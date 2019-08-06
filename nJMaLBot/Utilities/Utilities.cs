@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.IO;
-using System.Text;
-using Discord;
 using Newtonsoft.Json;
 
-namespace SKProCH_s_Discord_Bot
+namespace Bot.Utilities
 {
     class Utilities
     { }

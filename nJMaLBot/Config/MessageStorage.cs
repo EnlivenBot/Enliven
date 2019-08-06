@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using Bot.Utilities;
 using Discord;
 using Discord.WebSocket;
 using ICSharpCode.SharpZipLib.Core;
@@ -9,7 +10,7 @@ using ICSharpCode.SharpZipLib.Zip;
 using ICSharpCode.SharpZipLib.Zip.Compression;
 using Newtonsoft.Json;
 
-namespace SKProCH_s_Discord_Bot
+namespace Bot
 {
     public class MessageStorage
     {

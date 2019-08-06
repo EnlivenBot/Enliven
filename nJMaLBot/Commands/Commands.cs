@@ -1,11 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
+using Bot.Utilities;
 using Discord;
 using Discord.Commands;
 
-namespace SKProCH_s_Discord_Bot
+namespace Bot.Commands
 {
     public class GetLogByMessage : ModuleBase
     {

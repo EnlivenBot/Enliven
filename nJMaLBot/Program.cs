@@ -3,36 +3,46 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Mime;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
+using Bot.Commands;
+using Bot.Config;
+using Bot.Utilities;
 using Discord;
 using Discord.Audio;
 using Discord.Commands;
 using Discord.WebSocket;
 using Newtonsoft.Json;
 
-namespace SKProCH_s_Discord_Bot
+namespace Bot
 {
     class Program
     {
         public static DiscordSocketClient Client;
         public static CommandHandler      Handler;
+        public static Config.GlobalConfig GlobalConfig;
 
 
         static void Main(string[] args) {
             Console.WriteLine("Start Initialising");
-            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+
+            GlobalConfig = GlobalConfig.LoadConfig();
             ChannelUtils.LoadCache();
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
             AppDomain.CurrentDomain.ProcessExit += (sender, eventArgs) => ChannelUtils.SaveCache();
+
+            Console.WriteLine("Starting Bot");
             MainAsync(args).ConfigureAwait(false).GetAwaiter().GetResult();
         }
 
         static async Task MainAsync(string[] args) {
             var _config = new DiscordSocketConfig {MessageCacheSize = 100};
             Client = new DiscordSocketClient(_config);
-            await Client.LoginAsync(TokenType.Bot, "NjA2NzYwOTY0MTgzOTQ5MzE0.XUPwVw.RmNIahF2YyX8aQIjOCkky6FuFA0");
+            await Client.LoginAsync(TokenType.Bot, GlobalConfig.BotToken);
             await Client.StartAsync();
 
             Client.MessageUpdated += MessageUpdated;

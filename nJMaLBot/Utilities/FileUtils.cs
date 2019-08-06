@@ -1,10 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
-using System.Text;
 
-namespace SKProCH_s_Discord_Bot
+namespace Bot.Utilities
 {
     class FileUtils
     {

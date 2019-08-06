@@ -1,9 +1,10 @@
 ﻿using System.Reflection;
 using System.Threading.Tasks;
+using Bot.Utilities;
 using Discord.Commands;
 using Discord.WebSocket;
 
-namespace SKProCH_s_Discord_Bot
+namespace Bot.Commands
 {
     public class CommandHandler
     {
