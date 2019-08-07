@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.Collections.Generic;
+using System.Reflection;
 using System.Threading.Tasks;
 using Bot.Utilities;
 using Discord.Commands;
@@ -8,8 +9,10 @@ namespace Bot.Commands
 {
     public class CommandHandler
     {
-        private CommandService      _cmds;
+        public  CommandService      _cmds;
+        public List<CommandInfo> AllCommands = new List<CommandInfo>();
         private DiscordSocketClient _client;
+        public const string Prefix = "&";
 
         public async Task Install(DiscordSocketClient c) {
             _client = c;
@@ -17,9 +20,13 @@ namespace Bot.Commands
 
             await _cmds.AddModulesAsync(Assembly.GetEntryAssembly(), null);
             _cmds.AddTypeReader(typeof(ChannelUtils.ChannelFunction), new ChannelFunctionTypeReader());
+            foreach (var cmdsModule in _cmds.Modules) {
+                foreach (var command in cmdsModule.Commands) {
+                    AllCommands.Add(command);
+                }
+            }
 
             _client.MessageReceived += HandleCommand;
-
 
             _client.UserJoined += AnnounceUserJoined;
             _client.UserLeft += AnnounceUserLeft;
@@ -32,18 +39,13 @@ namespace Bot.Commands
         public       void code()                                 { }
 
         public async Task HandleCommand(SocketMessage s) {
-
-
             var msg = s as SocketUserMessage;
             if (msg == null) return;
 
             var context = new CommandContext(_client, msg);
 
             int argPos = 0;
-            string prefix = "&";
-            if (msg.HasStringPrefix(prefix, ref argPos)) {
-
-
+            if (msg.HasStringPrefix(Prefix, ref argPos)) {
                 var result = await _cmds.ExecuteAsync(context, argPos, null);
 
                 if (!result.IsSuccess) {
@@ -56,9 +58,8 @@ namespace Bot.Commands
 
                             await msg.DeleteAsync();
 
-                            await s.Channel.SendMessageAsync($"Command not found! Use the command {prefix}help for a list of commands.");
+                            await s.Channel.SendMessageAsync($"Command not found! Use the command {Prefix}help for a list of commands.");
                             break;
-
                     }
                 }
             }
