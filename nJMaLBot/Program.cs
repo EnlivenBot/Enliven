@@ -57,7 +57,15 @@ namespace Bot
             Handler = new CommandHandler();
             await Handler.Install(Client);
 
+            Client.Disconnected += Client_Disconnected;
+
             await Task.Delay(-1);
+        }
+
+        private static async Task Client_Disconnected(Exception arg) {
+            Client.Dispose();
+            Console.WriteLine("Bot Disconnected. Retry...");
+            await MainAsync(new string[] { });
         }
 
         private static async Task ReactionAdded(Cacheable<IUserMessage, ulong> arg1, ISocketMessageChannel arg2, SocketReaction arg3) {
@@ -97,14 +105,20 @@ namespace Bot
         private static Task MessageReceived(SocketMessage arg) {
             if (arg.Author.IsBot || arg.Author.IsWebhook) return Task.CompletedTask;
             var channel = arg.Channel;
-            MessageStorage thisMessage = new MessageStorage() {
-                                                                  AuthorId = arg.Author.Id, AuthorAvatar = arg.Author.GetAvatarUrl(), AuthorName = arg.Author.Username,
-                                                                  Id = arg.Id, ChannelId = arg.Channel.Id, GuildId = (channel as SocketGuildChannel).Guild.Id,
-                                                                  CreationDate = arg.CreatedAt, UrlToNavigate = arg.GetJumpUrl(),
-                                                                  Edits = new List<MessageStorage.MessageSnapshot>()
-                                                                          {new MessageStorage.MessageSnapshot() {Content = arg.Content, EditTimestamp = arg.CreatedAt}}
-                                                              };
-            thisMessage.Save();
+            try {
+                MessageStorage thisMessage = new MessageStorage() {
+                                                                      AuthorId = arg.Author.Id, AuthorAvatar = arg.Author.GetAvatarUrl(), AuthorName = arg.Author.Username,
+                                                                      Id = arg.Id, ChannelId = arg.Channel.Id, GuildId = (channel as SocketGuildChannel).Guild.Id,
+                                                                      CreationDate = arg.CreatedAt, UrlToNavigate = arg.GetJumpUrl(),
+                                                                      Edits = new List<MessageStorage.MessageSnapshot>()
+                                                                              {new MessageStorage.MessageSnapshot() {Content = arg.Content, EditTimestamp = arg.CreatedAt}}
+                                                                  };
+                thisMessage.Save();
+            }
+            catch (Exception e) {
+                Console.WriteLine(e.Message);
+            }
+
             return Task.CompletedTask;
         }
 

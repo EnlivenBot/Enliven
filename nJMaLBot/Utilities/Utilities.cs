@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.IO;
+using Discord;
 using Newtonsoft.Json;
 
 namespace Bot.Utilities
@@ -50,6 +51,45 @@ namespace Bot.Utilities
                 throw new NoSuchChannelException($"Для этого сервера не назначен канал, выполняющий функцию `{func.ToString()}`");
             }
             return toreturn;
+        }
+
+        public static bool IsFuncChannel(ulong guildId, ulong channelId, ChannelFunction func) {
+            try {
+                FunctionsChannel.TryGetValue(guildId, out var concurrentDictionaryElement);
+                concurrentDictionaryElement.TryGetValue(func, out var toreturn);
+                return toreturn == channelId;
+            }
+            catch (Exception) {
+                return false;
+            }
+        }
+
+        public static bool IsFuncChannel(ulong channelId, ChannelFunction func) { return IsFuncChannel(((IGuildChannel) Program.Client.GetChannel(channelId)).GuildId, channelId, func); }
+
+        public static bool IsChannelAssigned(ulong guildId, ChannelFunction func) {
+            try {
+                FunctionsChannel.TryGetValue(guildId, out var concurrentDictionaryElement);
+                return concurrentDictionaryElement.ContainsKey(func);
+            }
+            catch (Exception) {
+                return false;
+            }
+        }
+
+        public static bool IsChannelAssigned(ulong guildId, ChannelFunction func, out ulong channelId) {
+            try {
+                FunctionsChannel.TryGetValue(guildId, out var concurrentDictionaryElement);
+                if (concurrentDictionaryElement.ContainsKey(func)) {
+                    channelId = concurrentDictionaryElement[func];
+                    return true;
+                }
+            }
+            catch (Exception) {
+                // ignored
+            }
+
+            channelId = 0;
+            return false;
         }
     }
 
