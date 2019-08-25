@@ -30,6 +30,7 @@ namespace Bot
         static void Main(string[] args) {
             Console.WriteLine("Start Initialising");
 
+            Localization.Initialize();
             GlobalConfig = GlobalConfig.LoadConfig();
             ChannelUtils.LoadCache();
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
@@ -72,7 +73,8 @@ namespace Bot
             if (arg3.Emote.ToString() != "📖")
                 return;
             await ((IUserMessage) ((ISocketMessageChannel) Client.GetChannel(arg2.Id)).GetMessageAsync(arg3.MessageId).Result).RemoveReactionAsync(new Emoji("📖"), arg3.User.Value);
-            await arg2.SendMessageAsync("", false, MessageStorage.Load((arg2 as SocketGuildChannel).Guild.Id, arg2.Id, arg3.MessageId).BuildEmbed());
+            await arg2.SendMessageAsync("", false, MessageStorage.Load((arg2 as SocketGuildChannel).Guild.Id, arg2.Id, arg3.MessageId).BuildEmbed(Localization.GetLanguage((arg2 as SocketGuildChannel).Guild.Id,
+                                                                                                                                                                           arg2.Id)));
         }
 
         private static async Task MessageDeleted(Cacheable<IMessage, ulong> arg1, ISocketMessageChannel arg2) {
@@ -83,9 +85,8 @@ namespace Bot
                 EmbedBuilder eb = new EmbedBuilder()
                                  .WithFields(thisMessage.BuildLog())
                                  .WithAuthor(thisMessage.GetAuthorName(), thisMessage.GetAuthorIcon())
-                                 .WithDescription($"написал сообщение в <#{thisMessage.ChannelId}>, которое было только что удалено.\n" +
-                                                  "Вот история его изменений:")
-                                 .WithFooter($"ID сообщения: {thisMessage.Id}")
+                                 .WithDescription(string.Format(Localization.Get(thisMessage.ChannelId, "OnDelete.NotNullMessage"), thisMessage.ChannelId))
+                                 .WithFooter(Localization.Get(thisMessage.ChannelId, "OnDelete.MessageId") + thisMessage.Id)
                                  .WithTimestamp(DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3)))
                                  .WithColor(Color.Red);
                 await channel.SendMessageAsync(null, false, eb.Build());
@@ -93,9 +94,9 @@ namespace Bot
             else {
                 var channel = (ISocketMessageChannel) Client.GetChannel(ChannelUtils.GetChannel((arg2 as SocketGuildChannel).Guild.Id, ChannelUtils.ChannelFunction.Log));
                 EmbedBuilder eb = new EmbedBuilder()
-                                 .AddField("Удалённое сообщение:", "```Отсутствует```")
-                                 .WithDescription($"Сообщение было удалено в <#{arg2.Id}>")
-                                 .WithFooter($"ID сообщения: {arg1.Id}")
+                                 .AddField(Localization.Get(arg2.Id, "OnDelete.DeletedMessage"), Localization.Get(arg2.Id, "OnDelete.Missing"))
+                                 .WithDescription(String.Format(Localization.Get(arg2.Id, "OnDelete.MessageDeletedIn"), arg2.Id))
+                                 .WithFooter(Localization.Get(arg2.Id, "OnDelete.MessageId") + arg1.Id)
                                  .WithTimestamp(DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(3)))
                                  .WithColor(Color.DarkRed);
                 await channel.SendMessageAsync(null, false, eb.Build());
@@ -134,7 +135,7 @@ namespace Bot
             if (thisMessage.Edits.Count == 0) {
                 var message = await before.GetOrDownloadAsync();
                 thisMessage.Edits.Add(new MessageStorage.MessageSnapshot() {
-                                                                               Content = message.Content          != after.Content ? message.Content : "***Предыдущая запись недоступна",
+                                                                               Content = message.Content          != after.Content ? message.Content : Localization.Get(channel.Id, "OnUpdate."),
                                                                                EditTimestamp = message.ToString() != after.ToString() ? message.Timestamp : message.CreatedAt
                                                                            });
             }

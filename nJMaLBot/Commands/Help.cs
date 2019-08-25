@@ -11,7 +11,7 @@ namespace Bot.Commands
 {
     class HelpUtils
     {
-        public static void PrintHelpByCommand(ulong channelId, string command, string comment = "") {
+        public static List<EmbedFieldBuilder> BuildHelpField(string command) {
             List<EmbedFieldBuilder> fields = new List<EmbedFieldBuilder>();
             foreach (var thisCommand in Program.Handler.AllCommands.Where(x => x.Aliases.Any(y => y == command))) {
                 fields.Add(new EmbedFieldBuilder() {
@@ -22,9 +22,13 @@ namespace Bot.Commands
                                                    });
             }
 
+            return fields;
+        }
+
+        public static void PrintHelpByCommand(ulong channelId, string command, string comment = "") {
             EmbedBuilder eb = new EmbedBuilder();
             eb.WithDescription(comment)
-              .WithFields(fields)
+              .WithFields(BuildHelpField(command))
               .WithTitle($"Справка о команде `{command}`")
               .WithColor(Color.Gold);
             (Program.Client.GetChannel(channelId) as IMessageChannel)

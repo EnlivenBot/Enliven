@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Threading.Tasks;
 using Bot.Utilities;
@@ -52,13 +53,13 @@ namespace Bot.Commands
                     switch (result.ToString()) {
                         default:
 
-                            await s.Channel.SendMessageAsync($"An error occurred! Details: ```" + result.ToString() + "```");
+                            await s.Channel.SendMessageAsync(String.Format(Localization.Get(s.Channel.Id, "CommandHandler.Error"), result.ToString()));
                             break;
                         case "UnknownCommand: Unknown command.":
 
                             await msg.DeleteAsync();
 
-                            await s.Channel.SendMessageAsync($"Command not found! Use the command {Prefix}help for a list of commands.");
+                            await s.Channel.SendMessageAsync(String.Format(Localization.Get(s.Channel.Id, "CommandHandler.NotFound"), Prefix));
                             break;
                     }
                 }

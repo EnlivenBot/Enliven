@@ -13,4 +13,10 @@
     <PackageReference Include="System.Security.Permissions" Version="4.6.0-preview7.19362.9" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Localization\en.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

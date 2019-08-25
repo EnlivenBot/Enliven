@@ -1,13 +1,27 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.IO;
+using System.Net;
 using Discord;
 using Newtonsoft.Json;
 
 namespace Bot.Utilities
 {
     class Utilities
-    { }
+    {
+        public static string DownloadFile(string url, string path) {
+            using (WebClient wc = new WebClient()) {
+                wc.DownloadFile(url, path);
+            }
+
+            return path;
+        }
+
+        public static string DownloadString(string url) {
+            using WebClient wc = new WebClient();
+            return wc.DownloadString(url);
+        }
+    }
 
     public static class ChannelUtils
     {
@@ -50,6 +64,7 @@ namespace Bot.Utilities
             if (toreturn == 0) {
                 throw new NoSuchChannelException($"Для этого сервера не назначен канал, выполняющий функцию `{func.ToString()}`");
             }
+
             return toreturn;
         }
 
@@ -95,8 +110,8 @@ namespace Bot.Utilities
 
     class NoSuchChannelException : Exception
     {
-        public NoSuchChannelException() {}
-        public NoSuchChannelException(string message) : base(message){}
+        public NoSuchChannelException() { }
+        public NoSuchChannelException(string message) : base(message) { }
         public NoSuchChannelException(string message, Exception inner) : base(message, inner) { }
     }
 }
