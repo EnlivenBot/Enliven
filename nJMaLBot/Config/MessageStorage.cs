@@ -49,10 +49,10 @@ namespace Bot
             return fields;
         }
 
-        public Embed BuildEmbed() {
+        public Embed BuildEmbed(string lang) {
             EmbedBuilder eb = new EmbedBuilder();
-            return eb.WithTitle($"Просмотр истории изменений")
-                     .WithDescription($"[этого]({this.UrlToNavigate}) сообщения")
+            return eb.WithTitle(Localization.Get(lang, "Message.ViewHistory"))
+                     .WithDescription(String.Format(Localization.Get(lang, "Message.ThisMessage"), this.UrlToNavigate))
                      .WithAuthor(GetAuthorName(), GetAuthorIcon())
                      .WithFields(BuildLog())
                      .WithColor(Color.Gold)

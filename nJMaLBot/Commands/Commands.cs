@@ -22,7 +22,7 @@ namespace Bot.Commands
 
             var message = MessageStorage.Load(Context.Guild.Id, channelId, messageId);
             if (message != null)
-                await Context.Channel.SendMessageAsync("", false, message.BuildEmbed());
+                await Context.Channel.SendMessageAsync("", false, message.BuildEmbed(Localization.GetLanguage(Context.Guild.Id, Context.Channel.Id)));
         }
     }
 

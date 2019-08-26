@@ -73,8 +73,9 @@ namespace Bot
             if (arg3.Emote.ToString() != "📖")
                 return;
             await ((IUserMessage) ((ISocketMessageChannel) Client.GetChannel(arg2.Id)).GetMessageAsync(arg3.MessageId).Result).RemoveReactionAsync(new Emoji("📖"), arg3.User.Value);
-            await arg2.SendMessageAsync("", false, MessageStorage.Load((arg2 as SocketGuildChannel).Guild.Id, arg2.Id, arg3.MessageId).BuildEmbed(Localization.GetLanguage((arg2 as SocketGuildChannel).Guild.Id,
-                                                                                                                                                                           arg2.Id)));
+            await arg2.SendMessageAsync("", false, MessageStorage.Load((arg2 as SocketGuildChannel).Guild.Id, arg2.Id, arg3.MessageId)
+                                                                 .BuildEmbed(Localization.GetLanguage((arg2 as SocketGuildChannel).Guild.Id,
+                                                                                                      arg2.Id)));
         }
 
         private static async Task MessageDeleted(Cacheable<IMessage, ulong> arg1, ISocketMessageChannel arg2) {

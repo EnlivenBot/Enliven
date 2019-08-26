@@ -9,7 +9,7 @@ using Discord.Commands;
 
 namespace Bot.Commands
 {
-    class HelpUtils
+    static class HelpUtils
     {
         public static List<EmbedFieldBuilder> BuildHelpField(string command) {
             List<EmbedFieldBuilder> fields = new List<EmbedFieldBuilder>();
