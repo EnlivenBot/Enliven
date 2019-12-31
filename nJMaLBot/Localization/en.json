@@ -1,30 +1,30 @@
 {
-	"OnDelete": {
-		"NotNullMessage": " wrote a message in <#{0}>, which was just deleted.\nHere is the history of its changes:",
-		"MessageId": " Message ID: ",
-		"DeletedMessage": " Deleted message:",
-		"Missing": "```Missing```",
-		"MessageDeletedIn": "Сообщение было удалено в <#{0}>"
-	},
-	"OnUpdate": {
-		"PreviousUnavailable": "***Previous entry unavailable"
-	},
-	"Localization": {
-		"LocalizationEmpty": "***We found that your language is not selected on the server.***\nThe default is English. Here is the help for changing the server language:"
-	},
-	"Help": {
-		"HelpMessage": "Command Help"
-	},
-	"CommandHandler": {
-		"Error": "An error occurred! Details: ```{0}```",
-		"NotFound": "Command not found! Use the command `{0}help` for a list of commands."
-	},
-	"Message": {
-		"ViewHistory": "View changes history",
-		"ThisMessage": "of [this]({0}) message"
-	},
-	"Commands": {
-		"history_summary": "View changes history",
-		"ThisMessage": "of [this]({0}) message"
-	}
+  "OnDelete": {
+	"DeletedMessage": " Deleted message:",
+	"MessageDeletedIn": "Сообщение было удалено в <#{0}>",
+	"MessageId": " Message ID: ",
+	"Missing": "```Missing```",
+	"NotNullMessage": " wrote a message in <#{0}>, which was just deleted.\nHere is the history of its changes:"
+},
+  "OnUpdate": {
+    "PreviousUnavailable": "***Previous entry unavailable"
+  },
+  "Localization": {
+    "LocalizationEmpty": "***You didn't select bot's localization on the server.***\nThe default one is for English. How to change server's language:"
+  },
+  "Help": {
+    "HelpMessage": "Command Help"
+  },
+  "CommandHandler": {
+    "Error": "An error occurred! Details: ```{0}```",
+    "NotFound": "Command not found! Use the command `{0}help` for a list of commands."
+  },
+  "Message": {
+	"ThisMessage": "of [this]({0}) message",
+	"ViewHistory": "View changes history"
+},
+  "Commands": {
+	"ThisMessage": "of [this]({0}) message",
+	"history_summary": "View changes history"
+}
 }

@@ -9,12 +9,15 @@ using Discord.Audio;
 
 namespace Bot.Music
 {
-    class AudioUtils
+    internal static class AudioUtils
     {
-        private static readonly ConcurrentDictionary<ulong, AudioInfo> ConnectedChannels = new ConcurrentDictionary<ulong, AudioInfo>();
+        private static readonly ConcurrentDictionary<ulong, AudioInfo> ConnectedChannels =
+            new ConcurrentDictionary<ulong, AudioInfo>();
 
-        public static async Task JoinAudio(IVoiceChannel target) {
-            if (ConnectedChannels.TryGetValue(target.Id, out var client)) {
+        public static async Task JoinAudio(IVoiceChannel target)
+        {
+            if (ConnectedChannels.TryGetValue(target.Id, out var client))
+            {
                 return;
             }
 
@@ -24,13 +27,21 @@ namespace Bot.Music
             ConnectedChannels.TryAdd(target.Id, new AudioInfo(await target.ConnectAsync(), target.Id));
         }
 
-        private static async Task UserVoiceStateUpdated(Discord.WebSocket.SocketUser arg1, Discord.WebSocket.SocketVoiceState arg2, Discord.WebSocket.SocketVoiceState arg3) {
-            var temp = ConnectedChannels.FirstOrDefault(x => x.Value.IsAlone ? arg3.VoiceChannel.Id == x.Key : arg2.VoiceChannel.Id == x.Key && arg3.VoiceChannel.Id != x.Key);
-            temp.Value.IsAlone = !temp.Value.IsAlone;
+        private static async Task UserVoiceStateUpdated(Discord.WebSocket.SocketUser arg1,
+            Discord.WebSocket.SocketVoiceState arg2, Discord.WebSocket.SocketVoiceState arg3)
+        {
+            var (_, value) = ConnectedChannels.FirstOrDefault(x =>
+                x.Value.IsAlone
+                    ? arg3.VoiceChannel.Id == x.Key
+                    : arg2.VoiceChannel.Id == x.Key && arg3.VoiceChannel.Id != x.Key);
+
+            value.IsAlone = !value.IsAlone;
         }
 
-        public static async Task LeaveAudio(ulong channelId) {
-            if (ConnectedChannels.TryRemove(channelId, out var client)) {
+        public static async Task LeaveAudio(ulong channelId)
+        {
+            if (ConnectedChannels.TryRemove(channelId, out var client))
+            {
                 await client.Client.StopAsync();
                 //await Log(LogSeverity.Info, $"Disconnected from voice on {guild.Name}.");
                 if (ConnectedChannels.IsEmpty)

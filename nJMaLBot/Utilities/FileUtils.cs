@@ -1,30 +1,32 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 
 namespace Bot.Utilities
 {
-    class FileUtils
+    internal static class FileUtils
     {
-        public static List<string> RecursiveFilesScan(string dir) {
+        private static IEnumerable<string> RecursiveFilesScan(string dir)
+        {
             Directory.CreateDirectory(dir);
             var dirs = new List<string>();
             dirs.AddRange(Directory.GetDirectories(dir));
-            var toreturn = new List<string>();
-            toreturn.AddRange(Directory.GetFiles(dir));
-            foreach (var VARIABLE in dirs) toreturn.AddRange(RecursiveFilesScan(VARIABLE));
-
-            return toreturn;
+            var result = new List<string>();
+            result.AddRange(Directory.GetFiles(dir));
+            dirs.ForEach(s => result.AddRange(RecursiveFilesScan(s)));
+            return result;
         }
 
-        public static void RecursiveFoldersDelete([Localizable(false)] string dir) {
-            foreach (var VARIABLE in RecursiveFilesScan(dir)) File.Delete(VARIABLE);
-            RecursiveFoldersDeleteMethod(dir);
+        public static void DeleteDirectoriesRecursively([Localizable(false)] string dir)
+        {
+            RecursiveFilesScan(dir).ToList().ForEach(File.Delete);
+            DeleteDirectoriesRecursivelyInternal(dir);
         }
 
-        private static void RecursiveFoldersDeleteMethod(string dir) {
-            foreach (var directory in Directory.GetDirectories(dir)) RecursiveFoldersDeleteMethod(directory);
-
+        private static void DeleteDirectoriesRecursivelyInternal(string dir)
+        {
+            Directory.GetDirectories(dir).ToList().ForEach(DeleteDirectoriesRecursivelyInternal);
             Directory.Delete(dir, true);
         }
     }

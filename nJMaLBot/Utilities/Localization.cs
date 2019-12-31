@@ -27,7 +27,7 @@ namespace Bot.Utilities
             try {
                 Dictionary<string, Dictionary<string, Dictionary<string, string>>> temp = new Dictionary<string, Dictionary<string, Dictionary<string, string>>>();
                 foreach (var VARIABLE in
-                    JsonConvert.DeserializeObject<Dictionary<string, string>>(Utilities.DownloadString(@"https://gitlab.com/skprochlab/nJMaLBot/raw/master/nJMaLBot/Localization/Index.json"))) {
+                    JsonConvert.DeserializeObject<Dictionary<string, string>>(Utilities.DownloadString(@"https://gitlab.com/skprochlab/nJMaLBot/raw/master/nJMaLBot/Localization/index.json"))) {
                     temp.Add(VARIABLE.Key, JsonConvert.DeserializeObject<Dictionary<string, Dictionary<string, string>>>(Utilities.DownloadString(VARIABLE.Value)));
                 }
 

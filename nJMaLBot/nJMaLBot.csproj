@@ -1,22 +1,22 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp3.0</TargetFramework>
-    <RootNamespace>Bot</RootNamespace>
-    <AssemblyName>SKP-DB</AssemblyName>
-  </PropertyGroup>
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>netcoreapp3.0</TargetFramework>
+        <RootNamespace>Bot</RootNamespace>
+        <AssemblyName>SKP-DB</AssemblyName>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Discord.Net" Version="2.1.1" />
-    <PackageReference Include="SharpZipLib" Version="1.1.0" />
-    <PackageReference Include="System.Security.Permissions" Version="4.6.0-preview7.19362.9" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Discord.Net" Version="2.1.1" />
+        <PackageReference Include="SharpZipLib" Version="1.1.0" />
+        <PackageReference Include="System.Security.Permissions" Version="4.7.0" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <None Update="Localization\en.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
+    <ItemGroup>
+        <None Update="Localization\en.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
 
 </Project>

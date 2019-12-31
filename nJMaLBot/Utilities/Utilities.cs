@@ -7,18 +7,19 @@ using Newtonsoft.Json;
 
 namespace Bot.Utilities
 {
-    class Utilities
+    internal static class Utilities
     {
-        public static string DownloadFile(string url, string path) {
-            using (WebClient wc = new WebClient()) {
+        public static string DownloadFile(string url, string path)
+        {
+            using (var wc = new WebClient())
                 wc.DownloadFile(url, path);
-            }
 
             return path;
         }
 
-        public static string DownloadString(string url) {
-            using WebClient wc = new WebClient();
+        public static string DownloadString(string url)
+        {
+            using var wc = new WebClient();
             return wc.DownloadString(url);
         }
     }
@@ -27,79 +28,102 @@ namespace Bot.Utilities
     {
         public enum ChannelFunction
         {
-            Log, Music
+            Log,
+            Music
         }
 
         private static ConcurrentDictionary<ulong, ConcurrentDictionary<ChannelFunction, ulong>> FunctionsChannel;
 
-        public static void LoadCache() {
+        public static void LoadCache()
+        {
             var path = Path.Combine("messageEditsLogs", "FunctionChannels.json");
             FunctionsChannel = File.Exists(path)
-                                   ? JsonConvert.DeserializeObject<ConcurrentDictionary<ulong, ConcurrentDictionary<ChannelFunction, ulong>>>(File.ReadAllText(path))
-                                   : new ConcurrentDictionary<ulong, ConcurrentDictionary<ChannelFunction, ulong>>();
+                ? JsonConvert
+                    .DeserializeObject<ConcurrentDictionary<ulong, ConcurrentDictionary<ChannelFunction, ulong>>>(
+                        File.ReadAllText(path))
+                : new ConcurrentDictionary<ulong, ConcurrentDictionary<ChannelFunction, ulong>>();
         }
 
-        public static void SaveCache() {
+        public static void SaveCache()
+        {
             var path = Path.Combine("messageEditsLogs", "FunctionChannels.json");
             File.WriteAllText(path, JsonConvert.SerializeObject(FunctionsChannel));
         }
 
-        public static void SetChannel(ulong guildId, ulong channelId, ChannelFunction func) {
+        public static void SetChannel(ulong guildId, ulong channelId, ChannelFunction func)
+        {
             if (!FunctionsChannel.ContainsKey(guildId))
                 FunctionsChannel.TryAdd(guildId, new ConcurrentDictionary<ChannelFunction, ulong>());
-            if (!FunctionsChannel[guildId].TryAdd(func, channelId)) {
-                ulong justforget = 0;
-                FunctionsChannel[guildId].TryRemove(func, out justforget);
+
+            if (!FunctionsChannel[guildId].TryAdd(func, channelId))
+            {
+                FunctionsChannel[guildId].TryRemove(func, out _);
                 FunctionsChannel[guildId].TryAdd(func, channelId);
             }
 
             SaveCache();
         }
 
-        public static ulong GetChannel(ulong guild, ChannelFunction func) {
+        public static ulong GetChannel(ulong guild, ChannelFunction func)
+        {
             FunctionsChannel.TryGetValue(guild, out var concurrentDictionaryElement);
+
             if (concurrentDictionaryElement == null)
                 throw new NoSuchChannelException("Для этого сервера нет назначенных каналов");
+
             concurrentDictionaryElement.TryGetValue(func, out var toreturn);
-            if (toreturn == 0) {
-                throw new NoSuchChannelException($"Для этого сервера не назначен канал, выполняющий функцию `{func.ToString()}`");
-            }
+
+            if (toreturn == 0)
+                throw new NoSuchChannelException(
+                    $"Для этого сервера не назначен канал, выполняющий функцию `{func.ToString()}`");
 
             return toreturn;
         }
 
-        public static bool IsFuncChannel(ulong guildId, ulong channelId, ChannelFunction func) {
-            try {
+        private static bool IsFuncChannel(ulong guildId, ulong channelId, ChannelFunction func)
+        {
+            try
+            {
                 FunctionsChannel.TryGetValue(guildId, out var concurrentDictionaryElement);
-                concurrentDictionaryElement.TryGetValue(func, out var toreturn);
-                return toreturn == channelId;
+                concurrentDictionaryElement.TryGetValue(func, out var result);
+                return result == channelId;
             }
-            catch (Exception) {
+            catch (Exception)
+            {
                 return false;
             }
         }
 
-        public static bool IsFuncChannel(ulong channelId, ChannelFunction func) { return IsFuncChannel(((IGuildChannel) Program.Client.GetChannel(channelId)).GuildId, channelId, func); }
+        public static bool IsFuncChannel(ulong channelId, ChannelFunction func) =>
+            IsFuncChannel(((IGuildChannel) Program.Client.GetChannel(channelId)).GuildId, channelId, func);
 
-        public static bool IsChannelAssigned(ulong guildId, ChannelFunction func) {
-            try {
+        public static bool IsChannelAssigned(ulong guildId, ChannelFunction func)
+        {
+            try
+            {
                 FunctionsChannel.TryGetValue(guildId, out var concurrentDictionaryElement);
                 return concurrentDictionaryElement.ContainsKey(func);
             }
-            catch (Exception) {
+            catch (Exception)
+            {
                 return false;
             }
         }
 
-        public static bool IsChannelAssigned(ulong guildId, ChannelFunction func, out ulong channelId) {
-            try {
+        public static bool IsChannelAssigned(ulong guildId, ChannelFunction func, out ulong channelId)
+        {
+            try
+            {
                 FunctionsChannel.TryGetValue(guildId, out var concurrentDictionaryElement);
-                if (concurrentDictionaryElement.ContainsKey(func)) {
+                
+                if (concurrentDictionaryElement.ContainsKey(func))
+                {
                     channelId = concurrentDictionaryElement[func];
                     return true;
                 }
             }
-            catch (Exception) {
+            catch (Exception)
+            {
                 // ignored
             }
 
@@ -108,10 +132,18 @@ namespace Bot.Utilities
         }
     }
 
-    class NoSuchChannelException : Exception
+    internal class NoSuchChannelException : Exception
     {
-        public NoSuchChannelException() { }
-        public NoSuchChannelException(string message) : base(message) { }
-        public NoSuchChannelException(string message, Exception inner) : base(message, inner) { }
+        public NoSuchChannelException()
+        {
+        }
+
+        public NoSuchChannelException(string message) : base(message)
+        {
+        }
+
+        public NoSuchChannelException(string message, Exception inner) : base(message, inner)
+        {
+        }
     }
 }

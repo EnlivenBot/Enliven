@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text;
 using System.Text.Json.Serialization;
@@ -7,7 +8,8 @@ using Newtonsoft.Json;
 
 namespace Bot.Config
 {
-    class GlobalConfig
+    [SuppressMessage("ReSharper", "UnusedAutoPropertyAccessor.Global")]
+    internal class GlobalConfig
     {
         public static GlobalConfig LoadConfig() {
             if (File.Exists("config.json"))

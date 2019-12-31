@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Timers;
 using Bot.Utilities;
@@ -9,6 +10,7 @@ using Discord.Audio;
 
 namespace Bot.Music
 {
+    [SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Global")]
     class AudioInfo
     {
         private bool _isAlone;
@@ -45,9 +47,10 @@ namespace Bot.Music
             }
         }
 
-        public bool PrintMessage(ulong FromChannel) {
+        public bool PrintMessage(ulong fromChannel) {
             ControlMessage?.DeleteAsync();
-            if (ChannelUtils.IsChannelAssigned((Program.Client.GetChannel(AudioChannelId) as IGuildChannel).GuildId, ChannelUtils.ChannelFunction.Music, out var channelId)) {
+            
+            if (ChannelUtils.IsChannelAssigned(((IGuildChannel) Program.Client.GetChannel(AudioChannelId)).GuildId, ChannelUtils.ChannelFunction.Music, out var channelId)) {
 
                 //((ITextChannel)Program.Client.GetChannel(channelId)).SendMessageAsync()
             }
