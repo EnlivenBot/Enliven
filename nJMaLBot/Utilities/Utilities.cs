@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.IO;
 using System.Net;
+using Bot.Config;
 using Discord;
 using Newtonsoft.Json;
 
@@ -48,8 +49,7 @@ namespace Bot.Utilities
             if (!FunctionsChannel.ContainsKey(guildId))
                 FunctionsChannel.TryAdd(guildId, new ConcurrentDictionary<ChannelFunction, ulong>());
             if (!FunctionsChannel[guildId].TryAdd(func, channelId)) {
-                ulong justforget = 0;
-                FunctionsChannel[guildId].TryRemove(func, out justforget);
+                FunctionsChannel[guildId].TryRemove(func, out _);
                 FunctionsChannel[guildId].TryAdd(func, channelId);
             }
 
@@ -113,5 +113,15 @@ namespace Bot.Utilities
         public NoSuchChannelException() { }
         public NoSuchChannelException(string message) : base(message) { }
         public NoSuchChannelException(string message, Exception inner) : base(message, inner) { }
+    }
+
+    public static class ServerUtils {
+        public static string GetServerPrefix(ulong serverId) {
+            return GlobalDB.Prefixes.FindById(serverId.ToString()) ?? "&";
+        }
+        
+        public static void SetServerPrefix(ulong serverId, string prefix) {
+            GlobalDB.Prefixes.Upsert(serverId.ToString(), new Entity(prefix));
+        }
     }
 }
