@@ -23,8 +23,9 @@ namespace Bot
     class Program
     {
         public static DiscordSocketClient Client;
+        public static event EventHandler<DiscordSocketClient> OnClientConnect; 
         public static CommandHandler      Handler;
-        public static Config.GlobalConfig GlobalConfig;
+        public static GlobalConfig GlobalConfig;
 
 
         static void Main(string[] args) {
@@ -38,11 +39,15 @@ namespace Bot
 
             Console.WriteLine("Starting Bot");
             MainAsync(args).ConfigureAwait(false).GetAwaiter().GetResult();
+            ConsoleCommandsHandler();
         }
 
         static async Task MainAsync(string[] args) {
-            var _config = new DiscordSocketConfig {MessageCacheSize = 100};
-            Client = new DiscordSocketClient(_config);
+            var c = new DiscordShardedClient();
+            var config = new DiscordSocketConfig {MessageCacheSize = 100};
+            Client = new DiscordSocketClient(config);
+            
+            Console.WriteLine("Start authorization");
             await Client.LoginAsync(TokenType.Bot, GlobalConfig.BotToken);
             await Client.StartAsync();
 
@@ -50,23 +55,30 @@ namespace Bot
             Client.MessageReceived += MessageReceived;
             Client.MessageDeleted += MessageDeleted;
             Client.ReactionAdded += ReactionAdded;
-            Client.Ready += () => {
-                                Console.WriteLine("Bot is connected!");
-                                return Task.CompletedTask;
-                            };
-
+            Client.Ready += async () => {
+                Console.WriteLine("Bot has connected!");
+                OnClientConnect?.Invoke(null, Client);
+            };
+            
             Handler = new CommandHandler();
             await Handler.Install(Client);
 
-            Client.Disconnected += Client_Disconnected;
-
-            await Task.Delay(-1);
+            Client.Disconnected += exception => Client_Disconnected(exception, args);
         }
 
-        private static async Task Client_Disconnected(Exception arg) {
+        private static async Task Client_Disconnected(Exception e, string[] args) {
             Client.Dispose();
-            Console.WriteLine("Bot Disconnected. Retry...");
-            await MainAsync(new string[] { });
+            Console.WriteLine("================================");
+            Console.WriteLine("Bot Disconnected with exception:");
+            Console.WriteLine(e.ToString());
+            Console.WriteLine("\nReconnecting...\n\n");
+            await MainAsync(args);
+        }
+
+        public static void ConsoleCommandsHandler() {
+            while (true) {
+                
+            }
         }
 
         private static async Task ReactionAdded(Cacheable<IUserMessage, ulong> arg1, ISocketMessageChannel arg2, SocketReaction arg3) {
