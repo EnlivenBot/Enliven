@@ -13,7 +13,6 @@ namespace Bot.Commands
         public  CommandService      _cmds;
         public List<CommandInfo> AllCommands = new List<CommandInfo>();
         private DiscordSocketClient _client;
-        public const string Prefix = "&";
 
         public async Task Install(DiscordSocketClient c) {
             _client = c;
@@ -46,7 +45,7 @@ namespace Bot.Commands
             var context = new CommandContext(_client, msg);
 
             int argPos = 0;
-            if (msg.HasStringPrefix(Prefix, ref argPos)) {
+            if (msg.HasStringPrefix(ServerUtils.GetServerPrefix(((SocketGuildChannel) s.Channel).Guild.Id), ref argPos)) {
                 var result = await _cmds.ExecuteAsync(context, argPos, null);
 
                 if (!result.IsSuccess) {
@@ -59,7 +58,7 @@ namespace Bot.Commands
 
                             await msg.DeleteAsync();
 
-                            await s.Channel.SendMessageAsync(String.Format(Localization.Get(s.Channel.Id, "CommandHandler.NotFound"), Prefix));
+                            await s.Channel.SendMessageAsync(String.Format(Localization.Get(s.Channel.Id, "CommandHandler.NotFound"), ServerUtils.GetServerPrefix(((SocketGuildChannel) s.Channel).Guild.Id)));
                             break;
                     }
                 }
