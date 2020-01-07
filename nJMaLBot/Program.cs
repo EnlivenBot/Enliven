@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -12,30 +12,25 @@ using System.Threading.Tasks;
 using Bot.Commands;
 using Bot.Config;
 using Bot.Utilities;
+using DiffMatchPatch;
 using Discord;
 using Discord.Audio;
 using Discord.Commands;
 using Discord.WebSocket;
 using Newtonsoft.Json;
 
-namespace Bot
-{
-    class Program
-    {
+namespace Bot {
+    class Program {
         public static DiscordSocketClient Client;
-        public static event EventHandler<DiscordSocketClient> OnClientConnect; 
-        public static CommandHandler      Handler;
+        public static event EventHandler<DiscordSocketClient> OnClientConnect;
+        public static CommandHandler Handler;
         public static GlobalConfig GlobalConfig;
 
 
         static void Main(string[] args) {
             Console.WriteLine("Start Initialising");
-
             Localization.Initialize();
             GlobalConfig = GlobalConfig.LoadConfig();
-            ChannelUtils.LoadCache();
-            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-            AppDomain.CurrentDomain.ProcessExit += (sender, eventArgs) => ChannelUtils.SaveCache();
 
             Console.WriteLine("Starting Bot");
             MainAsync(args).ConfigureAwait(false).GetAwaiter().GetResult();
@@ -46,7 +41,7 @@ namespace Bot
             var c = new DiscordShardedClient();
             var config = new DiscordSocketConfig {MessageCacheSize = 100};
             Client = new DiscordSocketClient(config);
-            
+
             Console.WriteLine("Start authorization");
             await Client.LoginAsync(TokenType.Bot, GlobalConfig.BotToken);
             await Client.StartAsync();
@@ -59,7 +54,7 @@ namespace Bot
                 Console.WriteLine("Bot has connected!");
                 OnClientConnect?.Invoke(null, Client);
             };
-            
+
             Handler = new CommandHandler();
             await Handler.Install(Client);
 
@@ -76,9 +71,7 @@ namespace Bot
         }
 
         public static void ConsoleCommandsHandler() {
-            while (true) {
-                
-            }
+            while (true) { }
         }
 
         private static async Task ReactionAdded(Cacheable<IUserMessage, ulong> arg1, ISocketMessageChannel arg2, SocketReaction arg3) {

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Reflection;
 using System.Threading.Tasks;
+using Bot.Config;
 using Bot.Utilities;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -19,7 +20,7 @@ namespace Bot.Commands
             _cmds = new CommandService();
 
             await _cmds.AddModulesAsync(Assembly.GetEntryAssembly(), null);
-            _cmds.AddTypeReader(typeof(ChannelUtils.ChannelFunction), new ChannelFunctionTypeReader());
+            _cmds.AddTypeReader(typeof(ChannelFunction), new ChannelFunctionTypeReader());
             foreach (var cmdsModule in _cmds.Modules) {
                 foreach (var command in cmdsModule.Commands) {
                     AllCommands.Add(command);
@@ -43,9 +44,10 @@ namespace Bot.Commands
             if (msg == null) return;
 
             var context = new CommandContext(_client, msg);
+            if (!(s.Channel is SocketGuildChannel guildChannel)) return;
 
-            int argPos = 0;
-            if (msg.HasStringPrefix(ServerUtils.GetServerPrefix(((SocketGuildChannel) s.Channel).Guild.Id), ref argPos)) {
+            var argPos = 0;
+            if (msg.HasStringPrefix(GuildConfig.Get(guildChannel.Guild.Id).Prefix, ref argPos)) {
                 var result = await _cmds.ExecuteAsync(context, argPos, null);
 
                 if (!result.IsSuccess) {
@@ -58,7 +60,7 @@ namespace Bot.Commands
 
                             await msg.DeleteAsync();
 
-                            await s.Channel.SendMessageAsync(String.Format(Localization.Get(s.Channel.Id, "CommandHandler.NotFound"), ServerUtils.GetServerPrefix(((SocketGuildChannel) s.Channel).Guild.Id)));
+                            await s.Channel.SendMessageAsync(String.Format(Localization.Get(s.Channel.Id, "CommandHandler.NotFound"), GuildConfig.Get(((SocketGuildChannel) s.Channel).Guild.Id).Prefix));
                             break;
                     }
                 }

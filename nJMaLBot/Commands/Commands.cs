@@ -30,16 +30,15 @@ namespace Bot.Commands {
         [Command("setchannel")]
         [Summary("Назначает канал, который будет использоваться ботом для определенного типа сообщений")]
         public async Task SetChannel([Summary("Название функции канала (`music`, `log`)")]
-                                     ChannelUtils.ChannelFunction func, [Summary("Ссылка на канал")] IChannel channel) {
-            ChannelUtils.SetChannel(Context.Guild.Id, channel.Id, func);
+                                     ChannelFunction func, [Summary("Ссылка на канал")] IChannel channel) {
+            GuildConfig.Get(Context.Guild.Id).SetChannel(channel.Id.ToString(), func).Save();
             await Context.Message.DeleteAsync();
         }
 
         [Command("setchannel")]
         [Summary("Назначает канал, который будет использоваться ботом для определенного типа сообщений")]
-        public async Task SetThisChannel([Summary("Ссылка на канал")] ChannelUtils.ChannelFunction func) {
-            ChannelUtils.SetChannel(Context.Guild.Id, Context.Channel.Id, func);
-            await Context.Message.DeleteAsync();
+        public async Task SetThisChannel([Summary("Ссылка на канал")] ChannelFunction func) {
+            await SetChannel(func, Context.Channel);
         }
     }
 
@@ -47,8 +46,11 @@ namespace Bot.Commands {
         [Command("setprefix")]
         [Summary("Назначает префикс для команд бота")]
         public async Task SetPrefix([Summary("Префикс")] string prefix) {
-            ServerUtils.SetServerPrefix(Context.Guild.Id, prefix);
-            await Context.Message.DeleteAsync();
+            GuildConfig.Get(Context.Guild.Id).SetServerPrefix(prefix).Save();
+            Context.Message.SafeDelete();
+            (await Context.Channel.SendMessageAsync(
+                    $"Успешно изменен префикс бота на `{prefix}`.\nЕсли вы забыли префикс, то просто упомяните бота.\n*Это сообщение будет удалено через минуту.")
+                ).DelayedDelete(TimeSpan.FromMinutes(1));
         }
     }
 }
