@@ -1,12 +1,14 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
+using Bot.Config;
 using Bot.Utilities;
 using Discord;
 using Discord.Commands;
+using Discord.WebSocket;
 
 namespace Bot.Commands {
     public class GetLogByMessage : ModuleBase {
-        [Command("history")]
+        [Command("history", RunMode = RunMode.Async)]
         [Summary("Показывает историю изменений сообщения.\n" +
                  "Так-же можно поставить эмоцию 📖 под нужное сообщение")]
         public async Task PrintChanges(
@@ -19,14 +21,11 @@ namespace Bot.Commands {
                 messageId = id.Split('-')[1];
             }
 
-            var message = MessageStorage.Load(Context.Guild.Id, channelId, messageId);
-            if (message != null)
-                await Context.Channel.SendMessageAsync("", false, message.BuildEmbed(Localization.GetLanguage(Context.Guild.Id, Context.Channel.Id)));
+            await MessageHistoryManager.PrintLog(Convert.ToUInt64(messageId), channelId, (SocketTextChannel) Context.Channel, (IGuildUser) Context.User);
         }
     }
 
-    public class ChannelsFunctions : ModuleBase
-    {
+    public class ChannelsCommands : ModuleBase {
         [Command("setchannel")]
         [Summary("Назначает канал, который будет использоваться ботом для определенного типа сообщений")]
         public async Task SetChannel([Summary("Название функции канала (`music`, `log`)")]
