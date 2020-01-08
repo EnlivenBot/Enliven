@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net;
-using System.Text;
 using System.Threading.Tasks;
 using Bot.Config;
 using Bot.Utilities;
@@ -12,11 +9,7 @@ using CoreHtmlToImage;
 using DiffMatchPatch;
 using Discord;
 using Discord.WebSocket;
-using ICSharpCode.SharpZipLib.Core;
-using ICSharpCode.SharpZipLib.Zip;
-using ICSharpCode.SharpZipLib.Zip.Compression;
 using LiteDB;
-using Newtonsoft.Json;
 
 namespace Bot {
     public class MessageHistory {
@@ -30,11 +23,6 @@ namespace Bot {
 
         [BsonField("E")] public List<MessageSnapshot> Edits { get; set; } = new List<MessageSnapshot>();
 
-        public class MessageSnapshot {
-            public DateTimeOffset EditTimestamp { get; set; }
-            public string Patch { get; set; }
-        }
-
         public void Save() {
             GlobalDB.Messages.Upsert(this);
         }
@@ -44,12 +32,12 @@ namespace Bot {
         }
 
         public SocketGuildUser GetAuthor() {
-            return Program.Client.GetUser(this.AuthorId) as SocketGuildUser;
+            return Program.Client.GetUser(AuthorId) as SocketGuildUser;
         }
 
         public EmbedBuilder GetEmbed() {
             var author = GetAuthor();
-            EmbedBuilder eb = new EmbedBuilder();
+            var eb = new EmbedBuilder();
             eb.AddField("Последнее содержимое:",
                    $@">>> {MessageHistoryManager.SafeContentCut(Edits.Aggregate("", (s, snapshot) =>
                        MessageHistoryManager.DiffMatchPatch.patch_apply(
@@ -59,6 +47,11 @@ namespace Bot {
               .WithFooter($"Message ID: {MessageId}")
               .WithCurrentTimestamp();
             return eb;
+        }
+
+        public class MessageSnapshot {
+            public DateTimeOffset EditTimestamp { get; set; }
+            public string Patch { get; set; }
         }
     }
 
@@ -93,7 +86,7 @@ namespace Bot {
             try {
                 var textChannel = (ITextChannel) Program.Client.GetChannel(channelId);
                 var messageAsync = await textChannel?.GetMessageAsync(messageId);
-                return (messageAsync as IUserMessage);
+                return messageAsync as IUserMessage;
             }
             catch (Exception) {
                 return null;
@@ -103,9 +96,8 @@ namespace Bot {
         public static async Task PrintLog(ulong messageId, ulong channelId, SocketTextChannel channel, IGuildUser user) {
             IMessageChannel textChannel = channel;
             var ourPermissions = channel.GetUser(Program.Client.CurrentUser.Id).GetPermissions(channel);
-            if (!user.GetPermissions(channel).SendMessages || !ourPermissions.SendMessages || !ourPermissions.AttachFiles) {
+            if (!user.GetPermissions(channel).SendMessages || !ourPermissions.SendMessages || !ourPermissions.AttachFiles)
                 textChannel = await user.GetOrCreateDMChannelAsync();
-            }
 
             var messageLog = MessageHistory.Get(channelId, messageId);
             var message = await GetRealMessage(channelId, messageId);
@@ -133,7 +125,8 @@ namespace Bot {
                         #pragma warning disable 4014
                         ClientOnMessageUpdated(null, message, Program.Client.GetChannel(channelId) as ISocketMessageChannel);
                         #pragma warning restore 4014
-                    } }
+                    }
+                }
 
                 emberBuilder.AddField("Канал", $"<#{channelId}>", true)
                             .WithFooter($"Message ID: {messageId}")
@@ -154,8 +147,8 @@ namespace Bot {
             var guild = GuildConfig.Get(textChannel.GuildId);
             var message = MessageHistory.Get(arg2.Id, arg1.Id);
 
-            if (guild.GetChannel(ChannelFunction.Log, out var logChannel)) {
-                if (logChannel.Id != arg2.Id) {
+            if (guild.GetChannel(ChannelFunction.Log, out var logChannel))
+                if (logChannel.Id != arg2.Id)
                     try {
                         var logImage = await RenderLog(message);
                         var embedBuilder = message.GetEmbed()
@@ -172,8 +165,6 @@ namespace Bot {
                         Console.WriteLine(e.ToString());
                         Console.ForegroundColor = color;
                     }
-                }
-            }
 
             if (message != null) GlobalDB.Messages.Delete(id);
         }
@@ -193,22 +184,21 @@ namespace Bot {
                                  };
 
             if (messageHistory.Edits.Count == 0) {
-                messageHistory.Edits.Add(new MessageHistory.MessageSnapshot() {
+                messageHistory.Edits.Add(new MessageHistory.MessageSnapshot {
                     EditTimestamp = after.CreatedAt,
                     Patch = DiffMatchPatch.patch_toText(DiffMatchPatch.patch_make("", Localization.Get(channel.Id, "OnUpdate.PreviousUnavailable")))
                 });
 
-                if (before != null) {
-                    messageHistory.Edits.Add(new MessageHistory.MessageSnapshot() {
+                if (before != null)
+                    messageHistory.Edits.Add(new MessageHistory.MessageSnapshot {
                         EditTimestamp = before.EditedTimestamp ?? before.Timestamp,
                         Patch = DiffMatchPatch.patch_toText(DiffMatchPatch.patch_make(
                             DiffMatchPatch.patch_apply(messageHistory.Edits.SelectMany(s1 => DiffMatchPatch.patch_fromText(s1.Patch)).ToList(), "")[0]
                                           .ToString(), before.Content))
                     });
-                }
             }
 
-            messageHistory.Edits.Add(new MessageHistory.MessageSnapshot() {
+            messageHistory.Edits.Add(new MessageHistory.MessageSnapshot {
                 EditTimestamp = after.EditedTimestamp ?? after.Timestamp,
                 Patch = DiffMatchPatch.patch_toText(DiffMatchPatch.patch_make(
                     DiffMatchPatch.patch_apply(messageHistory.Edits.SelectMany(s1 => DiffMatchPatch.patch_fromText(s1.Patch)).ToList(), "")[0].ToString(),

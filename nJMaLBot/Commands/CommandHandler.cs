@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Reflection;
 using System.Threading.Tasks;
 using Bot.Config;
@@ -7,26 +6,20 @@ using Bot.Utilities;
 using Discord.Commands;
 using Discord.WebSocket;
 
-namespace Bot.Commands
-{
-    public class CommandHandler
-    {
+namespace Bot.Commands {
+    public class CommandHandler {
+        private DiscordSocketClient _client;
         private CommandService _commands;
         public List<CommandInfo> AllCommands { get; } = new List<CommandInfo>();
-        private DiscordSocketClient _client;
 
         public async Task Install(DiscordSocketClient c) {
             _client = c;
             _commands = new CommandService();
 
             await _commands.AddModulesAsync(Assembly.GetEntryAssembly(), null);
-            _commands.AddTypeReader(typeof(ChannelUtils.ChannelFunction), new ChannelFunctionTypeReader());
-            foreach (var cmdsModule in _commands.Modules)
-            {
-                foreach (var command in cmdsModule.Commands)
-                {
-                    AllCommands.Add(command);
-                }
+            _commands.AddTypeReader(typeof(ChannelFunction), new ChannelFunctionTypeReader());
+            foreach (var cmdsModule in _commands.Modules) {
+                foreach (var command in cmdsModule.Commands) AllCommands.Add(command);
             }
 
             _client.MessageReceived += HandleCommand;
@@ -38,11 +31,13 @@ namespace Bot.Commands
         public async Task AnnounceUserJoined(SocketGuildUser user) { }
 
 
-        public async Task AnnounceUserLeft(SocketGuildUser user) { await Task.Delay(0); }
-        public       void code()                                 { }
+        public async Task AnnounceUserLeft(SocketGuildUser user) {
+            await Task.Delay(0);
+        }
 
-        private async Task HandleCommand(SocketMessage s)
-        {
+        public void code() { }
+
+        private async Task HandleCommand(SocketMessage s) {
             if (!(s is SocketUserMessage msg))
                 return;
 
@@ -51,9 +46,9 @@ namespace Bot.Commands
 
             var argPos = 0;
             if (msg.HasStringPrefix(GuildConfig.Get(guildChannel.Guild.Id).Prefix, ref argPos)) {
-                var result = await _cmds.ExecuteAsync(context, argPos, null);
+                var result = await _commands.ExecuteAsync(context, argPos, null);
 
-                if (!result.IsSuccess) {
+                if (!result.IsSuccess)
                     switch (result.ToString()) {
                         default:
 
@@ -66,10 +61,10 @@ namespace Bot.Commands
                             await msg.DeleteAsync();
 
                             await s.Channel.SendMessageAsync(
-                                string.Format(Localization.Get(s.Channel.Id, "CommandHandler.NotFound"), Prefix));
+                                string.Format(Localization.Get(s.Channel.Id, "CommandHandler.NotFound"),
+                                    GuildConfig.Get(guildChannel.Guild.Id).Prefix));
                             break;
                     }
-                }
             }
         }
     }

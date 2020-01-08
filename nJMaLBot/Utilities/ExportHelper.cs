@@ -4,7 +4,6 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
-using System.Threading;
 using System.Threading.Tasks;
 using DiffMatchPatch;
 using Discord;
@@ -39,7 +38,7 @@ namespace Bot.Utilities {
                     throw new InvalidOperationException($"Unknown export format [{format}].");
             }
         }
-        
+
         public static async Task ExportHistoryAsync(MessageHistory messageHistory, string outputPath) {
             // Create context
             var diffMatchPatch = new diff_match_patch();
@@ -73,9 +72,7 @@ namespace Bot.Utilities {
                 lastString = currentString;
                 // Add encountered users to the list of mentionable users
                 mentionableUsers.Add(ConstructUser(messageHistory.AuthorId));
-                foreach (var userMention in GetUserMentions(lastString)) {
-                    mentionableUsers.Add(userMention);
-                }
+                foreach (var userMention in GetUserMentions(lastString)) mentionableUsers.Add(userMention);
 
                 // var htmlText = diffMatchPatch.diff_prettyHtml(diffs);
                 // var replacedHtml = htmlText.Replace("<span>", "�").Replace("</span>", "�")
@@ -84,7 +81,7 @@ namespace Bot.Utilities {
                 // Render message
                 await renderer.RenderMessageAsync(new Message(
                     messageHistory.Id, messageHistory.ChannelId.ToString(), MessageType.Default, ConstructUser(messageHistory.AuthorId),
-                    messageHistory.Edits.First().EditTimestamp, snapshotPatches.Item2.EditTimestamp, false,lastString, new List<Attachment>(),
+                    messageHistory.Edits.First().EditTimestamp, snapshotPatches.Item2.EditTimestamp, false, lastString, new List<Attachment>(),
                     new List<Embed>(), new List<Reaction>(), new List<User>()));
             }
 
@@ -106,9 +103,8 @@ namespace Bot.Utilities {
         }
 
         private static IEnumerable<User> GetUserMentions(string text) {
-            foreach (Match m in Regex.Matches(text, @"(?<=<@|<@!)[0-9]{18}(?=>)", RegexOptions.Multiline)) {
+            foreach (Match m in Regex.Matches(text, @"(?<=<@|<@!)[0-9]{18}(?=>)", RegexOptions.Multiline))
                 yield return ConstructUser(Convert.ToUInt64(m.Value));
-            }
         }
     }
 }

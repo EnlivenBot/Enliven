@@ -1,18 +1,13 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
-using System.Text;
 using System.Threading;
-using Bot.Commands;
 using Bot.Config;
-using Discord;
 using Newtonsoft.Json;
 
 namespace Bot.Utilities {
-    class Localization {
+    internal class Localization {
         private static Dictionary<string, Dictionary<string, Dictionary<string, string>>> Languages;
 
         private static Timer _updateLanguageTimer = new Timer(state => LoadLanguages(), null, 0,
@@ -29,7 +24,7 @@ namespace Bot.Utilities {
                                                     Utilities.DownloadString(variable.Value)));
             }
             catch (Exception e) {
-                Console.WriteLine($"Error while downloading: {e.ToString()}");
+                Console.WriteLine($"Error while downloading: {e}");
                 Console.WriteLine("Loading default (en) pack.");
                 Languages = new Dictionary<string, Dictionary<string, Dictionary<string, string>>> {
                     {

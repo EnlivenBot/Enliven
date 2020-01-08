@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Concurrent;
-using System.IO;
-using System.Linq;
 using Bot.Commands;
 using Bot.Utilities;
 using Discord;
@@ -14,7 +12,7 @@ namespace Bot.Config {
         public string Prefix { get; set; } = "&";
         public int Volume { get; set; } = 100;
         public ConcurrentDictionary<ChannelFunction, ulong> FunctionalChannels { get; set; } = new ConcurrentDictionary<ChannelFunction, ulong>();
-        public string GuildLanguage { get; set; } = null;
+        public string GuildLanguage { get; set; }
 
         public void Save() {
             GlobalDB.Guilds.Upsert(GuildId, this);
@@ -27,17 +25,15 @@ namespace Bot.Config {
 
     public enum ChannelFunction {
         Log,
-        Music,
+        Music
     }
 
     public partial class GuildConfig {
         public GuildConfig SetChannel(string channelId, ChannelFunction func) {
-            if (channelId == "null") {
+            if (channelId == "null")
                 FunctionalChannels.TryRemove(func, out _);
-            }
-            else {
+            else
                 FunctionalChannels[func] = Convert.ToUInt64(channelId);
-            }
 
             return this;
         }
@@ -60,7 +56,7 @@ namespace Bot.Config {
         public string GetLanguage() {
             if (!string.IsNullOrWhiteSpace(GuildLanguage)) return GuildLanguage;
             try {
-                EmbedBuilder eb = new EmbedBuilder();
+                var eb = new EmbedBuilder();
                 eb.WithFields(HelpUtils.BuildHelpField("setserverlanguage"))
                   .WithTitle(Localization.Get("en", "Help", "HelpMessage") + "`setserverlanguage`")
                   .WithColor(Color.Gold);

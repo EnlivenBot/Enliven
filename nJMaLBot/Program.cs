@@ -1,30 +1,27 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Text;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Bot.Commands;
-using Bot.Utilities;
+using Bot.Config;
 using Discord;
-using Discord.Audio;
 using Discord.WebSocket;
 
 namespace Bot {
-    class Program {
+    internal class Program {
         public static DiscordSocketClient Client;
-        public static event EventHandler<DiscordSocketClient> OnClientConnect;
         public static CommandHandler Handler;
+        public static event EventHandler<DiscordSocketClient> OnClientConnect;
 
-        static void Main(string[] args) {
+        private static void Main(string[] args) {
             Console.WriteLine("Start Initialising");
 
             Console.WriteLine("Starting Bot");
-            System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(MessageHistoryManager).TypeHandle);
+            RuntimeHelpers.RunClassConstructor(typeof(MessageHistoryManager).TypeHandle);
             MainAsync(args).ConfigureAwait(false).GetAwaiter().GetResult();
             ConsoleCommandsHandler();
         }
 
-        static async Task MainAsync(string[] args) {
+        private static async Task MainAsync(string[] args) {
             var c = new DiscordShardedClient();
             var config = new DiscordSocketConfig {MessageCacheSize = 100};
             Client = new DiscordSocketClient(config);
