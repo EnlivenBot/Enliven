@@ -1,25 +1,16 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.IO;
-using System.Net;
-using Bot.Config;
-using Discord;
-using Newtonsoft.Json;
+﻿using System.Net;
 
-namespace Bot.Utilities
-{
-    class Utilities
-    {
+namespace Bot.Utilities {
+    internal static class Utilities {
         public static string DownloadFile(string url, string path) {
-            using (WebClient wc = new WebClient()) {
-                wc.DownloadFile(url, path);
-            }
+            using var wc = new WebClient();
+            wc.DownloadFile(url, path);
 
             return path;
         }
 
         public static string DownloadString(string url) {
-            using WebClient wc = new WebClient();
+            using var wc = new WebClient();
             return wc.DownloadString(url);
         }
     }
