@@ -2,16 +2,35 @@ using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
+using Bot.Commands;
+using Bot.Utilities;
+using Discord;
 using Discord.WebSocket;
 using LiteDB;
 
 namespace Bot.Config {
-    public class GuildConfig {
+    public partial class GuildConfig {
         [BsonId] public ulong GuildId { get; set; }
         public string Prefix { get; set; } = "&";
+        public int Volume { get; set; } = 100;
         public ConcurrentDictionary<ChannelFunction, ulong> FunctionalChannels { get; set; } = new ConcurrentDictionary<ChannelFunction, ulong>();
-        public int Volume { get; set; }
+        public string GuildLanguage { get; set; } = null;
 
+        public void Save() {
+            GlobalDB.Guilds.Upsert(GuildId, this);
+        }
+
+        public static GuildConfig Get(ulong guildId) {
+            return GlobalDB.Guilds.FindById(guildId) ?? new GuildConfig {GuildId = guildId};
+        }
+    }
+
+    public enum ChannelFunction {
+        Log,
+        Music,
+    }
+
+    public partial class GuildConfig {
         public GuildConfig SetChannel(string channelId, ChannelFunction func) {
             if (channelId == "null") {
                 FunctionalChannels.TryRemove(func, out _);
@@ -19,6 +38,7 @@ namespace Bot.Config {
             else {
                 FunctionalChannels[func] = Convert.ToUInt64(channelId);
             }
+
             return this;
         }
 
@@ -37,17 +57,24 @@ namespace Bot.Config {
             return false;
         }
 
-        public void Save() {
-            GlobalDB.Guilds.Upsert(GuildId, this);
-        }
+        public string GetLanguage() {
+            if (!string.IsNullOrWhiteSpace(GuildLanguage)) return GuildLanguage;
+            try {
+                EmbedBuilder eb = new EmbedBuilder();
+                eb.WithFields(HelpUtils.BuildHelpField("setserverlanguage"))
+                  .WithTitle(Localization.Get("en", "Help", "HelpMessage") + "`setserverlanguage`")
+                  .WithColor(Color.Gold);
+                Program.Client.GetGuild(GuildId).DefaultChannel
+                       .SendMessageAsync(Localization.Get("en", "Localization", "LocalizationEmpty"), false, eb.Build());
+            }
+            catch (Exception) {
+                // ignored
+            }
+            finally {
+                GuildLanguage = "en";
+            }
 
-        public static GuildConfig Get(ulong guildId) {
-            return GlobalDB.Guilds.FindById(guildId) ?? new GuildConfig {GuildId = guildId};
+            return GuildLanguage;
         }
-    }
-
-    public enum ChannelFunction {
-        Log,
-        Music,
     }
 }
