@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -24,12 +24,9 @@ namespace Bot {
         public static DiscordSocketClient Client;
         public static event EventHandler<DiscordSocketClient> OnClientConnect;
         public static CommandHandler Handler;
-        public static GlobalConfig GlobalConfig;
-
 
         static void Main(string[] args) {
             Console.WriteLine("Start Initialising");
-            GlobalConfig = GlobalConfig.LoadConfig();
 
             Console.WriteLine("Starting Bot");
             System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(MessageHistoryManager).TypeHandle);
@@ -43,7 +40,7 @@ namespace Bot {
             Client = new DiscordSocketClient(config);
 
             Console.WriteLine("Start authorization");
-            await Client.LoginAsync(TokenType.Bot, GlobalConfig.BotToken);
+            await Client.LoginAsync(TokenType.Bot, GlobalConfig.Instance.BotToken);
             await Client.StartAsync();
 
             Client.ReactionAdded += ReactionAdded;
