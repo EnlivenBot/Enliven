@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Threading.Tasks;
 using Bot.Config;
@@ -23,19 +24,7 @@ namespace Bot.Commands {
             }
 
             _client.MessageReceived += HandleCommand;
-
-            _client.UserJoined += AnnounceUserJoined;
-            _client.UserLeft += AnnounceUserLeft;
         }
-
-        public async Task AnnounceUserJoined(SocketGuildUser user) { }
-
-
-        public async Task AnnounceUserLeft(SocketGuildUser user) {
-            await Task.Delay(0);
-        }
-
-        public void code() { }
 
         private async Task HandleCommand(SocketMessage s) {
             if (!(s is SocketUserMessage msg))
@@ -53,16 +42,18 @@ namespace Bot.Commands {
                         default:
 
                             await s.Channel.SendMessageAsync(
-                                string.Format(Localization.Get(s.Channel.Id, "CommandHandler.Error"),
+                                string.Format(Localization.Get(guildChannel.Guild.Id, "CommandHandler.Error"),
                                     result));
                             break;
                         case "UnknownCommand: Unknown command.":
-
-                            await msg.DeleteAsync();
+                            try {
+                                await msg.DeleteAsync();
+                            }
+                            catch (Exception) { }
 
                             await s.Channel.SendMessageAsync(
-                                string.Format(Localization.Get(s.Channel.Id, "CommandHandler.NotFound"),
-                                    GuildConfig.Get(guildChannel.Guild.Id).Prefix));
+                                        string.Format(Localization.Get(guildChannel.Guild.Id, "CommandHandler.NotFound"),
+                                            GuildConfig.Get(guildChannel.Guild.Id).Prefix));
                             break;
                     }
             }

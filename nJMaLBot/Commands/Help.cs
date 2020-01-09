@@ -49,7 +49,7 @@ namespace Bot.Commands {
         }
     }
 
-    public class HelpCommand : ModuleBase {
+    public class HelpCommand : AdvancedModuleBase {
         [Command("help")]
         [Summary("Показывает информацию о всех командах")]
         public async Task PrintHelp() {

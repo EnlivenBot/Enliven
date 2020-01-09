@@ -35,16 +35,16 @@ namespace Bot {
             return Program.Client.GetUser(AuthorId) as SocketGuildUser;
         }
 
-        public EmbedBuilder GetEmbed() {
+        public EmbedBuilder GetEmbed(LocalizationProvider loc) {
             var author = GetAuthor();
             var eb = new EmbedBuilder();
-            eb.AddField("Последнее содержимое:",
+            eb.AddField(loc.Get("MessageHistory.LastContent"),
                    $@">>> {MessageHistoryManager.SafeContentCut(Edits.Aggregate("", (s, snapshot) =>
                        MessageHistoryManager.DiffMatchPatch.patch_apply(
                            MessageHistoryManager.DiffMatchPatch.patch_fromText(snapshot.Patch), s)[0].ToString()), 1000)}")
-              .AddField("Автор", $"{author?.Username} (<@{AuthorId}>)", true)
-              .AddField("Канал", $"<#{ChannelId}>", true)
-              .WithFooter($"Message ID: {MessageId}")
+              .AddField(loc.Get("MessageHistory.Author"), $"{author?.Username} (<@{AuthorId}>)", true)
+              .AddField(loc.Get("MessageHistory.Channel"), $"<#{ChannelId}>", true)
+              .WithFooter(loc.Get("MessageHistory.MessageId").Format(MessageId))
               .WithCurrentTimestamp();
             return eb;
         }
@@ -56,7 +56,7 @@ namespace Bot {
     }
 
     public static class MessageHistoryManager {
-        public static diff_match_patch DiffMatchPatch = new diff_match_patch();
+        public static readonly diff_match_patch DiffMatchPatch = new diff_match_patch();
 
         static MessageHistoryManager() {
             Program.OnClientConnect += (sender, client) => SetHandlers(client);
@@ -74,7 +74,7 @@ namespace Bot {
             return content.Substring(0, maxLength - 3) + "...";
         }
 
-        public static async Task<byte[]> RenderLog(MessageHistory messageHistory) {
+        private static async Task<byte[]> RenderLog(MessageHistory messageHistory) {
             await ExportHelper.ExportHistoryAsync(messageHistory, $"{messageHistory.Id}.html");
             var converter = new HtmlConverter();
             var bytes = converter.FromHtmlString(File.ReadAllText($"{messageHistory.Id}.html"), 512);
@@ -82,7 +82,7 @@ namespace Bot {
             return bytes;
         }
 
-        public static async Task<IUserMessage> GetRealMessage(ulong channelId, ulong messageId) {
+        private static async Task<IUserMessage> GetRealMessage(ulong channelId, ulong messageId) {
             try {
                 var textChannel = (ITextChannel) Program.Client.GetChannel(channelId);
                 var messageAsync = await textChannel?.GetMessageAsync(messageId);
@@ -95,6 +95,7 @@ namespace Bot {
 
         public static async Task PrintLog(ulong messageId, ulong channelId, SocketTextChannel channel, IGuildUser user) {
             IMessageChannel textChannel = channel;
+            var loc = new LocalizationProvider(channel.Guild.Id);
             var ourPermissions = channel.GetUser(Program.Client.CurrentUser.Id).GetPermissions(channel);
             if (!user.GetPermissions(channel).SendMessages || !ourPermissions.SendMessages || !ourPermissions.AttachFiles)
                 textChannel = await user.GetOrCreateDMChannelAsync();
@@ -103,33 +104,33 @@ namespace Bot {
             var message = await GetRealMessage(channelId, messageId);
             if (messageLog != null) {
                 var logImage = await RenderLog(messageLog);
-                var embedBuilder = messageLog.GetEmbed()
-                                             .WithTitle("История изменений сообщения")
-                                             .WithDescription("История изменений отражена на изображении выше.")
-                                             .WithUrl(message?.GetJumpUrl());
+                var embedBuilder = messageLog.GetEmbed(loc)
+                                             .WithTitle(loc.Get("MessageHistory.LogTitle"))
+                                             .WithDescription(loc.Get("MessageHistory.ImageDescription").Format(message?.GetJumpUrl()));
                 (await textChannel.SendFileAsync(new MemoryStream(logImage),
                     $"History-{messageLog.ChannelId}-{messageLog.MessageId}.jpg",
                     "===========================================", false, embedBuilder.Build())).DelayedDelete(TimeSpan.FromMinutes(10));
             }
             else {
-                var emberBuilder = new EmbedBuilder().WithTitle("История изменений сообщения").WithUrl(message?.GetJumpUrl());
+                var emberBuilder = new EmbedBuilder().WithTitle(loc.Get("MessageHistory.LogTitle"));
                 emberBuilder.WithDescription(
                     message == null
-                        ? "Не удалось получить историю изменений: сообщение не найдено.\nВозможные причины:\n- Неправильный ID\n- Сообщение удалено\n- Бот больше не имеет к нему доступ."
+                        ? loc.Get("MessageHistory.MessageNull")
                         : GlobalDB.IgnoredMessages.FindById($"{channelId}:{messageId}") != null || message.Author.IsBot || message.Author.IsWebhook
-                            ? "Не удалось получить историю изменений, сообщение игнорируется.\nВозможные причины:\n- Сообщение написано ботом"
-                            : "Не удалось получить историю изменений, история не найдена.\nВозможные причины:\n- Сообщение написано до появления бота на сервере\n- Бот во время написания сообщения был оффлайн\n- Сообщение написано в канале лога\n\nСообщение залоггированно.");
+                            ? loc.Get("MessageHistory.MessageIgnore").Format(message.GetJumpUrl())
+                            : loc.Get("MessageHistory.MessageWithoutHistory").Format(message.GetJumpUrl()));
                 if (message != null) {
-                    emberBuilder.AddField("Автор", $"{message.Author?.Username} (<@{message.Author?.Id}>)", true);
-                    if (!(message.Author.IsBot || message.Author.IsWebhook)) {
+                    emberBuilder.AddField(loc.Get("MessageHistory.Author"), $"{message.Author?.Username} (<@{message.Author?.Id}>)",
+                        true);
+                    if (!(message.Author?.IsBot == true || message.Author?.IsWebhook == true)) {
                         #pragma warning disable 4014
                         ClientOnMessageUpdated(null, message, Program.Client.GetChannel(channelId) as ISocketMessageChannel);
                         #pragma warning restore 4014
                     }
                 }
 
-                emberBuilder.AddField("Канал", $"<#{channelId}>", true)
-                            .WithFooter($"Message ID: {messageId}")
+                emberBuilder.AddField(loc.Get("MessageHistory.Channel"), $"<#{channelId}>", true)
+                            .WithFooter(loc.Get("MessageHistory.MessageId").Format(messageId))
                             .WithCurrentTimestamp();
                 (await channel.SendMessageAsync(null, false, emberBuilder.Build())).DelayedDelete(TimeSpan.FromMinutes(10));
             }
@@ -145,18 +146,31 @@ namespace Bot {
             }
 
             var guild = GuildConfig.Get(textChannel.GuildId);
-            var message = MessageHistory.Get(arg2.Id, arg1.Id);
+            var loc = new LocalizationProvider(arg2.Id);
+            var messageLog = MessageHistory.Get(arg2.Id, arg1.Id);
 
             if (guild.GetChannel(ChannelFunction.Log, out var logChannel))
                 if (logChannel.Id != arg2.Id)
                     try {
-                        var logImage = await RenderLog(message);
-                        var embedBuilder = message.GetEmbed()
-                                                  .WithTitle("Сообщение было удалено")
-                                                  .WithDescription("История изменений отражена на изображении выше.");
-                        await ((ISocketMessageChannel) logChannel).SendFileAsync(new MemoryStream(logImage),
-                            $"History-{message.ChannelId}-{message.MessageId}.jpg",
-                            "===========================================", false, embedBuilder.Build());
+                        if (messageLog != null) {
+                            var logImage = await RenderLog(messageLog);
+                            var embedBuilder = messageLog.GetEmbed(loc)
+                                                         .WithTitle(loc.Get("MessageHistory.MessageWasDeleted"))
+                                                         .WithDescription(loc.Get("MessageHistory.ImageDescription"));
+                            await ((ISocketMessageChannel) logChannel).SendFileAsync(new MemoryStream(logImage),
+                                $"History-{messageLog.ChannelId}-{messageLog.MessageId}.jpg",
+                                "===========================================", false, embedBuilder.Build());
+                        }
+                        else {
+                            var embedBuilder = new EmbedBuilder()
+                                              .WithTitle(loc.Get("MessageHistory.MessageWasDeleted"))
+                                              .WithDescription(loc.Get("MessageHistory.OnDeleteWithoutHistory"));
+                            var message = await arg1.GetOrDownloadAsync();
+                            embedBuilder.AddField(loc.Get("MessageHistory.LastContent"),
+                                message == null ? loc.Get("MessageHistory.Unavailable") : message.Content);
+                            await ((ISocketMessageChannel) logChannel).SendMessageAsync("===========================================", false,
+                                embedBuilder.Build());
+                        }
                     }
                     catch (Exception e) {
                         var color = Console.ForegroundColor;
@@ -166,7 +180,7 @@ namespace Bot {
                         Console.ForegroundColor = color;
                     }
 
-            if (message != null) GlobalDB.Messages.Delete(id);
+            if (messageLog != null) GlobalDB.Messages.Delete(id);
         }
 
         private static async Task ClientOnMessageUpdated(IMessage before, IMessage after, ISocketMessageChannel channel) {
@@ -186,7 +200,7 @@ namespace Bot {
             if (messageHistory.Edits.Count == 0) {
                 messageHistory.Edits.Add(new MessageHistory.MessageSnapshot {
                     EditTimestamp = after.CreatedAt,
-                    Patch = DiffMatchPatch.patch_toText(DiffMatchPatch.patch_make("", Localization.Get(channel.Id, "OnUpdate.PreviousUnavailable")))
+                    Patch = DiffMatchPatch.patch_toText(DiffMatchPatch.patch_make("", Localization.Get(textChannel.Guild.Id, "MessageHistory.PreviousUnavailable")))
                 });
 
                 if (before != null)

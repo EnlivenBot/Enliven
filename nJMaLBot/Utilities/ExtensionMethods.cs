@@ -19,5 +19,13 @@ namespace Bot.Utilities {
                 // ignored
             }
         }
+
+        public static string Format(this string format, object arg) {
+            return string.Format(format, arg);
+        }
+        
+        public static string Format(this string format, object arg1, object arg2) {
+            return string.Format(format, arg1, arg2);
+        }
     }
 }

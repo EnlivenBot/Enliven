@@ -57,8 +57,8 @@ namespace Bot.Config {
             if (!string.IsNullOrWhiteSpace(GuildLanguage)) return GuildLanguage;
             try {
                 var eb = new EmbedBuilder();
-                eb.WithFields(HelpUtils.BuildHelpField("setserverlanguage"))
-                  .WithTitle(Localization.Get("en", "Help", "HelpMessage") + "`setserverlanguage`")
+                eb.WithFields(HelpUtils.BuildHelpField("setlanguage"))
+                  .WithTitle(Localization.Get("en", "Help", "HelpMessage") + "`setlanguage`")
                   .WithColor(Color.Gold);
                 Program.Client.GetGuild(GuildId).DefaultChannel
                        .SendMessageAsync(Localization.Get("en", "Localization", "LocalizationEmpty"), false, eb.Build());
@@ -68,9 +68,15 @@ namespace Bot.Config {
             }
             finally {
                 GuildLanguage = "en";
+                Save();
             }
 
             return GuildLanguage;
+        }
+
+        public GuildConfig SetLanguage(string language) {
+            GuildLanguage = language;
+            return this;
         }
     }
 }

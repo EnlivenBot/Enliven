@@ -1,16 +1,8 @@
 {
-  "OnDelete": {
-	"DeletedMessage": " Deleted message:",
-	"MessageDeletedIn": "Сообщение было удалено в <#{0}>",
-	"MessageId": " Message ID: ",
-	"Missing": "```Missing```",
-	"NotNullMessage": " написал сообщение в <#{0}>, которое было только что удалено.\nВот история его изменений:"
-},
-  "OnUpdate": {
-    "PreviousUnavailable": "***Previous entry unavailable"
-  },
   "Localization": {
-    "LocalizationEmpty": "***You didn't select bot's localization on the server.***\nThe default one is for English. How to change server's language:"
+    "LocalizationEmpty": "***Вы не выбрали локализацию бота на сервере.*** \nПо умолчанию используется английский язык. Изменение языка сервера:",
+    "Success": "Успешно изменен язык бота на `{0}`.\n*Это сообщение будет удалено через минуту.",
+    "Fail": "Не существует языка `{0}`.\n Доступны: {1}"
   },
   "Help": {
     "HelpMessage": "Command Help"
@@ -19,12 +11,23 @@
     "Error": "An error occurred! Details: ```{0}```",
     "NotFound": "Command not found! Use the command `{0}help` for a list of commands."
   },
-  "Message": {
-	"ThisMessage": "of [this]({0}) message",
-	"ViewHistory": "View changes history"
-},
   "Commands": {
-	"ThisMessage": "of [this]({0}) message",
-	"history_summary": "View changes history"
-}
+    "SetChannelResponse": "Каналу <#{0}> успешно назначена роль {1}",
+    "SetPrefixResponse": "Успешно изменен префикс бота на `{0}`.\nЕсли вы забыли префикс, то просто упомяните бота."
+  },
+  "MessageHistory": {
+    "PreviousUnavailable": "***Previous entry unavailable",
+    "MessageWasDeleted": "Сообщение было удалено",
+    "LastContent": "Последнее содержимое:",
+    "Channel": "Канал",
+    "Unavailable": "Недоступно",
+    "MessageId": "ID сообщения: {0}",
+    "LogTitle": "История изменений сообщения",
+    "MessageNull": "Не удалось получить историю изменений: сообщение не найдено.\nВозможные причины:\n- Неправильный ID\n- Сообщение удалено\n- Бот больше не имеет к нему доступ.",
+    "MessageIgnore": "Не удалось получить историю изменений, [сообщение]({0}) игнорируется.\nВозможные причины:\n- Сообщение написано ботом",
+    "MessageWithoutHistory": "Не удалось получить историю изменений [сообщения]({0}) — не найдено.\nВозможные причины:\n- Сообщение написано до появления бота на сервере\n- Бот во время написания сообщения был оффлайн\n- Сообщение написано в канале лога\n\nСообщение залоггированно.",
+    "OnDeleteWithoutHistory": "Не удалось получить историю изменений сообщения — не найдено.\nВозможные причины:\n- Сообщение написано до появления бота на сервере\n- Бот во время написания сообщения был оффлайн",
+    "ImageDescription": "История изменений [сообщения]({0}) отражена на изображении выше.",
+    "Author": "Автор"
+  }
 }
