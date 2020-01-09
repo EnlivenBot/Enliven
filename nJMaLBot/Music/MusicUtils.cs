@@ -10,18 +10,25 @@ using Bot.Config;
 using Lavalink4NET;
 using Lavalink4NET.Cluster;
 using Lavalink4NET.DiscordNet;
+using Lavalink4NET.Logging;
+using NLog.Fluent;
+
+#pragma warning disable 4014
 
 namespace Bot.Music {
     public static class MusicUtils {
         public static LavalinkCluster Cluster;
+        private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
 
         static MusicUtils() {
             Program.OnClientConnect += (sender, client) => { SetHandler(); };
         }
 
         private static async Task SetHandler() {
+            logger.Info("Starting music module");
             var nodes = new List<LavalinkNodeOptions>();
             if (GlobalConfig.Instance.IsSelfMusicEnabled) {
+                logger.Info("Starting self music node");
                 var startInfo = new ProcessStartInfo("java", "-jar Lavalink.jar") {
                     CreateNoWindow = false, RedirectStandardError = false, RedirectStandardInput = false,
                     RedirectStandardOutput = false, UseShellExecute = true,
@@ -43,22 +50,41 @@ namespace Bot.Music {
                 }));
 
             if (nodes.Count != 0) {
-                Cluster = new LavalinkCluster(new LavalinkClusterOptions {Nodes = nodes.ToArray()}, new DiscordClientWrapper(Program.Client))
+                logger.Info("Start building music cluster");
+                var lavalinkLogger = new Lavalink4NET.Logging.EventLogger();
+                lavalinkLogger.LogMessage += (sender, args) => {
+                    switch (args.Level) {
+                        case LogLevel.Information:
+                            logger.Info(args.Message);
+                            break;
+                        case LogLevel.Error:
+                            logger.Error(args.Exception, args.Message);
+                            break;
+                        case LogLevel.Warning:
+                            logger.Warn(args.Message);
+                            break;
+                        case LogLevel.Debug:
+                            logger.Info(args.Message);
+                            break;
+                        case LogLevel.Trace:
+                            logger.Trace(args.Message);
+                            break;
+                        default:
+                            logger.Warn(args.Message);
+                            break;
+                    }
+                };
+                Cluster = new LavalinkCluster(new LavalinkClusterOptions {Nodes = nodes.ToArray()}, new DiscordClientWrapper(Program.Client), lavalinkLogger)
                     {StayOnline = true};
                 Task.Run(async () => {
-                    await Task.Delay(TimeSpan.FromSeconds(10));
-                    Exception exception = null;
-                    do {
-                        try {
-                            Console.WriteLine("Trying to connect to nodes!");
-                            await Cluster.InitializeAsync();
-                            exception = null;
-                        }
-                        catch (Exception e) {
-                            exception = e;
-                        }
-                    } while (exception != null);
+                    if (GlobalConfig.Instance.IsSelfMusicEnabled)
+                        await Task.Delay(TimeSpan.FromSeconds(10));
+                    logger.Info("Trying to connect to nodes!");
+                    await Cluster.InitializeAsync();
                 });
+            }
+            else {
+                logger.Warn("Nodes not found, music disabled!");
             }
         }
     }

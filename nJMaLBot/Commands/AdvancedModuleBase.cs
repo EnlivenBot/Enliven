@@ -16,6 +16,7 @@ namespace Bot.Commands {
         }
 
         private Lazy<LocalizationProvider> _loc;
+        private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
 
         protected override void BeforeExecute(CommandInfo command) {
             base.BeforeExecute(command);

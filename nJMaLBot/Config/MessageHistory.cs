@@ -56,6 +56,7 @@ namespace Bot {
     }
 
     public static class MessageHistoryManager {
+        private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
         public static readonly diff_match_patch DiffMatchPatch = new diff_match_patch();
 
         static MessageHistoryManager() {
@@ -106,6 +107,7 @@ namespace Bot {
                 var logImage = await RenderLog(messageLog);
                 var embedBuilder = messageLog.GetEmbed(loc)
                                              .WithTitle(loc.Get("MessageHistory.LogTitle"))
+                                             .AddField(loc.Get("MessageHistory.Requester"), $"{user.Username} (<@{user.Id}>)", true)
                                              .WithDescription(loc.Get("MessageHistory.ImageDescription").Format(message?.GetJumpUrl()));
                 (await textChannel.SendFileAsync(new MemoryStream(logImage),
                     $"History-{messageLog.ChannelId}-{messageLog.MessageId}.jpg",
@@ -130,6 +132,7 @@ namespace Bot {
                 }
 
                 emberBuilder.AddField(loc.Get("MessageHistory.Channel"), $"<#{channelId}>", true)
+                            .AddField(loc.Get("MessageHistory.Requester"), $"{user.Username} (<@{user.Id}>)", true)
                             .WithFooter(loc.Get("MessageHistory.MessageId").Format(messageId))
                             .WithCurrentTimestamp();
                 (await channel.SendMessageAsync(null, false, emberBuilder.Build())).DelayedDelete(TimeSpan.FromMinutes(10));
@@ -173,11 +176,7 @@ namespace Bot {
                         }
                     }
                     catch (Exception e) {
-                        var color = Console.ForegroundColor;
-                        Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine("Exception during print log message!");
-                        Console.WriteLine(e.ToString());
-                        Console.ForegroundColor = color;
+                        logger.Error(e, "Failed to print log message");
                     }
 
             if (messageLog != null) GlobalDB.Messages.Delete(id);
@@ -213,7 +212,7 @@ namespace Bot {
             }
 
             messageHistory.Edits.Add(new MessageHistory.MessageSnapshot {
-                EditTimestamp = after.EditedTimestamp ?? after.Timestamp,
+                EditTimestamp = DateTimeOffset.Now,
                 Patch = DiffMatchPatch.patch_toText(DiffMatchPatch.patch_make(
                     DiffMatchPatch.patch_apply(messageHistory.Edits.SelectMany(s1 => DiffMatchPatch.patch_fromText(s1.Patch)).ToList(), "")[0].ToString(),
                     after.Content))

@@ -28,6 +28,7 @@
     "MessageWithoutHistory": "Failed to get change history [message]({0}) - not found. \nProbable reasons: \n- Message was written before the bot appeared on the server \n- The bot was offline while writing the message \n- Message was written in the log channel \n \nMessage is logged in. ",
     "OnDeleteWithoutHistory": "Failed to get message change history - not found. \nProbable reasons: \n- Message was written before the bot appeared on the server \n- The bot was offline while writing the message",
     "ImageDescription": "The history of the [message]({0}) is reflected in the image above.",
-    "Author": "Author"
+    "Author": "Author",
+    "Requester": "Requester"
   }
 }
