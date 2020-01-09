@@ -15,14 +15,15 @@ namespace Bot.Commands {
                 : await Context.User.GetOrCreateDMChannelAsync();
         }
 
-        private readonly Lazy<LocalizationProvider> _loc;
+        private Lazy<LocalizationProvider> _loc;
 
-        protected AdvancedModuleBase() {
+        protected override void BeforeExecute(CommandInfo command) {
+            base.BeforeExecute(command);
             GuildConfig = GuildConfig.Get(Context.Guild.Id);
             _loc = new Lazy<LocalizationProvider>(() => new LocalizationProvider(GuildConfig));
         }
 
         public LocalizationProvider Loc => _loc.Value;
-        public GuildConfig GuildConfig { get; }
+        public GuildConfig GuildConfig { get; private set; }
     }
 }

@@ -6,6 +6,8 @@ using Bot.Config;
 using Bot.Utilities;
 using Discord.Commands;
 using Discord.WebSocket;
+using Lavalink4NET;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bot.Commands {
     public class CommandHandler {

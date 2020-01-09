@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Bot.Commands;
 using Bot.Config;
+using Bot.Music;
 using Discord;
 using Discord.WebSocket;
 
@@ -17,18 +18,17 @@ namespace Bot {
 
             Console.WriteLine("Starting Bot");
             RuntimeHelpers.RunClassConstructor(typeof(MessageHistoryManager).TypeHandle);
+            RuntimeHelpers.RunClassConstructor(typeof(MusicUtils).TypeHandle);
             MainAsync(args).ConfigureAwait(false).GetAwaiter().GetResult();
             ConsoleCommandsHandler();
         }
 
         private static async Task MainAsync(string[] args) {
-            var c = new DiscordShardedClient();
             var config = new DiscordSocketConfig {MessageCacheSize = 100};
             Client = new DiscordSocketClient(config);
 
             Console.WriteLine("Start authorization");
-            await Client.LoginAsync(TokenType.Bot, GlobalConfig.Instance.BotToken);
-            await Client.StartAsync();
+
 
             Client.ReactionAdded += ReactionAdded;
             Client.Ready += async () => {
@@ -36,10 +36,13 @@ namespace Bot {
                 OnClientConnect?.Invoke(null, Client);
             };
 
+            Client.Disconnected += exception => Client_Disconnected(exception, args);
+
+            await Client.LoginAsync(TokenType.Bot, GlobalConfig.Instance.BotToken);
+            await Client.StartAsync();
+
             Handler = new CommandHandler();
             await Handler.Install(Client);
-
-            Client.Disconnected += exception => Client_Disconnected(exception, args);
         }
 
         private static async Task Client_Disconnected(Exception e, string[] args) {

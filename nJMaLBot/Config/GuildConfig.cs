@@ -10,7 +10,7 @@ namespace Bot.Config {
     public partial class GuildConfig {
         [BsonId] public ulong GuildId { get; set; }
         public string Prefix { get; set; } = "&";
-        public int Volume { get; set; } = 100;
+        public float Volume { get; set; } = 1f;
         public ConcurrentDictionary<ChannelFunction, ulong> FunctionalChannels { get; set; } = new ConcurrentDictionary<ChannelFunction, ulong>();
         public string GuildLanguage { get; set; }
 
@@ -76,6 +76,11 @@ namespace Bot.Config {
 
         public GuildConfig SetLanguage(string language) {
             GuildLanguage = language;
+            return this;
+        }
+        
+        public GuildConfig SetVolume(float volume) {
+            Volume = volume;
             return this;
         }
     }

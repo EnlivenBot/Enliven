@@ -1,6 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Text.Json.Serialization;
+using Bot.Music;
+using Lavalink4NET;
 using Newtonsoft.Json;
 
 namespace Bot.Config {
@@ -12,8 +16,19 @@ namespace Bot.Config {
             return new GlobalConfig();
         });
 
-        public static GlobalConfig Instance = _globalConfig.Value;
+        public static readonly GlobalConfig Instance = _globalConfig.Value;
 
         [JsonPropertyName("Bot Token")] public string BotToken { get; set; } = "Place your token here";
+
+        [JsonPropertyName("Self Music")]
+        [Description("Should the bot run the Lavalink node on its own to play music?")]
+        public bool IsSelfMusicEnabled { get; set; } = true;
+
+        public string SelfPort { get; set; } = "45635";
+        public string SelfPass { get; set; } = "nJMaLBot";
+
+        [JsonPropertyName("Lavalink Nodes")]
+        [Description("Not including self node\nExample:\n{\n  \"Password\": \"youshallnotpass\",\n  \"RestUri\": \"http://localhost:8080/\",\n  \"WebSocketUri\": \"ws://localhost:8080/\"\n}")]
+        public List<LavalinkNodeInfo> LavalinkNodes { get; set; } = new List<LavalinkNodeInfo>();
     }
 }
