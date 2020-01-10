@@ -1,30 +1,34 @@
 {
-	"OnDelete": {
-		"NotNullMessage": " wrote a message in <#{0}>, which was just deleted.\nHere is the history of its changes:",
-		"MessageId": " Message ID: ",
-		"DeletedMessage": " Deleted message:",
-		"Missing": "```Missing```",
-		"MessageDeletedIn": "Сообщение было удалено в <#{0}>"
-	},
-	"OnUpdate": {
-		"PreviousUnavailable": "***Previous entry unavailable"
-	},
-	"Localization": {
-		"LocalizationEmpty": "***We found that your language is not selected on the server.***\nThe default is English. Here is the help for changing the server language:"
-	},
-	"Help": {
-		"HelpMessage": "Command Help"
-	},
-	"CommandHandler": {
-		"Error": "An error occurred! Details: ```{0}```",
-		"NotFound": "Command not found! Use the command `{0}help` for a list of commands."
-	},
-	"Message": {
-		"ViewHistory": "View changes history",
-		"ThisMessage": "of [this]({0}) message"
-	},
-	"Commands": {
-		"history_summary": "View changes history",
-		"ThisMessage": "of [this]({0}) message"
-	}
+  "Localization": {
+    "LocalizationEmpty": "***You didn't select bot's localization on the server.***\nThe default one is for English. Help to change server's language:",
+    "Success": "Successfully changed the bot language to `{0}`.\n* This message will be deleted in a minute.",
+    "Fail": "There is no language {0}.\nAvailable: {1}"
+  },
+  "Help": {
+    "HelpMessage": "Command Help"
+  },
+  "CommandHandler": {
+    "Error": "An error occurred! Details: ```{0}```",
+    "NotFound": "Command not found! Use the command `{0}help` for a list of commands."
+  },
+  "Commands": {
+    "SetChannelResponse": "Channel <#{0}> was successfully assigned the role {1}",
+    "SetPrefixResponse": "Successfully changed the bot prefix to `{0}`.\nIf you forget the prefix, just mention the bot."
+  },
+  "MessageHistory": {
+    "PreviousUnavailable": "***Previous entry unavailable",
+    "MessageWasDeleted": "Message has been deleted",
+    "LastContent": "Last content:",
+    "Channel": "Channel",
+    "Unavailable": "Unavailable",
+    "MessageId": "Message ID: {0}",
+    "LogTitle": "Message Changes History",
+    "MessageNull": "Failed to get change history: message not found. \nProbable reasons: \n- Wrong ID \n- Message deleted \n- The bot no longer has access to it.",
+    "MessageIgnore": "Failed to get change history, [message]({0}) is ignored. \nProbable reasons: \n- Message written by bot",
+    "MessageWithoutHistory": "Failed to get change history [message]({0}) - not found. \nProbable reasons: \n- Message was written before the bot appeared on the server \n- The bot was offline while writing the message \n- Message was written in the log channel \n \nMessage is logged in. ",
+    "OnDeleteWithoutHistory": "Failed to get message change history - not found. \nProbable reasons: \n- Message was written before the bot appeared on the server \n- The bot was offline while writing the message",
+    "ImageDescription": "The history of the [message]({0}) is reflected in the image above.",
+    "Author": "Author",
+    "Requester": "Requester"
+  }
 }

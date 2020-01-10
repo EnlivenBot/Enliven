@@ -2,67 +2,62 @@
 using System.Collections.Generic;
 using System.Reflection;
 using System.Threading.Tasks;
+using Bot.Config;
 using Bot.Utilities;
 using Discord.Commands;
 using Discord.WebSocket;
+using Lavalink4NET;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace Bot.Commands
-{
-    public class CommandHandler
-    {
-        public  CommandService      _cmds;
-        public List<CommandInfo> AllCommands = new List<CommandInfo>();
+namespace Bot.Commands {
+    public class CommandHandler {
         private DiscordSocketClient _client;
-        public const string Prefix = "&";
+        private CommandService _commands;
+        public List<CommandInfo> AllCommands { get; } = new List<CommandInfo>();
 
         public async Task Install(DiscordSocketClient c) {
             _client = c;
-            _cmds = new CommandService();
+            _commands = new CommandService();
 
-            await _cmds.AddModulesAsync(Assembly.GetEntryAssembly(), null);
-            _cmds.AddTypeReader(typeof(ChannelUtils.ChannelFunction), new ChannelFunctionTypeReader());
-            foreach (var cmdsModule in _cmds.Modules) {
-                foreach (var command in cmdsModule.Commands) {
-                    AllCommands.Add(command);
-                }
+            await _commands.AddModulesAsync(Assembly.GetEntryAssembly(), null);
+            _commands.AddTypeReader(typeof(ChannelFunction), new ChannelFunctionTypeReader());
+            foreach (var cmdsModule in _commands.Modules) {
+                foreach (var command in cmdsModule.Commands) AllCommands.Add(command);
             }
 
             _client.MessageReceived += HandleCommand;
-
-            _client.UserJoined += AnnounceUserJoined;
-            _client.UserLeft += AnnounceUserLeft;
         }
 
-        public async Task AnnounceUserJoined(SocketGuildUser user) { }
-
-
-        public async Task AnnounceUserLeft(SocketGuildUser user) { await Task.Delay(0); }
-        public       void code()                                 { }
-
-        public async Task HandleCommand(SocketMessage s) {
-            var msg = s as SocketUserMessage;
-            if (msg == null) return;
+        private async Task HandleCommand(SocketMessage s) {
+            if (!(s is SocketUserMessage msg))
+                return;
 
             var context = new CommandContext(_client, msg);
+            if (!(s.Channel is SocketGuildChannel guildChannel)) return;
 
-            int argPos = 0;
-            if (msg.HasStringPrefix(Prefix, ref argPos)) {
-                var result = await _cmds.ExecuteAsync(context, argPos, null);
+            var argPos = 0;
+            if (msg.HasStringPrefix(GuildConfig.Get(guildChannel.Guild.Id).Prefix, ref argPos)) {
+                var result = await _commands.ExecuteAsync(context, argPos, null);
 
-                if (!result.IsSuccess) {
+                if (!result.IsSuccess)
                     switch (result.ToString()) {
                         default:
 
-                            await s.Channel.SendMessageAsync(String.Format(Localization.Get(s.Channel.Id, "CommandHandler.Error"), result.ToString()));
+                            await s.Channel.SendMessageAsync(
+                                string.Format(Localization.Get(guildChannel.Guild.Id, "CommandHandler.Error"),
+                                    result));
                             break;
                         case "UnknownCommand: Unknown command.":
+                            try {
+                                await msg.DeleteAsync();
+                            }
+                            catch (Exception) { }
 
-                            await msg.DeleteAsync();
-
-                            await s.Channel.SendMessageAsync(String.Format(Localization.Get(s.Channel.Id, "CommandHandler.NotFound"), Prefix));
+                            await s.Channel.SendMessageAsync(
+                                        string.Format(Localization.Get(guildChannel.Guild.Id, "CommandHandler.NotFound"),
+                                            GuildConfig.Get(guildChannel.Guild.Id).Prefix));
                             break;
                     }
-                }
             }
         }
     }

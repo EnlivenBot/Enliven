@@ -1,23 +1,34 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
-using System.Text;
 using System.Text.Json.Serialization;
+using Bot.Music;
+using Lavalink4NET;
 using Newtonsoft.Json;
 
-namespace Bot.Config
-{
-    class GlobalConfig
-    {
-        public static GlobalConfig LoadConfig() {
+namespace Bot.Config {
+    internal class GlobalConfig {
+        private static readonly Lazy<GlobalConfig> _globalConfig = new Lazy<GlobalConfig>(() => {
             if (File.Exists("config.json"))
                 return JsonConvert.DeserializeObject<GlobalConfig>(File.ReadAllText("config.json"));
             File.WriteAllText("config.json", JsonConvert.SerializeObject(new GlobalConfig(), Formatting.Indented));
             return new GlobalConfig();
-        }
+        });
 
-        public void SaveConfig() { File.ReadAllText(JsonConvert.SerializeObject(this, Formatting.Indented)); }
+        public static readonly GlobalConfig Instance = _globalConfig.Value;
 
-        [JsonPropertyName("Bot Token")] public string BotToken { get; set; }
+        [JsonPropertyName("Bot Token")] public string BotToken { get; set; } = "Place your token here";
+
+        [JsonPropertyName("Self Music")]
+        [Description("Should the bot run the Lavalink node on its own to play music?")]
+        public bool IsSelfMusicEnabled { get; set; } = true;
+
+        public string SelfPort { get; set; } = "45635";
+        public string SelfPass { get; set; } = "nJMaLBot";
+
+        [JsonPropertyName("Lavalink Nodes")]
+        [Description("Not including self node\nExample:\n{\n  \"Password\": \"youshallnotpass\",\n  \"RestUri\": \"http://localhost:8080/\",\n  \"WebSocketUri\": \"ws://localhost:8080/\"\n}")]
+        public List<LavalinkNodeInfo> LavalinkNodes { get; set; } = new List<LavalinkNodeInfo>();
     }
 }
