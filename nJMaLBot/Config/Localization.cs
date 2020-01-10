@@ -24,7 +24,7 @@ namespace Bot.Config {
                 #endif
                 #if !DEBUG
                 var indexes = JsonConvert.DeserializeObject<Dictionary<string, string>>(
-                                    Utilities.Utilities.DownloadString(@"https://gitlab.com/skprochlab/nJMaLBot/raw/master/nJMaLBot/Localization/Index.json"));
+                                    Utilities.Utilities.DownloadString(@"https://gitlab.com/skprochlab/nJMaLBot/raw/master/nJMaLBot/Localization/index.json"));
                 #endif
                 logger.Info("Loaded languages: {land}", string.Join(' ', indexes.Select(pair => pair.Key)));
                 return

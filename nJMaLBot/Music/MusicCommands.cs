@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Bot.Commands;
+using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using Lavalink4NET;
@@ -64,7 +65,9 @@ namespace Bot.Music {
 
             if (position == 0)
             {
-                await ReplyAsync("🔈 Playing: " + track.Source);
+                var message = await ReplyAsync("🔈 Playing: " + track.Source);
+                var emote = Emote.Parse("<:GregThinking:660895644864479262>");
+                await message.AddReactionAsync(emote);
             }
             else
             {
@@ -105,7 +108,7 @@ namespace Bot.Music {
         public async Task Stop()
         {
             var player = await GetPlayerAsync();
-
+            
             if (player == null)
             {
                 return;
@@ -137,7 +140,6 @@ namespace Bot.Music {
             }
 
             var player = await GetPlayerAsync();
-
             if (player == null)
             {
                 return;
