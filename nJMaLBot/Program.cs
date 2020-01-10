@@ -63,7 +63,9 @@ namespace Bot {
         }
 
         public static void ConsoleCommandsHandler() {
-            while (true) { }
+            while (true) {
+                var input = Console.ReadLine();
+            }
         }
 
         private static async Task ReactionAdded(Cacheable<IUserMessage, ulong> arg1, ISocketMessageChannel arg2, SocketReaction arg3) {
