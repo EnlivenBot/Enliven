@@ -20,7 +20,7 @@ namespace Bot {
         private static void Main(string[] args) {
             InstallLogger();
             logger.Info("Start Initialising");
-            
+
             RuntimeHelpers.RunClassConstructor(typeof(MessageHistoryManager).TypeHandle);
             RuntimeHelpers.RunClassConstructor(typeof(MusicUtils).TypeHandle);
             MainAsync(args).ConfigureAwait(false).GetAwaiter().GetResult();
@@ -49,6 +49,7 @@ namespace Bot {
                 logger.Fatal(e, "Using non valid bot token - {token}", GlobalConfig.Instance.BotToken);
                 Environment.Exit(-1);
             }
+
             await Client.StartAsync();
 
             Handler = new CommandHandler();
@@ -74,7 +75,7 @@ namespace Bot {
             await ((IUserMessage) ((ISocketMessageChannel) Client.GetChannel(arg2.Id)).GetMessageAsync(arg3.MessageId).Result).RemoveReactionAsync(
                 new Emoji("📖"), arg3.User.Value);
 
-            await MessageHistoryManager.PrintLog(arg1.Id, arg2.Id, (SocketTextChannel) arg2, (IGuildUser) arg3.User.Value);
+            await logger.Swallow(async () => await MessageHistoryManager.PrintLog(arg1.Id, arg2.Id, (SocketTextChannel) arg2, (IGuildUser) arg3.User.Value));
         }
 
         private static void InstallLogger() {

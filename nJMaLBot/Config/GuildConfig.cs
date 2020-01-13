@@ -19,7 +19,13 @@ namespace Bot.Config {
         }
 
         public static GuildConfig Get(ulong guildId) {
-            return GlobalDB.Guilds.FindById(guildId) ?? new GuildConfig {GuildId = guildId};
+            var guildConfig = GlobalDB.Guilds.FindById(guildId);
+            if (guildConfig != null) return guildConfig;
+            
+            guildConfig = new GuildConfig {GuildId = guildId};
+            guildConfig.Save();
+
+            return guildConfig;
         }
     }
 
