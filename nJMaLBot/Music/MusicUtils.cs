@@ -87,5 +87,12 @@ namespace Bot.Music {
                 logger.Warn("Nodes not found, music disabled!");
             }
         }
+
+        public static bool IsValidUrl(string query) {
+            return Uri.TryCreate(query, UriKind.Absolute, out var uriResult) &&
+                   (uriResult.Scheme == Uri.UriSchemeFile || uriResult.Scheme == Uri.UriSchemeFtp ||
+                    uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps ||
+                    uriResult.Scheme == Uri.UriSchemeNetTcp);
+        }
     }
 }

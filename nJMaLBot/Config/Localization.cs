@@ -78,14 +78,34 @@ namespace Bot.Config {
         }
     }
 
-    public class LocalizationProvider {
+    public interface ILocalizationProvider {
+        string Get(string id);
+        string Get(string group, string id);
+    }
+
+    public class LandLocalizationProvider : ILocalizationProvider {
+        private readonly string _lang;
+        public LandLocalizationProvider(string lang) {
+            _lang = lang;
+        }
+
+        public string Get(string id) {
+            return Localization.Get(_lang, id);
+        }
+
+        public string Get(string group, string id) {
+            return Localization.Get(_lang, group, id);
+        }
+    }
+
+    public class GuildLocalizationProvider : ILocalizationProvider {
         private readonly GuildConfig _guildConfig;
 
-        public LocalizationProvider(ulong guildId) {
+        public GuildLocalizationProvider(ulong guildId) {
             _guildConfig = GuildConfig.Get(guildId);
         }
 
-        public LocalizationProvider(GuildConfig guildConfig) {
+        public GuildLocalizationProvider(GuildConfig guildConfig) {
             _guildConfig = guildConfig;
         }
 

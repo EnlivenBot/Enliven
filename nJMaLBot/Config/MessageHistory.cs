@@ -35,7 +35,7 @@ namespace Bot {
             return Program.Client.GetUser(AuthorId) as SocketGuildUser;
         }
 
-        public EmbedBuilder GetEmbed(LocalizationProvider loc) {
+        public EmbedBuilder GetEmbed(ILocalizationProvider loc) {
             var author = GetAuthor();
             var eb = new EmbedBuilder();
             eb.AddField(loc.Get("MessageHistory.LastContent"),
@@ -96,7 +96,7 @@ namespace Bot {
 
         public static async Task PrintLog(ulong messageId, ulong channelId, SocketTextChannel channel, IGuildUser user) {
             IMessageChannel textChannel = channel;
-            var loc = new LocalizationProvider(channel.Guild.Id);
+            var loc = new GuildLocalizationProvider(channel.Guild.Id);
             var ourPermissions = channel.GetUser(Program.Client.CurrentUser.Id).GetPermissions(channel);
             if (!user.GetPermissions(channel).SendMessages || !ourPermissions.SendMessages || !ourPermissions.AttachFiles)
                 textChannel = await user.GetOrCreateDMChannelAsync();
@@ -149,7 +149,7 @@ namespace Bot {
             }
 
             var guild = GuildConfig.Get(textChannel.GuildId);
-            var loc = new LocalizationProvider(arg2.Id);
+            var loc = new GuildLocalizationProvider(arg2.Id);
             var messageLog = MessageHistory.Get(arg2.Id, arg1.Id);
 
             if (guild.GetChannel(ChannelFunction.Log, out var logChannel))

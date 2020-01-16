@@ -4,12 +4,28 @@
     "Success": "Successfully changed the bot language to `{0}`.\n* This message will be deleted in a minute.",
     "Fail": "There is no language {0}.\nAvailable: {1}"
   },
+  "Groups": {
+    "music" : "Music",
+    "admin" : "Administrative",
+    "utils" : "Utilities"
+  },
   "Help": {
-    "HelpMessage": "Command Help"
+    "HelpMessage": "Command Help",
+    "HelpTitle" : "Available commands",
+    "HelpDescription" : "Help for all commands and categories",
+    "NotFoundTitle" : "Command not found",
+    "NotFoundDescription" : "Command `{0}` not found. Type `{1}help` to see all available commands.",
+    "CommandsOfGroup" : "Available commands from group `{0}`",
+    "CommandTitle" : "**{0}** - (Aliases: {1})"
   },
   "CommandHandler": {
-    "Error": "An error occurred! Details: ```{0}```",
-    "NotFound": "Command not found! Use the command `{0}help` for a list of commands."
+    "FailedTitle": "Error executing command",
+    "UnmetPrecondition" : "You do not have permission to execute this command!",
+    "BadArgCount": "Error - the wrong number of arguments for the command. Verify the correctness through `{0}help {1}`",
+    "ParseFailed": "An error occurred while trying to parse the command. Check the arguments through `{0}help {1}`",
+    "Exception": "Error executing command:\n ```{0}```",
+    "UnknownCommand": "Command `{0}` not found! Use the command `{1}help` for a list of commands.",
+    "ByCommand" : "Help for the command `{0}`"
   },
   "Commands": {
     "SetChannelResponse": "Channel <#{0}> was successfully assigned the role {1}",

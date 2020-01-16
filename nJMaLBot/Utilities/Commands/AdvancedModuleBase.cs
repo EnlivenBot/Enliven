@@ -3,9 +3,8 @@ using System.Threading.Tasks;
 using Bot.Config;
 using Discord;
 using Discord.Commands;
-using Discord.WebSocket;
 
-namespace Bot.Commands {
+namespace Bot.Utilities.Commands {
     public class AdvancedModuleBase : ModuleBase {
         public async Task<IMessageChannel> GetResponseChannel(bool fileSupport = false) {
             var bot = (await Context.Guild.GetCurrentUserAsync()).GetPermissions((IGuildChannel) Context.Channel);
@@ -15,16 +14,16 @@ namespace Bot.Commands {
                 : await Context.User.GetOrCreateDMChannelAsync();
         }
 
-        private Lazy<LocalizationProvider> _loc;
+        private Lazy<GuildLocalizationProvider> _loc;
         private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
 
         protected override void BeforeExecute(CommandInfo command) {
             base.BeforeExecute(command);
             GuildConfig = GuildConfig.Get(Context.Guild.Id);
-            _loc = new Lazy<LocalizationProvider>(() => new LocalizationProvider(GuildConfig));
+            _loc = new Lazy<GuildLocalizationProvider>(() => new GuildLocalizationProvider(GuildConfig));
         }
 
-        public LocalizationProvider Loc => _loc.Value;
+        public GuildLocalizationProvider Loc => _loc.Value;
         public GuildConfig GuildConfig { get; private set; }
     }
 }
