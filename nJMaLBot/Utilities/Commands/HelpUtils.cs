@@ -12,7 +12,7 @@ namespace Bot.Utilities.Commands {
             return Program.Handler.AllCommands.GroupBy(info => info.GetGroup()?.GroupName ?? "")
                           .Where(grouping => !string.IsNullOrWhiteSpace(grouping.Key)).Select(infos =>
                                new CommandGroup {
-                                   Commands = infos.SelectMany(info => infos).ToList(), GroupId = infos.Key,
+                                   Commands = infos.ToList(), GroupId = infos.Key,
                                    GroupNameTemplate = $"{{0}} ({{1}}help {infos.Key}):",
                                    GroupTextTemplate = string.Join(' ', infos.Select(info => info.Name)
                                                                              .GroupBy(s => s).Select(grouping => grouping.First())
@@ -34,7 +34,7 @@ namespace Bot.Utilities.Commands {
                 Name = loc.Get("Help.CommandTitle").Format(command, info.Aliases.Aggregate((s, s1) => s + $"`{s1}`")),
                 Value = $"{loc.Get($"Help.{info.Summary}")}\n" +
                         $"```css\n" +
-                        $"{prefix}{info.Name} {(info.Parameters.Count == 0 ? "" : $"[{string.Join("] [", info.Parameters.Select(x => x.Name))}]")}" +
+                        $"{prefix}{info.Name} {(info.Parameters.Count == 0 ? "" : $"[{string.Join("] [", info.Parameters.Select(x => x.Name))}]")}```" +
                         (info.Parameters.Count == 0
                             ? ""
                             : "\n" + string.Join("\n", info.Parameters.Select(x => $"`{x.Name}` - {x.Summary}")))

@@ -4,6 +4,11 @@
     "Success": "Successfully changed the bot language to `{0}`.\n* This message will be deleted in a minute.",
     "Fail": "There is no language {0}.\nAvailable: {1}"
   },
+  "Music" : {
+    "AttachmentAdd" : "`{0}` - successfully added 👍",
+    "AttachmentFail" : "`{0}` - impossible to add 😖",
+    "Volume" : "Volume"
+  },
   "Groups": {
     "music" : "Music",
     "admin" : "Administrative",
@@ -16,7 +21,23 @@
     "NotFoundTitle" : "Command not found",
     "NotFoundDescription" : "Command `{0}` not found. Type `{1}help` to see all available commands.",
     "CommandsOfGroup" : "Available commands from group `{0}`",
-    "CommandTitle" : "**{0}** - (Aliases: {1})"
+    "CommandTitle" : "**{0}** - (Aliases: {1})",
+    "ByCommand": "Command Help `{0}`",
+    "history0s": "Shows the message change history.\nYou can also put emotion 📖 under the desired message",
+    "history0_0s": "ID of the message whose history needs to be displayed. You can also use a pair of `channel ID` -`ID messages`",
+    "setprefix0s": "Assigns a prefix for bot commands",
+    "setrefix0_0s": "New prefix",
+    "setlanguage0s": "Assigns bot response language",
+    "setlanguage0_0s" : "Language",
+    "setchannel0s" : "Specifies the channel that the bot will use for a specific type of message.",
+    "setchannel0_0s" : "Channel Function Name (`music`, `log`)",
+    "setchannel0_1s" : "Channel Link",
+    "play0s" : "Play music by name or URL",
+    "play0_0s" : "Query",
+    "play1s" : "Play music from an attached file",
+    "volume0s" : "Player volume control",
+    "volume0_0s" : "New volume",
+    "stop0s" : "Stops the current track"
   },
   "CommandHandler": {
     "FailedTitle": "Error executing command",

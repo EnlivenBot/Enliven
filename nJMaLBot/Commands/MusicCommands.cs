@@ -78,26 +78,9 @@ namespace Bot.Music {
             Context.Message.SafeDelete();
         }
 
-        [Command("position", RunMode = RunMode.Async)]
-        [Summary("Shows the track position")]
-        public async Task Position() {
-            var player = await GetPlayerAsync();
-
-            if (player == null) {
-                return;
-            }
-
-            if (player.CurrentTrack == null) {
-                await ReplyAsync("Nothing playing!");
-                return;
-            }
-
-            await ReplyAsync($"Position: {player.TrackPosition} / {player.CurrentTrack.Duration}.");
-        }
-
         [Command("stop", RunMode = RunMode.Async)]
         [Alias("s")]
-        [Summary("Stops the current track")]
+        [Summary("stop0s")]
         public async Task Stop() {
             var player = await GetPlayerAsync();
 
