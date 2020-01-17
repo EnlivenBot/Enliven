@@ -3,15 +3,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net.WebSockets;
-using System.Threading;
 using System.Threading.Tasks;
 using Bot.Config;
 using Lavalink4NET;
 using Lavalink4NET.Cluster;
 using Lavalink4NET.DiscordNet;
 using Lavalink4NET.Logging;
-using NLog.Fluent;
 
 #pragma warning disable 4014
 

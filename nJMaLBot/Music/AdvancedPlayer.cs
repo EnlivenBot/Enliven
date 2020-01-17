@@ -20,8 +20,8 @@ namespace Bot.Music {
             await base.SetVolumeAsync(volume, normalize);
             GuildConfig.Get(GuildId).SetVolume(volume).Save();
         }
-
-        public async override Task OnConnectedAsync(VoiceServer voiceServer, VoiceState voiceState) {
+        
+        public override async Task OnConnectedAsync(VoiceServer voiceServer, VoiceState voiceState) {
             await base.SetVolumeAsync(GuildConfig.Get(GuildId).Volume);
             await base.OnConnectedAsync(voiceServer, voiceState);
         }
@@ -36,6 +36,8 @@ namespace Bot.Music {
                             ?.WithTitle(CurrentTrack.Title);
                 ControlMessage?.ModifyAsync(properties => properties.Embed = EmbedBuilder.Build());
             }
+            else {
+            }
             return toReturn;
         }
 
@@ -45,12 +47,9 @@ namespace Bot.Music {
             var toReturn = base.PlayAsync(track, enqueue, startTime, endTime, noReplace);
             var guildConfig = GuildConfig.Get(GuildId);
             if (initialState != PlayerState.Playing && guildConfig.GetChannel(ChannelFunction.Music, out var channel)) {
-                EmbedBuilder?.WithAuthor(string.IsNullOrWhiteSpace(track.Author) ? "Unknown" : track.Author,
-                                  $"https://img.youtube.com/vi/{(string.IsNullOrWhiteSpace(track.TrackIdentifier) ? "" : track.TrackIdentifier)}/0.jpg")
-                            ?.WithThumbnailUrl(
-                                  $"https://img.youtube.com/vi/{(string.IsNullOrWhiteSpace(track.TrackIdentifier) ? "" : track.TrackIdentifier)}/0.jpg")
-                            ?.WithTitle(track.Title)
-                    ?.WithUrl(track.Source);
+                var iconUrl = $"https://img.youtube.com/vi/{(string.IsNullOrWhiteSpace(track.TrackIdentifier) ? "" : track.TrackIdentifier)}/0.jpg";
+                EmbedBuilder?.WithAuthor(string.IsNullOrWhiteSpace(track.Author) ? "Unknown" : track.Author, iconUrl)
+                            ?.WithThumbnailUrl(iconUrl)?.WithTitle(track.Title)?.WithUrl(track.Source);
                 BuildEmbedFields();
                 ControlMessage = await ((ITextChannel) channel).SendMessageAsync("Debug playback", false, EmbedBuilder.Build());
                 UpdateTimer.Start();
@@ -66,7 +65,7 @@ namespace Bot.Music {
         private void BuildEmbedFields() {
             EmbedBuilder.Fields.Clear();
             //ProgressBar has 20 segments
-            var segments = Convert.ToInt32(TrackPosition.TotalSeconds / (double)CurrentTrack.Duration.TotalSeconds * 20);
+            var segments = Math.Min(Convert.ToInt32(TrackPosition.TotalSeconds / (double)CurrentTrack.Duration.TotalSeconds * 20), 20);
             var progressBar = "<==================>";
             if (segments != 0) {
                 progressBar = progressBar.Insert(segments, "**");

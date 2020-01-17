@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Bot.Utilities.Commands;
 using Discord;
@@ -42,6 +43,16 @@ namespace Bot.Utilities {
             return text.Length <= start         ? ""
                 : text.Length - start <= length ? text.Substring(start)
                                                   : text.Substring(start, length);
+        }
+
+        public static string Repeat(this string s, int count) {
+            if (string.IsNullOrEmpty(s)) return string.Empty;
+            if (count <= 0) return string.Empty;
+            var builder = new StringBuilder(s.Length * count);
+
+            for (var i = 0; i < count; i++) builder.Append(s);
+
+            return builder.ToString();
         }
     }
 }

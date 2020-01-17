@@ -3,57 +3,37 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Bot.Commands;
+using Bot.Music;
 using Bot.Utilities;
 using Bot.Utilities.Commands;
-using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
-using Lavalink4NET;
 using Lavalink4NET.Player;
 using Lavalink4NET.Rest;
 
-namespace Bot.Music {
-    /// <summary>
-    ///     Presents some of the main features of the Lavalink4NET-Library.
-    /// </summary>
+namespace Bot.Commands {
     [Grouping("music")]
     [RequireContext(ContextType.Guild)]
     public sealed class MusicCommands : AdvancedModuleBase {
         [Command("play", RunMode = RunMode.Async)]
         [Alias("p")]
-        [Summary("play1s")]
-        public async Task PlayFromAttachment() {
+        [Summary("play0s")]
+        public async Task Play([Remainder] [Summary("play0_0s")] string query = null) {
             var player = await GetPlayerAsync();
             if (player == null) return;
-
+            
             var sb = new StringBuilder();
-            if (Context.Message.Attachments.Count != 0) {
-                foreach (var attachment in Context.Message.Attachments) {
-                    var lavalinkTrack = await MusicUtils.Cluster.GetTrackAsync(attachment.Url);
+            foreach (var attachment in Context.Message.Attachments) {
+                var lavalinkTrack = await MusicUtils.Cluster.GetTrackAsync(attachment.Url);
 
-                    if (lavalinkTrack == null) {
-                        sb.AppendLine(Loc.Get("Music.AttachmentFail").Format(attachment.Filename.SafeSubstring(0, 20)));
-                    }
-                    else {
-                        await player.PlayAsync(lavalinkTrack, enqueue: true);
-                        sb.AppendLine(Loc.Get("Music.AttachmentAdd").Format(attachment.Filename.SafeSubstring(0, 20)));
-                    }
+                if (lavalinkTrack == null) {
+                    sb.AppendLine(Loc.Get("Music.AttachmentFail").Format(attachment.Filename.SafeSubstring(0, 20)));
+                }
+                else {
+                    await player.PlayAsync(lavalinkTrack, enqueue: true);
+                    sb.AppendLine(Loc.Get("Music.AttachmentAdd").Format(attachment.Filename.SafeSubstring(0, 20)));
                 }
             }
-
-            #pragma warning disable 4014
-            ReplyAsync(sb.ToString());
-            #pragma warning restore 4014
-            Context.Message.SafeDelete();
-        }
-
-        [Command("play", RunMode = RunMode.Async)]
-        [Alias("p")]
-        [Summary("play0s")]
-        public async Task Play([Remainder] [Summary("play0_0s")] string query) {
-            var player = await GetPlayerAsync();
-            if (player == null) return;
 
             var tracks = (await MusicUtils.Cluster.GetTracksAsync(query, SearchMode.YouTube)).ToList();
             if (!tracks.Any()) {
@@ -84,8 +64,7 @@ namespace Bot.Music {
         public async Task Stop() {
             var player = await GetPlayerAsync();
 
-            if (player == null) {
-                return;
+            if (player == null) { return;
             }
 
             if (player.CurrentTrack == null) {
