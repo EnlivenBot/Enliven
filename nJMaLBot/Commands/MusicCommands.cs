@@ -98,8 +98,8 @@ namespace Bot.Commands {
             await ReplyAsync($"Volume updated: {volume}%");
         }
 
-        private async Task<AdvancedPlayer> GetPlayerAsync(bool connectToVoiceChannel = true) {
-            var player = MusicUtils.Cluster.GetPlayer<AdvancedPlayer>(Context.Guild.Id);
+        private async Task<EmbedPlaybackPlayer> GetPlayerAsync(bool connectToVoiceChannel = true) {
+            var player = MusicUtils.Cluster.GetPlayer<EmbedPlaybackPlayer>(Context.Guild.Id);
 
             if (player != null
              && player.State != PlayerState.NotConnected
@@ -114,7 +114,7 @@ namespace Bot.Commands {
                 return null;
             }
 
-            if (connectToVoiceChannel) return await MusicUtils.Cluster.JoinAsync<AdvancedPlayer>(Context.Guild.Id, user.VoiceChannel.Id);
+            if (connectToVoiceChannel) return await MusicUtils.Cluster.JoinAsync<EmbedPlaybackPlayer>(Context.Guild.Id, user.VoiceChannel.Id);
             await ReplyAsync("The bot is not in a voice channel!");
             return null;
         }

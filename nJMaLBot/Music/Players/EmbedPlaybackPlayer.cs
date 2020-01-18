@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 using System.Threading.Tasks;
 using System.Timers;
 using Bot.Config;
@@ -10,8 +11,8 @@ using Lavalink4NET.Events;
 using Lavalink4NET.Player;
 
 namespace Bot.Music {
-    public sealed class AdvancedPlayer : PlaylistLavalinkPlayer {
-        public AdvancedPlayer(LavalinkSocket lavalinkSocket, IDiscordClientWrapper client, ulong guildId, bool disconnectOnStop)
+    public sealed class EmbedPlaybackPlayer : PlaylistLavalinkPlayer {
+        public EmbedPlaybackPlayer(LavalinkSocket lavalinkSocket, IDiscordClientWrapper client, ulong guildId, bool disconnectOnStop)
             : base(lavalinkSocket, client, guildId, disconnectOnStop) { }
 
         public override async Task SetVolumeAsync(float volume = 1, bool normalize = false) {
@@ -27,8 +28,8 @@ namespace Bot.Music {
             await base.OnConnectedAsync(voiceServer, voiceState);
         }
 
-        public override Task OnTrackEndAsync(TrackEndEventArgs eventArgs) {
-            var toReturn = base.OnTrackEndAsync(eventArgs);
+        public override async Task OnTrackEndAsync(TrackEndEventArgs eventArgs) {
+            await base.OnTrackEndAsync(eventArgs);
             if (State == PlayerState.Playing) {
                 EmbedBuilder?.WithAuthor(string.IsNullOrWhiteSpace(CurrentTrack.Author) ? "Unknown" : CurrentTrack.Author,
                                   $"https://img.youtube.com/vi/{(string.IsNullOrWhiteSpace(CurrentTrack.TrackIdentifier) ? "" : CurrentTrack.TrackIdentifier)}/0.jpg")
@@ -38,8 +39,6 @@ namespace Bot.Music {
                 ControlMessage?.ModifyAsync(properties => properties.Embed = EmbedBuilder.Build());
             }
             else { }
-
-            return toReturn;
         }
 
         public override async Task<int> PlayAsync(LavalinkTrack track, bool enqueue, TimeSpan? startTime = null, TimeSpan? endTime = null,
@@ -65,21 +64,27 @@ namespace Bot.Music {
 
         private void BuildEmbedFields() {
             EmbedBuilder.Fields.Clear();
-            //ProgressBar has 20 segments
-            var segments = Math.Min(Convert.ToInt32(TrackPosition.TotalSeconds / (double) CurrentTrack.Duration.TotalSeconds * 20), 20);
-            var progressBar = "<==================>";
-            if (segments != 0) {
-                progressBar = progressBar.Insert(segments, "**");
-                progressBar = "**" + progressBar;
-            }
-
+            var progress = Convert.ToInt32(TrackPosition.TotalSeconds / CurrentTrack.Duration.TotalSeconds * 100);
+            var requester = CurrentTrack is AuthoredLavalinkTrack authoredLavalinkTrack ? authoredLavalinkTrack.GetRequester() : "Unknown";
             EmbedBuilder.AddField(
-                $"Requested by: {(CurrentTrack is AuthoredLavalinkTrack authoredLavalinkTrack ? authoredLavalinkTrack.GetRequester() : "Unknown")}",
-                progressBar + $" `{TrackPosition:mm':'ss} / {CurrentTrack.Duration:mm':'ss}`", true);
+                $"Requested by: {requester}",
+                GetProgressString(progress) + $" `{TrackPosition:mm':'ss} / {CurrentTrack.Duration:mm':'ss}`", true);
             EmbedBuilder.AddField(Localization.Get(GuildId, "Music.Volume"), $"{Convert.ToInt32(Volume * 100f)}% 🔉", true);
         }
 
-        private Timer UpdateTimer = new Timer(TimeSpan.FromSeconds(10).TotalMilliseconds);
+        private string GetProgressString(int progress) {
+            var builder = new StringBuilder();
+            builder.Append(ProgressEmoji.Start.GetEmoji(progress));
+            progress -= 10;
+            for (var i = 0; i < 8; i++) {
+                builder.Append(ProgressEmoji.Intermediate.GetEmoji(progress));
+                progress -= 10;
+            }
+            builder.Append(ProgressEmoji.End.GetEmoji(progress));
+            return builder.ToString();
+        }
+
+        private Timer UpdateTimer = new Timer(TimeSpan.FromSeconds(2).TotalMilliseconds);
         private EmbedBuilder EmbedBuilder = new EmbedBuilder();
         private IUserMessage ControlMessage;
 
