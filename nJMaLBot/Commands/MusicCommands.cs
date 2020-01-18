@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Bot.Music;
+using Bot.Music.Players;
 using Bot.Utilities;
 using Bot.Utilities.Commands;
 using Discord.Commands;
@@ -21,7 +22,7 @@ namespace Bot.Commands {
         public async Task Play([Remainder] [Summary("play0_0s")] string query = null) {
             var player = await GetPlayerAsync();
             if (player == null) return;
-            
+
             var sb = new StringBuilder();
             foreach (var attachment in Context.Message.Attachments) {
                 var lavalinkTrack = await MusicUtils.Cluster.GetTrackAsync(attachment.Url);
@@ -35,21 +36,23 @@ namespace Bot.Commands {
                 }
             }
 
-            var tracks = (await MusicUtils.Cluster.GetTracksAsync(query, SearchMode.YouTube)).ToList();
+            var tracks =
+                (await MusicUtils.Cluster.GetTracksAsync(query, SearchMode.YouTube))
+               .Select(track => AuthoredLavalinkTrack.FromLavalinkTrack(track, Context.User)).ToList();
             if (!tracks.Any()) {
                 (await ReplyAsync("😖 No results.")).DelayedDelete(TimeSpan.FromMinutes(10));
                 return;
             }
 
-            tracks = MusicUtils.IsValidUrl(query) ? tracks : new List<LavalinkTrack> {tracks.First()};
-
+            tracks = MusicUtils.IsValidUrl(query) ? tracks : new List<AuthoredLavalinkTrack> {tracks.First()};
 
 
             var position = await player.PlayAsync(tracks.First(), enqueue: true);
-            player.Queue.AddRange(tracks.Skip(1));
+            player.Playlist.AddRange(tracks.Skip(1));
 
             if (position == 0) {
-                (await ReplyAsync($"🔈 Playing: {tracks[0].Source}" + (tracks.Count == 1 ? "" : $" Enqueued `{tracks.Count}` tracks"))).DelayedDelete(TimeSpan.FromMinutes(5));
+                (await ReplyAsync($"🔈 Playing: {tracks[0].Source}" + (tracks.Count == 1 ? "" : $" Enqueued `{tracks.Count}` tracks"))).DelayedDelete(
+                    TimeSpan.FromMinutes(5));
             }
             else {
                 (await ReplyAsync($"🔈 {tracks.Count} added to queue.")).DelayedDelete(TimeSpan.FromMinutes(5));
@@ -64,7 +67,8 @@ namespace Bot.Commands {
         public async Task Stop() {
             var player = await GetPlayerAsync();
 
-            if (player == null) { return;
+            if (player == null) {
+                return;
             }
 
             if (player.CurrentTrack == null) {
@@ -75,11 +79,11 @@ namespace Bot.Commands {
             await player.StopAsync(true);
             await ReplyAsync("Stopped playing.");
         }
-        
+
         [Command("volume", RunMode = RunMode.Async)]
         [Alias("v")]
         [Summary("volume0s")]
-        public async Task Volume([Summary("volume0_0s")]int volume = 100) {
+        public async Task Volume([Summary("volume0_0s")] int volume = 100) {
             if (volume > 1000 || volume < 0) {
                 await ReplyAsync("Volume out of range: 0% - 1000%!");
                 return;
@@ -93,7 +97,7 @@ namespace Bot.Commands {
             await player.SetVolumeAsync(volume / 100f);
             await ReplyAsync($"Volume updated: {volume}%");
         }
-        
+
         private async Task<AdvancedPlayer> GetPlayerAsync(bool connectToVoiceChannel = true) {
             var player = MusicUtils.Cluster.GetPlayer<AdvancedPlayer>(Context.Guild.Id);
 

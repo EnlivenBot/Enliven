@@ -3,13 +3,14 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Timers;
 using Bot.Config;
+using Bot.Music.Players;
 using Discord;
 using Lavalink4NET;
 using Lavalink4NET.Events;
 using Lavalink4NET.Player;
 
 namespace Bot.Music {
-    public sealed class AdvancedPlayer : VoteLavalinkPlayer {
+    public sealed class AdvancedPlayer : PlaylistLavalinkPlayer {
         public AdvancedPlayer(LavalinkSocket lavalinkSocket, IDiscordClientWrapper client, ulong guildId, bool disconnectOnStop)
             : base(lavalinkSocket, client, guildId, disconnectOnStop) { }
 
@@ -20,7 +21,7 @@ namespace Bot.Music {
             await base.SetVolumeAsync(volume, normalize);
             GuildConfig.Get(GuildId).SetVolume(volume).Save();
         }
-        
+
         public override async Task OnConnectedAsync(VoiceServer voiceServer, VoiceState voiceState) {
             await base.SetVolumeAsync(GuildConfig.Get(GuildId).Volume);
             await base.OnConnectedAsync(voiceServer, voiceState);
@@ -36,8 +37,8 @@ namespace Bot.Music {
                             ?.WithTitle(CurrentTrack.Title);
                 ControlMessage?.ModifyAsync(properties => properties.Embed = EmbedBuilder.Build());
             }
-            else {
-            }
+            else { }
+
             return toReturn;
         }
 
@@ -65,14 +66,16 @@ namespace Bot.Music {
         private void BuildEmbedFields() {
             EmbedBuilder.Fields.Clear();
             //ProgressBar has 20 segments
-            var segments = Math.Min(Convert.ToInt32(TrackPosition.TotalSeconds / (double)CurrentTrack.Duration.TotalSeconds * 20), 20);
+            var segments = Math.Min(Convert.ToInt32(TrackPosition.TotalSeconds / (double) CurrentTrack.Duration.TotalSeconds * 20), 20);
             var progressBar = "<==================>";
             if (segments != 0) {
                 progressBar = progressBar.Insert(segments, "**");
                 progressBar = "**" + progressBar;
             }
 
-            EmbedBuilder.AddField("Playback", progressBar + $" `{TrackPosition:mm':'ss} / {CurrentTrack.Duration:mm':'ss}`", true);
+            EmbedBuilder.AddField(
+                $"Requested by: {(CurrentTrack is AuthoredLavalinkTrack authoredLavalinkTrack ? authoredLavalinkTrack.GetRequester() : "Unknown")}",
+                progressBar + $" `{TrackPosition:mm':'ss} / {CurrentTrack.Duration:mm':'ss}`", true);
             EmbedBuilder.AddField(Localization.Get(GuildId, "Music.Volume"), $"{Convert.ToInt32(Volume * 100f)}% 🔉", true);
         }
 
