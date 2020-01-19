@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Bot.Utilities.Commands;
 using Discord;
@@ -29,12 +31,8 @@ namespace Bot.Utilities {
                     info.Module.Attributes.FirstOrDefault(attribute => attribute is GroupingAttribute)) as GroupingAttribute;
         }
 
-        public static string Format(this string format, object arg) {
-            return string.Format(format, arg);
-        }
-
-        public static string Format(this string format, object arg1, object arg2) {
-            return string.Format(format, arg1, arg2);
+        public static string Format(this string format, params object?[] args) {
+            return string.Format(format, args);
         }
 
         public static string SafeSubstring(this string text, int start, int length) {
