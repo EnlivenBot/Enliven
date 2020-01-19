@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using Bot.Commands;
 using Bot.Utilities;
+using Bot.Utilities.Commands;
 using Discord;
 using Discord.WebSocket;
 using LiteDB;
@@ -19,7 +20,13 @@ namespace Bot.Config {
         }
 
         public static GuildConfig Get(ulong guildId) {
-            return GlobalDB.Guilds.FindById(guildId) ?? new GuildConfig {GuildId = guildId};
+            var guildConfig = GlobalDB.Guilds.FindById(guildId);
+            if (guildConfig != null) return guildConfig;
+            
+            guildConfig = new GuildConfig {GuildId = guildId};
+            guildConfig.Save();
+
+            return guildConfig;
         }
     }
 
@@ -57,7 +64,7 @@ namespace Bot.Config {
             if (!string.IsNullOrWhiteSpace(GuildLanguage)) return GuildLanguage;
             try {
                 var eb = new EmbedBuilder();
-                eb.WithFields(HelpUtils.BuildHelpField("setlanguage"))
+                eb.WithFields(HelpUtils.BuildHelpFields("setlanguage", Prefix, new LandLocalizationProvider("en")))
                   .WithTitle(Localization.Get("en", "Help", "HelpMessage") + "`setlanguage`")
                   .WithColor(Color.Gold);
                 Program.Client.GetGuild(GuildId).DefaultChannel

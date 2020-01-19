@@ -1,68 +1,55 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using Bot.Utilities;
+using Bot.Utilities.Commands;
 using Discord;
 using Discord.Commands;
 
 namespace Bot.Commands {
-    internal static class HelpUtils {
-        public static IEnumerable<EmbedFieldBuilder> BuildHelpField(string command) {
-            return Program.Handler.AllCommands
-                          .Where(x => x.Aliases.Any(y => y == command))
-                          .Select(thisCommand => new EmbedFieldBuilder {
-                               Name = $"**{command}** - (Псевдонимы: `{string.Join("`,`", thisCommand.Aliases)}`)",
-                               Value =
-                                   $"{thisCommand.Summary}\n```css\n&{thisCommand.Name} {(thisCommand.Parameters.Count == 0 ? "" : $"[{string.Join("] [", thisCommand.Parameters.Select(x => x.Name))}]")}```" +
-                                   (thisCommand.Parameters.Count == 0
-                                       ? ""
-                                       : "\n" + string.Join("\n", thisCommand.Parameters.Select(x => $"`{x.Name}` - {x.Summary}")))
-                           });
-        }
-
-        public static void PrintHelpByCommand(ulong channelId, string command, string comment = "") {
-            var eb = new EmbedBuilder();
-
-            eb.WithDescription(comment)
-              .WithFields(BuildHelpField(command))
-              .WithTitle($"Справка о команде `{command}`")
-              .WithColor(Color.Gold);
-
-            (Program.Client.GetChannel(channelId) as IMessageChannel)?.SendMessageAsync("", false, eb.Build());
-        }
-
-        public static void PrintHelp(ulong channelId) {
-            var fields = Program.Handler.AllCommands
-                                .Select(thisCommand => new EmbedFieldBuilder {
-                                     Name =
-                                         $"**{thisCommand.Name}** {(thisCommand.Parameters.Count == 0 ? "" : $"[{string.Join("] [", thisCommand.Parameters.Select(x => x.Name))}]")} - (Псевдонимы: `{string.Join("`,`", thisCommand.Aliases)}`)",
-                                     Value = $"{thisCommand.Summary}"
-                                 }).ToList();
-
-            //Program.Handler.AllCommands.GroupBy()
-            var eb = new EmbedBuilder();
-
-            eb.WithTitle("Список доступных команд:")
-              .WithColor(Color.Gold)
-              .WithFields(fields);
-
-            (Program.Client.GetChannel(channelId) as IMessageChannel)?.SendMessageAsync("", false, eb.Build());
-        }
-    }
-
     public class HelpCommand : AdvancedModuleBase {
         [Command("help")]
         [Summary("Показывает информацию о всех командах")]
         public async Task PrintHelp() {
-            await Context.Message.DeleteAsync();
-            HelpUtils.PrintHelp(Context.Channel.Id);
+            var eb = new EmbedBuilder();
+            eb.WithTitle(Loc.Get("Help.HelpTitle"))
+              .WithColor(Color.Gold)
+              .AddField($"{GuildConfig.Prefix}help", Loc.Get("Help.HelpDescription"))
+              .WithFooter(Context.User.Username, Context.User.GetAvatarUrl())
+              .WithFields(HelpUtils.CommandsGroups.Value.Select(pair =>
+                   new EmbedFieldBuilder {
+                       Name = pair.Value.GroupNameTemplate.Format(Loc.Get($"Groups.{pair.Key}"), GuildConfig.Prefix),
+                       Value = pair.Value.GroupTextTemplate.Format(GuildConfig.Prefix)
+                   }));
+            (await (await GetResponseChannel()).SendMessageAsync(null, false, eb.Build())).DelayedDelete(TimeSpan.FromMinutes(10));
         }
 
         [Command("help")]
         [Summary("Показывает информацию о определенной команде")]
-        public async Task PrintHelp([Remainder] [Summary("Название команды")]
+        public async Task PrintHelp([Remainder] [Summary("Название команды или группы")]
                                     string message) {
-            HelpUtils.PrintHelpByCommand(Context.Channel.Id, message);
-            await Context.Message.DeleteAsync();
+            var eb = new EmbedBuilder()
+                    .WithFooter(Context.User.Username, Context.User.GetAvatarUrl())
+                    .WithColor(Color.Gold);
+            if (HelpUtils.CommandsGroups.Value.TryGetValue(message, out var commandGroup)) {
+                eb.WithTitle(Loc.Get("Help.CommandsOfGroup").Format(message))
+                  .WithFields(commandGroup.Commands.Select(info => new EmbedFieldBuilder {
+                       Name = $"{GuildConfig.Prefix}{info.Name}",
+                       Value = Loc.Get($"Help.{info.Summary}")
+                   }));
+            }
+            else if (HelpUtils.CommandAliases.Value.Contains(message)) {
+                eb.WithTitle(Loc.Get("Help.ByCommand").Format(message))
+                  .WithFields(HelpUtils.BuildHelpFields(message, GuildConfig.Prefix, Loc));
+            }
+            else {
+                eb.WithTitle(Loc.Get("Help.NotFoundTitle"))
+                  .WithDescription(Loc.Get("Help.NotFoundDescription").Format(message.SafeSubstring(0, 1900), GuildConfig.Prefix));
+            }
+
+            (await (await GetResponseChannel()).SendMessageAsync(null, false, eb.Build())).DelayedDelete(TimeSpan.FromMinutes(10));
         }
     }
 }

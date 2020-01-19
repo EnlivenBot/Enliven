@@ -3,19 +3,19 @@ using System.Linq;
 using System.Threading.Tasks;
 using Bot.Config;
 using Bot.Utilities;
+using Bot.Utilities.Commands;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using NeoSmart.Unicode;
 
 namespace Bot.Commands {
+    [Grouping("utils")]
     public class GetLogByMessage : AdvancedModuleBase {
         [Command("history", RunMode = RunMode.Async)]
-        [Summary("Показывает историю изменений сообщения.\n" +
-                 "Так-же можно поставить эмоцию 📖 под нужное сообщение")]
+        [Summary("history0s")]
         public async Task PrintChanges(
-            [Remainder] [Summary("ID сообщения, чью историю нужно вывести. Так-же можно использовать пару `ID канала`-`ID сообщения`")]
-            string id) {
+            [Remainder] [Summary("history0_0s")] string id) {
             var channelId = Context.Channel.Id;
             var messageId = id;
             if (id.Contains('-')) {
@@ -27,37 +27,20 @@ namespace Bot.Commands {
         }
     }
 
-    [RequireUserPermission(GuildPermission.Administrator)]
-    public class ChannelsCommands : AdvancedModuleBase {
-        [Command("setchannel")]
-        [Summary("Назначает канал, который будет использоваться ботом для определенного типа сообщений")]
-        public async Task SetChannel([Summary("Название функции канала (`music`, `log`)")]
-                                     ChannelFunction func, [Summary("Ссылка на канал")] IChannel channel) {
-            GuildConfig.Get(Context.Guild.Id).SetChannel(channel.Id.ToString(), func).Save();
-            await (await GetResponseChannel()).SendMessageAsync(Loc.Get("Commands.SetChannelResponse").Format(channel.Id, func.ToString()));
-            Context.Message.SafeDelete();
-        }
-
-        [Command("setchannel")]
-        [Summary("Назначает канал, который будет использоваться ботом для определенного типа сообщений")]
-        public async Task SetThisChannel([Summary("Ссылка на канал")] ChannelFunction func) {
-            await SetChannel(func, Context.Channel);
-        }
-    }
-
+    [Grouping("admin")]
     [RequireUserPermission(GuildPermission.Administrator)]
     public class ServerCommands : AdvancedModuleBase {
         [Command("setprefix")]
-        [Summary("Назначает префикс для команд бота")]
-        public async Task SetPrefix([Summary("Префикс")] string prefix) {
+        [Summary("setprefix0s")]
+        public async Task SetPrefix([Summary("setrefix0_0s")] string prefix) {
             GuildConfig.Get(Context.Guild.Id).SetServerPrefix(prefix).Save();
             await (await GetResponseChannel()).SendMessageAsync(Loc.Get("Commands.SetPrefixResponse").Format(prefix));
             Context.Message.SafeDelete();
         }
 
         [Command("setlanguage")]
-        [Summary("Назначает язык ответов бота")]
-        public async Task SetLanguage([Summary("Язык")] string language) {
+        [Summary("setlanguage0s")]
+        public async Task SetLanguage([Summary("setlanguage0_0s")] string language) {
             if (Localization.Languages.ContainsKey(language)) {
                 GuildConfig.Get(Context.Guild.Id).SetLanguage(language).Save();
                 Context.Message.SafeDelete();
@@ -71,6 +54,21 @@ namespace Bot.Commands {
                                                                                       string.Join(' ', Localization.Languages.Select(pair => $"`{pair.Key}`"))))
                     ).DelayedDelete(TimeSpan.FromMinutes(1));
             }
+        }
+
+        [Command("setchannel")]
+        [Summary("setchannel0s")]
+        public async Task SetChannel([Summary("setchannel0_0s")] ChannelFunction func,
+                                     [Summary("setchannel0_1s")] IChannel channel) {
+            GuildConfig.Get(Context.Guild.Id).SetChannel(channel.Id.ToString(), func).Save();
+            await (await GetResponseChannel()).SendMessageAsync(Loc.Get("Commands.SetChannelResponse").Format(channel.Id, func.ToString()));
+            Context.Message.SafeDelete();
+        }
+
+        [Command("setchannel")]
+        [Summary("setchannel0s")]
+        public async Task SetThisChannel([Summary("setchannel0_1s")] ChannelFunction func) {
+            await SetChannel(func, Context.Channel);
         }
     }
 }

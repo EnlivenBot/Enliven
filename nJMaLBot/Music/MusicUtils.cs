@@ -3,15 +3,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net.WebSockets;
-using System.Threading;
 using System.Threading.Tasks;
 using Bot.Config;
 using Lavalink4NET;
 using Lavalink4NET.Cluster;
 using Lavalink4NET.DiscordNet;
 using Lavalink4NET.Logging;
-using NLog.Fluent;
 
 #pragma warning disable 4014
 
@@ -86,6 +83,13 @@ namespace Bot.Music {
             else {
                 logger.Warn("Nodes not found, music disabled!");
             }
+        }
+
+        public static bool IsValidUrl(string query) {
+            return Uri.TryCreate(query, UriKind.Absolute, out var uriResult) &&
+                   (uriResult.Scheme == Uri.UriSchemeFile || uriResult.Scheme == Uri.UriSchemeFtp ||
+                    uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps ||
+                    uriResult.Scheme == Uri.UriSchemeNetTcp);
         }
     }
 }

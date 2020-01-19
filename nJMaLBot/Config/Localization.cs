@@ -24,7 +24,7 @@ namespace Bot.Config {
                 #endif
                 #if !DEBUG
                 var indexes = JsonConvert.DeserializeObject<Dictionary<string, string>>(
-                                    Utilities.Utilities.DownloadString(@"https://gitlab.com/skprochlab/nJMaLBot/raw/master/nJMaLBot/Localization/Index.json"));
+                                    Utilities.Utilities.DownloadString(@"https://gitlab.com/skprochlab/nJMaLBot/raw/master/nJMaLBot/Localization/index.json"));
                 #endif
                 logger.Info("Loaded languages: {land}", string.Join(' ', indexes.Select(pair => pair.Key)));
                 return
@@ -78,14 +78,34 @@ namespace Bot.Config {
         }
     }
 
-    public class LocalizationProvider {
+    public interface ILocalizationProvider {
+        string Get(string id);
+        string Get(string group, string id);
+    }
+
+    public class LandLocalizationProvider : ILocalizationProvider {
+        private readonly string _lang;
+        public LandLocalizationProvider(string lang) {
+            _lang = lang;
+        }
+
+        public string Get(string id) {
+            return Localization.Get(_lang, id);
+        }
+
+        public string Get(string group, string id) {
+            return Localization.Get(_lang, group, id);
+        }
+    }
+
+    public class GuildLocalizationProvider : ILocalizationProvider {
         private readonly GuildConfig _guildConfig;
 
-        public LocalizationProvider(ulong guildId) {
+        public GuildLocalizationProvider(ulong guildId) {
             _guildConfig = GuildConfig.Get(guildId);
         }
 
-        public LocalizationProvider(GuildConfig guildConfig) {
+        public GuildLocalizationProvider(GuildConfig guildConfig) {
             _guildConfig = guildConfig;
         }
 
