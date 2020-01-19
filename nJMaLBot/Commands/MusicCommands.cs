@@ -7,10 +7,13 @@ using Bot.Music;
 using Bot.Music.Players;
 using Bot.Utilities;
 using Bot.Utilities.Commands;
+using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using Lavalink4NET.Player;
 using Lavalink4NET.Rest;
+
+#pragma warning disable 4014
 
 namespace Bot.Commands {
     [Grouping("music")]
@@ -20,45 +23,46 @@ namespace Bot.Commands {
         [Alias("p")]
         [Summary("play0s")]
         public async Task Play([Remainder] [Summary("play0_0s")] string query = null) {
+            var message = ReplyAsync(Loc.Get("Music.Loading"));
             var player = await GetPlayerAsync();
             if (player == null) return;
 
-            var sb = new StringBuilder();
-            foreach (var attachment in Context.Message.Attachments) {
-                var lavalinkTrack = await MusicUtils.Cluster.GetTrackAsync(attachment.Url);
-
-                if (lavalinkTrack == null) {
-                    sb.AppendLine(Loc.Get("Music.AttachmentFail").Format(attachment.Filename.SafeSubstring(0, 20)));
+            var lavalinkTracks = new List<LavalinkTrack>();
+            if (Context.Message.Attachments.Count != 0) {
+                var lavalinkTrack = await MusicUtils.Cluster.GetTrackAsync(Context.Message.Attachments.First().Url);
+                if (lavalinkTrack != null) {
+                    lavalinkTracks.Add(lavalinkTrack);
                 }
                 else {
-                    await player.PlayAsync(lavalinkTrack, enqueue: true);
-                    sb.AppendLine(Loc.Get("Music.AttachmentAdd").Format(attachment.Filename.SafeSubstring(0, 20)));
+                    (await message).ModifyAsync(properties => {
+                        properties.Content = "";
+                        properties.Embed = new EmbedBuilder().WithTitle(Loc.Get("Music.Fail")).WithDescription(Loc.Get("Music.AttachmentFail")).Build();
+                    });
+                    return;
                 }
             }
-
-            var tracks =
-                (await MusicUtils.Cluster.GetTracksAsync(query, SearchMode.YouTube))
-               .Select(track => AuthoredLavalinkTrack.FromLavalinkTrack(track, Context.User)).ToList();
-            if (!tracks.Any()) {
-                (await ReplyAsync("😖 No results.")).DelayedDelete(TimeSpan.FromMinutes(10));
-                return;
-            }
-
-            tracks = MusicUtils.IsValidUrl(query) ? tracks : new List<AuthoredLavalinkTrack> {tracks.First()};
-
-
-            var position = await player.PlayAsync(tracks.First(), enqueue: true);
-            player.Playlist.AddRange(tracks.Skip(1));
-
-            if (position == 0) {
-                (await ReplyAsync($"🔈 Playing: {tracks[0].Source}" + (tracks.Count == 1 ? "" : $" Enqueued `{tracks.Count}` tracks"))).DelayedDelete(
-                    TimeSpan.FromMinutes(5));
+            else if (MusicUtils.IsValidUrl(query)) {
+                lavalinkTracks.AddRange(await MusicUtils.Cluster.GetTracksAsync(query, SearchMode.YouTube));
             }
             else {
-                (await ReplyAsync($"🔈 {tracks.Count} added to queue.")).DelayedDelete(TimeSpan.FromMinutes(5));
+                var track = await MusicUtils.Cluster.GetTrackAsync(query, SearchMode.YouTube);
+                if (track != null) {
+                    lavalinkTracks.Add(track);
+                }
             }
-
-            Context.Message.SafeDelete();
+            
+            if (!lavalinkTracks.Any()) {
+                (await message).ModifyAsync(properties => {
+                    properties.Content = "";
+                    properties.Embed = new EmbedBuilder().WithTitle(Loc.Get("Music.Fail")).WithDescription(Loc.Get("Music.NotFound")).Build();
+                });
+                return;
+            }
+            
+            var tracks = lavalinkTracks.Select(track => AuthoredLavalinkTrack.FromLavalinkTrack(track, Context.User)).ToList();
+            player.SetControlMessage(await message);
+            await player.PlayAsync(tracks.First(), true);
+            player.Playlist.AddRange(tracks.Skip(1));
         }
 
         [Command("stop", RunMode = RunMode.Async)]

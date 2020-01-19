@@ -5,15 +5,27 @@ using System.Threading.Tasks;
 using System.Timers;
 using Bot.Config;
 using Bot.Music.Players;
+using Bot.Utilities;
 using Discord;
 using Lavalink4NET;
 using Lavalink4NET.Events;
 using Lavalink4NET.Player;
+using Lavalink4NET.Rest;
 
 namespace Bot.Music {
     public sealed class EmbedPlaybackPlayer : PlaylistLavalinkPlayer {
         public EmbedPlaybackPlayer(LavalinkSocket lavalinkSocket, IDiscordClientWrapper client, ulong guildId, bool disconnectOnStop)
-            : base(lavalinkSocket, client, guildId, disconnectOnStop) { }
+            : base(lavalinkSocket, client, guildId, disconnectOnStop) {
+            Playlist.Update += (sender, args) => PlaylistString = GetPlaylistString(Playlist, CurrentTrackIndex);
+            CurrentTrackIndexChange += (sender, args) => PlaylistString = GetPlaylistString(Playlist, args);
+            UpdateTimer.Elapsed += (sender, args) => {
+                BuildEmbedFields();
+                ControlMessage?.ModifyAsync(properties => {
+                    properties.Embed = EmbedBuilder.Build();
+                    properties.Content = "";
+                });
+            };
+        }
 
         public override async Task SetVolumeAsync(float volume = 1, bool normalize = false) {
             EnsureNotDestroyed();
@@ -29,6 +41,7 @@ namespace Bot.Music {
         }
 
         public override async Task OnTrackEndAsync(TrackEndEventArgs eventArgs) {
+            UpdateTimer.Stop();
             await base.OnTrackEndAsync(eventArgs);
             if (State == PlayerState.Playing) {
                 EmbedBuilder?.WithAuthor(string.IsNullOrWhiteSpace(CurrentTrack.Author) ? "Unknown" : CurrentTrack.Author,
@@ -38,7 +51,14 @@ namespace Bot.Music {
                             ?.WithTitle(CurrentTrack.Title);
                 ControlMessage?.ModifyAsync(properties => properties.Embed = EmbedBuilder.Build());
             }
-            else { }
+            else if (State != PlayerState.Paused) {
+                if (eventArgs.Reason == TrackEndReason.Finished) { }
+            }
+        }
+
+        public override void Cleanup() {
+            UpdateTimer.Stop();
+            base.Cleanup();
         }
 
         public override async Task<int> PlayAsync(LavalinkTrack track, bool enqueue, TimeSpan? startTime = null, TimeSpan? endTime = null,
@@ -51,14 +71,10 @@ namespace Bot.Music {
                 EmbedBuilder?.WithAuthor(string.IsNullOrWhiteSpace(track.Author) ? "Unknown" : track.Author, iconUrl)
                             ?.WithThumbnailUrl(iconUrl)?.WithTitle(track.Title)?.WithUrl(track.Source);
                 BuildEmbedFields();
-                ControlMessage = await ((ITextChannel) channel).SendMessageAsync("Debug playback", false, EmbedBuilder.Build());
-                UpdateTimer.Start();
-                UpdateTimer.Elapsed += (sender, args) => {
-                    BuildEmbedFields();
-                    ControlMessage.ModifyAsync(properties => properties.Embed = EmbedBuilder.Build());
-                };
+                ControlMessage ??= await ((ITextChannel) channel).SendMessageAsync("", false, EmbedBuilder.Build());
             }
 
+            UpdateTimer.Start();
             return await toReturn;
         }
 
@@ -68,8 +84,9 @@ namespace Bot.Music {
             var requester = CurrentTrack is AuthoredLavalinkTrack authoredLavalinkTrack ? authoredLavalinkTrack.GetRequester() : "Unknown";
             EmbedBuilder.AddField(
                 $"Requested by: {requester}",
-                GetProgressString(progress) + $" `{TrackPosition:mm':'ss} / {CurrentTrack.Duration:mm':'ss}`", true);
+                GetProgressString(progress) + $"  `{TrackPosition:mm':'ss} / {CurrentTrack.Duration:mm':'ss}`", true);
             EmbedBuilder.AddField(Localization.Get(GuildId, "Music.Volume"), $"{Convert.ToInt32(Volume * 100f)}% 🔉", true);
+            EmbedBuilder.AddField("Queue", PlaylistString);
         }
 
         private string GetProgressString(int progress) {
@@ -80,14 +97,51 @@ namespace Bot.Music {
                 builder.Append(ProgressEmoji.Intermediate.GetEmoji(progress));
                 progress -= 10;
             }
+
             builder.Append(ProgressEmoji.End.GetEmoji(progress));
             return builder.ToString();
         }
 
-        private Timer UpdateTimer = new Timer(TimeSpan.FromSeconds(2).TotalMilliseconds);
+        private string GetPlaylistString(LavalinkPlaylist playlist, int index) {
+            try {
+                var globalStringBuilder = new StringBuilder();
+                string lastAuthor = null;
+                var authorStringBuilder = new StringBuilder();
+                for (var i = Math.Max(index - 1, 0); i < index + 5; i++) {
+                    if (!playlist.TryGetValue(i, out var track) || !(track is AuthoredLavalinkTrack authoredLavalinkTrack)) continue;
+                    var author = authoredLavalinkTrack.GetRequester();
+                    if (author != lastAuthor && lastAuthor != null) FinalizeBlock();
+                    authorStringBuilder.Replace("└", "├");
+                    authorStringBuilder.AppendLine(index == i
+                        ?$"@{i + 1}   ".SafeSubstring(0, 4) + $"└{authoredLavalinkTrack.Title.SafeSubstring(0, 40).Trim()}"
+                        :$" {i + 1}   ".SafeSubstring(0, 4) + $"└{authoredLavalinkTrack.Title.SafeSubstring(0, 40).Trim()}");
+                    lastAuthor = author;
+                }
+
+                FinalizeBlock();
+
+                void FinalizeBlock() {
+                    globalStringBuilder.AppendLine($"────┬────{lastAuthor}");
+                    globalStringBuilder.Append(authorStringBuilder);
+
+                    authorStringBuilder = new StringBuilder();
+                }
+
+
+                return $"```py\n{globalStringBuilder}```";
+            }
+            catch (Exception) {
+                return "Failed";
+            }
+        }
+
+        private string PlaylistString;
+        private Timer UpdateTimer = new Timer(TimeSpan.FromSeconds(4).TotalMilliseconds);
         private EmbedBuilder EmbedBuilder = new EmbedBuilder();
         private IUserMessage ControlMessage;
 
-        public void SetControlMessage(IMessage message) { }
+        public void SetControlMessage(IUserMessage message) {
+            ControlMessage = (IUserMessage) message;
+        }
     }
 }

@@ -8,6 +8,7 @@ namespace Bot.Music.Players {
     public sealed class LavalinkPlaylist : IList<LavalinkTrack> {
         private readonly List<LavalinkTrack> _list;
         private readonly object _syncRoot;
+        public event EventHandler Update;
 
         public LavalinkPlaylist() {
             _list = new List<LavalinkTrack>();
@@ -36,6 +37,7 @@ namespace Bot.Music.Players {
                 lock (_syncRoot) {
                     _list.Clear();
                     _list.AddRange(value);
+                    OnUpdate();
                 }
             }
         }
@@ -52,24 +54,34 @@ namespace Bot.Music.Players {
 
         public void Add(LavalinkTrack track) {
             if (track == null) throw new ArgumentNullException(nameof(track));
-            lock (_syncRoot) _list.Add(track);
+            lock (_syncRoot) {
+                _list.Add(track);
+                OnUpdate();
+            }
         }
 
         public void AddRange(IEnumerable<LavalinkTrack> tracks) {
             if (tracks == null) throw new ArgumentNullException(nameof(tracks));
-            lock (_syncRoot) _list.AddRange(tracks);
+            lock (_syncRoot) {
+                _list.AddRange(tracks);
+                OnUpdate();
+            }
         }
 
         public int Clear() {
             lock (_syncRoot) {
                 int count = _list.Count;
                 _list.Clear();
+                OnUpdate();
                 return count;
             }
         }
 
         void ICollection<LavalinkTrack>.Clear() {
-            lock (_syncRoot) _list.Clear();
+            lock (_syncRoot) {
+                _list.Clear();
+                OnUpdate();
+            }
         }
 
         public bool Contains(LavalinkTrack track) {
@@ -94,21 +106,13 @@ namespace Bot.Music.Players {
             }
         }
 
-        public LavalinkTrack Dequeue() {
-            lock (_syncRoot) {
-                if (_list.Count <= 0) throw new InvalidOperationException("No tracks in to dequeue.");
-                LavalinkTrack lavalinkTrack = _list[0];
-                _list.RemoveAt(0);
-                return lavalinkTrack;
-            }
-        }
-
         public void Distinct() {
             lock (_syncRoot) {
                 if (_list.Count <= 1) return;
                 LavalinkTrack[] array = _list.GroupBy(track => track.Identifier).Select(s => s.First()).ToArray();
                 _list.Clear();
                 _list.AddRange(array);
+                OnUpdate();
             }
         }
 
@@ -126,23 +130,40 @@ namespace Bot.Music.Players {
         }
 
         public void Insert(int index, LavalinkTrack track) {
-            lock (_syncRoot) _list.Insert(index, track);
+            lock (_syncRoot) {
+                _list.Insert(index, track);
+                OnUpdate();
+            }
         }
 
         public bool Remove(LavalinkTrack track) {
-            lock (_syncRoot) return _list.Remove(track);
+            lock (_syncRoot) {
+                var result = _list.Remove(track);
+                OnUpdate();
+                return result;
+            }
         }
 
         public int RemoveAll(Predicate<LavalinkTrack> predicate) {
-            lock (_syncRoot) return _list.RemoveAll(predicate);
+            lock (_syncRoot) {
+                var result =  _list.RemoveAll(predicate);
+                OnUpdate();
+                return result;
+            }
         }
 
         public void RemoveAt(int index) {
-            lock (_syncRoot) _list.RemoveAt(index);
+            lock (_syncRoot) {
+                _list.RemoveAt(index);
+                OnUpdate();
+            }
         }
 
         public void RemoveRange(int index, int count) {
-            lock (_syncRoot) _list.RemoveRange(index, count);
+            lock (_syncRoot) {
+                _list.RemoveRange(index, count);
+                OnUpdate();
+            }
         }
 
         public void Shuffle() {
@@ -151,6 +172,7 @@ namespace Bot.Music.Players {
                 LavalinkTrack[] array = _list.OrderBy(s => Guid.NewGuid()).ToArray();
                 _list.Clear();
                 _list.AddRange(array);
+                OnUpdate();
             }
         }
 
@@ -163,8 +185,13 @@ namespace Bot.Music.Players {
 
                 track = _list[0];
                 _list.RemoveAt(0);
+                OnUpdate();
                 return true;
             }
+        }
+
+        private void OnUpdate() {
+            Update?.Invoke(this, EventArgs.Empty);
         }
     }
 }

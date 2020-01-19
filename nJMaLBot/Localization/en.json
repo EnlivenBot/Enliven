@@ -5,9 +5,11 @@
     "Fail": "There is no language {0}.\nAvailable: {1}"
   },
   "Music" : {
-    "AttachmentAdd" : "`{0}` - successfully added 👍",
-    "AttachmentFail" : "`{0}` - impossible to add 😖",
-    "Volume" : "Volume"
+    "Fail" : "Error",
+    "AttachmentFail" : "Error adding `{0}`",
+    "NotFound" : "No results for `{}`",
+    "Volume" : "Volume",
+    "Loading" : "Loading"
   },
   "Groups": {
     "music" : "Music",
