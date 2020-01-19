@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Timers;
@@ -41,18 +42,28 @@ namespace Bot.Music {
         }
 
         public override async Task OnTrackEndAsync(TrackEndEventArgs eventArgs) {
-            UpdateTimer.Stop();
             await base.OnTrackEndAsync(eventArgs);
-            if (State == PlayerState.Playing) {
-                EmbedBuilder?.WithAuthor(string.IsNullOrWhiteSpace(CurrentTrack.Author) ? "Unknown" : CurrentTrack.Author,
-                                  $"https://img.youtube.com/vi/{(string.IsNullOrWhiteSpace(CurrentTrack.TrackIdentifier) ? "" : CurrentTrack.TrackIdentifier)}/0.jpg")
-                            ?.WithThumbnailUrl(
-                                  $"https://img.youtube.com/vi/{(string.IsNullOrWhiteSpace(CurrentTrack.TrackIdentifier) ? "" : CurrentTrack.TrackIdentifier)}/0.jpg")
-                            ?.WithTitle(CurrentTrack.Title);
-                ControlMessage?.ModifyAsync(properties => properties.Embed = EmbedBuilder.Build());
-            }
-            else if (State != PlayerState.Paused) {
-                if (eventArgs.Reason == TrackEndReason.Finished) { }
+            switch (State) {
+                case PlayerState.Playing:
+                    EmbedBuilder?.WithAuthor(string.IsNullOrWhiteSpace(CurrentTrack.Author) ? "Unknown" : CurrentTrack.Author,
+                                      $"https://img.youtube.com/vi/{(string.IsNullOrWhiteSpace(CurrentTrack.TrackIdentifier) ? "" : CurrentTrack.TrackIdentifier)}/0.jpg")
+                                ?.WithThumbnailUrl(
+                                      $"https://img.youtube.com/vi/{(string.IsNullOrWhiteSpace(CurrentTrack.TrackIdentifier) ? "" : CurrentTrack.TrackIdentifier)}/0.jpg")
+                                ?.WithTitle(CurrentTrack.Title);
+                    ControlMessage?.ModifyAsync(properties => properties.Embed = EmbedBuilder.Build());
+                    break;
+                case PlayerState.NotPlaying:
+                    break;
+                case PlayerState.Destroyed:
+                    UpdateTimer.Stop();
+                    break;
+                case PlayerState.Paused:
+                    break;
+                case PlayerState.NotConnected:
+                    UpdateTimer.Stop();
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
         }
 
@@ -86,7 +97,7 @@ namespace Bot.Music {
                 $"Requested by: {requester}",
                 GetProgressString(progress) + $"  `{TrackPosition:mm':'ss} / {CurrentTrack.Duration:mm':'ss}`", true);
             EmbedBuilder.AddField(Localization.Get(GuildId, "Music.Volume"), $"{Convert.ToInt32(Volume * 100f)}% 🔉", true);
-            EmbedBuilder.AddField("Queue", PlaylistString);
+            EmbedBuilder.AddField(Localization.Get(GuildId, "Music.Queue"), PlaylistString);
         }
 
         private string GetProgressString(int progress) {
@@ -111,10 +122,9 @@ namespace Bot.Music {
                     if (!playlist.TryGetValue(i, out var track) || !(track is AuthoredLavalinkTrack authoredLavalinkTrack)) continue;
                     var author = authoredLavalinkTrack.GetRequester();
                     if (author != lastAuthor && lastAuthor != null) FinalizeBlock();
-                    authorStringBuilder.Replace("└", "├");
-                    authorStringBuilder.AppendLine(index == i
-                        ?$"@{i + 1}   ".SafeSubstring(0, 4) + $"└{authoredLavalinkTrack.Title.SafeSubstring(0, 40).Trim()}"
-                        :$" {i + 1}   ".SafeSubstring(0, 4) + $"└{authoredLavalinkTrack.Title.SafeSubstring(0, 40).Trim()}");
+                    authorStringBuilder.Replace("└", "├").Replace("▬", "│");
+                    authorStringBuilder.Append(GetTrackString(authoredLavalinkTrack.Title.Replace("'", "").Replace("#", ""), 
+                        i + 1, 40, CurrentTrackIndex == i));
                     lastAuthor = author;
                 }
 
@@ -122,11 +132,21 @@ namespace Bot.Music {
 
                 void FinalizeBlock() {
                     globalStringBuilder.AppendLine($"────┬────{lastAuthor}");
-                    globalStringBuilder.Append(authorStringBuilder);
+                    globalStringBuilder.Append(authorStringBuilder.Replace("▬", " "));
 
-                    authorStringBuilder = new StringBuilder();
+                    authorStringBuilder.Clear();
                 }
 
+                StringBuilder GetTrackString(string title, int trackNumber, int maxLength, bool isCurrent) {
+                    var lines = Utilities.Utilities.SplitToLines(title, maxLength);
+                    var sb = new StringBuilder();
+                    sb.AppendLine($"{(isCurrent ? "@" : " ")}{trackNumber}   ".SafeSubstring(0, 4) + "└" + lines.First());
+                    foreach (var line in lines.Skip(1)) {
+                        sb.AppendLine((isCurrent ? "@" : " ").PadRight(4) + "▬" + line.SafeSubstring(0, 40));
+                    }
+
+                    return sb;
+                }
 
                 return $"```py\n{globalStringBuilder}```";
             }
@@ -141,7 +161,8 @@ namespace Bot.Music {
         private IUserMessage ControlMessage;
 
         public void SetControlMessage(IUserMessage message) {
-            ControlMessage = (IUserMessage) message;
+            ControlMessage?.SafeDelete();
+            ControlMessage = message;
         }
     }
 }

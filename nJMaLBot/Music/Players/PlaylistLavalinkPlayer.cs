@@ -69,10 +69,10 @@ namespace Bot.Music.Players {
         //     return true;
         // }
 
-        public virtual async Task SkipAsync(int count = 1) {
+        public virtual async Task SkipAsync(int count = 1, bool force = false) {
             EnsureNotDestroyed();
             EnsureConnected();
-            if (LoopingState == LoopingState.LoopingTrack && CurrentTrack != null) {
+            if (!force && LoopingState == LoopingState.LoopingTrack && CurrentTrack != null) {
                 await PlayAsync(CurrentTrack, false, new TimeSpan?(), new TimeSpan?());
                 return;
             }
@@ -83,7 +83,7 @@ namespace Bot.Music.Players {
             }
 
             CurrentTrackIndex += count;
-            if (CurrentTrackIndex < 0) CurrentTrackIndex = Playlist.Count - 1;
+            CurrentTrackIndex = Math.Min(Math.Max(CurrentTrackIndex, 0), Playlist.Count - 1);
             
             if (Playlist.TryGetValue(CurrentTrackIndex, out var track)) {
                 await PlayAsync(track, false, new TimeSpan?(), new TimeSpan?());

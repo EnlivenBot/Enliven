@@ -50,7 +50,7 @@ namespace Bot.Commands {
                     lavalinkTracks.Add(track);
                 }
             }
-            
+
             if (!lavalinkTracks.Any()) {
                 (await message).ModifyAsync(properties => {
                     properties.Content = "";
@@ -58,7 +58,7 @@ namespace Bot.Commands {
                 });
                 return;
             }
-            
+
             var tracks = lavalinkTracks.Select(track => AuthoredLavalinkTrack.FromLavalinkTrack(track, Context.User)).ToList();
             player.SetControlMessage(await message);
             await player.PlayAsync(tracks.First(), true);
@@ -81,15 +81,44 @@ namespace Bot.Commands {
             }
 
             await player.StopAsync(true);
+            Context.Message.SafeDelete();
             await ReplyAsync("Stopped playing.");
+        }
+
+        [Command("jump", RunMode = RunMode.Async)]
+        [Alias("j", "skip", "next", "n")]
+        [Summary("jump0s")]
+        public async Task Jump([Summary("jump0_0s")] int index = 1) {
+            var player = await GetPlayerAsync();
+            if (player == null)
+                return;
+
+            await player.SkipAsync(index, true);
+            Context.Message.SafeDelete();
+        }
+
+        [Command("goto", RunMode = RunMode.Async)]
+        [Alias("g")]
+        [Summary("goto0s")]
+        public async Task Goto([Summary("goto0_0s")] int index) {
+            var player = await GetPlayerAsync();
+            if (player == null)
+                return;
+
+            if (player.Playlist.TryGetValue(index - 1, out var track)) {
+                await player.PlayAsync(track, false, new TimeSpan?(), new TimeSpan?());
+            }
+            else {
+                (await ReplyAsync(Loc.Get("Music.TrackIndexWrong").Format(Context.User.Mention, index, player.Playlist.Count))).DelayedDelete(TimeSpan.FromMinutes(5));
+            }
         }
 
         [Command("volume", RunMode = RunMode.Async)]
         [Alias("v")]
         [Summary("volume0s")]
         public async Task Volume([Summary("volume0_0s")] int volume = 100) {
-            if (volume > 1000 || volume < 0) {
-                await ReplyAsync("Volume out of range: 0% - 1000%!");
+            if (volume > 150 || volume < 0) {
+                await ReplyAsync("Volume out of range: 0% - 150%!");
                 return;
             }
 
@@ -99,6 +128,7 @@ namespace Bot.Commands {
             }
 
             await player.SetVolumeAsync(volume / 100f);
+            Context.Message.SafeDelete();
             await ReplyAsync($"Volume updated: {volume}%");
         }
 

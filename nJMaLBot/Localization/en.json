@@ -9,7 +9,9 @@
     "AttachmentFail" : "Error adding `{0}`",
     "NotFound" : "No results for `{}`",
     "Volume" : "Volume",
-    "Loading" : "Loading"
+    "Loading" : "Loading",
+    "Queue" : "Queue",
+    "TrackIndexWrong" : "{0}, the playlist does not have a track with the index `{1}`. The valid value is from `1` to `{2}`"
   },
   "Groups": {
     "music" : "Music",
@@ -39,7 +41,11 @@
     "play1s" : "Play music from an attached file",
     "volume0s" : "Player volume control",
     "volume0_0s" : "New volume",
-    "stop0s" : "Stops the current track"
+    "stop0s" : "Stops the current track",
+    "jump0s" : "Moves the playhead to the specified number of tracks. Can move back.",
+    "jump0_0s" : "Number of tracks",
+    "goto0s" : "Moves the playhead to a specific track by its index",
+    "goto0_0s" : "Index of track"
   },
   "CommandHandler": {
     "FailedTitle": "Error executing command",
