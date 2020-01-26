@@ -18,16 +18,9 @@ namespace Bot.Config {
         private static Dictionary<string, Dictionary<string, Dictionary<string, string>>> LoadLanguages() {
             logger.Info("Start loading localizations packs...");
             try {
-                #if DEBUG
                 var indexes = Directory.GetFiles("../../../Localization")
-                                       .ToDictionary(Path.GetFileNameWithoutExtension)
-                                       .Where(pair => pair.Key != "index");
-                #endif
-                #if !DEBUG
-                var indexes = JsonConvert.DeserializeObject<Dictionary<string, string>>(
-                                    Utilities.Utilities.DownloadString(@"https://gitlab.com/skprochlab/nJMaLBot/raw/master/nJMaLBot/Localization/index.json"));
-                #endif
-                logger.Info("Loaded languages: {land}", string.Join(' ', indexes.Select(pair => pair.Key)));
+                                       .ToDictionary(Path.GetFileNameWithoutExtension);
+                logger.Info("Loaded languages: {lang}.", string.Join(", ", indexes.Select(pair => pair.Key)));
                 return
                     indexes.ToDictionary(variable => variable.Key,
                         variable =>
