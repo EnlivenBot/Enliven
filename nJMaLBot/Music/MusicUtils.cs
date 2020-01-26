@@ -54,7 +54,7 @@ namespace Bot.Music {
 
             if (nodes.Count != 0) {
                 logger.Info("Start building music cluster");
-                var lavalinkLogger = new Lavalink4NET.Logging.EventLogger();
+                var lavalinkLogger = new EventLogger();
                 lavalinkLogger.LogMessage += (sender, args) => {
                     switch (args.Level) {
                         case LogLevel.Information:
@@ -77,14 +77,27 @@ namespace Bot.Music {
                             break;
                     }
                 };
-                Cluster = new LavalinkCluster(new LavalinkClusterOptions {Nodes = nodes.ToArray()}, new DiscordClientWrapper(Program.Client), lavalinkLogger)
-                    {StayOnline = true};
-                Task.Run(async () => {
-                    if (GlobalConfig.Instance.IsSelfMusicEnabled)
-                        await Task.Delay(TimeSpan.FromSeconds(10));
-                    logger.Info("Trying to connect to nodes!");
-                    await Cluster.InitializeAsync();
-                });
+                try {
+                    Cluster = new LavalinkCluster(new LavalinkClusterOptions {Nodes = nodes.ToArray()}, new DiscordClientWrapper(Program.Client),
+                            lavalinkLogger) {StayOnline = true};
+                    Task.Run(async () => {
+                        if (GlobalConfig.Instance.IsSelfMusicEnabled)
+                            await Task.Delay(TimeSpan.FromSeconds(10));
+                        logger.Info("Trying to connect to nodes!");
+                        await Cluster.InitializeAsync();
+
+                        logger.Info("initializing InactivityTrackingService instance with default options");
+                        var inactivityTrackingService = new InactivityTrackingService(Cluster, new DiscordClientWrapper(Program.Client),
+                            new InactivityTrackingOptions {
+                                TrackInactivity = true,
+                                DisconnectDelay = TimeSpan.FromSeconds(10),
+                                PollInterval = TimeSpan.FromSeconds(4)
+                            }, lavalinkLogger);
+                    });
+                }
+                catch (Exception e) {
+                    logger.Fatal(e, "Exception with music cluster");
+                }
             }
             else {
                 logger.Warn("Nodes not found, music disabled!");
