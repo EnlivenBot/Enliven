@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Bot.Config;
 using Bot.Music;
 using Bot.Music.Players;
 using Bot.Utilities;
@@ -10,8 +11,10 @@ using Bot.Utilities.Commands;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using DiscordChatExporter.Core.Models;
 using Lavalink4NET.Player;
 using Lavalink4NET.Rest;
+using Embed = Discord.Embed;
 
 #pragma warning disable 4014
 
@@ -23,46 +26,46 @@ namespace Bot.Commands {
         [Alias("p")]
         [Summary("play0s")]
         public async Task Play([Remainder] [Summary("play0_0s")] string query = null) {
-            var message = ReplyAsync(Loc.Get("Music.Loading"));
+            var replyMessageTask = ReplyAsync(Loc.Get("Music.Loading"));
             var player = await GetPlayerAsync();
             if (player == null) return;
 
-            var lavalinkTracks = new List<LavalinkTrack>();
-            if (Context.Message.Attachments.Count != 0) {
-                var lavalinkTrack = await MusicUtils.Cluster.GetTrackAsync(Context.Message.Attachments.First().Url);
-                if (lavalinkTrack != null) {
-                    lavalinkTracks.Add(lavalinkTrack);
-                }
-                else {
-                    (await message).ModifyAsync(properties => {
-                        properties.Content = "";
-                        properties.Embed = new EmbedBuilder().WithTitle(Loc.Get("Music.Fail")).WithDescription(Loc.Get("Music.AttachmentFail")).Build();
-                    });
-                    return;
-                }
-            }
-            else if (MusicUtils.IsValidUrl(query)) {
-                lavalinkTracks.AddRange(await MusicUtils.Cluster.GetTracksAsync(query, SearchMode.YouTube));
-            }
-            else {
-                var track = await MusicUtils.Cluster.GetTrackAsync(query, SearchMode.YouTube);
-                if (track != null) {
-                    lavalinkTracks.Add(track);
-                }
-            }
-
-            if (!lavalinkTracks.Any()) {
-                (await message).ModifyAsync(properties => {
-                    properties.Content = "";
-                    properties.Embed = new EmbedBuilder().WithTitle(Loc.Get("Music.Fail")).WithDescription(Loc.Get("Music.NotFound")).Build();
+            if (GetChannel(out var channel)) {
+                var lastMessage = await replyMessageTask;
+                #pragma warning disable 4014
+                lastMessage.ModifyAsync(properties => {
+                    #pragma warning restore 4014
+                    properties.Content = Localization.Get(GuildConfig, "Music.PlaybackMoved").Format(channel.Id);
+                    properties.Embed = Optional<Embed>.Unspecified;
                 });
-                return;
+                lastMessage.DelayedDelete(TimeSpan.FromMinutes(5));
+
+                replyMessageTask = ((ITextChannel) channel).SendMessageAsync(Localization.Get(GuildConfig, "Music.Loading"));
             }
 
-            var tracks = lavalinkTracks.Select(track => AuthoredLavalinkTrack.FromLavalinkTrack(track, Context.User)).ToList();
-            player.SetControlMessage(await message);
-            await player.PlayAsync(tracks.First(), true);
-            player.Playlist.AddRange(tracks.Skip(1));
+            player.SetControlMessage(await replyMessageTask);
+            try {
+                var tracks = (await MusicUtils.GetMusic(Context.Message, query))
+                            .Select(track => AuthoredLavalinkTrack.FromLavalinkTrack(track, Context.User))
+                            .ToList();
+                await player.PlayAsync(tracks.First(), true);
+                player.Playlist.AddRange(tracks.Skip(1));
+            }
+            catch (TrackNotFoundException) {
+                player.ControlMessage.ModifyAsync(properties => {
+                    properties.Content = "";
+                    properties.Embed = new EmbedBuilder().WithTitle(Loc.Get("Music.Fail"))
+                                                         .WithDescription(Loc.Get("Music.NotFound").Format(query.SafeSubstring(0, 512)))
+                                                         .WithColor(Color.Red).Build();
+                });
+            }
+            catch (AttachmentAddFailException) {
+                player.ControlMessage.ModifyAsync(properties => {
+                    properties.Content = "";
+                    properties.Embed = new EmbedBuilder().WithTitle(Loc.Get("Music.Fail")).WithDescription(Loc.Get("Music.AttachmentFail"))
+                                                         .WithColor(Color.Red).Build();
+                });
+            }
         }
 
         [Command("stop", RunMode = RunMode.Async)]
@@ -70,10 +73,8 @@ namespace Bot.Commands {
         [Summary("stop0s")]
         public async Task Stop() {
             var player = await GetPlayerAsync();
-
-            if (player == null) {
+            if (player == null)
                 return;
-            }
 
             if (player.CurrentTrack == null) {
                 await ReplyAsync("Nothing playing!");
@@ -109,7 +110,8 @@ namespace Bot.Commands {
                 await player.PlayAsync(track, false, new TimeSpan?(), new TimeSpan?());
             }
             else {
-                (await ReplyAsync(Loc.Get("Music.TrackIndexWrong").Format(Context.User.Mention, index, player.Playlist.Count))).DelayedDelete(TimeSpan.FromMinutes(5));
+                (await ReplyAsync(Loc.Get("Music.TrackIndexWrong").Format(Context.User.Mention, index, player.Playlist.Count))).DelayedDelete(
+                    TimeSpan.FromMinutes(5));
             }
         }
 
@@ -151,6 +153,14 @@ namespace Bot.Commands {
             if (connectToVoiceChannel) return await MusicUtils.Cluster.JoinAsync<EmbedPlaybackPlayer>(Context.Guild.Id, user.VoiceChannel.Id);
             await ReplyAsync("The bot is not in a voice channel!");
             return null;
+        }
+
+        private bool GetChannel(out IMessageChannel channel) {
+            channel = Context.Channel;
+            if (!GuildConfig.GetChannel(ChannelFunction.Music, out var musicChannel) || Context.Message.Channel.Id == channel.Id) return false;
+            channel = (IMessageChannel) musicChannel;
+            return true;
+
         }
     }
 }

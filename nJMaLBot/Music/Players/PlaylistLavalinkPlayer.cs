@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Lavalink4NET;
 using Lavalink4NET.Events;
@@ -7,7 +8,7 @@ using Lavalink4NET.Player;
 namespace Bot.Music.Players {
     public class PlaylistLavalinkPlayer : LavalinkPlayer {
         private readonly bool _disconnectOnStop;
-        private int _currentTrackIndex = 0;
+        private int _currentTrackIndex;
 
         public PlaylistLavalinkPlayer(LavalinkSocket lavalinkSocket, IDiscordClientWrapper client, ulong guildId, bool disconnectOnStop)
             : base(lavalinkSocket, client, guildId, false) {
@@ -19,17 +20,37 @@ namespace Bot.Music.Players {
         public LavalinkPlaylist Playlist { get; }
 
         public event EventHandler<int> CurrentTrackIndexChange;
+
         public int CurrentTrackIndex {
             get => _currentTrackIndex;
-            set {
+            private set {
                 _currentTrackIndex = value;
                 CurrentTrackIndexChange.Invoke(null, value);
             }
         }
 
         public override async Task OnTrackEndAsync(TrackEndEventArgs eventArgs) {
-            if (eventArgs.MayStartNext) await SkipAsync();
             await base.OnTrackEndAsync(eventArgs);
+            if (eventArgs.MayStartNext) await ContinueOnTrackEnd();
+        }
+
+        private async Task ContinueOnTrackEnd() {
+            if (LoopingState == LoopingState.LoopingTrack && CurrentTrack != null) {
+                await PlayAsync(CurrentTrack, false);
+                return;
+            }
+
+            if (Playlist.TryGetValue(CurrentTrackIndex + 1, out var track)) {
+                await PlayAsync(track, false);
+                return;
+            }
+
+            if (LoopingState == LoopingState.LoopingPlaylist) {
+                await PlayAsync(Playlist.First(), false);
+                return;
+            }
+
+            if (_disconnectOnStop) await DisconnectAsync();
         }
 
         public virtual Task<int> PlayAsync(LavalinkTrack track, TimeSpan? startTime = null, TimeSpan? endTime = null, bool noReplace = false) {
@@ -84,7 +105,7 @@ namespace Bot.Music.Players {
 
             CurrentTrackIndex += count;
             CurrentTrackIndex = Math.Min(Math.Max(CurrentTrackIndex, 0), Playlist.Count - 1);
-            
+
             if (Playlist.TryGetValue(CurrentTrackIndex, out var track)) {
                 await PlayAsync(track, false, new TimeSpan?(), new TimeSpan?());
                 return;
@@ -96,7 +117,7 @@ namespace Bot.Music.Players {
             }
 
             CurrentTrackIndex = 0;
-            await PlayAsync(Playlist[0], false);
+            await PlayAsync(Playlist.First(), false);
         }
 
         public virtual void Cleanup() {

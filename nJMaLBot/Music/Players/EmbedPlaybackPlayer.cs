@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -11,7 +10,6 @@ using Discord;
 using Lavalink4NET;
 using Lavalink4NET.Events;
 using Lavalink4NET.Player;
-using Lavalink4NET.Rest;
 
 namespace Bot.Music {
     public sealed class EmbedPlaybackPlayer : PlaylistLavalinkPlayer {
@@ -45,14 +43,9 @@ namespace Bot.Music {
             await base.OnTrackEndAsync(eventArgs);
             switch (State) {
                 case PlayerState.Playing:
-                    EmbedBuilder?.WithAuthor(string.IsNullOrWhiteSpace(CurrentTrack.Author) ? "Unknown" : CurrentTrack.Author,
-                                      $"https://img.youtube.com/vi/{(string.IsNullOrWhiteSpace(CurrentTrack.TrackIdentifier) ? "" : CurrentTrack.TrackIdentifier)}/0.jpg")
-                                ?.WithThumbnailUrl(
-                                      $"https://img.youtube.com/vi/{(string.IsNullOrWhiteSpace(CurrentTrack.TrackIdentifier) ? "" : CurrentTrack.TrackIdentifier)}/0.jpg")
-                                ?.WithTitle(CurrentTrack.Title);
-                    ControlMessage?.ModifyAsync(properties => properties.Embed = EmbedBuilder.Build());
                     break;
                 case PlayerState.NotPlaying:
+                    UpdateTimer.Stop();
                     break;
                 case PlayerState.Destroyed:
                     UpdateTimer.Stop();
@@ -67,6 +60,11 @@ namespace Bot.Music {
             }
         }
 
+        public override void Dispose() {
+            Cleanup();
+            base.Dispose();
+        }
+
         public override void Cleanup() {
             UpdateTimer.Stop();
             base.Cleanup();
@@ -74,19 +72,16 @@ namespace Bot.Music {
 
         public override async Task<int> PlayAsync(LavalinkTrack track, bool enqueue, TimeSpan? startTime = null, TimeSpan? endTime = null,
                                                   bool noReplace = false) {
-            var initialState = State;
-            var toReturn = base.PlayAsync(track, enqueue, startTime, endTime, noReplace);
+            var toReturn = await base.PlayAsync(track, enqueue, startTime, endTime, noReplace);
             var guildConfig = GuildConfig.Get(GuildId);
-            if (initialState != PlayerState.Playing && guildConfig.GetChannel(ChannelFunction.Music, out var channel)) {
-                var iconUrl = $"https://img.youtube.com/vi/{(string.IsNullOrWhiteSpace(track.TrackIdentifier) ? "" : track.TrackIdentifier)}/0.jpg";
-                EmbedBuilder?.WithAuthor(string.IsNullOrWhiteSpace(track.Author) ? "Unknown" : track.Author, iconUrl)
-                            ?.WithThumbnailUrl(iconUrl)?.WithTitle(track.Title)?.WithUrl(track.Source);
-                BuildEmbedFields();
-                ControlMessage ??= await ((ITextChannel) channel).SendMessageAsync("", false, EmbedBuilder.Build());
-            }
+
+            var iconUrl = $"https://img.youtube.com/vi/{(string.IsNullOrWhiteSpace(track.TrackIdentifier) ? "" : track.TrackIdentifier)}/0.jpg";
+            EmbedBuilder?.WithAuthor(string.IsNullOrWhiteSpace(track.Author) ? "Unknown" : track.Author.SafeSubstring(0, 250), iconUrl)
+                        ?.WithThumbnailUrl(iconUrl)?.WithTitle(track.Title.SafeSubstring(0, 250))?.WithUrl(track.Source);
+            BuildEmbedFields();
 
             UpdateTimer.Start();
-            return await toReturn;
+            return toReturn;
         }
 
         private void BuildEmbedFields() {
@@ -123,7 +118,7 @@ namespace Bot.Music {
                     var author = authoredLavalinkTrack.GetRequester();
                     if (author != lastAuthor && lastAuthor != null) FinalizeBlock();
                     authorStringBuilder.Replace("└", "├").Replace("▬", "│");
-                    authorStringBuilder.Append(GetTrackString(authoredLavalinkTrack.Title.Replace("'", "").Replace("#", ""), 
+                    authorStringBuilder.Append(GetTrackString(authoredLavalinkTrack.Title.Replace("'", "").Replace("#", ""),
                         i + 1, 40, CurrentTrackIndex == i));
                     lastAuthor = author;
                 }
@@ -158,7 +153,7 @@ namespace Bot.Music {
         private string PlaylistString;
         private Timer UpdateTimer = new Timer(TimeSpan.FromSeconds(4).TotalMilliseconds);
         private EmbedBuilder EmbedBuilder = new EmbedBuilder();
-        private IUserMessage ControlMessage;
+        public IUserMessage ControlMessage { get; private set; }
 
         public void SetControlMessage(IUserMessage message) {
             ControlMessage?.SafeDelete();

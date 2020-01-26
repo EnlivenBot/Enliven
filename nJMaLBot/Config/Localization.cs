@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using Discord;
 using Newtonsoft.Json;
 
 namespace Bot.Config {
@@ -75,6 +76,10 @@ namespace Bot.Config {
 
         public static string Get(ulong guildId, string id) {
             return Get(GuildConfig.Get(guildId).GetLanguage(), id);
+        }
+
+        public static string Get(GuildConfig guildConfig, string id) {
+            return Get(guildConfig.GetLanguage(), id);
         }
     }
 

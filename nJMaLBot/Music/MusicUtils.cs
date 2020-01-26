@@ -5,17 +5,23 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Bot.Config;
+using Discord;
 using Lavalink4NET;
 using Lavalink4NET.Cluster;
 using Lavalink4NET.DiscordNet;
 using Lavalink4NET.Logging;
+using Lavalink4NET.Player;
+using Lavalink4NET.Rest;
+using Lavalink4NET.Tracking;
+using NLog;
+using LogLevel = Lavalink4NET.Logging.LogLevel;
 
 #pragma warning disable 4014
 
 namespace Bot.Music {
     public static class MusicUtils {
         public static LavalinkCluster Cluster;
-        private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
+        private static Logger logger = LogManager.GetCurrentClassLogger();
 
         static MusicUtils() {
             Program.OnClientConnect += (sender, client) => { SetHandler(); };
@@ -91,5 +97,36 @@ namespace Bot.Music {
                     uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps ||
                     uriResult.Scheme == Uri.UriSchemeNetTcp);
         }
+
+        public static async Task<IEnumerable<LavalinkTrack>> GetMusic(IUserMessage message, string query) {
+            var lavalinkTracks = new List<LavalinkTrack>();
+            if (message.Attachments.Count != 0) {
+                foreach (var messageAttachment in message.Attachments) {
+                    var lavalinkTrack = await Cluster.GetTrackAsync(messageAttachment.Url);
+                    if (lavalinkTrack != null)
+                        lavalinkTracks.Add(lavalinkTrack);
+                }
+
+                if (lavalinkTracks.Count == 0) {
+                    throw new AttachmentAddFailException();
+                }
+            }
+            else if (IsValidUrl(query))
+                lavalinkTracks.AddRange(await Cluster.GetTracksAsync(query, SearchMode.YouTube));
+            else {
+                var track = await Cluster.GetTrackAsync(query, SearchMode.YouTube);
+                if (track != null) lavalinkTracks.Add(track);
+            }
+
+            if (lavalinkTracks.Count == 0) {
+                throw new TrackNotFoundException();
+            }
+
+            return lavalinkTracks;
+        }
     }
+
+    public class AttachmentAddFailException : Exception { }
+
+    public class TrackNotFoundException : Exception { }
 }

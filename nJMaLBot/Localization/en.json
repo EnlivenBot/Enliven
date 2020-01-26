@@ -6,12 +6,13 @@
   },
   "Music" : {
     "Fail" : "Error",
-    "AttachmentFail" : "Error adding `{0}`",
+    "AttachmentFail" : "It looks like not one of your attachments is music",
     "NotFound" : "No results for `{}`",
     "Volume" : "Volume",
     "Loading" : "Loading",
     "Queue" : "Queue",
-    "TrackIndexWrong" : "{0}, the playlist does not have a track with the index `{1}`. The valid value is from `1` to `{2}`"
+    "TrackIndexWrong" : "{0}, the playlist does not have a track with the index `{1}`. The valid value is from `1` to `{2}`",
+    "PlaybackMoved" : "The playback bar has been moved to the music channel - <#{0}>"
   },
   "Groups": {
     "music" : "Music",
