@@ -16,7 +16,7 @@ namespace Bot.Music.Players {
             _disconnectOnStop = disconnectOnStop;
         }
 
-        public LoopingState LoopingState { get; set; } = LoopingState.No;
+        public LoopingState LoopingState { get; set; } = LoopingState.Off;
         public LavalinkPlaylist Playlist { get; }
 
         public event EventHandler<int> CurrentTrackIndexChange;
@@ -35,7 +35,7 @@ namespace Bot.Music.Players {
         }
 
         private async Task ContinueOnTrackEnd() {
-            if (LoopingState == LoopingState.LoopingTrack && CurrentTrack != null) {
+            if (LoopingState == LoopingState.One && CurrentTrack != null) {
                 await PlayAsync(CurrentTrack, false);
                 return;
             }
@@ -45,7 +45,7 @@ namespace Bot.Music.Players {
                 return;
             }
 
-            if (LoopingState == LoopingState.LoopingPlaylist) {
+            if (LoopingState == LoopingState.All) {
                 await PlayAsync(Playlist.First(), false);
                 return;
             }
@@ -93,7 +93,7 @@ namespace Bot.Music.Players {
         public virtual async Task SkipAsync(int count = 1, bool force = false) {
             EnsureNotDestroyed();
             EnsureConnected();
-            if (!force && LoopingState == LoopingState.LoopingTrack && CurrentTrack != null) {
+            if (!force && LoopingState == LoopingState.One && CurrentTrack != null) {
                 await PlayAsync(CurrentTrack, false, new TimeSpan?(), new TimeSpan?());
                 return;
             }
@@ -111,7 +111,7 @@ namespace Bot.Music.Players {
                 return;
             }
 
-            if (LoopingState != LoopingState.LoopingPlaylist) {
+            if (LoopingState != LoopingState.All) {
                 await DisconnectAsync();
                 return;
             }
@@ -137,8 +137,8 @@ namespace Bot.Music.Players {
     }
 
     public enum LoopingState {
-        LoopingTrack,
-        LoopingPlaylist,
-        No
+        One,
+        All,
+        Off
     }
 }

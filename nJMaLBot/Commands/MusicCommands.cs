@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -125,15 +126,38 @@ namespace Bot.Commands {
             }
 
             var player = await GetPlayerAsync();
-            if (player == null) {
+            if (player == null)
                 return;
-            }
 
             await player.SetVolumeAsync(volume / 100f);
             Context.Message.SafeDelete();
             await ReplyAsync($"Volume updated: {volume}%");
         }
 
+        [Command("repeat", RunMode = RunMode.Async)]
+        [Alias("r")]
+        [Summary("repeat0s")]
+        public async Task Repeat(LoopingState state) {
+            var player = await GetPlayerAsync();
+            if (player == null)
+                return;
+
+            player.LoopingState = state;
+            Context.Message.SafeDelete();
+            ReplyAsync(Loc.Get("Music.RepeatSet").Format(player.LoopingState.ToString())).DelayedDelete(TimeSpan.FromMinutes(5));
+        }
+        
+        [Command("repeat", RunMode = RunMode.Async)]
+        [Alias("r")]
+        [Summary("repeat0s")]
+        public async Task Repeat() {
+            var player = await GetPlayerAsync();
+            if (player == null)
+                return;
+
+            Repeat(player.LoopingState.Next());
+        }
+        
         private async Task<EmbedPlaybackPlayer> GetPlayerAsync(bool connectToVoiceChannel = true) {
             var player = MusicUtils.Cluster.GetPlayer<EmbedPlaybackPlayer>(Context.Guild.Id);
 

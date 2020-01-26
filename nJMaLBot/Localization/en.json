@@ -12,7 +12,8 @@
     "Loading" : "Loading",
     "Queue" : "Queue",
     "TrackIndexWrong" : "{0}, the playlist does not have a track with the index `{1}`. The valid value is from `1` to `{2}`",
-    "PlaybackMoved" : "The playback bar has been moved to the music channel - <#{0}>"
+    "PlaybackMoved" : "The playback bar has been moved to the music channel - <#{0}>",
+    "RepeatSet" : "Playback repeat mode set to {0}"
   },
   "Groups": {
     "music" : "Music",
@@ -46,7 +47,8 @@
     "jump0s" : "Moves the playhead to the specified number of tracks. Can move back.",
     "jump0_0s" : "Number of tracks",
     "goto0s" : "Moves the playhead to a specific track by its index",
-    "goto0_0s" : "Index of track"
+    "goto0_0s" : "Index of track",
+    "repeat0s" : "Setting repeat playback mode: `All`, `One`, 'Off'"
   },
   "CommandHandler": {
     "FailedTitle": "Error executing command",

@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Bot.Config;
+using Bot.Music.Players;
 using Bot.Utilities;
 using Discord;
 using Discord.Commands;
@@ -24,6 +25,7 @@ namespace Bot.Commands {
 
             await _commands.AddModulesAsync(Assembly.GetEntryAssembly(), null);
             _commands.AddTypeReader(typeof(ChannelFunction), new ChannelFunctionTypeReader());
+            _commands.AddTypeReader(typeof(LoopingState), new LoopingStateTypeReader());
             foreach (var cmdsModule in _commands.Modules) {
                 foreach (var command in cmdsModule.Commands) AllCommands.Add(command);
             }
