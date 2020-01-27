@@ -74,8 +74,10 @@ namespace Bot.Commands {
         [Summary("stop0s")]
         public async Task Stop() {
             var player = await GetPlayerAsync();
-            if (player == null)
+            if (player == null) {
+                Context.Message.SafeDelete();
                 return;
+            }
 
             if (player.CurrentTrack == null) {
                 await ReplyAsync("Nothing playing!");
@@ -92,8 +94,10 @@ namespace Bot.Commands {
         [Summary("jump0s")]
         public async Task Jump([Summary("jump0_0s")] int index = 1) {
             var player = await GetPlayerAsync();
-            if (player == null)
+            if (player == null) {
+                Context.Message.SafeDelete();
                 return;
+            }
 
             await player.SkipAsync(index, true);
             Context.Message.SafeDelete();
@@ -104,8 +108,10 @@ namespace Bot.Commands {
         [Summary("goto0s")]
         public async Task Goto([Summary("goto0_0s")] int index) {
             var player = await GetPlayerAsync();
-            if (player == null)
+            if (player == null) {
+                Context.Message.SafeDelete();
                 return;
+            }
 
             if (player.Playlist.TryGetValue(index - 1, out var track)) {
                 await player.PlayAsync(track, false, new TimeSpan?(), new TimeSpan?());
@@ -126,8 +132,10 @@ namespace Bot.Commands {
             }
 
             var player = await GetPlayerAsync();
-            if (player == null)
+            if (player == null) {
+                Context.Message.SafeDelete();
                 return;
+            }
 
             await player.SetVolumeAsync(volume / 100f);
             Context.Message.SafeDelete();
@@ -139,52 +147,54 @@ namespace Bot.Commands {
         [Summary("repeat0s")]
         public async Task Repeat(LoopingState state) {
             var player = await GetPlayerAsync();
-            if (player == null)
+            if (player == null) {
+                Context.Message.SafeDelete();
                 return;
+            }
 
             player.LoopingState = state;
             Context.Message.SafeDelete();
             ReplyAsync(Loc.Get("Music.RepeatSet").Format(player.LoopingState.ToString())).DelayedDelete(TimeSpan.FromMinutes(5));
         }
-        
+
         [Command("repeat", RunMode = RunMode.Async)]
         [Alias("r")]
         [Summary("repeat0s")]
         public async Task Repeat() {
             var player = await GetPlayerAsync();
-            if (player == null)
+            if (player == null) {
+                Context.Message.SafeDelete();
                 return;
+            }
 
             Repeat(player.LoopingState.Next());
         }
-        
-        private async Task<EmbedPlaybackPlayer> GetPlayerAsync(bool connectToVoiceChannel = true) {
-            var player = MusicUtils.Cluster.GetPlayer<EmbedPlaybackPlayer>(Context.Guild.Id);
 
+        private async Task<EmbedPlaybackPlayer> GetPlayerAsync(bool summonToUser = false) {
+            var player = MusicUtils.Cluster.GetPlayer<EmbedPlaybackPlayer>(Context.Guild.Id);
+            var userTask = Context.Guild.GetUserAsync(Context.User.Id);
+            
             if (player != null
              && player.State != PlayerState.NotConnected
-             && player.State != PlayerState.Destroyed) {
-                return player;
-            }
-
-            var user = (SocketGuildUser) await Context.Guild.GetUserAsync(Context.User.Id);
-
-            if (!user.VoiceState.HasValue) {
-                await ReplyAsync("You must be in a voice channel!");
+             && player.State != PlayerState.Destroyed
+             && !summonToUser) {
+                if (((SocketGuildUser) await userTask).VoiceChannel.Id == player.VoiceChannelId) return player;
+                ReplyAsync(Loc.Get("Music.OtherVoiceChannel").Format(Context.User.Mention)).DelayedDelete(TimeSpan.FromMinutes(5));
                 return null;
             }
 
-            if (connectToVoiceChannel) return await MusicUtils.Cluster.JoinAsync<EmbedPlaybackPlayer>(Context.Guild.Id, user.VoiceChannel.Id);
-            await ReplyAsync("The bot is not in a voice channel!");
+            if (((SocketGuildUser) await userTask).VoiceState.HasValue)
+                return await MusicUtils.Cluster.JoinAsync<EmbedPlaybackPlayer>(Context.Guild.Id, ((SocketGuildUser) await userTask).VoiceChannel.Id);
+            ReplyAsync(Loc.Get("Music.NotInVoiceChannel").Format(Context.User.Mention)).DelayedDelete(TimeSpan.FromMinutes(5));
             return null;
+
         }
 
         private bool GetChannel(out IMessageChannel channel) {
             channel = Context.Channel;
-            if (!GuildConfig.GetChannel(ChannelFunction.Music, out var musicChannel) || Context.Message.Channel.Id == channel.Id) return false;
+            if (!GuildConfig.GetChannel(ChannelFunction.Music, out var musicChannel) || musicChannel.Id == channel.Id) return false;
             channel = (IMessageChannel) musicChannel;
             return true;
-
         }
     }
 }
