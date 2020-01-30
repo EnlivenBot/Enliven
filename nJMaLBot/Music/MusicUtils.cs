@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Reflection;
 using System.Threading.Tasks;
 using Bot.Config;
 using Discord;
@@ -24,7 +26,7 @@ namespace Bot.Music {
         private static Logger logger = LogManager.GetCurrentClassLogger();
 
         static MusicUtils() {
-            Program.OnClientConnect += (sender, client) => { SetHandler(); };
+            Program.OnClientConnect += (sender, client) => { logger.Swallow(SetHandler()); };
         }
 
         private static async Task SetHandler() {
@@ -32,7 +34,23 @@ namespace Bot.Music {
             var nodes = new List<LavalinkNodeOptions>();
             if (GlobalConfig.Instance.IsSelfMusicEnabled) {
                 logger.Info("Starting self music node");
-                var startInfo = new ProcessStartInfo("java", "-jar Lavalink.jar") {
+                Directory.CreateDirectory("Music");
+                if (!File.Exists(Path.Combine("Music", "application.yml"))) {
+                    logger.Info("Writing default application.yml");
+                    WriteResourceToFile("Bot.Music.application.yml", Path.Combine("Music", "application.yml"));
+                }
+
+                if (!File.Exists(Path.Combine("Music", "lavalink.jar"))) {
+                    await DownloadLavalink();
+                }
+                else if (File.GetCreationTime(Path.Combine("Music", "lavalink.jar")) < DateTime.Now.AddDays(-5)) {
+                    logger.Swallow(async () => {
+                        File.Delete(Path.Combine("Music", "lavalink.jar"));
+                        await DownloadLavalink();
+                    });
+                }
+
+                var startInfo = new ProcessStartInfo("java", "-jar lavalink.jar") {
                     CreateNoWindow = false, RedirectStandardError = false, RedirectStandardInput = false,
                     RedirectStandardOutput = false, UseShellExecute = true,
                     WorkingDirectory = Path.Combine(Directory.GetCurrentDirectory(), "Music")
@@ -79,7 +97,7 @@ namespace Bot.Music {
                 };
                 try {
                     Cluster = new LavalinkCluster(new LavalinkClusterOptions {Nodes = nodes.ToArray()}, new DiscordClientWrapper(Program.Client),
-                            lavalinkLogger) {StayOnline = true};
+                        lavalinkLogger) {StayOnline = true};
                     Task.Run(async () => {
                         if (GlobalConfig.Instance.IsSelfMusicEnabled)
                             await Task.Delay(TimeSpan.FromSeconds(10));
@@ -125,7 +143,7 @@ namespace Bot.Music {
                 }
             }
             else if (IsValidUrl(query))
-                lavalinkTracks.AddRange(await Cluster.GetTracksAsync(query, SearchMode.YouTube));
+                lavalinkTracks.AddRange(await Cluster.GetTracksAsync(query));
             else {
                 var track = await Cluster.GetTrackAsync(query, SearchMode.YouTube);
                 if (track != null) lavalinkTracks.Add(track);
@@ -136,6 +154,30 @@ namespace Bot.Music {
             }
 
             return lavalinkTracks;
+        }
+
+        public static void WriteResourceToFile(string resourceName, string fileName) {
+            using (var resource = Assembly.GetExecutingAssembly().GetManifestResourceStream(resourceName)) {
+                using (var file = new FileStream(fileName, FileMode.Create, FileAccess.Write)) {
+                    resource.CopyTo(file);
+                }
+            }
+        }
+
+        private static async Task DownloadLavalink() {
+            logger.Info("Downloading latest lavalink.jar");
+            using var wc = new WebClient();
+            var previousPercent = 0;
+            var _lock = new object();
+            wc.DownloadProgressChanged += (sender, args) => {
+                lock (_lock) {
+                    if (args.ProgressPercentage - previousPercent <= 10) return;
+                    logger.Info("Downloading - {percentage}%", args.ProgressPercentage);
+                    previousPercent = args.ProgressPercentage;
+                }
+            };
+            await wc.DownloadFileTaskAsync("https://gitlab.com/SKProCH/lavalinkci/-/jobs/artifacts/master-jb/raw/Lavalink.jar?job=build",
+                Path.Combine("Music", "lavalink.jar"));
         }
     }
 

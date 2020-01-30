@@ -24,12 +24,6 @@
     <None Update="Localization\en.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="Music\Lavalink.jar">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="Music\application.yml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Update="Localization\ru.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
@@ -49,6 +43,10 @@
 
   <ItemGroup>
     <Compile Remove="Music\AdvancedPlayer.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Music\application.yml" />
   </ItemGroup>
 
 </Project>
