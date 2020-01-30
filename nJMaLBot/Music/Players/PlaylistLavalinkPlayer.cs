@@ -7,13 +7,12 @@ using Lavalink4NET.Player;
 
 namespace Bot.Music.Players {
     public class PlaylistLavalinkPlayer : LavalinkPlayer {
-        private readonly bool _disconnectOnStop;
         private int _currentTrackIndex;
 
+        // ReSharper disable once UnusedParameter.Local
         public PlaylistLavalinkPlayer(LavalinkSocket lavalinkSocket, IDiscordClientWrapper client, ulong guildId, bool disconnectOnStop)
             : base(lavalinkSocket, client, guildId, false) {
             Playlist = new LavalinkPlaylist();
-            _disconnectOnStop = disconnectOnStop;
         }
 
         public LoopingState LoopingState { get; set; } = LoopingState.Off;
@@ -30,8 +29,9 @@ namespace Bot.Music.Players {
         }
 
         public override async Task OnTrackEndAsync(TrackEndEventArgs eventArgs) {
-            await base.OnTrackEndAsync(eventArgs);
-            if (eventArgs.MayStartNext) await ContinueOnTrackEnd();
+            if (eventArgs.Reason == TrackEndReason.LoadFailed) Playlist.Remove(CurrentTrack);
+            if (eventArgs.Reason != TrackEndReason.Replaced) await base.OnTrackEndAsync(eventArgs);
+            if (eventArgs.MayStartNext || eventArgs.Reason == TrackEndReason.LoadFailed) await ContinueOnTrackEnd();
         }
 
         private async Task ContinueOnTrackEnd() {
@@ -47,14 +47,7 @@ namespace Bot.Music.Players {
 
             if (LoopingState == LoopingState.All) {
                 await PlayAsync(Playlist.First(), false);
-                return;
             }
-
-            if (_disconnectOnStop) await DisconnectAsync();
-        }
-
-        public virtual Task<int> PlayAsync(LavalinkTrack track, TimeSpan? startTime = null, TimeSpan? endTime = null, bool noReplace = false) {
-            return PlayAsync(track, true, startTime, endTime, noReplace);
         }
 
         public virtual async Task<int> PlayAsync(LavalinkTrack track, bool enqueue, TimeSpan? startTime = null, TimeSpan? endTime = null,
@@ -68,28 +61,6 @@ namespace Bot.Music.Players {
             return 0;
         }
 
-        // public virtual async Task PlayTopAsync(LavalinkTrack track) {
-        //     EnsureNotDestroyed();
-        //     if (track == null) throw new ArgumentNullException(nameof(track));
-        //     if (State == PlayerState.NotPlaying) {
-        //         var num = await PlayAsync(track, false, new TimeSpan?(), new TimeSpan?());
-        //     }
-        //     else Playlist.Insert(0, track);
-        // }
-        //
-        // public virtual async Task<bool> PushTrackAsync(LavalinkTrack track, bool push = false) {
-        //     if (State == PlayerState.NotPlaying) {
-        //         if (push) return false;
-        //         var num = await PlayAsync(track, false, new TimeSpan?(), new TimeSpan?());
-        //         return false;
-        //     }
-        //
-        //     var track1 = CurrentTrack.WithPosition(TrackPosition);
-        //     Playlist.Add(track1);
-        //     var num1 = await PlayAsync(track, false, new TimeSpan?(), new TimeSpan?());
-        //     return true;
-        // }
-
         public virtual async Task SkipAsync(int count = 1, bool force = false) {
             EnsureNotDestroyed();
             EnsureConnected();
@@ -98,10 +69,8 @@ namespace Bot.Music.Players {
                 return;
             }
 
-            if (Playlist.IsEmpty) {
-                if (_disconnectOnStop) await DisconnectAsync();
+            if (Playlist.IsEmpty)
                 return;
-            }
 
             CurrentTrackIndex += count;
             CurrentTrackIndex = Math.Min(Math.Max(CurrentTrackIndex, 0), Playlist.Count - 1);

@@ -120,6 +120,8 @@ namespace Bot.Commands {
                 (await ReplyAsync(Loc.Get("Music.TrackIndexWrong").Format(Context.User.Mention, index, player.Playlist.Count))).DelayedDelete(
                     TimeSpan.FromMinutes(5));
             }
+            
+            Context.Message.SafeDelete();
         }
 
         [Command("volume", RunMode = RunMode.Async)]

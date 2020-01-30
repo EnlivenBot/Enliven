@@ -13,6 +13,7 @@ using Lavalink4NET.Player;
 
 namespace Bot.Music {
     public sealed class EmbedPlaybackPlayer : PlaylistLavalinkPlayer {
+        // ReSharper disable once UnusedParameter.Local
         public EmbedPlaybackPlayer(LavalinkSocket lavalinkSocket, IDiscordClientWrapper client, ulong guildId, bool disconnectOnStop)
             : base(lavalinkSocket, client, guildId, disconnectOnStop) {
             Playlist.Update += (sender, args) => PlaylistString = GetPlaylistString(Playlist, CurrentTrackIndex);
@@ -40,6 +41,13 @@ namespace Bot.Music {
         }
 
         public override async Task OnTrackEndAsync(TrackEndEventArgs eventArgs) {
+            if (eventArgs.Reason == TrackEndReason.LoadFailed) {
+                var loc = new GuildLocalizationProvider(GuildId);
+                var embedBuilder = new EmbedBuilder();
+                embedBuilder.WithColor(Color.Red).WithTitle(loc.Get("Music.TrackError"))
+                            .WithDescription(loc.Get("Music.DecodingError").Format(CurrentTrack.Title, CurrentTrack.Source));
+                await ControlMessage.Channel.SendMessageAsync(null, false, embedBuilder.Build());
+            }
             await base.OnTrackEndAsync(eventArgs);
             switch (State) {
                 case PlayerState.Playing:
@@ -73,11 +81,10 @@ namespace Bot.Music {
         public override async Task<int> PlayAsync(LavalinkTrack track, bool enqueue, TimeSpan? startTime = null, TimeSpan? endTime = null,
                                                   bool noReplace = false) {
             var toReturn = await base.PlayAsync(track, enqueue, startTime, endTime, noReplace);
-            var guildConfig = GuildConfig.Get(GuildId);
 
-            var iconUrl = $"https://img.youtube.com/vi/{(string.IsNullOrWhiteSpace(track.TrackIdentifier) ? "" : track.TrackIdentifier)}/0.jpg";
-            EmbedBuilder?.WithAuthor(string.IsNullOrWhiteSpace(track.Author) ? "Unknown" : track.Author.SafeSubstring(0, 250), iconUrl)
-                        ?.WithThumbnailUrl(iconUrl)?.WithTitle(track.Title.SafeSubstring(0, 250))?.WithUrl(track.Source);
+            var iconUrl = $"https://img.youtube.com/vi/{(string.IsNullOrWhiteSpace(CurrentTrack.TrackIdentifier) ? "" : CurrentTrack.TrackIdentifier)}/0.jpg";
+            EmbedBuilder?.WithAuthor(string.IsNullOrWhiteSpace(CurrentTrack.Author) ? "Unknown" : CurrentTrack.Author.SafeSubstring(0, 250), iconUrl)
+                        ?.WithThumbnailUrl(iconUrl)?.WithTitle(CurrentTrack.Title.SafeSubstring(0, 250))?.WithUrl(CurrentTrack.Source);
             BuildEmbedFields();
 
             UpdateTimer.Start();

@@ -15,7 +15,9 @@
     "PlaybackMoved": "Панель воспроизведения была перемещена в канал музыки - <#{0}>",
     "RepeatSet": "Установлен режим повтора воспроизведения - {0}",
     "OtherVoiceChannel": "{0}, You must be in the same voice channel as the bot",
-    "NotInVoiceChannel": "{0}, You must be in a voice channel"
+    "NotInVoiceChannel": "{0}, You must be in a voice channel",
+    "TrackError": "Track error",
+    "DecodingError": "Something went wrong when decoding the track\n[{0}]({1})"
   },
   "Groups": {
     "music": "Музыка",

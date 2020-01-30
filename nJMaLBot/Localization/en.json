@@ -15,7 +15,9 @@
     "PlaybackMoved" : "The playback bar has been moved to the music channel - <#{0}>",
     "RepeatSet" : "Playback repeat mode set to {0}",
     "OtherVoiceChannel": "{0}, Вы должны быть в том же голосовом канале, что и бот",
-    "NotInVoiceChannel": "{0}, Вы должны быть в голосовом канале"
+    "NotInVoiceChannel": "{0}, Вы должны быть в голосовом канале",
+    "TrackError" : "Ошибка трека",
+    "DecodingError": "Что-то пошло не так при декодировании трека\n[{0}]({1})"
   },
   "Groups": {
     "music" : "Music",
