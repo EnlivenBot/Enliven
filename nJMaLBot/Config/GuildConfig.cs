@@ -14,6 +14,7 @@ namespace Bot.Config {
         public float Volume { get; set; } = 1f;
         public ConcurrentDictionary<ChannelFunction, ulong> FunctionalChannels { get; set; } = new ConcurrentDictionary<ChannelFunction, ulong>();
         public string GuildLanguage { get; set; }
+        public bool IsMusicLimited { get; set; }
 
         public void Save() {
             GlobalDB.Guilds.Upsert(GuildId, this);

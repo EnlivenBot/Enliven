@@ -37,6 +37,11 @@ namespace Bot.Utilities {
             return (info.Attributes.FirstOrDefault(attribute => attribute is GroupingAttribute) ??
                     info.Module.Attributes.FirstOrDefault(attribute => attribute is GroupingAttribute)) as GroupingAttribute;
         }
+        
+        public static bool IsHiddenCommand(this CommandInfo info) {
+            return (info.Attributes.FirstOrDefault(attribute => attribute is HiddenAttribute) ??
+                    info.Module.Attributes.FirstOrDefault(attribute => attribute is HiddenAttribute)) != null;
+        }
 
         public static string Format(this string format, params object?[] args) {
             return string.Format(format, args);

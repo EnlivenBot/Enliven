@@ -9,7 +9,8 @@ using Discord.Commands;
 namespace Bot.Utilities.Commands {
     internal static class HelpUtils {
         public static readonly Lazy<Dictionary<string, CommandGroup>> CommandsGroups = new Lazy<Dictionary<string, CommandGroup>>(() => {
-            return Program.Handler.AllCommands.GroupBy(info => info.GetGroup()?.GroupName ?? "")
+            return Program.Handler.AllCommands.Where(info => !info.IsHiddenCommand())
+                          .GroupBy(info => info.GetGroup()?.GroupName ?? "")
                           .Where(grouping => !string.IsNullOrWhiteSpace(grouping.Key)).Select(infos =>
                                new CommandGroup {
                                    Commands = infos.ToList(), GroupId = infos.Key,

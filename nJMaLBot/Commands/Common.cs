@@ -7,11 +7,10 @@ using Bot.Utilities.Commands;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
-using NeoSmart.Unicode;
 
 namespace Bot.Commands {
     [Grouping("utils")]
-    public class GetLogByMessage : AdvancedModuleBase {
+    public class LogCommand : AdvancedModuleBase {
         [Command("history", RunMode = RunMode.Async)]
         [Summary("history0s")]
         public async Task PrintChanges(
