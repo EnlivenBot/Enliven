@@ -18,7 +18,7 @@ namespace Bot.Config {
         private static Dictionary<string, Dictionary<string, Dictionary<string, string>>> LoadLanguages() {
             logger.Info("Start loading localizations packs...");
             try {
-                var indexes = Directory.GetFiles("../../../Localization")
+                var indexes = Directory.GetFiles(Path.Combine(Directory.GetCurrentDirectory(), "Localization"))
                                        .ToDictionary(Path.GetFileNameWithoutExtension);
                 logger.Info("Loaded languages: {lang}.", string.Join(", ", indexes.Select(pair => pair.Key)));
                 return
@@ -34,7 +34,7 @@ namespace Bot.Config {
                     {
                         "en",
                         JsonConvert.DeserializeObject<Dictionary<string, Dictionary<string, string>>>
-                            (File.ReadAllText("Localization/en.json"))
+                            (File.ReadAllText(Path.Combine(Directory.GetCurrentDirectory(), "Localization/en.json")))
                     }
                 };
             }
@@ -59,7 +59,7 @@ namespace Bot.Config {
 
             if (lang == "en") {
                 logger.Error(new Exception($"Failed to load {group}.{id} in en localization"),"Failed to load {group}.{id} in {lang} localization", group, id, "en");
-                return "";
+                return $"{group}.{id}";
             }
 
             logger.Warn("Failed to load {group}.{id} in {lang} localization", group, id, lang);
@@ -75,7 +75,7 @@ namespace Bot.Config {
             return Get(guildConfig.GetLanguage(), id);
         }
     }
-
+    
     public interface ILocalizationProvider {
         string Get(string id);
         string Get(string group, string id);

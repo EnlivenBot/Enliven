@@ -10,9 +10,9 @@ using Newtonsoft.Json;
 namespace Bot.Config {
     internal class GlobalConfig {
         private static readonly Lazy<GlobalConfig> _globalConfig = new Lazy<GlobalConfig>(() => {
-            if (File.Exists("config.json"))
-                return JsonConvert.DeserializeObject<GlobalConfig>(File.ReadAllText("config.json"));
-            File.WriteAllText("config.json", JsonConvert.SerializeObject(new GlobalConfig(), Formatting.Indented));
+            if (File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "config.json")))
+                return JsonConvert.DeserializeObject<GlobalConfig>(File.ReadAllText(Path.Combine(Directory.GetCurrentDirectory(), "config.json")));
+            File.WriteAllText(Path.Combine(Directory.GetCurrentDirectory(), "config.json"), JsonConvert.SerializeObject(new GlobalConfig(), Formatting.Indented));
             return new GlobalConfig();
         });
 

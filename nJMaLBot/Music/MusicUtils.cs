@@ -33,23 +33,24 @@ namespace Bot.Music {
             logger.Info("Starting music module");
             var nodes = new List<LavalinkNodeOptions>();
             if (GlobalConfig.Instance.IsSelfMusicEnabled) {
-                logger.Info("Starting self music node");
-                Directory.CreateDirectory("Music");
-                if (!File.Exists(Path.Combine("Music", "application.yml"))) {
+                logger.Info("Preparing self music node");
+                Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), "Music"));
+                if (!File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "Music", "application.yml"))) {
                     logger.Info("Writing default application.yml");
-                    WriteResourceToFile("Bot.Music.application.yml", Path.Combine("Music", "application.yml"));
+                    WriteResourceToFile("Bot.Music.application.yml", Path.Combine(Directory.GetCurrentDirectory(), "Music", "application.yml"));
                 }
 
-                if (!File.Exists(Path.Combine("Music", "lavalink.jar"))) {
+                if (!File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "Music", "lavalink.jar"))) {
                     await DownloadLavalink();
                 }
-                else if (File.GetCreationTime(Path.Combine("Music", "lavalink.jar")) < DateTime.Now.AddDays(-5)) {
+                else if (File.GetCreationTime(Path.Combine(Directory.GetCurrentDirectory(), "Music", "lavalink.jar")) < DateTime.Now.AddDays(-5)) {
                     logger.Swallow(async () => {
-                        File.Delete(Path.Combine("Music", "lavalink.jar"));
+                        File.Delete(Path.Combine(Directory.GetCurrentDirectory(), "Music", "lavalink.jar"));
                         await DownloadLavalink();
                     });
                 }
 
+                logger.Info("Starting self music node");
                 var startInfo = new ProcessStartInfo("java", "-jar lavalink.jar") {
                     CreateNoWindow = false, RedirectStandardError = false, RedirectStandardInput = false,
                     RedirectStandardOutput = false, UseShellExecute = true,
@@ -166,18 +167,26 @@ namespace Bot.Music {
 
         private static async Task DownloadLavalink() {
             logger.Info("Downloading latest lavalink.jar");
-            using var wc = new WebClient();
-            var previousPercent = 0;
-            var _lock = new object();
-            wc.DownloadProgressChanged += (sender, args) => {
-                lock (_lock) {
-                    if (args.ProgressPercentage - previousPercent <= 10) return;
-                    logger.Info("Downloading - {percentage}%", args.ProgressPercentage);
-                    previousPercent = args.ProgressPercentage;
+
+            try {
+                using (var wc = new WebClient()) {
+                    var previousPercent = 0;
+                    wc.DownloadProgressChanged += (sender, args) => {
+                        logger.Info("Downloading {percentage}%", args.ProgressPercentage);
+                        if (args.ProgressPercentage - previousPercent <= 10) return;
+                        logger.Info("Downloading - {percentage}%", args.ProgressPercentage);
+                        previousPercent = args.ProgressPercentage;
+                    };
+                    wc.DownloadFileCompleted += (sender, args) => { logger.Info(args.Error, "Download completed - {args}"); };
+                    logger.Info("Starting download lavalink.jar");
+                    wc.DownloadFile(new Uri("https://gitlab.com/SKProCH/lavalinkci/-/jobs/artifacts/master-jb/raw/Lavalink.jar?job=build"),
+                        Path.Combine(Directory.GetCurrentDirectory(), "Music", "lavalink.jar"));
+                    logger.Info("End download lavalink.jar");
                 }
-            };
-            await wc.DownloadFileTaskAsync("https://gitlab.com/SKProCH/lavalinkci/-/jobs/artifacts/master-jb/raw/Lavalink.jar?job=build",
-                Path.Combine("Music", "lavalink.jar"));
+            }
+            catch (Exception e) {
+                logger.Fatal(e, "Can't download lavalink");
+            }
         }
     }
 

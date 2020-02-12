@@ -73,5 +73,11 @@ namespace Bot.Utilities {
             int j = Array.IndexOf<T>(Arr, src) + 1;
             return (Arr.Length==j) ? Arr[0] : Arr[j];            
         }
+
+        public static EmbedBuilder GetAuthorEmbedBuilder(this ModuleBase moduleBase) {
+            var embedBuilder = new EmbedBuilder();
+            embedBuilder.WithFooter(moduleBase.Context.User.Username, moduleBase.Context.User.GetAvatarUrl());
+            return embedBuilder;
+        }
     }
 }
