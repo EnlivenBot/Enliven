@@ -49,9 +49,8 @@ namespace Bot.Music {
                 await ControlMessage.Channel.SendMessageAsync(null, false, embedBuilder.Build());
             }
             await base.OnTrackEndAsync(eventArgs);
+            // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
             switch (State) {
-                case PlayerState.Playing:
-                    break;
                 case PlayerState.NotPlaying:
                     UpdateTimer.Stop();
                     break;
@@ -63,8 +62,6 @@ namespace Bot.Music {
                 case PlayerState.NotConnected:
                     UpdateTimer.Stop();
                     break;
-                default:
-                    throw new ArgumentOutOfRangeException();
             }
         }
 
@@ -92,17 +89,18 @@ namespace Bot.Music {
         }
 
         private void BuildEmbedFields() {
+            var loc = new GuildLocalizationProvider(GuildId);
             EmbedBuilder.Fields.Clear();
             var progress = Convert.ToInt32(TrackPosition.TotalSeconds / CurrentTrack.Duration.TotalSeconds * 100);
             var requester = CurrentTrack is AuthoredLavalinkTrack authoredLavalinkTrack ? authoredLavalinkTrack.GetRequester() : "Unknown";
             EmbedBuilder.AddField(
-                $"Requested by: {requester}",
+                loc.Get("Music.RequestedBy").Format(requester),
                 GetProgressString(progress) + $"  `{TrackPosition:mm':'ss} / {CurrentTrack.Duration:mm':'ss}`", true);
-            EmbedBuilder.AddField(Localization.Get(GuildId, "Music.Volume"), $"{Convert.ToInt32(Volume * 100f)}% 🔉", true);
-            EmbedBuilder.AddField(Localization.Get(GuildId, "Music.Queue"), PlaylistString);
+            EmbedBuilder.AddField(loc.Get("Music.Volume"), $"{Convert.ToInt32(Volume * 100f)}% 🔉", true);
+            EmbedBuilder.AddField(loc.Get("Music.Queue").Format(CurrentTrackIndex + 1, Playlist.Count), PlaylistString);
         }
 
-        private string GetProgressString(int progress) {
+        private static string GetProgressString(int progress) {
             var builder = new StringBuilder();
             builder.Append(ProgressEmoji.Start.GetEmoji(progress));
             progress -= 10;
@@ -140,7 +138,7 @@ namespace Bot.Music {
                 }
 
                 StringBuilder GetTrackString(string title, int trackNumber, int maxLength, bool isCurrent) {
-                    var lines = Utilities.Utilities.SplitToLines(title, maxLength);
+                    var lines = Utilities.Utilities.SplitToLines(title, maxLength).ToList();
                     var sb = new StringBuilder();
                     sb.AppendLine($"{(isCurrent ? "@" : " ")}{trackNumber}   ".SafeSubstring(0, 4) + "└" + lines.First());
                     foreach (var line in lines.Skip(1)) {

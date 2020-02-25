@@ -1,0 +1,158 @@
+using System;
+using System.Linq;
+using System.Threading.Tasks;
+using Bot.Config;
+using Bot.Music;
+using Bot.Music.Players;
+using Bot.Utilities;
+using Bot.Utilities.Commands;
+using Discord;
+using Discord.Commands;
+using Discord.WebSocket;
+using Lavalink4NET.Player;
+using Embed = Discord.Embed;
+
+#pragma warning disable 4014
+
+namespace Bot.Commands {
+    [Grouping("music")]
+    [RequireContext(ContextType.Guild)]
+    public sealed class MusicCommands : MusicModuleBase {
+        [Command("play", RunMode = RunMode.Async)]
+        [Alias("p")]
+        [Summary("play0s")]
+        public async Task Play([Remainder] [Summary("play0_0s")] string query = null) {
+            var player = await GetPlayerAsync(true);
+            var logMessage = await GetLogMessage();
+            if (logMessage == null || player == null)
+                return;
+            player.SetControlMessage(logMessage);
+            try {
+                await MusicUtils.QueueLoadMusic(Context.Message, query, player);
+            }
+            catch (TrackNotFoundException) {
+                ReplyFormattedAsync(Loc.Get("Music.NotFound").Format(query.SafeSubstring(0, 512)), true, logMessage);
+                if (player.Playlist.Count == 0) player.ControlMessage.SafeDelete();
+            }
+            catch (AttachmentAddFailException) {
+                ReplyFormattedAsync(Loc.Get("Music.AttachmentFail"), true, logMessage);
+                if (player.Playlist.Count == 0) player.ControlMessage.SafeDelete();
+            }
+        }
+
+        [Command("stop", RunMode = RunMode.Async)]
+        [Alias("s")]
+        [Summary("stop0s")]
+        public async Task Stop() {
+            var player = await GetPlayerAsync();
+            var logMessage = await GetLogMessage();
+            if (player == null || logMessage == null) {
+                Context.Message.SafeDelete();
+                return;
+            }
+
+            if (player.CurrentTrack == null) {
+                await ReplyFormattedAsync(Loc.Get("Music.NothingPlaying"), true, logMessage);
+                return;
+            }
+
+            await player.StopAsync(true);
+            Context.Message.SafeDelete();
+            ReplyFormattedAsync(Loc.Get("Music.Stopped"), false, logMessage).DelayedDelete(TimeSpan.FromMinutes(5));
+        }
+
+        [Command("jump", RunMode = RunMode.Async)]
+        [Alias("j", "skip", "next", "n")]
+        [Summary("jump0s")]
+        public async Task Jump([Summary("jump0_0s")] int index = 1) {
+            var player = await GetPlayerAsync();
+            var logMessage = await GetLogMessage();
+            if (player == null || logMessage == null) {
+                Context.Message.SafeDelete();
+                return;
+            }
+
+            await player.SkipAsync(index, true);
+            ReplyFormattedAsync(Loc.Get("Music.Jumped").Format(player.CurrentTrackIndex + 1, player.CurrentTrack.Title.SafeSubstring(0, 512)),
+                    false, logMessage).DelayedDelete(TimeSpan.FromMinutes(5));
+            Context.Message.SafeDelete();
+        }
+
+        [Command("goto", RunMode = RunMode.Async)]
+        [Alias("g")]
+        [Summary("goto0s")]
+        public async Task Goto([Summary("goto0_0s")] int index) {
+            var player = await GetPlayerAsync();
+            var logMessage = await GetLogMessage();
+            if (player == null || logMessage == null) {
+                Context.Message.SafeDelete();
+                return;
+            }
+
+            if (player.Playlist.TryGetValue(index - 1, out var track)) {
+                await player.PlayAsync(track, false, new TimeSpan?(), new TimeSpan?());
+                ReplyFormattedAsync(Loc.Get("Music.Jumped").Format(player.CurrentTrackIndex, player.CurrentTrack.Title.SafeSubstring(0, 512)),
+                        false, logMessage)
+                   .DelayedDelete(TimeSpan.FromMinutes(5));
+            }
+            else {
+                ReplyFormattedAsync(Loc.Get("Music.TrackIndexWrong").Format(Context.User.Mention, index, player.Playlist.Count), 
+                        true, logMessage)
+                   .DelayedDelete(TimeSpan.FromMinutes(5));
+            }
+
+            Context.Message.SafeDelete();
+        }
+
+        [Command("volume", RunMode = RunMode.Async)]
+        [Alias("v")]
+        [Summary("volume0s")]
+        public async Task Volume([Summary("volume0_0s")] int volume = 100) {
+            var player = await GetPlayerAsync();
+            var logMessage = await GetLogMessage();
+            if (player == null || logMessage == null) {
+                Context.Message.SafeDelete();
+                return;
+            }
+
+            if (volume > 150 || volume < 0) {
+                await ReplyFormattedAsync(Loc.Get("Music.VolumeOutOfRange"), true, logMessage);
+                return;
+            }
+
+            await player.SetVolumeAsync(volume / 10f);
+            Context.Message.SafeDelete();
+            await ReplyFormattedAsync($"Music.NewVolume".Format(volume), false, logMessage);
+        }
+
+        [Command("repeat", RunMode = RunMode.Async)]
+        [Alias("r")]
+        [Summary("repeat0s")]
+        public async Task Repeat(LoopingState state) {
+            var player = await GetPlayerAsync();
+            var logMessage = await GetLogMessage();
+            if (player == null || logMessage == null) {
+                Context.Message.SafeDelete();
+                return;
+            }
+
+            player.LoopingState = state;
+            Context.Message.SafeDelete();
+            ReplyFormattedAsync(Loc.Get("Music.RepeatSet").Format(player.LoopingState.ToString()), false, logMessage)
+               .DelayedDelete(TimeSpan.FromMinutes(5));
+        }
+
+        [Command("repeat", RunMode = RunMode.Async)]
+        [Alias("r")]
+        [Summary("repeat0s")]
+        public async Task Repeat() {
+            var player = await GetPlayerAsync();
+            if (player == null) {
+                Context.Message.SafeDelete();
+                return;
+            }
+
+            Repeat(player.LoopingState.Next());
+        }
+    }
+}

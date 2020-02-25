@@ -5,8 +5,10 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Bot.Config;
+using Bot.Music.Players;
 using Discord;
 using Lavalink4NET;
 using Lavalink4NET.Cluster;
@@ -109,7 +111,7 @@ namespace Bot.Music {
                         var inactivityTrackingService = new InactivityTrackingService(Cluster, new DiscordClientWrapper(Program.Client),
                             new InactivityTrackingOptions {
                                 TrackInactivity = true,
-                                DisconnectDelay = TimeSpan.FromSeconds(10),
+                                DisconnectDelay = TimeSpan.FromMinutes(2),
                                 PollInterval = TimeSpan.FromSeconds(4)
                             }, lavalinkLogger);
                     });
@@ -130,7 +132,7 @@ namespace Bot.Music {
                     uriResult.Scheme == Uri.UriSchemeNetTcp);
         }
 
-        public static async Task<IEnumerable<LavalinkTrack>> GetMusic(IUserMessage message, string query) {
+        public static async Task<IEnumerable<LavalinkTrack>> QueueLoadMusic(IUserMessage message, string query, EmbedPlaybackPlayer player) {
             var lavalinkTracks = new List<LavalinkTrack>();
             if (message.Attachments.Count != 0) {
                 foreach (var messageAttachment in message.Attachments) {
@@ -146,13 +148,29 @@ namespace Bot.Music {
             else if (IsValidUrl(query))
                 lavalinkTracks.AddRange(await Cluster.GetTracksAsync(query));
             else {
-                var track = await Cluster.GetTrackAsync(query, SearchMode.YouTube);
-                if (track != null) lavalinkTracks.Add(track);
+                var counter = 0;
+                var tasks = query.Split('\n').Select(s => (counter++, s, Cluster.GetTrackAsync(s, SearchMode.YouTube))).ToList();
+                await Task.WhenAll(tasks.Select((tuple, i) => tuple.Item3));
+                LavalinkTrack lastTrack = null;
+                foreach (var valueTuple in tasks.OrderBy(tuple => tuple.Item1)) {
+                    if (valueTuple.Item3.Result == null) continue;
+                    if (lastTrack == null || !lastTrack.Title.Contains(valueTuple.s)) {
+                        lavalinkTracks.Add(valueTuple.Item3.Result);
+                    }
+
+                    lastTrack = valueTuple.Item3.Result;
+                }
             }
 
             if (lavalinkTracks.Count == 0) {
                 throw new TrackNotFoundException();
             }
+
+            var tracks = lavalinkTracks
+                        .Select(track => AuthoredLavalinkTrack.FromLavalinkTrack(track, message.Author))
+                        .ToList();
+            await player.PlayAsync(tracks.First(), true);
+            player.Playlist.AddRange(tracks.Skip(1));
 
             return lavalinkTracks;
         }
