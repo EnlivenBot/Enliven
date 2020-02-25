@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using Bot.Config;
 using Discord;
 using Discord.Commands;
@@ -32,14 +33,33 @@ namespace Bot.Utilities.Commands {
 
         public static IEnumerable<EmbedFieldBuilder> BuildHelpFields(string command, string prefix, ILocalizationProvider loc) {
             return CommandAliases.Value[command].Select(info => new EmbedFieldBuilder {
-                Name = loc.Get("Help.CommandTitle").Format(command, info.Aliases.Aggregate((s, s1) => s + $"`{s1}`")),
+                Name = loc.Get("Help.CommandTitle").Format(command, GetAliasesString(info.Aliases, loc)),
                 Value = $"{loc.Get($"Help.{info.Summary}")}\n" +
                         $"```css\n" +
                         $"{prefix}{info.Name} {(info.Parameters.Count == 0 ? "" : $"[{string.Join("] [", info.Parameters.Select(x => x.Name))}]")}```" +
                         (info.Parameters.Count == 0
                             ? ""
-                            : "\n" + string.Join("\n", info.Parameters.Select(x => $"`{x.Name}` - {x.Summary}")))
+                            : "\n" + string.Join("\n", 
+                                info.Parameters.Select(x => $"`{x.Name}` - {(string.IsNullOrWhiteSpace(x.Summary) ? "" : loc.Get("Help." + x.Summary))}")))
             });
+        }
+
+        public static string GetAliasesString(IEnumerable<string> aliases, ILocalizationProvider loc, bool skipFirst = true) {
+            aliases = skipFirst ? aliases.Skip(1) : aliases;
+            var enumerable = aliases.ToList();
+            if (!enumerable.Any())
+                return "";
+
+            return "(" + loc.Get("Help.Aliases") + GetAliases(enumerable) + ")";
+        }
+
+        private static string GetAliases(IEnumerable<string> aliases) {
+            var s = new StringBuilder();
+            foreach (var aliase in aliases) {
+                s.Append($" `{aliase}` ");
+            }
+
+            return s.ToString().Trim();
         }
     }
 

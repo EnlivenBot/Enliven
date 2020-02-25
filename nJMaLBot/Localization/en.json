@@ -7,17 +7,18 @@
   "Music" : {
     "Fail" : "Error",
     "AttachmentFail" : "It looks like not one of your attachments is music",
-    "NotFound" : "No results for `{}`",
+    "NotFound" : "No results for `{0}`",
     "Volume" : "Volume",
     "Loading" : "Loading",
     "Queue" : "Queue",
     "TrackIndexWrong" : "{0}, the playlist does not have a track with the index `{1}`. The valid value is from `1` to `{2}`",
     "PlaybackMoved" : "The playback bar has been moved to the music channel - <#{0}>",
     "RepeatSet" : "Playback repeat mode set to {0}",
-    "OtherVoiceChannel": "{0}, Вы должны быть в том же голосовом канале, что и бот",
-    "NotInVoiceChannel": "{0}, Вы должны быть в голосовом канале",
-    "TrackError" : "Ошибка трека",
-    "DecodingError": "Что-то пошло не так при декодировании трека\n[{0}]({1})"
+    "OtherVoiceChannel": "{0}, You must be in the same voice channel as the bot",
+    "NotInVoiceChannel": "{0}, You must be in a voice channel",
+    "TrackError": "Track error",
+    "DecodingError": "Something went wrong when decoding the track\n[{0}]({1})",
+    "ChannelNotAllowed": "{0}, you can’t play music on this channel. Use <#{1}> for this, or ask the administrator to change this through the server setup."
   },
   "Groups": {
     "music" : "Music",
@@ -25,14 +26,18 @@
     "utils" : "Utilities"
   },
   "Help": {
-    "HelpMessage": "Command Help",
+    "HelpMessage": "Command help: ",
     "HelpTitle" : "Available commands",
     "HelpDescription" : "Help for all commands and categories",
     "NotFoundTitle" : "Command not found",
     "NotFoundDescription" : "Command `{0}` not found. Type `{1}help` to see all available commands.",
     "CommandsOfGroup" : "Available commands from group `{0}`",
-    "CommandTitle" : "**{0}** - (Aliases: {1})",
-    "ByCommand": "Command Help `{0}`",
+    "CommandTitle" : "**{0}** - {1}",
+    "ByCommand": "Command help: `{0}`",
+    "Aliases" : "Aliases: ",
+    "help0s" : "Shows information about a specific command",
+    "help0_0s" : "Command or group name",
+    "help1s" : "Shows information about all commands",
     "history0s": "Shows the message change history.\nYou can also put emotion 📖 under the desired message",
     "history0_0s": "ID of the message whose history needs to be displayed. You can also use a pair of `channel ID` -`ID messages`",
     "setprefix0s": "Assigns a prefix for bot commands",
@@ -52,7 +57,7 @@
     "jump0_0s" : "Number of tracks",
     "goto0s" : "Moves the playhead to a specific track by its index",
     "goto0_0s" : "Index of track",
-    "repeat0s" : "Setting repeat playback mode: `All`, `One`, 'Off'"
+    "repeat0s" : "Setting repeat playback mode: `All`, `One`, `Off`"
   },
   "CommandHandler": {
     "FailedTitle": "Error executing command",
