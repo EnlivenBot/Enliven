@@ -64,14 +64,14 @@ namespace Bot.Utilities.Commands {
                              .WithTitle(Loc.Get("Music.Fail"))
                              .WithDescription(Loc.Get("Music.ChannelNotAllowed").Format(Context.User.Mention, channel.Id));
                 Context.Message.SafeDelete();
-                ReplyAsync(null, false, eb.Build()).DelayedDelete(TimeSpan.FromMinutes(5));
+                Context.Channel.SendMessageAsync(null, false, eb.Build()).DelayedDelete(TimeSpan.FromMinutes(5));
                 return null;
             }
             else {
                 var eb = this.GetAuthorEmbedBuilder()
                              .WithTitle(Loc.Get("Music.Playback"))
                              .WithDescription(Localization.Get(GuildConfig, "Music.PlaybackMoved").Format(channel.Id));
-                ReplyAsync(null, false, eb.Build()).DelayedDelete(TimeSpan.FromMinutes(5));
+                Context.Channel.SendMessageAsync(null, false, eb.Build()).DelayedDelete(TimeSpan.FromMinutes(5));
                 return channel.SendMessageAsync(Loc.Get("Music.Loading"));
             }
         }

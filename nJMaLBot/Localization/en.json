@@ -34,6 +34,7 @@
     "utils" : "Utilities"
   },
   "Help": {
+    "QueueEmpty" : "The queue is empty. Order tracks via `{0}play [request]`",
     "HelpMessage": "Command help: ",
     "HelpTitle" : "Available commands",
     "HelpDescription" : "Help for all commands and categories",
@@ -46,6 +47,7 @@
     "help0s" : "Shows information about a specific command",
     "help0_0s" : "Command or group name",
     "help1s" : "Shows information about all commands",
+    "list0s" : "Displays the entire queue",
     "history0s": "Shows the message change history.\nYou can also put emotion 📖 under the desired message",
     "history0_0s": "ID of the message whose history needs to be displayed. You can also use a pair of `channel ID` -`ID messages`",
     "setprefix0s": "Assigns a prefix for bot commands",

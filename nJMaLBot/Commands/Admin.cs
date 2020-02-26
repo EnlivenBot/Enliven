@@ -6,7 +6,7 @@ using Discord.Commands;
 namespace Bot.Commands {
     [Hidden]
     public class AdminCommands : AdvancedModuleBase {
-        [Command("limitmusiccommands.")]
+        [Command("limitmusiccommands")]
         public async Task LimitMusicCommand(bool b) {
             if (b && !GuildConfig.GetChannel(ChannelFunction.Music, out _)) {
                 await ReplyAsync("You must set music channel first");

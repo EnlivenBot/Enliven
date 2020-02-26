@@ -111,7 +111,7 @@ namespace Bot.Music {
                         var inactivityTrackingService = new InactivityTrackingService(Cluster, new DiscordClientWrapper(Program.Client),
                             new InactivityTrackingOptions {
                                 TrackInactivity = true,
-                                DisconnectDelay = TimeSpan.FromMinutes(2),
+                                DisconnectDelay = TimeSpan.FromSeconds(30),
                                 PollInterval = TimeSpan.FromSeconds(4)
                             }, lavalinkLogger);
                     });

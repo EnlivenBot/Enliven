@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Bot.Config;
 using Bot.Music;
@@ -122,7 +123,7 @@ namespace Bot.Commands {
 
             await player.SetVolumeAsync(volume / 10f);
             Context.Message.SafeDelete();
-            await ReplyFormattedAsync($"Music.NewVolume".Format(volume), false, logMessage);
+            await ReplyFormattedAsync(Loc.Get("Music.NewVolume").Format(volume), false, logMessage);
         }
 
         [Command("repeat", RunMode = RunMode.Async)]
@@ -153,6 +154,46 @@ namespace Bot.Commands {
             }
 
             Repeat(player.LoopingState.Next());
+        }
+        
+        [Command("list", RunMode = RunMode.Async)]
+        [Alias("l", "q", "queue")]
+        [Summary("list0s")]
+        public async Task List() {
+            var player = await GetPlayerAsync();
+            var logMessage = await GetLogMessage();
+            if (player == null || player.Playlist.IsEmpty) {
+                Context.Message.SafeDelete();
+                ReplyFormattedAsync(Loc.Get("Music.QueueEmpty").Format(GuildConfig.Prefix), true, logMessage);
+                return;
+            }
+            var queue = new StringBuilder("```py\n");
+            for (var index = 0; index < player.Playlist.Count; index++) {
+                var builder = new StringBuilder();
+                var lavalinkTrack = player.Playlist[index];
+                builder.Append(player.CurrentTrackIndex == index ? "@" : " ");
+                builder.Append(index + 1);
+                builder.Append(": ");
+                builder.AppendLine(lavalinkTrack.Title);
+                if (queue.Length + builder.Length > 2000) {
+                    PrintList(queue, logMessage);
+                    logMessage = null;
+                    queue = new StringBuilder("```py\n");
+                }
+
+                queue.Append(builder);
+            }
+            PrintList(queue, logMessage);
+
+            Context.Message.SafeDelete();
+        }
+
+        private async Task PrintList(StringBuilder builder, IUserMessage message = null) {
+            builder.Append("```");
+            builder.Replace("'", "");
+            builder.Replace("\"", "");
+            builder.Replace("#", "");
+            ReplyFormattedAsync(builder.ToString(), false, message);
         }
     }
 }
