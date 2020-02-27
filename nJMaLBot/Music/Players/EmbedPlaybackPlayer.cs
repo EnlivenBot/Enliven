@@ -6,6 +6,7 @@ using System.Timers;
 using Bot.Config;
 using Bot.Music.Players;
 using Bot.Utilities;
+using Bot.Utilities.Emoji;
 using Discord;
 using Lavalink4NET;
 using Lavalink4NET.Events;

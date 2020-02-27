@@ -10,9 +10,16 @@ using Newtonsoft.Json;
 namespace Bot.Config {
     internal class GlobalConfig {
         private static readonly Lazy<GlobalConfig> _globalConfig = new Lazy<GlobalConfig>(() => {
-            if (File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "config.json")))
-                return JsonConvert.DeserializeObject<GlobalConfig>(File.ReadAllText(Path.Combine(Directory.GetCurrentDirectory(), "config.json")));
-            File.WriteAllText(Path.Combine(Directory.GetCurrentDirectory(), "config.json"), JsonConvert.SerializeObject(new GlobalConfig(), Formatting.Indented));
+            if (File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "config.json"))) {
+                Directory.CreateDirectory("Config");
+                File.Move("config.json", Path.Combine("Config", "config.json"));
+            }
+
+            if (File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "Config", "config.json")))
+                return JsonConvert.DeserializeObject<GlobalConfig>(File.ReadAllText(Path.Combine(Directory.GetCurrentDirectory(), "Config", "config.json")));
+            Directory.CreateDirectory("Config");
+            File.WriteAllText(Path.Combine(Directory.GetCurrentDirectory(), "Config", "config.json"),
+                JsonConvert.SerializeObject(new GlobalConfig(), Formatting.Indented));
             return new GlobalConfig();
         });
 
@@ -28,7 +35,8 @@ namespace Bot.Config {
         public string SelfPass { get; set; } = "nJMaLBot";
 
         [JsonPropertyName("Lavalink Nodes")]
-        [Description("Not including self node\nExample:\n{\n  \"Password\": \"youshallnotpass\",\n  \"RestUri\": \"http://localhost:8080/\",\n  \"WebSocketUri\": \"ws://localhost:8080/\"\n}")]
+        [Description(
+            "Not including self node\nExample:\n{\n  \"Password\": \"youshallnotpass\",\n  \"RestUri\": \"http://localhost:8080/\",\n  \"WebSocketUri\": \"ws://localhost:8080/\"\n}")]
         public List<LavalinkNodeInfo> LavalinkNodes { get; set; } = new List<LavalinkNodeInfo>();
     }
 }
