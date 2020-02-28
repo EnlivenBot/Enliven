@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Bot.Config;
+using Bot.Config.Localization;
 using Bot.Utilities;
 using Bot.Utilities.Commands;
 using Discord;

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Bot.Config;
+using Bot.Config.Localization;
 using Bot.Music;
 using Discord;
 using Discord.Commands;

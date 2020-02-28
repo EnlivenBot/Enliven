@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Bot.Config;
+using Bot.Config.Localization;
+using Bot.Config.Localization.Providers;
 using Bot.Utilities;
 using CoreHtmlToImage;
 using DiffMatchPatch;

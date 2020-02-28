@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using Discord;
 using Newtonsoft.Json;
 
-namespace Bot.Config {
+namespace Bot.Config.Localization {
     internal static class Localization {
         private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
 
@@ -73,46 +71,6 @@ namespace Bot.Config {
 
         public static string Get(GuildConfig guildConfig, string id) {
             return Get(guildConfig.GetLanguage(), id);
-        }
-    }
-    
-    public interface ILocalizationProvider {
-        string Get(string id);
-        string Get(string group, string id);
-    }
-
-    public class LandLocalizationProvider : ILocalizationProvider {
-        private readonly string _lang;
-        public LandLocalizationProvider(string lang) {
-            _lang = lang;
-        }
-
-        public string Get(string id) {
-            return Localization.Get(_lang, id);
-        }
-
-        public string Get(string group, string id) {
-            return Localization.Get(_lang, group, id);
-        }
-    }
-
-    public class GuildLocalizationProvider : ILocalizationProvider {
-        private readonly GuildConfig _guildConfig;
-
-        public GuildLocalizationProvider(ulong guildId) {
-            _guildConfig = GuildConfig.Get(guildId);
-        }
-
-        public GuildLocalizationProvider(GuildConfig guildConfig) {
-            _guildConfig = guildConfig;
-        }
-
-        public string Get(string id) {
-            return Localization.Get(_guildConfig.GetLanguage(), id);
-        }
-
-        public string Get(string group, string id) {
-            return Localization.Get(_guildConfig.GetLanguage(), group, id);
         }
     }
 }

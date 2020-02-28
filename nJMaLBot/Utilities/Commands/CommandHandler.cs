@@ -4,6 +4,8 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Bot.Config;
+using Bot.Config.Localization;
+using Bot.Config.Localization.Providers;
 using Bot.Music.Players;
 using Bot.Utilities;
 using Discord;
