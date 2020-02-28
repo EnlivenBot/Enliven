@@ -5,6 +5,7 @@
     "Fail": "There is no language {0}.\nAvailable: {1}"
   },
   "Music" : {
+    "PlaybackDisposed" : "Playback has stopped",
     "VolumeOutOfRange" : "Volume out of range: 0% - 150%!",
     "NewVolume" : "New volume: `{0}`%",
     "RequestedBy" : "Requested by: {0}",

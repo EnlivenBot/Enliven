@@ -1,9 +1,12 @@
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Timers;
 using Bot.Config;
+using Bot.Config.Localization;
+using Bot.Config.Localization.Providers;
 using Bot.Music.Players;
 using Bot.Utilities;
 using Bot.Utilities.Emoji;
@@ -14,18 +17,23 @@ using Lavalink4NET.Player;
 
 namespace Bot.Music {
     public sealed class EmbedPlaybackPlayer : PlaylistLavalinkPlayer {
+        private string PlaylistString;
+        private Timer UpdateTimer = new Timer(TimeSpan.FromSeconds(4).TotalMilliseconds);
+        private EmbedBuilder EmbedBuilder = new EmbedBuilder();
+        public IUserMessage ControlMessage { get; private set; }
+        private bool IsConstructing { get; set; } = true;
+        public readonly ILocalizationProvider Loc;
+
         // ReSharper disable once UnusedParameter.Local
         public EmbedPlaybackPlayer(LavalinkSocket lavalinkSocket, IDiscordClientWrapper client, ulong guildId, bool disconnectOnStop)
             : base(lavalinkSocket, client, guildId, disconnectOnStop) {
-            Playlist.Update += (sender, args) => PlaylistString = GetPlaylistString(Playlist, CurrentTrackIndex);
-            CurrentTrackIndexChange += (sender, args) => PlaylistString = GetPlaylistString(Playlist, args);
-            UpdateTimer.Elapsed += (sender, args) => {
-                BuildEmbedFields();
-                ControlMessage?.ModifyAsync(properties => {
-                    properties.Embed = EmbedBuilder.Build();
-                    properties.Content = "";
-                });
-            };
+            Loc = new GuildLocalizationProvider(GuildId);
+            EmbedBuilder.AddField("Placeholder", "Placeholder", true);
+            EmbedBuilder.AddField(Loc.Get("Music.Volume"), "Placeholder", true);
+            EmbedBuilder.AddField(Loc.Get("Music.Queue").Format(0, 0), "Placeholder");
+            Playlist.Update += (sender, args) => UpdatePlaylist();
+            CurrentTrackIndexChange += (sender, args) => UpdatePlaylist();
+            UpdateTimer.Elapsed += (sender, args) => UpdateProgress();
         }
 
         public override async Task SetVolumeAsync(float volume = 1, bool normalize = false) {
@@ -34,21 +42,23 @@ namespace Bot.Music {
 
             await base.SetVolumeAsync(volume, normalize);
             GuildConfig.Get(GuildId).SetVolume(volume).Save();
+            UpdateVolume();
         }
 
         public override async Task OnConnectedAsync(VoiceServer voiceServer, VoiceState voiceState) {
             await base.SetVolumeAsync(GuildConfig.Get(GuildId).Volume);
+            UpdateVolume();
             await base.OnConnectedAsync(voiceServer, voiceState);
         }
 
         public override async Task OnTrackEndAsync(TrackEndEventArgs eventArgs) {
             if (eventArgs.Reason == TrackEndReason.LoadFailed) {
-                var loc = new GuildLocalizationProvider(GuildId);
                 var embedBuilder = new EmbedBuilder();
-                embedBuilder.WithColor(Color.Red).WithTitle(loc.Get("Music.TrackError"))
-                            .WithDescription(loc.Get("Music.DecodingError").Format(CurrentTrack.Title, CurrentTrack.Source));
+                embedBuilder.WithColor(Color.Red).WithTitle(Loc.Get("Music.TrackError"))
+                            .WithDescription(Loc.Get("Music.DecodingError").Format(CurrentTrack.Title, CurrentTrack.Source));
                 await ControlMessage.Channel.SendMessageAsync(null, false, embedBuilder.Build());
             }
+
             await base.OnTrackEndAsync(eventArgs);
             // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
             switch (State) {
@@ -73,6 +83,16 @@ namespace Bot.Music {
 
         public override void Cleanup() {
             UpdateTimer.Stop();
+            var embedBuilder = new EmbedBuilder();
+            embedBuilder.WithTitle(Loc.Get("Music.Playback"))
+                        .WithDescription(Loc.Get("Music.PlaybackDisposed"))
+                        .WithColor(Color.Gold);
+            ControlMessage?.ModifyAsync(properties => {
+                properties.Embed = embedBuilder.Build();
+                properties.Content = null;
+            });
+            ControlMessage.DelayedDelete(TimeSpan.FromMinutes(10));
+            ControlMessage = null;
             base.Cleanup();
         }
 
@@ -83,22 +103,56 @@ namespace Bot.Music {
             var iconUrl = $"https://img.youtube.com/vi/{(string.IsNullOrWhiteSpace(CurrentTrack.TrackIdentifier) ? "" : CurrentTrack.TrackIdentifier)}/0.jpg";
             EmbedBuilder?.WithAuthor(string.IsNullOrWhiteSpace(CurrentTrack.Author) ? "Unknown" : CurrentTrack.Author.SafeSubstring(0, 250), iconUrl)
                         ?.WithThumbnailUrl(iconUrl)?.WithTitle(CurrentTrack.Title.SafeSubstring(0, 250))?.WithUrl(CurrentTrack.Source);
-            BuildEmbedFields();
+            IsConstructing = false;
+            UpdateProgress();
 
             UpdateTimer.Start();
             return toReturn;
         }
 
-        private void BuildEmbedFields() {
-            var loc = new GuildLocalizationProvider(GuildId);
-            EmbedBuilder.Fields.Clear();
+        private void UpdateControlMessage() {
+            if (IsConstructing)
+                return;
+            ControlMessage?.ModifyAsync(properties => {
+                properties.Embed = EmbedBuilder.Build();
+                properties.Content = "";
+            });
+        }
+
+        private void UpdateProgress() {
+            var stateString = State switch {
+                PlayerState.Playing => CommonEmoji.Play.ToString(),
+                PlayerState.Paused  => CommonEmoji.Pause.ToString(),
+                _                   => CommonEmoji.Stop.ToString()
+            };
+            var repeatState = LoopingState switch {
+                LoopingState.One => CommonEmoji.RepeatOnce.ToString(),
+                LoopingState.All => CommonEmoji.Repeat.ToString(),
+                LoopingState.Off => CommonEmoji.RepeatOff.ToString(),
+                _                => ""
+            };
             var progress = Convert.ToInt32(TrackPosition.TotalSeconds / CurrentTrack.Duration.TotalSeconds * 100);
             var requester = CurrentTrack is AuthoredLavalinkTrack authoredLavalinkTrack ? authoredLavalinkTrack.GetRequester() : "Unknown";
-            EmbedBuilder.AddField(
-                loc.Get("Music.RequestedBy").Format(requester),
-                GetProgressString(progress) + $"  `{TrackPosition:mm':'ss} / {CurrentTrack.Duration:mm':'ss}`", true);
-            EmbedBuilder.AddField(loc.Get("Music.Volume"), $"{Convert.ToInt32(Volume * 100f)}% 🔉", true);
-            EmbedBuilder.AddField(loc.Get("Music.Queue").Format(CurrentTrackIndex + 1, Playlist.Count), PlaylistString);
+            EmbedBuilder.Fields[0].Name = Loc.Get("Music.RequestedBy").Format(requester);
+            EmbedBuilder.Fields[0].Value =
+                repeatState + stateString + GetProgressString(progress) + $"  `{TrackPosition:mm':'ss} / {CurrentTrack.Duration:mm':'ss}`";
+            UpdateControlMessage();
+        }
+
+        private void UpdateVolume() {
+            EmbedBuilder.Fields[1].Value = $"{Convert.ToInt32(Volume * 100f)}% 🔉";
+            UpdateControlMessage();
+        }
+
+        private void UpdatePlaylist() {
+            PlaylistString = GetPlaylistString(Playlist, CurrentTrackIndex);
+            UpdateQueue();
+        }
+
+        private void UpdateQueue() {
+            EmbedBuilder.Fields[2].Name = Loc.Get("Music.Queue").Format(CurrentTrackIndex + 1, Playlist.Count);
+            EmbedBuilder.Fields[2].Value = PlaylistString;
+            UpdateControlMessage();
         }
 
         private static string GetProgressString(int progress) {
@@ -156,14 +210,10 @@ namespace Bot.Music {
             }
         }
 
-        private string PlaylistString;
-        private Timer UpdateTimer = new Timer(TimeSpan.FromSeconds(4).TotalMilliseconds);
-        private EmbedBuilder EmbedBuilder = new EmbedBuilder();
-        public IUserMessage ControlMessage { get; private set; }
-
         public void SetControlMessage(IUserMessage message) {
             ControlMessage?.SafeDelete();
             ControlMessage = message;
+            UpdateControlMessage();
         }
     }
 }

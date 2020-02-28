@@ -11,6 +11,7 @@ namespace Bot.Utilities.Emoji {
         public static Emote Repeat { get; set; } = Emote.Parse(CommonEmojiStrings.Instance.Repeat);
         public static Emote Play { get; set; } = Emote.Parse(CommonEmojiStrings.Instance.Play);
         public static Emote Pause { get; set; } = Emote.Parse(CommonEmojiStrings.Instance.Pause);
+        public static Emote Stop { get; set; } = Emote.Parse(CommonEmojiStrings.Instance.Stop);
     }
 
     public class CommonEmojiStrings {
@@ -32,5 +33,6 @@ namespace Bot.Utilities.Emoji {
         public string Repeat { get; set; } = "<:repeat:682469899066409043>";
         public string Play { get; set; } = "<:play:682580118358458368>";
         public string Pause { get; set; } = "<:pause:682580118425960469>";
+        public string Stop { get; set; } = "<:stop:682658172615524382>";
     }
 }
