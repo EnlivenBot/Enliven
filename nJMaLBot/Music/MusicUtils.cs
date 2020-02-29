@@ -116,6 +116,11 @@ namespace Bot.Music {
                                 DisconnectDelay = TimeSpan.FromSeconds(30),
                                 PollInterval = TimeSpan.FromSeconds(4)
                             }, lavalinkLogger);
+                        inactivityTrackingService.InactivePlayer += async (sender, args) => {
+                            if (args.Player is EmbedPlaybackPlayer embedPlaybackPlayer) {
+                                embedPlaybackPlayer.PrepareShutdown(embedPlaybackPlayer.Loc.Get("Music.NoListenersLeft"));
+                            }
+                        };
                     });
                 }
                 catch (Exception e) {

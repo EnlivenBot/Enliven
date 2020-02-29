@@ -29,6 +29,7 @@ namespace Bot.Commands {
                 logMessage.SafeDelete();
                 return;
             }
+
             player.SetControlMessage(logMessage);
             try {
                 await MusicUtils.QueueLoadMusic(Context.Message, query, player);
@@ -48,20 +49,19 @@ namespace Bot.Commands {
         [Summary("stop0s")]
         public async Task Stop() {
             var player = await GetPlayerAsync();
-            var logMessage = await GetLogMessage();
-            if (player == null || logMessage == null) {
+            if (player == null) {
                 Context.Message.SafeDelete();
                 return;
             }
 
             if (player.CurrentTrack == null) {
-                await ReplyFormattedAsync(Loc.Get("Music.NothingPlaying"), true, logMessage);
+                await ReplyFormattedAsync(Loc.Get("Music.NothingPlaying"), true);
                 return;
             }
 
+            player.PrepareShutdown(Loc.Get("Music.UserStopPlayback"));
             await player.StopAsync(true);
             Context.Message.SafeDelete();
-            ReplyFormattedAsync(Loc.Get("Music.Stopped"), false, logMessage).DelayedDelete(TimeSpan.FromMinutes(5));
         }
 
         [Command("jump", RunMode = RunMode.Async)]
@@ -69,17 +69,15 @@ namespace Bot.Commands {
         [Summary("jump0s")]
         public async Task Jump([Summary("jump0_0s")] int index = 1) {
             var player = await GetPlayerAsync();
-            var logMessage = await GetLogMessage();
-            if (player == null || logMessage == null) {
+            if (player == null) {
                 Context.Message.SafeDelete();
                 return;
             }
 
             await player.SkipAsync(index, true);
             player.WriteToQueueHistory(Loc.Get("MusicQueues.Jumped")
-                                          .Format(Context.User.Username, player.CurrentTrackIndex + 1, 
+                                          .Format(Context.User.Username, player.CurrentTrackIndex + 1,
                                                player.CurrentTrack.Title.SafeSubstring(0, 40) + "..."));
-            logMessage.SafeDelete();
             Context.Message.SafeDelete();
         }
 
@@ -88,8 +86,7 @@ namespace Bot.Commands {
         [Summary("goto0s")]
         public async Task Goto([Summary("goto0_0s")] int index) {
             var player = await GetPlayerAsync();
-            var logMessage = await GetLogMessage();
-            if (player == null || logMessage == null) {
+            if (player == null) {
                 Context.Message.SafeDelete();
                 return;
             }
@@ -97,14 +94,12 @@ namespace Bot.Commands {
             if (player.Playlist.TryGetValue(index - 1, out var track)) {
                 await player.PlayAsync(track, false, new TimeSpan?(), new TimeSpan?());
                 player.WriteToQueueHistory(Loc.Get("MusicQueues.Jumped")
-                                              .Format(Context.User.Username, player.CurrentTrackIndex + 1, 
+                                              .Format(Context.User.Username, player.CurrentTrackIndex + 1,
                                                    player.CurrentTrack.Title.SafeSubstring(0, 40) + "..."));
-                logMessage.SafeDelete();
             }
             else {
                 ReplyFormattedAsync(Loc.Get("Music.TrackIndexWrong").Format(Context.User.Mention, index, player.Playlist.Count),
-                        true, logMessage)
-                   .DelayedDelete(TimeSpan.FromMinutes(5));
+                        true).DelayedDelete(TimeSpan.FromMinutes(5));
             }
 
             Context.Message.SafeDelete();
@@ -157,7 +152,7 @@ namespace Bot.Commands {
 
             Repeat(player.LoopingState.Next());
         }
-        
+
         [Command("pause", RunMode = RunMode.Async)]
         [Summary("pause0s")]
         public async Task Pause() {
@@ -171,7 +166,7 @@ namespace Bot.Commands {
             player.PauseAsync();
             player.WriteToQueueHistory(Loc.Get("MusicQueues.Pause").Format(Context.User.Username));
         }
-        
+
         [Command("resume", RunMode = RunMode.Async)]
         [Alias("unpause")]
         [Summary("resume0s")]
@@ -186,7 +181,7 @@ namespace Bot.Commands {
             player.ResumeAsync();
             player.WriteToQueueHistory(Loc.Get("MusicQueues.Resume").Format(Context.User.Username));
         }
-        
+
         [Command("shuffle", RunMode = RunMode.Async)]
         [Alias("random", "shuf", "shuff", "randomize", "randomise")]
         [Summary("shuffle0s")]

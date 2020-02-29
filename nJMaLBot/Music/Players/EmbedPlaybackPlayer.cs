@@ -66,14 +66,15 @@ namespace Bot.Music {
             // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
             switch (State) {
                 case PlayerState.NotPlaying:
+                    UpdateProgress();
                     UpdateTimer.Stop();
                     break;
                 case PlayerState.Destroyed:
+                    UpdateProgress();
                     UpdateTimer.Stop();
                     break;
-                case PlayerState.Paused:
-                    break;
                 case PlayerState.NotConnected:
+                    UpdateProgress();
                     UpdateTimer.Stop();
                     break;
             }
@@ -81,11 +82,13 @@ namespace Bot.Music {
 
         public override async Task PauseAsync() {
             await base.PauseAsync();
+            UpdateTimer.Stop();
             UpdateProgress();
         }
 
         public override async Task ResumeAsync() {
             await base.ResumeAsync();
+            UpdateTimer.Start();
             UpdateProgress();
         }
 
@@ -101,17 +104,32 @@ namespace Bot.Music {
 
         public override void Cleanup() {
             UpdateTimer.Stop();
+            if (ControlMessage != null) {
+                var embedBuilder = new EmbedBuilder();
+                embedBuilder.WithTitle(Loc.Get("Music.Playback"))
+                            .WithDescription(Loc.Get("Music.PlaybackDisposed"))
+                            .WithColor(Color.Gold);
+                ControlMessage?.ModifyAsync(properties => {
+                    properties.Embed = embedBuilder.Build();
+                    properties.Content = null;
+                });
+                ControlMessage?.DelayedDelete(TimeSpan.FromMinutes(10));
+                ControlMessage = null;
+            }
+
+            base.Cleanup();
+        }
+
+        public void PrepareShutdown(string reason) {
             var embedBuilder = new EmbedBuilder();
-            embedBuilder.WithTitle(Loc.Get("Music.Playback"))
-                        .WithDescription(Loc.Get("Music.PlaybackDisposed"))
-                        .WithColor(Color.Gold);
+            embedBuilder.WithTitle(Loc.Get("Music.PlaybackStopped"))
+                        .WithDescription(reason);
             ControlMessage?.ModifyAsync(properties => {
                 properties.Embed = embedBuilder.Build();
                 properties.Content = null;
             });
             ControlMessage.DelayedDelete(TimeSpan.FromMinutes(10));
             ControlMessage = null;
-            base.Cleanup();
         }
 
         public override async Task<int> PlayAsync(LavalinkTrack track, bool enqueue, TimeSpan? startTime = null, TimeSpan? endTime = null,
@@ -139,14 +157,14 @@ namespace Bot.Music {
 
         private void UpdateProgress() {
             var stateString = State switch {
-                PlayerState.Playing => CommonEmoji.Play.ToString(),
-                PlayerState.Paused  => CommonEmoji.Pause.ToString(),
-                _                   => CommonEmoji.Stop.ToString()
+                PlayerState.Playing => CommonEmojiStrings.Instance.Play,
+                PlayerState.Paused  => CommonEmojiStrings.Instance.Pause,
+                _                   => CommonEmojiStrings.Instance.Stop
             };
             var repeatState = LoopingState switch {
-                LoopingState.One => CommonEmoji.RepeatOnce.ToString(),
-                LoopingState.All => CommonEmoji.Repeat.ToString(),
-                LoopingState.Off => CommonEmoji.RepeatOff.ToString(),
+                LoopingState.One => CommonEmojiStrings.Instance.RepeatOnce,
+                LoopingState.All => CommonEmojiStrings.Instance.Repeat,
+                LoopingState.Off => CommonEmojiStrings.Instance.RepeatOff,
                 _                => ""
             };
             var progress = Convert.ToInt32(TrackPosition.TotalSeconds / CurrentTrack.Duration.TotalSeconds * 100);
@@ -158,7 +176,7 @@ namespace Bot.Music {
         }
 
         private void UpdateVolume() {
-            EmbedBuilder.Fields[1].Value = $"{Convert.ToInt32(Volume * 100f)}% 🔉";
+            EmbedBuilder.Fields[1].Value = $"{Convert.ToInt32(Volume * 10f)}% 🔉";
             UpdateControlMessage();
         }
 
