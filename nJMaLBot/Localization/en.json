@@ -8,7 +8,10 @@
     "Enqueued" : "**{0}** enqueue `{1}`",
     "Jumped" : "**{0}** jumped to `{1}` track - `{2}`",
     "NewVolume" : "**{0}** set new volume: `{1}`%",
-    "RepeatSet" : "**{0}** set repeat mode to {1}"
+    "RepeatSet" : "**{0}** set repeat mode to {1}",
+    "Pause" : "**{0}** pauses playback",
+    "Resume" : "**{0}** resumes playback",
+    "Shuffle" : "**{0}** shuffles tracks in queue"
   },
   "Music" : {
     "RequestHistory" : "Request history",
@@ -49,6 +52,9 @@
     "CommandTitle" : "**{0}** - {1}",
     "ByCommand": "Command help: `{0}`",
     "Aliases" : "Aliases: ",
+    "shuffle0s" : "Randomizes the tracks in the queue",
+    "pause0s" : "Pauses playback",
+    "resume0s" : "Resumes playback",
     "help0s" : "Shows information about a specific command",
     "help0_0s" : "Command or group name",
     "help1s" : "Shows information about all commands",

@@ -146,7 +146,7 @@ namespace Bot.Commands {
         }
 
         [Command("repeat", RunMode = RunMode.Async)]
-        [Alias("r")]
+        [Alias("r", "loop", "l")]
         [Summary("repeat0s")]
         public async Task Repeat() {
             var player = await GetPlayerAsync();
@@ -156,6 +156,50 @@ namespace Bot.Commands {
             }
 
             Repeat(player.LoopingState.Next());
+        }
+        
+        [Command("pause", RunMode = RunMode.Async)]
+        [Summary("pause0s")]
+        public async Task Pause() {
+            var player = await GetPlayerAsync();
+            if (player == null) {
+                Context.Message.SafeDelete();
+                return;
+            }
+
+            Context.Message.SafeDelete();
+            player.PauseAsync();
+            player.WriteToQueueHistory(Loc.Get("MusicQueues.Pause").Format(Context.User.Username));
+        }
+        
+        [Command("resume", RunMode = RunMode.Async)]
+        [Alias("unpause")]
+        [Summary("resume0s")]
+        public async Task Resume() {
+            var player = await GetPlayerAsync();
+            if (player == null) {
+                Context.Message.SafeDelete();
+                return;
+            }
+
+            Context.Message.SafeDelete();
+            player.ResumeAsync();
+            player.WriteToQueueHistory(Loc.Get("MusicQueues.Resume").Format(Context.User.Username));
+        }
+        
+        [Command("shuffle", RunMode = RunMode.Async)]
+        [Alias("random", "shuf", "shuff", "randomize", "randomise")]
+        [Summary("shuffle0s")]
+        public async Task Shuffle() {
+            var player = await GetPlayerAsync();
+            if (player == null) {
+                Context.Message.SafeDelete();
+                return;
+            }
+
+            Context.Message.SafeDelete();
+            player.Playlist.Shuffle();
+            player.WriteToQueueHistory(Loc.Get("MusicQueues.Shuffle").Format(Context.User.Username));
         }
 
         [Command("list", RunMode = RunMode.Async)]

@@ -13,6 +13,9 @@ namespace Bot.Music.Players {
         public PlaylistLavalinkPlayer(LavalinkSocket lavalinkSocket, IDiscordClientWrapper client, ulong guildId, bool disconnectOnStop)
             : base(lavalinkSocket, client, guildId, false) {
             Playlist = new LavalinkPlaylist();
+            Playlist.Update += (sender, args) => {
+                if (CurrentTrack != null) CurrentTrackIndex = Playlist.IndexOf(CurrentTrack);
+            };
         }
 
         public LoopingState LoopingState { get; set; } = LoopingState.Off;
@@ -23,8 +26,10 @@ namespace Bot.Music.Players {
         public int CurrentTrackIndex {
             get => _currentTrackIndex;
             private set {
+                var notify = _currentTrackIndex != value;
                 _currentTrackIndex = value;
-                CurrentTrackIndexChange.Invoke(null, value);
+                if (notify)
+                    CurrentTrackIndexChange?.Invoke(null, value);
             }
         }
 

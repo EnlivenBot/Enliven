@@ -33,6 +33,7 @@ namespace Bot.Music {
             EmbedBuilder.AddField("Placeholder", "Placeholder", true);
             EmbedBuilder.AddField(Loc.Get("Music.Volume"), "Placeholder", true);
             EmbedBuilder.AddField(Loc.Get("Music.Queue").Format(0, 0), "Placeholder");
+            EmbedBuilder.AddField(Loc.Get("Music.RequestHistory"), "Placeholder");
             Playlist.Update += (sender, args) => UpdatePlaylist();
             CurrentTrackIndexChange += (sender, args) => UpdatePlaylist();
             UpdateTimer.Elapsed += (sender, args) => UpdateProgress();
@@ -78,9 +79,21 @@ namespace Bot.Music {
             }
         }
 
+        public override async Task PauseAsync() {
+            await base.PauseAsync();
+            UpdateProgress();
+        }
+
+        public override async Task ResumeAsync() {
+            await base.ResumeAsync();
+            UpdateProgress();
+        }
+
         public override void Dispose() {
             Cleanup();
-            try { base.Dispose();}
+            try {
+                base.Dispose();
+            }
             catch (Exception) {
                 // ignored
             }
@@ -167,11 +180,6 @@ namespace Bot.Music {
                 if (indexOf >= 0) _queueHistory.Remove(0, indexOf + Environment.NewLine.Length);
             }
 
-            if (EmbedBuilder.Fields.Count < 4) {
-                EmbedBuilder.AddField("Placeholder", "Placeholder");
-            }
-
-            EmbedBuilder.Fields[3].Name = Loc.Get("Music.RequestHistory");
             EmbedBuilder.Fields[3].Value = Utilities.Utilities.SplitToLines(_queueHistory.ToString(), 60)
                                                     .JoinToString("\n").Replace("\n\n", "\n");
             UpdateControlMessage();
