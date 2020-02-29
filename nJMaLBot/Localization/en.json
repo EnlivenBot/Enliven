@@ -4,13 +4,18 @@
     "Success": "Successfully changed the bot language to `{0}`.\n* This message will be deleted in a minute.",
     "Fail": "There is no language {0}.\nAvailable: {1}"
   },
+  "MusicQueues" : {
+    "Enqueued" : "**{0}** enqueue `{1}`",
+    "Jumped" : "**{0}** jumped to `{1}` track - `{2}`",
+    "NewVolume" : "**{0}** set new volume: `{1}`%",
+    "RepeatSet" : "**{0}** set repeat mode to {1}"
+  },
   "Music" : {
+    "RequestHistory" : "Request history",
     "PlaybackDisposed" : "Playback has stopped",
     "VolumeOutOfRange" : "Volume out of range: 0% - 150%!",
-    "NewVolume" : "New volume: `{0}`%",
     "RequestedBy" : "Requested by: {0}",
     "VolumeUpdated" : "Volume updated: {0}%",
-    "Jumped"  : "Moved to track {0} - `{1}`",
     "Stopped" : "Stopped playing",
     "NothingPlaying" : "Nothing playing",
     "Fail" : "Error",
@@ -22,7 +27,6 @@
     "Queue" : "Queue - `{0}` of `{1}`",
     "TrackIndexWrong" : "{0}, the playlist does not have a track with the index `{1}`. The valid value is from `1` to `{2}`",
     "PlaybackMoved" : "The playback bar has been moved to the music channel - <#{0}>",
-    "RepeatSet" : "Playback repeat mode set to {0}",
     "OtherVoiceChannel": "{0}, You must be in the same voice channel as the bot",
     "NotInVoiceChannel": "{0}, You must be in a voice channel",
     "TrackError": "Track error",

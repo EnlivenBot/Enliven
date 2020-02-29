@@ -21,7 +21,9 @@ namespace Bot {
 
         private static void Main(string[] args) {
             InstallLogger();
+            #if !DEBUG
             InstallErrorHandlers();
+            #endif
             logger.Info("Start Initialising");
 
             RuntimeHelpers.RunClassConstructor(typeof(MessageHistoryManager).TypeHandle);
@@ -102,7 +104,7 @@ namespace Bot {
 
         private static void InstallErrorHandlers() {
             AppDomain.CurrentDomain.UnhandledException += (sender, args) => logger.Fatal(args.ExceptionObject as Exception, "Global uncaught exception");
-            TaskScheduler.UnobservedTaskException += (sender, args) => logger.Fatal( args.Exception.Flatten(), "Global uncaught task exception");
+            TaskScheduler.UnobservedTaskException += (sender, args) => logger.Fatal(args.Exception.Flatten(), "Global uncaught task exception");
         }
     }
 }

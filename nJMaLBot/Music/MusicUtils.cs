@@ -5,10 +5,12 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Bot.Config;
 using Bot.Music.Players;
+using Bot.Utilities;
 using Discord;
 using Lavalink4NET;
 using Lavalink4NET.Cluster;
@@ -167,12 +169,27 @@ namespace Bot.Music {
             }
 
             var tracks = lavalinkTracks
-                        .Select(track => AuthoredLavalinkTrack.FromLavalinkTrack(track, message.Author))
-                        .ToList();
+                        .Select(track => {
+                             player.WriteToQueueHistory(player.Loc.Get("MusicQueues.Enqueued").Format(message.Author.Username, EscapeTrack(track.Title)));
+                             return AuthoredLavalinkTrack.FromLavalinkTrack(track, message.Author);
+                         }).ToList();
             await player.PlayAsync(tracks.First(), true);
             player.Playlist.AddRange(tracks.Skip(1));
 
             return lavalinkTracks;
+        }
+
+        public static string EscapeTrack(string track) {
+            track = track.Replace("'", "");
+            track = track.Replace("\"", "");
+            track = track.Replace("#", "");
+            return track;
+        }
+
+        public static void EscapeTrack(StringBuilder builder) {
+            builder.Replace("'", "");
+            builder.Replace("\"", "");
+            builder.Replace("#", "");
         }
 
         public static void WriteResourceToFile(string resourceName, string fileName) {

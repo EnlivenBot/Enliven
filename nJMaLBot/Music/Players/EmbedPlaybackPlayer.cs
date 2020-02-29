@@ -14,15 +14,17 @@ using Discord;
 using Lavalink4NET;
 using Lavalink4NET.Events;
 using Lavalink4NET.Player;
+using Tyrrrz.Extensions;
 
 namespace Bot.Music {
     public sealed class EmbedPlaybackPlayer : PlaylistLavalinkPlayer {
-        private string PlaylistString;
+        private string _playlistString;
         private Timer UpdateTimer = new Timer(TimeSpan.FromSeconds(4).TotalMilliseconds);
         private EmbedBuilder EmbedBuilder = new EmbedBuilder();
         public IUserMessage ControlMessage { get; private set; }
         private bool IsConstructing { get; set; } = true;
         public readonly ILocalizationProvider Loc;
+        private StringBuilder _queueHistory = new StringBuilder();
 
         // ReSharper disable once UnusedParameter.Local
         public EmbedPlaybackPlayer(LavalinkSocket lavalinkSocket, IDiscordClientWrapper client, ulong guildId, bool disconnectOnStop)
@@ -78,7 +80,10 @@ namespace Bot.Music {
 
         public override void Dispose() {
             Cleanup();
-            base.Dispose();
+            try { base.Dispose();}
+            catch (Exception) {
+                // ignored
+            }
         }
 
         public override void Cleanup() {
@@ -145,13 +150,36 @@ namespace Bot.Music {
         }
 
         private void UpdatePlaylist() {
-            PlaylistString = GetPlaylistString(Playlist, CurrentTrackIndex);
+            _playlistString = GetPlaylistString(Playlist, CurrentTrackIndex);
             UpdateQueue();
         }
 
         private void UpdateQueue() {
             EmbedBuilder.Fields[2].Name = Loc.Get("Music.Queue").Format(CurrentTrackIndex + 1, Playlist.Count);
-            EmbedBuilder.Fields[2].Value = PlaylistString;
+            EmbedBuilder.Fields[2].Value = _playlistString;
+            UpdateControlMessage();
+        }
+
+        public void WriteToQueueHistory(string entry) {
+            _queueHistory.AppendLine("- " + entry);
+            if (_queueHistory.Length > 512) {
+                var indexOf = _queueHistory.ToString().IndexOf(Environment.NewLine, StringComparison.Ordinal);
+                if (indexOf >= 0) _queueHistory.Remove(0, indexOf + Environment.NewLine.Length);
+            }
+
+            if (EmbedBuilder.Fields.Count < 4) {
+                EmbedBuilder.AddField("Placeholder", "Placeholder");
+            }
+
+            EmbedBuilder.Fields[3].Name = Loc.Get("Music.RequestHistory");
+            EmbedBuilder.Fields[3].Value = Utilities.Utilities.SplitToLines(_queueHistory.ToString(), 60)
+                                                    .JoinToString("\n").Replace("\n\n", "\n");
+            UpdateControlMessage();
+        }
+
+        public void SetControlMessage(IUserMessage message) {
+            ControlMessage?.SafeDelete();
+            ControlMessage = message;
             UpdateControlMessage();
         }
 
@@ -208,12 +236,6 @@ namespace Bot.Music {
             catch (Exception) {
                 return "Failed";
             }
-        }
-
-        public void SetControlMessage(IUserMessage message) {
-            ControlMessage?.SafeDelete();
-            ControlMessage = message;
-            UpdateControlMessage();
         }
     }
 }
