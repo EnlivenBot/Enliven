@@ -4,6 +4,9 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Bot.Config;
+using Bot.Config.Localization;
+using Bot.Config.Localization.Providers;
+using Bot.Music.Players;
 using Bot.Utilities;
 using Discord;
 using Discord.Commands;
@@ -24,6 +27,7 @@ namespace Bot.Commands {
 
             await _commands.AddModulesAsync(Assembly.GetEntryAssembly(), null);
             _commands.AddTypeReader(typeof(ChannelFunction), new ChannelFunctionTypeReader());
+            _commands.AddTypeReader(typeof(LoopingState), new LoopingStateTypeReader());
             foreach (var cmdsModule in _commands.Modules) {
                 foreach (var command in cmdsModule.Commands) AllCommands.Add(command);
             }
@@ -32,7 +36,7 @@ namespace Bot.Commands {
         }
 
         private async Task HandleCommand(SocketMessage s) {
-            if (!(s is SocketUserMessage msg))
+            if (!(s is SocketUserMessage msg) || msg.Source != MessageSource.User)
                 return;
 
             var context = new CommandContext(_client, msg);
@@ -41,15 +45,16 @@ namespace Bot.Commands {
             var argPos = 0;
             var guild = GuildConfig.Get(guildChannel.Guild.Id);
             var loc = new GuildLocalizationProvider(guild);
-            if (msg.HasStringPrefix(guild.Prefix, ref argPos)) {
-                var result = await _commands.ExecuteAsync(context, argPos, null);
+            if (msg.HasStringPrefix(guild.Prefix, ref argPos) || HasMentionPrefix(msg, _client.CurrentUser, ref argPos)) {
+                var query = msg.Content.SafeSubstring(argPos, 800);
+                if (string.IsNullOrWhiteSpace(query))
+                    query = "help";
+                var result = await _commands.ExecuteAsync(context, query, null);
                 if (!result.IsSuccess) {
-                    // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
                     switch (result.Error) {
                         case CommandError.UnknownCommand:
                             await SendErrorMessage(msg, loc, string.Format(loc.Get("CommandHandler.UnknownCommand"),
-                                Regex.Match(s.Content, $@"(?<={guild.Prefix})[a-z]{{2,}}(?= )?").Value,
-                                guild.Prefix));
+                                query, guild.Prefix));
                             break;
                         case CommandError.ParseFailed:
                             await SendErrorMessage(msg, loc, string.Format(loc.Get("CommandHandler.ParseFailed"),
@@ -68,6 +73,7 @@ namespace Bot.Commands {
                             await SendErrorMessage(msg, loc, string.Format(loc.Get("CommandHandler.Exception"), result));
                             break;
                     }
+
                     msg.SafeDelete();
                 }
             }
@@ -83,6 +89,18 @@ namespace Bot.Commands {
             builder.WithTitle(loc.Get("CommandHandler.FailedTitle"));
             builder.WithDescription(description);
             return builder.Build();
+        }
+
+        private static bool HasMentionPrefix(IUserMessage msg, IUser user, ref int argPos) {
+            var content = msg.Content;
+            if (string.IsNullOrEmpty(content) || content.Length <= 3 || (content[0] != '<' || content[1] != '@'))
+                return false;
+            var num = content.IndexOf('>');
+            if (num == -1 || !MentionUtils.TryParseUser(content.Substring(0, num + 1), out var userId) || 
+                (long) userId != (long) user.Id)
+                return false;
+            argPos = num + 2;
+            return true;
         }
     }
 }

@@ -5,7 +5,6 @@ using Lavalink4NET.Util;
 
 namespace Bot.Music.Players {
     public class AuthoredLavalinkTrack : LavalinkTrack {
-        public LavalinkTrack Track { get; set; }
         public string RequesterName { get; set; }
         public IUser Requester { get; set; }
 
@@ -13,9 +12,7 @@ namespace Bot.Music.Players {
         public string GetRequester() {
             return Requester?.Username ?? RequesterName ?? "Unknown";
         }
-
-        public AuthoredLavalinkTrack(string identifier, LavalinkTrackInfo info) : base(identifier, info) { }
-
+        
         public AuthoredLavalinkTrack(string identifier, string author, TimeSpan duration, bool isLiveStream, bool isSeekable, string source, string title,
                                      string trackIdentifier, StreamProvider provider) : base(identifier, author, duration, isLiveStream, isSeekable, source,
             title, trackIdentifier, provider) { }

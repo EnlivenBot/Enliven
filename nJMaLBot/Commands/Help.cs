@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Bot.Utilities;
@@ -11,7 +9,7 @@ using Discord.Commands;
 namespace Bot.Commands {
     public class HelpCommand : AdvancedModuleBase {
         [Command("help")]
-        [Summary("Показывает информацию о всех командах")]
+        [Summary("help1s")]
         public async Task PrintHelp() {
             var eb = new EmbedBuilder();
             eb.WithTitle(Loc.Get("Help.HelpTitle"))
@@ -27,16 +25,15 @@ namespace Bot.Commands {
         }
 
         [Command("help")]
-        [Summary("Показывает информацию о определенной команде")]
-        public async Task PrintHelp([Remainder] [Summary("Название команды или группы")]
-                                    string message) {
+        [Summary("help0s")]
+        public async Task PrintHelp([Remainder] [Summary("help0_0s")] string message) {
             var eb = new EmbedBuilder()
                     .WithFooter(Context.User.Username, Context.User.GetAvatarUrl())
                     .WithColor(Color.Gold);
             if (HelpUtils.CommandsGroups.Value.TryGetValue(message, out var commandGroup)) {
                 eb.WithTitle(Loc.Get("Help.CommandsOfGroup").Format(message))
-                  .WithFields(commandGroup.Commands.Select(info => new EmbedFieldBuilder {
-                       Name = $"{GuildConfig.Prefix}{info.Name}",
+                  .WithFields(commandGroup.Commands.GroupBy(info => info.Summary).Select(infos => infos.First()).Select(info => new EmbedFieldBuilder {
+                       Name = $"{GuildConfig.Prefix}{info.Name} {HelpUtils.GetAliasesString(info.Aliases, Loc)}",
                        Value = Loc.Get($"Help.{info.Summary}")
                    }));
             }

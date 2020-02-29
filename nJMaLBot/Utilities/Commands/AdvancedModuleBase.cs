@@ -1,6 +1,9 @@
 using System;
+using System.Reflection.Emit;
 using System.Threading.Tasks;
 using Bot.Config;
+using Bot.Config.Localization;
+using Bot.Config.Localization.Providers;
 using Discord;
 using Discord.Commands;
 

@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Bot.Config;
+using Bot.Config.Localization;
+using Bot.Config.Localization.Providers;
 using Bot.Utilities;
 using CoreHtmlToImage;
 using DiffMatchPatch;
@@ -76,10 +78,10 @@ namespace Bot {
         }
 
         private static async Task<byte[]> RenderLog(MessageHistory messageHistory) {
-            await ExportHelper.ExportHistoryAsync(messageHistory, $"{messageHistory.Id}.html");
+            await ExportHelper.ExportHistoryAsync(messageHistory, Path.Combine(Directory.GetCurrentDirectory(), $"{messageHistory.Id}.html"));
             var converter = new HtmlConverter();
-            var bytes = converter.FromHtmlString(File.ReadAllText($"{messageHistory.Id}.html"), 512);
-            File.Delete($"{messageHistory.Id}.html");
+            var bytes = converter.FromHtmlString(File.ReadAllText(Path.Combine(Directory.GetCurrentDirectory(), $"{messageHistory.Id}.html")), 512);
+            File.Delete(Path.Combine(Directory.GetCurrentDirectory(), $"{messageHistory.Id}.html"));
             return bytes;
         }
 

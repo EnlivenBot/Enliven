@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using LiteDB;
 
 namespace Bot.Config {
@@ -12,7 +13,13 @@ namespace Bot.Config {
         public static LiteDatabase Database => _database.Value;
 
         private static LiteDatabase Init() {
-            var tempdb = new LiteDatabase(@"DataBase.db");
+            if (File.Exists(Path.Combine(Directory.GetCurrentDirectory(), @"DataBase.db"))) {
+                Directory.CreateDirectory("Config");
+                File.Move(Path.Combine(Directory.GetCurrentDirectory(), @"DataBase.db"), 
+                    Path.Combine(Directory.GetCurrentDirectory(), "Config", @"DataBase.db"));
+            }
+
+            var tempdb = new LiteDatabase(Path.Combine(Directory.GetCurrentDirectory(), "Config", @"DataBase.db"));
             //Updating database in future
             tempdb.UserVersion = 1;
             return tempdb;

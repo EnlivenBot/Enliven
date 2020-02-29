@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Net.Mime;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Bot.Commands;
@@ -20,6 +21,9 @@ namespace Bot {
 
         private static void Main(string[] args) {
             InstallLogger();
+            #if !DEBUG
+            InstallErrorHandlers();
+            #endif
             logger.Info("Start Initialising");
 
             RuntimeHelpers.RunClassConstructor(typeof(MessageHistoryManager).TypeHandle);
@@ -37,7 +41,7 @@ namespace Bot {
 
             Client.ReactionAdded += ReactionAdded;
             Client.Ready += async () => {
-                logger.Info("Bot has connected!");
+                await Client.SetGameAsync("mentions of herself to get started", null, ActivityType.Listening);
                 OnClientConnect?.Invoke(null, Client);
             };
 
@@ -85,7 +89,7 @@ namespace Bot {
             var layout = Layout.FromString("${longdate}|${level:uppercase=true}|${logger}|${message}${onexception:${newline}${exception:format=tostring}}");
             // Targets where to log to: File and Console
             var logfile = new NLog.Targets.FileTarget("logfile") {
-                FileName = Path.Combine("Logs", DateTime.Now.ToString("yyyyMMddTHHmmss") + ".log"),
+                FileName = Path.Combine(Directory.GetCurrentDirectory(), "Logs", DateTime.Now.ToString("yyyyMMddTHHmmss") + ".log"),
                 Layout = layout
             };
             var logconsole = new NLog.Targets.ColoredConsoleTarget("logconsole") {Layout = layout};
@@ -96,6 +100,11 @@ namespace Bot {
 
             // Apply config           
             NLog.LogManager.Configuration = config;
+        }
+
+        private static void InstallErrorHandlers() {
+            AppDomain.CurrentDomain.UnhandledException += (sender, args) => logger.Fatal(args.ExceptionObject as Exception, "Global uncaught exception");
+            TaskScheduler.UnobservedTaskException += (sender, args) => logger.Fatal(args.Exception.Flatten(), "Global uncaught task exception");
         }
     }
 }

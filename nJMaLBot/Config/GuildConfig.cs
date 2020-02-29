@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Concurrent;
 using Bot.Commands;
+using Bot.Config.Localization;
+using Bot.Config.Localization.Providers;
 using Bot.Utilities;
 using Bot.Utilities.Commands;
 using Discord;
@@ -14,6 +16,7 @@ namespace Bot.Config {
         public float Volume { get; set; } = 1f;
         public ConcurrentDictionary<ChannelFunction, ulong> FunctionalChannels { get; set; } = new ConcurrentDictionary<ChannelFunction, ulong>();
         public string GuildLanguage { get; set; }
+        public bool IsMusicLimited { get; set; }
 
         public void Save() {
             GlobalDB.Guilds.Upsert(GuildId, this);
@@ -36,7 +39,9 @@ namespace Bot.Config {
     }
 
     public partial class GuildConfig {
+        public static event EventHandler<string> LocalizationChanged;
         public GuildConfig SetChannel(string channelId, ChannelFunction func) {
+            
             if (channelId == "null")
                 FunctionalChannels.TryRemove(func, out _);
             else
@@ -64,11 +69,11 @@ namespace Bot.Config {
             if (!string.IsNullOrWhiteSpace(GuildLanguage)) return GuildLanguage;
             try {
                 var eb = new EmbedBuilder();
-                eb.WithFields(HelpUtils.BuildHelpFields("setlanguage", Prefix, new LandLocalizationProvider("en")))
-                  .WithTitle(Localization.Get("en", "Help", "HelpMessage") + "`setlanguage`")
+                eb.WithFields(HelpUtils.BuildHelpFields("setlanguage", Prefix, new LangLocalizationProvider("en")))
+                  .WithTitle(Localization.Localization.Get("en", "Help", "HelpMessage") + "`setlanguage`")
                   .WithColor(Color.Gold);
                 Program.Client.GetGuild(GuildId).DefaultChannel
-                       .SendMessageAsync(Localization.Get("en", "Localization", "LocalizationEmpty"), false, eb.Build());
+                       .SendMessageAsync(Localization.Localization.Get("en", "Localization", "LocalizationEmpty"), false, eb.Build());
             }
             catch (Exception) {
                 // ignored
@@ -83,6 +88,7 @@ namespace Bot.Config {
 
         public GuildConfig SetLanguage(string language) {
             GuildLanguage = language;
+            LocalizationChanged?.Invoke(this, language);
             return this;
         }
         
