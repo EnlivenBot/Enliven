@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Bot.Config;
 using Bot.Config.Localization;
 using Bot.Music;
+using Bot.Music.Players;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -45,8 +46,12 @@ namespace Bot.Utilities.Commands {
                 return null;
             }
 
-            if (((SocketGuildUser) await userTask).VoiceState.HasValue)
-                return await MusicUtils.Cluster.JoinAsync<EmbedPlaybackPlayer>(Context.Guild.Id, ((SocketGuildUser) await userTask).VoiceChannel.Id);
+            if (((SocketGuildUser) await userTask).VoiceState.HasValue) {
+                var embedPlaybackPlayer = await MusicUtils.Cluster.JoinAsync<EmbedPlaybackPlayer>(Context.Guild.Id, ((SocketGuildUser) await userTask).VoiceChannel.Id);
+                EmbedPlaybackControl.PlaybackPlayers.Add(embedPlaybackPlayer);
+                return embedPlaybackPlayer;
+            }
+
             ReplyAsync(Loc.Get("Music.NotInVoiceChannel").Format(Context.User.Mention)).DelayedDelete(TimeSpan.FromMinutes(5));
             return null;
         }

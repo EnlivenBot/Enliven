@@ -19,7 +19,7 @@ using Tyrrrz.Extensions;
 namespace Bot.Music {
     public sealed class EmbedPlaybackPlayer : PlaylistLavalinkPlayer {
         private string _playlistString;
-        private Timer UpdateTimer = new Timer(TimeSpan.FromSeconds(4).TotalMilliseconds);
+        public bool UpdatePlayback = false;
         private EmbedBuilder EmbedBuilder = new EmbedBuilder();
         public IUserMessage ControlMessage { get; private set; }
         private bool IsConstructing { get; set; } = true;
@@ -36,7 +36,6 @@ namespace Bot.Music {
             EmbedBuilder.AddField(Loc.Get("Music.RequestHistory"), "Placeholder");
             Playlist.Update += (sender, args) => UpdatePlaylist();
             CurrentTrackIndexChange += (sender, args) => UpdatePlaylist();
-            UpdateTimer.Elapsed += (sender, args) => UpdateProgress();
         }
 
         public override async Task SetVolumeAsync(float volume = 1, bool normalize = false) {
@@ -67,34 +66,35 @@ namespace Bot.Music {
             switch (State) {
                 case PlayerState.NotPlaying:
                     UpdateProgress();
-                    UpdateTimer.Stop();
+                    UpdatePlayback = false;
                     break;
                 case PlayerState.Destroyed:
                     UpdateProgress();
-                    UpdateTimer.Stop();
+                    UpdatePlayback = false;
                     break;
                 case PlayerState.NotConnected:
                     UpdateProgress();
-                    UpdateTimer.Stop();
+                    UpdatePlayback = false;
                     break;
             }
         }
 
         public override async Task PauseAsync() {
             await base.PauseAsync();
-            UpdateTimer.Stop();
+            UpdatePlayback = false;
             UpdateProgress();
         }
 
         public override async Task ResumeAsync() {
             await base.ResumeAsync();
-            UpdateTimer.Start();
+            UpdatePlayback = true;
             UpdateProgress();
         }
 
         public override void Dispose() {
             Cleanup();
             try {
+                EmbedPlaybackControl.PlaybackPlayers.Remove(this);
                 base.Dispose();
             }
             catch (Exception) {
@@ -103,7 +103,7 @@ namespace Bot.Music {
         }
 
         public override void Cleanup() {
-            UpdateTimer.Stop();
+            UpdatePlayback = false;
             if (ControlMessage != null) {
                 var embedBuilder = new EmbedBuilder();
                 embedBuilder.WithTitle(Loc.Get("Music.Playback"))
@@ -142,7 +142,7 @@ namespace Bot.Music {
             IsConstructing = false;
             UpdateProgress();
 
-            UpdateTimer.Start();
+            UpdatePlayback = true;
             return toReturn;
         }
 
@@ -155,7 +155,7 @@ namespace Bot.Music {
             });
         }
 
-        private void UpdateProgress() {
+        public void UpdateProgress() {
             var stateString = State switch {
                 PlayerState.Playing => CommonEmojiStrings.Instance.Play,
                 PlayerState.Paused  => CommonEmojiStrings.Instance.Pause,
