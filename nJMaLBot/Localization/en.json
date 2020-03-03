@@ -114,6 +114,8 @@
     "OnDeleteWithoutHistory": "Failed to get message change history - not found. \nProbable reasons: \n- Message was written before the bot appeared on the server \n- The bot was offline while writing the message",
     "ImageDescription": "The history of the [message]({0}) is reflected in the image above.",
     "Author": "Author",
-    "Requester": "Requester"
+    "Requester": "Requester",
+    "ChannelDeleted" : "Channel {0} ({1}) on {2} was deleted. Cleared {3} messages",
+    "GuildLogCleared" : "The bot cleared the message history of the guild {0} ({1}). Cleared {2} posts"
   }
 }
