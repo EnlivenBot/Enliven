@@ -79,16 +79,16 @@ namespace Bot.Commands {
                             break;
                     }
 
-                    MessageHistoryManager.StartLogToHistory(s);
+                    MessageHistoryManager.StartLogToHistory(s, guild);
                     msg.SafeDelete();
                 }
-                else {
+                else if (guild.IsCommandLoggingEnabled)
+                    MessageHistoryManager.StartLogToHistory(s, guild);
+                else
                     MessageHistoryManager.AddMessageToIgnore(s);
-                }
             }
-            else {
-                MessageHistoryManager.StartLogToHistory(s);
-            }
+            else
+                MessageHistoryManager.StartLogToHistory(s, guild);
         }
 
         private static async Task SendErrorMessage(SocketUserMessage message, ILocalizationProvider loc, string description) {

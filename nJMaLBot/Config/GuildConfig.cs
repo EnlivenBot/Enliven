@@ -18,6 +18,9 @@ namespace Bot.Config {
         public string GuildLanguage { get; set; }
         public bool IsMusicLimited { get; set; }
 
+        public bool IsLoggingEnabled { get; set; } = false;
+        public bool IsCommandLoggingEnabled { get; set; } = false;
+
         public void Save() {
             GlobalDB.Guilds.Upsert(GuildId, this);
         }

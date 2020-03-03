@@ -227,7 +227,12 @@ namespace Bot {
             messageHistory.Save();
         }
 
-        public static void StartLogToHistory(SocketMessage arg) {
+        public static void StartLogToHistory(SocketMessage arg, GuildConfig config) {
+            if (config.IsLoggingEnabled) {
+                AddMessageToIgnore(arg);
+                return;
+            }
+            
             if (!(arg.Channel is ITextChannel textChannel)) return;
             var id = $"{textChannel.Id}:{arg.Id}";
             if (arg.Author.IsBot || arg.Author.IsWebhook) {
