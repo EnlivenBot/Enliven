@@ -66,7 +66,6 @@ namespace Bot {
         }
 
         private static void SetHandlers(DiscordSocketClient client) {
-            client.MessageReceived += ClientOnMessageReceived;
             client.MessageUpdated += async (before, after, channel) => await ClientOnMessageUpdated(await before.GetOrDownloadAsync(), after, channel);
             client.MessageDeleted += ClientOnMessageDeleted;
         }
@@ -78,11 +77,15 @@ namespace Bot {
         }
 
         private static async Task<byte[]> RenderLog(MessageHistory messageHistory) {
-            await ExportHelper.ExportHistoryAsync(messageHistory, Path.Combine(Directory.GetCurrentDirectory(), $"{messageHistory.Id}.html"));
-            var converter = new HtmlConverter();
-            var bytes = converter.FromHtmlString(File.ReadAllText(Path.Combine(Directory.GetCurrentDirectory(), $"{messageHistory.Id}.html")), 512);
-            File.Delete(Path.Combine(Directory.GetCurrentDirectory(), $"{messageHistory.Id}.html"));
-            return bytes;
+            try {
+                await ExportHelper.ExportHistoryAsync(messageHistory, Path.Combine(Directory.GetCurrentDirectory(), $"{messageHistory.Id}.html"));
+                var converter = new HtmlConverter();
+                var bytes = converter.FromHtmlString(File.ReadAllText(Path.Combine(Directory.GetCurrentDirectory(), $"{messageHistory.Id}.html")), 512);
+                return bytes;
+            }
+            finally {
+                File.Delete(Path.Combine(Directory.GetCurrentDirectory(), $"{messageHistory.Id}.html"));
+            }
         }
 
         private static async Task<IUserMessage> GetRealMessage(ulong channelId, ulong messageId) {
@@ -201,7 +204,8 @@ namespace Bot {
             if (messageHistory.Edits.Count == 0) {
                 messageHistory.Edits.Add(new MessageHistory.MessageSnapshot {
                     EditTimestamp = after.CreatedAt,
-                    Patch = DiffMatchPatch.patch_toText(DiffMatchPatch.patch_make("", Localization.Get(textChannel.Guild.Id, "MessageHistory.PreviousUnavailable")))
+                    Patch = DiffMatchPatch.patch_toText(DiffMatchPatch.patch_make("",
+                        Localization.Get(textChannel.Guild.Id, "MessageHistory.PreviousUnavailable")))
                 });
 
                 if (before != null)
@@ -223,11 +227,11 @@ namespace Bot {
             messageHistory.Save();
         }
 
-        private static async Task ClientOnMessageReceived(SocketMessage arg) {
+        public static void StartLogToHistory(SocketMessage arg) {
             if (!(arg.Channel is ITextChannel textChannel)) return;
             var id = $"{textChannel.Id}:{arg.Id}";
             if (arg.Author.IsBot || arg.Author.IsWebhook) {
-                GlobalDB.IgnoredMessages.Insert(id, new BsonDocument());
+                AddMessageToIgnore(arg);
                 return;
             }
 
@@ -239,6 +243,11 @@ namespace Bot {
                         {EditTimestamp = arg.CreatedAt, Patch = DiffMatchPatch.patch_toText(DiffMatchPatch.patch_make("", arg.Content))}
                 }
             }.Save();
+        }
+
+        public static void AddMessageToIgnore(SocketMessage arg) {
+            var id = $"{arg.Channel.Id}:{arg.Id}";
+            GlobalDB.IgnoredMessages.Insert(id, new BsonDocument());
         }
     }
 }

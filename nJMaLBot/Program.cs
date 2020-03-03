@@ -41,7 +41,7 @@ namespace Bot {
 
             Client.ReactionAdded += ReactionAdded;
             Client.Ready += async () => {
-                await Client.SetGameAsync("mentions of herself to get started", null, ActivityType.Listening);
+                await Client.SetGameAsync("mentions of itself to get started", null, ActivityType.Listening);
                 OnClientConnect?.Invoke(null, Client);
             };
 

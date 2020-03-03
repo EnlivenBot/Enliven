@@ -38,7 +38,6 @@ namespace Bot.Commands {
         private async Task HandleCommand(SocketMessage s) {
             if (!(s is SocketUserMessage msg) || msg.Source != MessageSource.User)
                 return;
-
             var context = new CommandContext(_client, msg);
             if (!(s.Channel is SocketGuildChannel guildChannel)) return;
 
@@ -72,10 +71,23 @@ namespace Bot.Commands {
                         case CommandError.Exception:
                             await SendErrorMessage(msg, loc, string.Format(loc.Get("CommandHandler.Exception"), result));
                             break;
+                        case CommandError.ObjectNotFound:
+                            await SendErrorMessage(msg, loc, result.ErrorReason);
+                            break;
+                        case CommandError.MultipleMatches:
+                            await SendErrorMessage(msg, loc, result.ErrorReason);
+                            break;
                     }
 
+                    MessageHistoryManager.StartLogToHistory(s);
                     msg.SafeDelete();
                 }
+                else {
+                    MessageHistoryManager.AddMessageToIgnore(s);
+                }
+            }
+            else {
+                MessageHistoryManager.StartLogToHistory(s);
             }
         }
 
@@ -96,7 +108,7 @@ namespace Bot.Commands {
             if (string.IsNullOrEmpty(content) || content.Length <= 3 || (content[0] != '<' || content[1] != '@'))
                 return false;
             var num = content.IndexOf('>');
-            if (num == -1 || !MentionUtils.TryParseUser(content.Substring(0, num + 1), out var userId) || 
+            if (num == -1 || !MentionUtils.TryParseUser(content.Substring(0, num + 1), out var userId) ||
                 (long) userId != (long) user.Id)
                 return false;
             argPos = num + 2;
