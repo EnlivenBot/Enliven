@@ -81,7 +81,8 @@
     "jump0_0s" : "Number of tracks",
     "goto0s" : "Moves the playhead to a specific track by its index",
     "goto0_0s" : "Index of track",
-    "repeat0s" : "Setting repeat playback mode: `All`, `One`, `Off`"
+    "repeat0s" : "Setting repeat playback mode: `All`, `One`, `Off`",
+    "clearhistories0s" : "Clearing all message changes logs from the server"
   },
   "CommandHandler": {
     "FailedTitle": "Error executing command",
@@ -115,7 +116,7 @@
     "ImageDescription": "The history of the [message]({0}) is reflected in the image above.",
     "Author": "Author",
     "Requester": "Requester",
-    "ChannelDeleted" : "Channel {0} ({1}) on {2} was deleted. Cleared {3} messages",
-    "GuildLogCleared" : "The bot cleared the message history of the guild {0} ({1}). Cleared {2} posts"
+    "ChannelDeleted" : "Channel {0} ({1}) on {2} was deleted. Cleared {3} messages.",
+    "GuildLogCleared" : "The bot cleared the message history of the guild {0} ({1}). Cleared {2} posts."
   }
 }

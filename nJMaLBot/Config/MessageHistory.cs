@@ -75,7 +75,7 @@ namespace Bot {
         public static Task ClearGuildLogs(SocketGuild arg) {
             new Task(() => {
                 var socketGuildChannels = arg.Channels.Where(channel => channel is SocketTextChannel _).ToList();
-                var deletesCount = GlobalDB.Messages.DeleteMany(history => socketGuildChannels.Any(channel => channel.Id == history.ChannelId));
+                var deletesCount = socketGuildChannels.Select(channel => GlobalDB.Messages.DeleteMany(history => channel.Id == history.ChannelId)).Sum();
                 try {
                     var guild = GuildConfig.Get(arg.Id);
                     if (!guild.GetChannel(ChannelFunction.Log, out var logChannel)) return;
@@ -84,7 +84,7 @@ namespace Bot {
                         arg.Name, arg.Id, deletesCount));
                 }
                 finally {
-                    logger.Info("Bot has left the guild - {guildName} ({guildId}). Cleared {messagesCount} messages",
+                    logger.Info("The bot cleared the message history of the guild {guildName} ({guildId}). Cleared {postNumber} posts",
                         arg.Name, arg.Id, deletesCount);
                 }
             }, TaskCreationOptions.LongRunning).Start();
