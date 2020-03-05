@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -48,6 +50,7 @@ namespace Bot.Commands {
                 var query = msg.Content.SafeSubstring(argPos, 800);
                 if (string.IsNullOrWhiteSpace(query))
                     query = "help";
+
                 var result = await _commands.ExecuteAsync(context, query, null);
                 if (!result.IsSuccess) {
                     switch (result.Error) {
@@ -82,10 +85,13 @@ namespace Bot.Commands {
                     MessageHistoryManager.StartLogToHistory(s, guild);
                     msg.SafeDelete();
                 }
-                else if (guild.IsCommandLoggingEnabled)
-                    MessageHistoryManager.StartLogToHistory(s, guild);
-                else
-                    MessageHistoryManager.AddMessageToIgnore(s);
+                else {
+                    RegisterCommandUsage(s.Author.Id, query.IndexOf(" ") > -1 ? query.Substring(0, query.IndexOf(" ")) : query);
+                    if (guild.IsCommandLoggingEnabled)
+                        MessageHistoryManager.StartLogToHistory(s, guild);
+                    else
+                        MessageHistoryManager.AddMessageToIgnore(s);
+                }
             }
             else
                 MessageHistoryManager.StartLogToHistory(s, guild);
@@ -113,6 +119,25 @@ namespace Bot.Commands {
                 return false;
             argPos = num + 2;
             return true;
+        }
+
+        public void RegisterCommandUsage(ulong userId, string command) {
+            var allstats = GlobalDB.CommandStatistics.FindAll().ToList();
+            var userStatistics = GlobalDB.CommandStatistics.FindById(userId.ToString()) ?? new StatisticsPart {Id = userId.ToString()};
+            if (!userStatistics.UsagesList.TryGetValue(command, out var userUsageCount)) {
+                userUsageCount = 0;
+            }
+
+            userStatistics.UsagesList[command] = ++userUsageCount;
+            GlobalDB.CommandStatistics.Upsert(userStatistics);
+
+            var globalStatistics = GlobalDB.CommandStatistics.FindById("Global") ?? new StatisticsPart {Id = "Global"};
+            if (!globalStatistics.UsagesList.TryGetValue(command, out var globalUsageCount)) {
+                globalUsageCount = 0;
+            }
+
+            globalStatistics.UsagesList[command] = ++globalUsageCount;
+            GlobalDB.CommandStatistics.Upsert(globalStatistics);
         }
     }
 }
