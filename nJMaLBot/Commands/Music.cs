@@ -35,7 +35,7 @@ namespace Bot.Commands {
                 await MusicUtils.QueueLoadMusic(Context.Message, query, player);
             }
             catch (TrackNotFoundException) {
-                ReplyFormattedAsync(Loc.Get("Music.NotFound").Format(query.SafeSubstring(0, 512)), true, logMessage);
+                ReplyFormattedAsync(Loc.Get("Music.NotFound").Format(query.SafeSubstring(0, 512)), true);
                 if (player.Playlist.Count == 0) player.ControlMessage.SafeDelete();
             }
             catch (AttachmentAddFailException) {
