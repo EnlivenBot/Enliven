@@ -56,9 +56,9 @@ namespace Bot.Commands {
                 return;
             }
 
-
-            var valueTuples = stats.UsagesList.GroupBy(pair => HelpUtils.CommandAliases.Value[pair.Key].First().Name)
-                                   .Select(pairs => (pairs.Key.ToString(), pairs.Sum(pair => pair.Value)));
+            var valueTuples = stats.UsagesList.GroupBy(pair => HelpUtils.CommandAliases.Value[pair.Key].First())
+                                   .Where(pairs => !pairs.Key.IsHiddenCommand())
+                                   .Select(pairs => (pairs.Key.Name.ToString(), pairs.Sum(pair => pair.Value)));
             embedBuilder.AddField(Loc.Get("Statistics.ByCommands"),
                 string.Join("\n", valueTuples.Select((tuple, i) => $"`{tuple.Item1}` - {tuple.Item2}")));
             await ReplyAsync(null, false, embedBuilder.Build());
