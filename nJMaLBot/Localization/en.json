@@ -55,6 +55,9 @@
     "CommandTitle" : "**{0}** - {1}",
     "ByCommand": "Command help: `{0}`",
     "Aliases" : "Aliases: ",
+    "stats0s" : "Bot command usage statistics",
+    "userstats0s" : "Bot command usage statistics by a specific user",
+    "userstats1s" : "Bot command usage statistics by you",
     "shuffle0s" : "Randomizes the tracks in the queue",
     "pause0s" : "Pauses playback",
     "resume0s" : "Resumes playback",
@@ -118,5 +121,13 @@
     "Requester": "Requester",
     "ChannelDeleted" : "Channel {0} ({1}) on {2} was deleted. Cleared {3} messages.",
     "GuildLogCleared" : "The bot cleared the message history of the guild {0} ({1}). Cleared {2} posts."
+  },
+  "Statistics" : {
+    "Title" : "Statistics",
+    "NoGlobalStats" : "Apparently, no one used the bot 😥. You are the first.",
+    "NoUserStats" : "Apparently, {0} did not use the bot.",
+    "GlobalStats" : "Bot commands global usage statistics",
+    "UserStats" : "User {0} usage statistics for bot commands",
+    "ByCommands" : "Commands"
   }
 }
