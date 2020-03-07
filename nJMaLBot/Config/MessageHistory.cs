@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Bot.Commands;
 using Bot.Config;
 using Bot.Config.Localization;
 using Bot.Config.Localization.Providers;
@@ -227,6 +228,8 @@ namespace Bot {
                     }
 
             if (messageLog != null) GlobalDB.Messages.Delete(id);
+            
+            CommandHandler.RegisterUsage("MessagesDeleted", "Messages");
         }
 
         private static async Task ClientOnMessageUpdated(IMessage before, IMessage after, ISocketMessageChannel channel) {
@@ -267,6 +270,7 @@ namespace Bot {
             });
 
             messageHistory.Save();
+            CommandHandler.RegisterUsage("MessagesChanged", "Messages");
         }
 
         public static void StartLogToHistory(SocketMessage arg, GuildConfig config) {
@@ -290,6 +294,7 @@ namespace Bot {
                         {EditTimestamp = arg.CreatedAt, Patch = DiffMatchPatch.patch_toText(DiffMatchPatch.patch_make("", arg.Content))}
                 }
             }.Save();
+            CommandHandler.RegisterUsage("MessagesCreated", "Messages");
         }
 
         public static void AddMessageToIgnore(SocketMessage arg) {

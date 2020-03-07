@@ -86,7 +86,9 @@ namespace Bot.Commands {
                     msg.SafeDelete();
                 }
                 else {
-                    RegisterCommandUsage(s.Author.Id, query.IndexOf(" ") > -1 ? query.Substring(0, query.IndexOf(" ")) : query);
+                    var commandName = query.IndexOf(" ") > -1 ? query.Substring(0, query.IndexOf(" ")) : query;
+                    RegisterUsage(commandName, s.Author.Id.ToString());
+                    RegisterUsage(commandName, "Global");
                     if (guild.IsCommandLoggingEnabled)
                         MessageHistoryManager.StartLogToHistory(s, guild);
                     else
@@ -121,23 +123,14 @@ namespace Bot.Commands {
             return true;
         }
 
-        public void RegisterCommandUsage(ulong userId, string command) {
-            var allstats = GlobalDB.CommandStatistics.FindAll().ToList();
-            var userStatistics = GlobalDB.CommandStatistics.FindById(userId.ToString()) ?? new StatisticsPart {Id = userId.ToString()};
+        public static void RegisterUsage(string command, string userId) {
+            var userStatistics = GlobalDB.CommandStatistics.FindById(userId) ?? new StatisticsPart {Id = userId};
             if (!userStatistics.UsagesList.TryGetValue(command, out var userUsageCount)) {
                 userUsageCount = 0;
             }
 
             userStatistics.UsagesList[command] = ++userUsageCount;
             GlobalDB.CommandStatistics.Upsert(userStatistics);
-
-            var globalStatistics = GlobalDB.CommandStatistics.FindById("Global") ?? new StatisticsPart {Id = "Global"};
-            if (!globalStatistics.UsagesList.TryGetValue(command, out var globalUsageCount)) {
-                globalUsageCount = 0;
-            }
-
-            globalStatistics.UsagesList[command] = ++globalUsageCount;
-            GlobalDB.CommandStatistics.Upsert(globalStatistics);
         }
     }
 }
