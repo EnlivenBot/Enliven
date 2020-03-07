@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -48,6 +50,7 @@ namespace Bot.Commands {
                 var query = msg.Content.SafeSubstring(argPos, 800);
                 if (string.IsNullOrWhiteSpace(query))
                     query = "help";
+
                 var result = await _commands.ExecuteAsync(context, query, null);
                 if (!result.IsSuccess) {
                     switch (result.Error) {
@@ -82,10 +85,15 @@ namespace Bot.Commands {
                     MessageHistoryManager.StartLogToHistory(s, guild);
                     msg.SafeDelete();
                 }
-                else if (guild.IsCommandLoggingEnabled)
-                    MessageHistoryManager.StartLogToHistory(s, guild);
-                else
-                    MessageHistoryManager.AddMessageToIgnore(s);
+                else {
+                    var commandName = query.IndexOf(" ") > -1 ? query.Substring(0, query.IndexOf(" ")) : query;
+                    RegisterUsage(commandName, s.Author.Id.ToString());
+                    RegisterUsage(commandName, "Global");
+                    if (guild.IsCommandLoggingEnabled)
+                        MessageHistoryManager.StartLogToHistory(s, guild);
+                    else
+                        MessageHistoryManager.AddMessageToIgnore(s);
+                }
             }
             else
                 MessageHistoryManager.StartLogToHistory(s, guild);
@@ -113,6 +121,35 @@ namespace Bot.Commands {
                 return false;
             argPos = num + 2;
             return true;
+        }
+
+        public static void RegisterUsage(string command, string userId) {
+            var userStatistics = GlobalDB.CommandStatistics.FindById(userId) ?? new StatisticsPart {Id = userId};
+            if (!userStatistics.UsagesList.TryGetValue(command, out var userUsageCount)) {
+                userUsageCount = 0;
+            }
+
+            userStatistics.UsagesList[command] = ++userUsageCount;
+            GlobalDB.CommandStatistics.Upsert(userStatistics);
+        }
+        
+        public static void RegisterMusicTime(TimeSpan span) {
+            var userStatistics = GlobalDB.CommandStatistics.FindById("Music") ?? new StatisticsPart {Id = "Music"};
+            if (!userStatistics.UsagesList.TryGetValue("PlaybackTime", out var userUsageCount)) {
+                userUsageCount = 0;
+            }
+            
+            userStatistics.UsagesList["PlaybackTime"] = (ulong) (userUsageCount + span.TotalSeconds);
+            GlobalDB.CommandStatistics.Upsert(userStatistics);
+        }
+
+        public static TimeSpan GetTotalMusicTime() {
+            var userStatistics = GlobalDB.CommandStatistics.FindById("Music") ?? new StatisticsPart {Id = "Music"};
+            if (!userStatistics.UsagesList.TryGetValue("PlaybackTime", out var userUsageCount)) {
+                userUsageCount = 0;
+            }
+            
+            return TimeSpan.FromSeconds(userUsageCount);
         }
     }
 }
