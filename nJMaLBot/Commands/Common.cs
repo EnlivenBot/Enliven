@@ -63,7 +63,7 @@ namespace Bot.Commands {
 
             var valueTuples = stats.UsagesList.GroupBy(pair => HelpUtils.CommandAliases.Value[pair.Key].First())
                                    .Where(pairs => !pairs.Key.IsHiddenCommand())
-                                   .Select(pairs => (pairs.Key.Name.ToString(), pairs.Sum(pair => pair.Value)));
+                                   .Select(pairs => (pairs.Key.Name.ToString(), pairs.Sum(pair => (double) pair.Value)));
             embedBuilder.AddField(Loc.Get("Statistics.ByCommands"),
                 string.Join("\n", valueTuples.Select((tuple, i) => $"`{tuple.Item1}` - {tuple.Item2}")));
 
@@ -73,7 +73,12 @@ namespace Bot.Commands {
                     embedBuilder.AddField(Loc.Get("Statistics.ByMessages"),
                         messageStats.UsagesList.Select(pair => $"`{Loc.Get("Statistics." + pair.Key)}` - {pair.Value}").JoinToString("\n"));
                 }
+
+                var musicTime = CommandHandler.GetTotalMusicTime();
+                embedBuilder.AddField(Loc.Get("Statistics.ByMusic"),
+                    Loc.Get("Statistics.ByMusicFormatted").Format((int) musicTime.TotalDays, musicTime.Hours, musicTime.Minutes));
             }
+
             await ReplyAsync(null, false, embedBuilder.Build());
         }
     }

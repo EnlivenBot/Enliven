@@ -4,6 +4,6 @@ using LiteDB;
 namespace Bot.Config {
     public class StatisticsPart {
         [BsonId] public string Id { get; set; }
-        public Dictionary<string, int> UsagesList { get; set; } = new Dictionary<string, int>();
+        public Dictionary<string, ulong> UsagesList { get; set; } = new Dictionary<string, ulong>();
     }
 }

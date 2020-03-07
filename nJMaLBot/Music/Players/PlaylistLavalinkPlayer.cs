@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Bot.Commands;
 using Lavalink4NET;
 using Lavalink4NET.Events;
 using Lavalink4NET.Player;
@@ -35,6 +36,9 @@ namespace Bot.Music.Players {
 
         public override async Task OnTrackEndAsync(TrackEndEventArgs eventArgs) {
             if (eventArgs.Reason == TrackEndReason.LoadFailed) Playlist.Remove(CurrentTrack);
+            if (CurrentTrack != null) {
+                CommandHandler.RegisterMusicTime(TrackPosition);
+            }
             if (eventArgs.Reason != TrackEndReason.Replaced) await base.OnTrackEndAsync(eventArgs);
             if (eventArgs.MayStartNext || eventArgs.Reason == TrackEndReason.LoadFailed) await ContinueOnTrackEnd();
         }

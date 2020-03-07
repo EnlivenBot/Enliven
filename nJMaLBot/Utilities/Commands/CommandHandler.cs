@@ -132,5 +132,24 @@ namespace Bot.Commands {
             userStatistics.UsagesList[command] = ++userUsageCount;
             GlobalDB.CommandStatistics.Upsert(userStatistics);
         }
+        
+        public static void RegisterMusicTime(TimeSpan span) {
+            var userStatistics = GlobalDB.CommandStatistics.FindById("Music") ?? new StatisticsPart {Id = "Music"};
+            if (!userStatistics.UsagesList.TryGetValue("PlaybackTime", out var userUsageCount)) {
+                userUsageCount = 0;
+            }
+            
+            userStatistics.UsagesList["PlaybackTime"] = (ulong) (userUsageCount + span.TotalSeconds);
+            GlobalDB.CommandStatistics.Upsert(userStatistics);
+        }
+
+        public static TimeSpan GetTotalMusicTime() {
+            var userStatistics = GlobalDB.CommandStatistics.FindById("Music") ?? new StatisticsPart {Id = "Music"};
+            if (!userStatistics.UsagesList.TryGetValue("PlaybackTime", out var userUsageCount)) {
+                userUsageCount = 0;
+            }
+            
+            return TimeSpan.FromSeconds(userUsageCount);
+        }
     }
 }

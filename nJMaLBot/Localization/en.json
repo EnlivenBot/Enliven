@@ -127,10 +127,12 @@
     "Title" : "Statistics",
     "NoGlobalStats" : "Apparently, no one used the bot 😥. You are the first.",
     "NoUserStats" : "Apparently, {0} did not use the bot.",
-    "GlobalStats" : "Bot commands global usage statistics",
+    "GlobalStats" : "Bot commands global statistics",
     "UserStats" : "{0}'s usage statistics for bot commands",
     "ByCommands" : "Commands",
     "ByMessages" : "Message changes history",
+    "ByMusic" : "Playback",
+    "ByMusicFormatted" : "The bot played `{0} days`, `{1} hours` and `{2} minutes` of music",
     "MessagesCreated" : "Message creations logged",
     "MessagesChanged" : "Message changes logged",
     "MessagesDeleted" : "Message deletions logged"
