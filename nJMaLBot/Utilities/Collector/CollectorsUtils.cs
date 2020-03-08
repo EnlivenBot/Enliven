@@ -11,6 +11,7 @@ using Discord.WebSocket;
 
 namespace Bot.Utilities.Collector {
     public static class CollectorsUtils {
+        private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
         static CollectorsUtils() {
             Program.OnClientConnect += (sender, client) => { RegisterHandlers(); };
             RegisterHandlers();
@@ -33,7 +34,7 @@ namespace Bot.Utilities.Collector {
 
         private static void ProcessMessage(IMessage message, IEnumerable<KeyValuePair<Guid, (Predicate<IMessage>, Action<IMessage>)>> dictionary) {
             foreach (var i in dictionary.Where(pair => pair.Value.Item1(message))) {
-                i.Value.Item2(message);
+                logger.Swallow(() => i.Value.Item2(message));
             }
         }
 
@@ -57,7 +58,7 @@ namespace Bot.Utilities.Collector {
         private static void ProcessReactions(SocketReaction reaction,
                                              IEnumerable<KeyValuePair<Guid, (Predicate<SocketReaction>, Action<SocketReaction>)>> dictionary) {
             foreach (var i in dictionary.Where(pair => pair.Value.Item1(reaction))) {
-                i.Value.Item2(reaction);
+                logger.Swallow(() => i.Value.Item2(reaction));
             }
         }
 
