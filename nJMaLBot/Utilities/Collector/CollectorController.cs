@@ -19,4 +19,10 @@ namespace Bot.Utilities.Collector {
             _timer?.Dispose();
         }
     }
+
+    public enum CollectorFilter {
+        Off,
+        IgnoreSelf,
+        IgnoreBots
+    }
 }
