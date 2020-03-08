@@ -108,6 +108,24 @@ namespace Bot.Music.Players {
             if (disconnect) Cleanup();
             return base.StopAsync(disconnect);
         }
+
+        public virtual async Task TryPause() {
+            try {
+                await PauseAsync();
+            }
+            catch (Exception) {
+                // ignored
+            }
+        }
+
+        public virtual async Task TryResume() {
+            try {
+                await ResumeAsync();
+            }
+            catch (Exception) {
+                // ignored
+            }
+        }
     }
 
     public enum LoopingState {
