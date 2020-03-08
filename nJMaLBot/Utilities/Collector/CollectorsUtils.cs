@@ -67,7 +67,7 @@ namespace Bot.Utilities.Collector {
             new ConcurrentDictionary<ulong, ConcurrentDictionary<Guid, (Predicate<SocketReaction>, Action<SocketReaction>)>>();
 
         public static CollectorController CollectReaction(IChannel channel, Predicate<SocketReaction> predicate,
-                                                          Action<CollectorController, SocketReaction> action) {
+                                                          Action<EmoteCollectorEventArgs> action) {
             var collectorController = new CollectorController();
             var key = Guid.NewGuid();
             collectorController.Stop += (sender, args) => {
@@ -79,7 +79,7 @@ namespace Bot.Utilities.Collector {
             };
             var concurrentDictionary = ReactionByChannel.GetOrAdd(channel.Id,
                 arg => new ConcurrentDictionary<Guid, (Predicate<SocketReaction>, Action<SocketReaction>)>());
-            concurrentDictionary.TryAdd(key, (predicate, reaction => action(collectorController, reaction)));
+            concurrentDictionary.TryAdd(key, (predicate, reaction => action(new EmoteCollectorEventArgs(collectorController, reaction))));
             return collectorController;
         }
 
@@ -91,7 +91,7 @@ namespace Bot.Utilities.Collector {
             new ConcurrentDictionary<IEmote, ConcurrentDictionary<Guid, (Predicate<SocketReaction>, Action<SocketReaction>)>>();
 
         public static CollectorController CollectReaction(IEmote emote, Predicate<SocketReaction> predicate,
-                                                          Action<CollectorController, SocketReaction> action) {
+                                                          Action<EmoteCollectorEventArgs> action) {
             var collectorController = new CollectorController();
             var key = Guid.NewGuid();
             collectorController.Stop += (sender, args) => {
@@ -103,7 +103,7 @@ namespace Bot.Utilities.Collector {
             };
             var concurrentDictionary = ReactionByEmote.GetOrAdd(emote,
                 arg => new ConcurrentDictionary<Guid, (Predicate<SocketReaction>, Action<SocketReaction>)>());
-            concurrentDictionary.TryAdd(key, (predicate, reaction => action(collectorController, reaction)));
+            concurrentDictionary.TryAdd(key, (predicate, reaction => action(new EmoteCollectorEventArgs(collectorController, reaction))));
             return collectorController;
         }
 
@@ -115,7 +115,7 @@ namespace Bot.Utilities.Collector {
             new ConcurrentDictionary<ulong, ConcurrentDictionary<Guid, (Predicate<SocketReaction>, Action<SocketReaction>)>>();
 
         public static CollectorController CollectReaction(IMessage message, Predicate<SocketReaction> predicate,
-                                                          Action<CollectorController, SocketReaction> action) {
+                                                          Action<EmoteCollectorEventArgs> action) {
             var collectorController = new CollectorController();
             var key = Guid.NewGuid();
             collectorController.Stop += (sender, args) => {
@@ -127,7 +127,7 @@ namespace Bot.Utilities.Collector {
             };
             var concurrentDictionary = ReactionByMessage.GetOrAdd(message.Id,
                 arg => new ConcurrentDictionary<Guid, (Predicate<SocketReaction>, Action<SocketReaction>)>());
-            concurrentDictionary.TryAdd(key, (predicate, reaction => action(collectorController, reaction)));
+            concurrentDictionary.TryAdd(key, (predicate, reaction => action(new EmoteCollectorEventArgs(collectorController, reaction))));
             return collectorController;
         }
 
@@ -138,7 +138,7 @@ namespace Bot.Utilities.Collector {
         private static ConcurrentDictionary<ulong, ConcurrentDictionary<Guid, (Predicate<SocketReaction>, Action<SocketReaction>)>> ReactionByUser =
             new ConcurrentDictionary<ulong, ConcurrentDictionary<Guid, (Predicate<SocketReaction>, Action<SocketReaction>)>>();
 
-        public static CollectorController CollectReaction(IUser user, Predicate<SocketReaction> predicate, Action<CollectorController, SocketReaction> action) {
+        public static CollectorController CollectReaction(IUser user, Predicate<SocketReaction> predicate, Action<EmoteCollectorEventArgs> action) {
             var collectorController = new CollectorController();
             var key = Guid.NewGuid();
             collectorController.Stop += (sender, args) => {
@@ -150,7 +150,7 @@ namespace Bot.Utilities.Collector {
             };
             var concurrentDictionary = ReactionByUser.GetOrAdd(user.Id,
                 arg => new ConcurrentDictionary<Guid, (Predicate<SocketReaction>, Action<SocketReaction>)>());
-            concurrentDictionary.TryAdd(key, (predicate, reaction => action(collectorController, reaction)));
+            concurrentDictionary.TryAdd(key, (predicate, reaction => action(new EmoteCollectorEventArgs(collectorController, reaction))));
             return collectorController;
         }
 
@@ -160,8 +160,8 @@ namespace Bot.Utilities.Collector {
 
         private static ConcurrentDictionary<ulong, ConcurrentDictionary<Guid, (Predicate<IMessage>, Action<IMessage>)>> MessageByUser =
             new ConcurrentDictionary<ulong, ConcurrentDictionary<Guid, (Predicate<IMessage>, Action<IMessage>)>>();
-        
-        public static CollectorController CollectMessage(IUser user, Predicate<IMessage> predicate, Action<CollectorController, IMessage> action) {
+
+        public static CollectorController CollectMessage(IUser user, Predicate<IMessage> predicate, Action<MessageCollectorEventArgs> action) {
             var collectorController = new CollectorController();
             var key = Guid.NewGuid();
             collectorController.Stop += (sender, args) => {
@@ -173,7 +173,7 @@ namespace Bot.Utilities.Collector {
             };
             var concurrentDictionary = MessageByUser.GetOrAdd(user.Id,
                 arg => new ConcurrentDictionary<Guid, (Predicate<IMessage>, Action<IMessage>)>());
-            concurrentDictionary.TryAdd(key, (predicate, reaction => action(collectorController, reaction)));
+            concurrentDictionary.TryAdd(key, (predicate, reaction => action(new MessageCollectorEventArgs(collectorController, reaction))));
             return collectorController;
         }
 
@@ -184,7 +184,7 @@ namespace Bot.Utilities.Collector {
         private static ConcurrentDictionary<ulong, ConcurrentDictionary<Guid, (Predicate<IMessage>, Action<IMessage>)>> MessageByChannel =
             new ConcurrentDictionary<ulong, ConcurrentDictionary<Guid, (Predicate<IMessage>, Action<IMessage>)>>();
 
-        public static CollectorController CollectMessage(IChannel channel, Predicate<IMessage> predicate, Action<CollectorController, IMessage> action) {
+        public static CollectorController CollectMessage(IChannel channel, Predicate<IMessage> predicate, Action<MessageCollectorEventArgs> action) {
             var collectorController = new CollectorController();
             var key = Guid.NewGuid();
             collectorController.Stop += (sender, args) => {
@@ -196,7 +196,7 @@ namespace Bot.Utilities.Collector {
             };
             var concurrentDictionary = MessageByChannel.GetOrAdd(channel.Id,
                 arg => new ConcurrentDictionary<Guid, (Predicate<IMessage>, Action<IMessage>)>());
-            concurrentDictionary.TryAdd(key, (predicate, reaction => action(collectorController, reaction)));
+            concurrentDictionary.TryAdd(key, (predicate, reaction => action(new MessageCollectorEventArgs(collectorController, reaction))));
             return collectorController;
         }
 
