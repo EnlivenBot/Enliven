@@ -9,6 +9,7 @@ using Bot.Config.Localization;
 using Bot.Config.Localization.Providers;
 using Bot.Music.Players;
 using Bot.Utilities;
+using Bot.Utilities.Collector;
 using Bot.Utilities.Emoji;
 using Discord;
 using Lavalink4NET;
@@ -19,7 +20,7 @@ using Tyrrrz.Extensions;
 namespace Bot.Music {
     public sealed class EmbedPlaybackPlayer : PlaylistLavalinkPlayer {
         private string _playlistString;
-        private Timer UpdateTimer = new Timer(TimeSpan.FromSeconds(4).TotalMilliseconds);
+        public bool UpdatePlayback = false;
         private EmbedBuilder EmbedBuilder = new EmbedBuilder();
         public IUserMessage ControlMessage { get; private set; }
         private bool IsConstructing { get; set; } = true;
@@ -36,22 +37,16 @@ namespace Bot.Music {
             EmbedBuilder.AddField(Loc.Get("Music.RequestHistory"), "Placeholder");
             Playlist.Update += (sender, args) => UpdatePlaylist();
             CurrentTrackIndexChange += (sender, args) => UpdatePlaylist();
-            UpdateTimer.Elapsed += (sender, args) => UpdateProgress();
         }
 
         public override async Task SetVolumeAsync(float volume = 1, bool normalize = false) {
-            EnsureNotDestroyed();
-            EnsureConnected();
-
             await base.SetVolumeAsync(volume, normalize);
-            GuildConfig.Get(GuildId).SetVolume(volume).Save();
             UpdateVolume();
         }
 
         public override async Task OnConnectedAsync(VoiceServer voiceServer, VoiceState voiceState) {
-            await base.SetVolumeAsync(GuildConfig.Get(GuildId).Volume);
-            UpdateVolume();
             await base.OnConnectedAsync(voiceServer, voiceState);
+            UpdateVolume();
         }
 
         public override async Task OnTrackEndAsync(TrackEndEventArgs eventArgs) {
@@ -67,34 +62,35 @@ namespace Bot.Music {
             switch (State) {
                 case PlayerState.NotPlaying:
                     UpdateProgress();
-                    UpdateTimer.Stop();
+                    UpdatePlayback = false;
                     break;
                 case PlayerState.Destroyed:
                     UpdateProgress();
-                    UpdateTimer.Stop();
+                    UpdatePlayback = false;
                     break;
                 case PlayerState.NotConnected:
                     UpdateProgress();
-                    UpdateTimer.Stop();
+                    UpdatePlayback = false;
                     break;
             }
         }
 
         public override async Task PauseAsync() {
             await base.PauseAsync();
-            UpdateTimer.Stop();
+            UpdatePlayback = false;
             UpdateProgress();
         }
 
         public override async Task ResumeAsync() {
             await base.ResumeAsync();
-            UpdateTimer.Start();
+            UpdatePlayback = true;
             UpdateProgress();
         }
 
         public override void Dispose() {
             Cleanup();
             try {
+                EmbedPlaybackControl.PlaybackPlayers.Remove(this);
                 base.Dispose();
             }
             catch (Exception) {
@@ -103,7 +99,7 @@ namespace Bot.Music {
         }
 
         public override void Cleanup() {
-            UpdateTimer.Stop();
+            UpdatePlayback = false;
             if (ControlMessage != null) {
                 var embedBuilder = new EmbedBuilder();
                 embedBuilder.WithTitle(Loc.Get("Music.Playback"))
@@ -113,6 +109,8 @@ namespace Bot.Music {
                     properties.Embed = embedBuilder.Build();
                     properties.Content = null;
                 });
+                _collectorsGroup?.DisposeAll();
+                ControlMessage?.RemoveAllReactionsAsync();
                 ControlMessage?.DelayedDelete(TimeSpan.FromMinutes(10));
                 ControlMessage = null;
             }
@@ -128,6 +126,8 @@ namespace Bot.Music {
                 properties.Embed = embedBuilder.Build();
                 properties.Content = null;
             });
+            _collectorsGroup?.DisposeAll();
+            ControlMessage?.RemoveAllReactionsAsync();
             ControlMessage.DelayedDelete(TimeSpan.FromMinutes(10));
             ControlMessage = null;
         }
@@ -139,10 +139,14 @@ namespace Bot.Music {
             var iconUrl = $"https://img.youtube.com/vi/{(string.IsNullOrWhiteSpace(CurrentTrack.TrackIdentifier) ? "" : CurrentTrack.TrackIdentifier)}/0.jpg";
             EmbedBuilder?.WithAuthor(string.IsNullOrWhiteSpace(CurrentTrack.Author) ? "Unknown" : CurrentTrack.Author.SafeSubstring(0, 250), iconUrl)
                         ?.WithThumbnailUrl(iconUrl)?.WithTitle(CurrentTrack.Title.SafeSubstring(0, 250))?.WithUrl(CurrentTrack.Source);
-            IsConstructing = false;
+            if (IsConstructing) {
+                IsConstructing = false;
+                await SetupControlReactions();
+            }
+
             UpdateProgress();
 
-            UpdateTimer.Start();
+            UpdatePlayback = true;
             return toReturn;
         }
 
@@ -155,7 +159,7 @@ namespace Bot.Music {
             });
         }
 
-        private void UpdateProgress() {
+        public void UpdateProgress() {
             var stateString = State switch {
                 PlayerState.Playing => CommonEmojiStrings.Instance.Play,
                 PlayerState.Paused  => CommonEmojiStrings.Instance.Pause,
@@ -176,7 +180,7 @@ namespace Bot.Music {
         }
 
         private void UpdateVolume() {
-            EmbedBuilder.Fields[1].Value = $"{Convert.ToInt32(Volume * 10f)}% 🔉";
+            EmbedBuilder.Fields[1].Value = $"{Convert.ToInt32(Volume * 100f)}% 🔉";
             UpdateControlMessage();
         }
 
@@ -203,9 +207,10 @@ namespace Bot.Music {
             UpdateControlMessage();
         }
 
-        public void SetControlMessage(IUserMessage message) {
+        public async Task SetControlMessage(IUserMessage message) {
             ControlMessage?.SafeDelete();
             ControlMessage = message;
+            await SetupControlReactions();
             UpdateControlMessage();
         }
 
@@ -262,6 +267,62 @@ namespace Bot.Music {
             catch (Exception) {
                 return "Failed";
             }
+        }
+
+        private CollectorsGroup _collectorsGroup;
+
+        private async Task SetupControlReactions() {
+            if (IsConstructing)
+                return;
+
+            _collectorsGroup?.DisposeAll();
+            await ControlMessage.AddReactionsAsync(new IEmote[] {
+                CommonEmoji.LegacyTrackPrevious, CommonEmoji.LegacyPlay, CommonEmoji.LegacyPause, CommonEmoji.LegacyTrackNext,
+                CommonEmoji.LegacyStop, CommonEmoji.LegacyRepeat, CommonEmoji.LegacySound, CommonEmoji.LegacyLoudSound
+            });
+
+            _collectorsGroup = new CollectorsGroup(
+                CollectorsUtils.CollectReaction(ControlMessage,
+                    reaction => reaction.Emote.Equals(CommonEmoji.LegacyTrackPrevious), async args => {
+                        args.RemoveReason();
+                        await SkipAsync(-1, true);
+                    }, CollectorFilter.IgnoreSelf),
+                CollectorsUtils.CollectReaction(ControlMessage,
+                    reaction => reaction.Emote.Equals(CommonEmoji.LegacyPlay), async args => {
+                        args.RemoveReason();
+                        await TryResume();
+                    }, CollectorFilter.IgnoreSelf),
+                CollectorsUtils.CollectReaction(ControlMessage,
+                    reaction => reaction.Emote.Equals(CommonEmoji.LegacyPause), async args => {
+                        args.RemoveReason();
+                        await TryPause();
+                    }, CollectorFilter.IgnoreSelf),
+                CollectorsUtils.CollectReaction(ControlMessage,
+                    reaction => reaction.Emote.Equals(CommonEmoji.LegacyTrackNext), async args => {
+                        args.RemoveReason();
+                        await SkipAsync(1, true);
+                    }, CollectorFilter.IgnoreSelf),
+                CollectorsUtils.CollectReaction(ControlMessage,
+                    reaction => reaction.Emote.Equals(CommonEmoji.LegacyStop), args => {
+                        args.RemoveReason();
+                        StopAsync(true);
+                    }, CollectorFilter.IgnoreSelf),
+                CollectorsUtils.CollectReaction(ControlMessage,
+                    reaction => reaction.Emote.Equals(CommonEmoji.LegacyRepeat), args => {
+                        args.RemoveReason();
+                        LoopingState = LoopingState.Next();
+                    }, CollectorFilter.IgnoreSelf),
+                CollectorsUtils.CollectReaction(ControlMessage,
+                    reaction => reaction.Emote.Equals(CommonEmoji.LegacySound), async args => {
+                        args.RemoveReason();
+                        await SetVolumeAsync(Volume - 0.1f, true);
+                    }, CollectorFilter.IgnoreSelf),
+                CollectorsUtils.CollectReaction(ControlMessage,
+                    reaction => reaction.Emote.Equals(CommonEmoji.LegacyLoudSound), async args => {
+                        args.RemoveReason(); 
+                        await SetVolumeAsync(Volume + 0.1f, true);
+                    }, CollectorFilter.IgnoreSelf)
+            );
         }
     }
 }

@@ -10,6 +10,7 @@ namespace Bot.Config {
         public static readonly LiteCollection<GuildConfig> Guilds = Database.GetCollection<GuildConfig>(@"Guilds");
         public static readonly LiteCollection<BsonDocument> IgnoredMessages = Database.GetCollection<BsonDocument>(@"IgnoredMessages");
         public static readonly LiteCollection<MessageHistory> Messages = Database.GetCollection<MessageHistory>(@"MessagesHistory");
+        public static readonly LiteCollection<StatisticsPart> CommandStatistics = Database.GetCollection<StatisticsPart>(@"CommandStatistics");
         public static LiteDatabase Database => _database.Value;
 
         private static LiteDatabase Init() {

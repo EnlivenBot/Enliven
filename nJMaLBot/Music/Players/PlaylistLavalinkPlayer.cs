@@ -1,12 +1,13 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Bot.Commands;
 using Lavalink4NET;
 using Lavalink4NET.Events;
 using Lavalink4NET.Player;
 
 namespace Bot.Music.Players {
-    public class PlaylistLavalinkPlayer : LavalinkPlayer {
+    public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer {
         private int _currentTrackIndex;
 
         // ReSharper disable once UnusedParameter.Local
@@ -35,6 +36,9 @@ namespace Bot.Music.Players {
 
         public override async Task OnTrackEndAsync(TrackEndEventArgs eventArgs) {
             if (eventArgs.Reason == TrackEndReason.LoadFailed) Playlist.Remove(CurrentTrack);
+            if (CurrentTrack != null) {
+                CommandHandler.RegisterMusicTime(TrackPosition);
+            }
             if (eventArgs.Reason != TrackEndReason.Replaced) await base.OnTrackEndAsync(eventArgs);
             if (eventArgs.MayStartNext || eventArgs.Reason == TrackEndReason.LoadFailed) await ContinueOnTrackEnd();
         }
@@ -107,6 +111,24 @@ namespace Bot.Music.Players {
         public override Task StopAsync(bool disconnect = false) {
             if (disconnect) Cleanup();
             return base.StopAsync(disconnect);
+        }
+
+        public virtual async Task TryPause() {
+            try {
+                await PauseAsync();
+            }
+            catch (Exception) {
+                // ignored
+            }
+        }
+
+        public virtual async Task TryResume() {
+            try {
+                await ResumeAsync();
+            }
+            catch (Exception) {
+                // ignored
+            }
         }
     }
 

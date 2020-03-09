@@ -35,7 +35,7 @@ namespace Bot.Commands {
                 await MusicUtils.QueueLoadMusic(Context.Message, query, player);
             }
             catch (TrackNotFoundException) {
-                ReplyFormattedAsync(Loc.Get("Music.NotFound").Format(query.SafeSubstring(0, 512)), true, logMessage);
+                ReplyFormattedAsync(Loc.Get("Music.NotFound").Format(query.SafeSubstring(0, 512)), true);
                 if (player.Playlist.Count == 0) player.ControlMessage.SafeDelete();
             }
             catch (AttachmentAddFailException) {
@@ -59,7 +59,7 @@ namespace Bot.Commands {
                 return;
             }
 
-            player.PrepareShutdown(Loc.Get("Music.UserStopPlayback"));
+            player.PrepareShutdown(Loc.Get("Music.UserStopPlayback").Format(Context.User.Username));
             await player.StopAsync(true);
             Context.Message.SafeDelete();
         }
@@ -120,7 +120,7 @@ namespace Bot.Commands {
                 return;
             }
 
-            await player.SetVolumeAsync(volume / 10f);
+            await player.SetVolumeAsync(volume / 100f);
             Context.Message.SafeDelete();
             player.WriteToQueueHistory(Loc.Get("MusicQueues.NewVolume").Format(Context.User.Username, volume));
         }

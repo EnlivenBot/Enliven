@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -38,7 +40,6 @@ namespace Bot.Commands {
         private async Task HandleCommand(SocketMessage s) {
             if (!(s is SocketUserMessage msg) || msg.Source != MessageSource.User)
                 return;
-
             var context = new CommandContext(_client, msg);
             if (!(s.Channel is SocketGuildChannel guildChannel)) return;
 
@@ -49,6 +50,7 @@ namespace Bot.Commands {
                 var query = msg.Content.SafeSubstring(argPos, 800);
                 if (string.IsNullOrWhiteSpace(query))
                     query = "help";
+
                 var result = await _commands.ExecuteAsync(context, query, null);
                 if (!result.IsSuccess) {
                     switch (result.Error) {
@@ -72,11 +74,29 @@ namespace Bot.Commands {
                         case CommandError.Exception:
                             await SendErrorMessage(msg, loc, string.Format(loc.Get("CommandHandler.Exception"), result));
                             break;
+                        case CommandError.ObjectNotFound:
+                            await SendErrorMessage(msg, loc, result.ErrorReason);
+                            break;
+                        case CommandError.MultipleMatches:
+                            await SendErrorMessage(msg, loc, result.ErrorReason);
+                            break;
                     }
 
+                    MessageHistoryManager.StartLogToHistory(s, guild);
                     msg.SafeDelete();
                 }
+                else {
+                    var commandName = query.IndexOf(" ") > -1 ? query.Substring(0, query.IndexOf(" ")) : query;
+                    RegisterUsage(commandName, s.Author.Id.ToString());
+                    RegisterUsage(commandName, "Global");
+                    if (guild.IsCommandLoggingEnabled)
+                        MessageHistoryManager.StartLogToHistory(s, guild);
+                    else
+                        MessageHistoryManager.AddMessageToIgnore(s);
+                }
             }
+            else
+                MessageHistoryManager.StartLogToHistory(s, guild);
         }
 
         private static async Task SendErrorMessage(SocketUserMessage message, ILocalizationProvider loc, string description) {
@@ -96,11 +116,40 @@ namespace Bot.Commands {
             if (string.IsNullOrEmpty(content) || content.Length <= 3 || (content[0] != '<' || content[1] != '@'))
                 return false;
             var num = content.IndexOf('>');
-            if (num == -1 || !MentionUtils.TryParseUser(content.Substring(0, num + 1), out var userId) || 
+            if (num == -1 || !MentionUtils.TryParseUser(content.Substring(0, num + 1), out var userId) ||
                 (long) userId != (long) user.Id)
                 return false;
             argPos = num + 2;
             return true;
+        }
+
+        public static void RegisterUsage(string command, string userId) {
+            var userStatistics = GlobalDB.CommandStatistics.FindById(userId) ?? new StatisticsPart {Id = userId};
+            if (!userStatistics.UsagesList.TryGetValue(command, out var userUsageCount)) {
+                userUsageCount = 0;
+            }
+
+            userStatistics.UsagesList[command] = ++userUsageCount;
+            GlobalDB.CommandStatistics.Upsert(userStatistics);
+        }
+        
+        public static void RegisterMusicTime(TimeSpan span) {
+            var userStatistics = GlobalDB.CommandStatistics.FindById("Music") ?? new StatisticsPart {Id = "Music"};
+            if (!userStatistics.UsagesList.TryGetValue("PlaybackTime", out var userUsageCount)) {
+                userUsageCount = 0;
+            }
+            
+            userStatistics.UsagesList["PlaybackTime"] = (ulong) (userUsageCount + span.TotalSeconds);
+            GlobalDB.CommandStatistics.Upsert(userStatistics);
+        }
+
+        public static TimeSpan GetTotalMusicTime() {
+            var userStatistics = GlobalDB.CommandStatistics.FindById("Music") ?? new StatisticsPart {Id = "Music"};
+            if (!userStatistics.UsagesList.TryGetValue("PlaybackTime", out var userUsageCount)) {
+                userUsageCount = 0;
+            }
+            
+            return TimeSpan.FromSeconds(userUsageCount);
         }
     }
 }

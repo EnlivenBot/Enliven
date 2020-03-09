@@ -55,6 +55,10 @@
     "CommandTitle" : "**{0}** - {1}",
     "ByCommand": "Command help: `{0}`",
     "Aliases" : "Aliases: ",
+    "stats0s" : "Bot command usage statistics",
+    "userstats0s" : "Bot command usage statistics by a specific user",
+    "userstats1s" : "Bot command usage statistics by you",
+    "userstats0_0s" : "The user whose statistics requested",
     "shuffle0s" : "Randomizes the tracks in the queue",
     "pause0s" : "Pauses playback",
     "resume0s" : "Resumes playback",
@@ -81,7 +85,8 @@
     "jump0_0s" : "Number of tracks",
     "goto0s" : "Moves the playhead to a specific track by its index",
     "goto0_0s" : "Index of track",
-    "repeat0s" : "Setting repeat playback mode: `All`, `One`, `Off`"
+    "repeat0s" : "Setting repeat playback mode: `All`, `One`, `Off`",
+    "clearhistories0s" : "Clearing all message changes logs from the server"
   },
   "CommandHandler": {
     "FailedTitle": "Error executing command",
@@ -94,7 +99,11 @@
   },
   "Commands": {
     "SetChannelResponse": "Channel <#{0}> was successfully assigned the role {1}",
-    "SetPrefixResponse": "Successfully changed the bot prefix to `{0}`.\nIf you forget the prefix, just mention the bot."
+    "SetPrefixResponse": "Successfully changed the bot prefix to `{0}`.\nIf you forget the prefix, just mention the bot.",
+    "LoggingEnabled" : "Saving message change history enabled",
+    "LoggingDisabled" : "Saving message change history disabled",
+    "CommandLoggingEnabled" : "Saving history for successful commands enabled",
+    "CommandLoggingDisabled" : "Saving history for successful commands disabled"
   },
   "MessageHistory": {
     "PreviousUnavailable": "***Previous entry unavailable",
@@ -110,6 +119,25 @@
     "OnDeleteWithoutHistory": "Failed to get message change history - not found. \nProbable reasons: \n- Message was written before the bot appeared on the server \n- The bot was offline while writing the message",
     "ImageDescription": "The history of the [message]({0}) is reflected in the image above.",
     "Author": "Author",
-    "Requester": "Requester"
+    "Requester": "Requester",
+    "ChannelDeleted" : "Channel {0} ({1}) on {2} was deleted. Cleared {3} messages.",
+    "GuildLogCleared" : "The bot cleared the message history of the guild {0} ({1}). Cleared {2} posts."
+  },
+  "Statistics" : {
+    "Title" : "Statistics",
+    "NoGlobalStats" : "Apparently, no one used the bot 😥. You are the first.",
+    "NoUserStats" : "Apparently, {0} did not use the bot.",
+    "GlobalStats" : "Bot commands global statistics",
+    "UserStats" : "{0}'s usage statistics for bot commands",
+    "ByCommands" : "Commands",
+    "ByMessages" : "Message changes history",
+    "ByMusic" : "Playback",
+    "ByGlobal" : "Global",
+    "ByGlobalFormatted0" : "The bot serves `{0} servers`.\n These are `{1} text` and `{2} voice` channels.\n These are `{3} users`.\n",
+    "ByGlobalFormatted1" : "This is the `{0} command usages` all time.\n This is the `{1} persons that used the bot`.",
+    "ByMusicFormatted" : "The bot played `{0} days`, `{1} hours` and `{2} minutes` of music",
+    "MessagesCreated" : "Message creations logged",
+    "MessagesChanged" : "Message changes logged",
+    "MessagesDeleted" : "Message deletions logged"
   }
 }

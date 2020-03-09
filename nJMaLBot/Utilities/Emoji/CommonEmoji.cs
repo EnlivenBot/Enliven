@@ -12,6 +12,14 @@ namespace Bot.Utilities.Emoji {
         public static Emote Play { get; set; } = Emote.Parse(CommonEmojiStrings.Instance.Play);
         public static Emote Pause { get; set; } = Emote.Parse(CommonEmojiStrings.Instance.Pause);
         public static Emote Stop { get; set; } = Emote.Parse(CommonEmojiStrings.Instance.Stop);
+        public static Discord.Emoji LegacyTrackNext { get; set; } = new Discord.Emoji(CommonEmojiStrings.Instance.LegacyTrackNext);
+        public static Discord.Emoji LegacyTrackPrevious { get; set; } = new Discord.Emoji(CommonEmojiStrings.Instance.LegacyTrackPrevious);
+        public static Discord.Emoji LegacyPause { get; set; } = new Discord.Emoji(CommonEmojiStrings.Instance.LegacyPause);
+        public static Discord.Emoji LegacyPlay { get; set; } = new Discord.Emoji(CommonEmojiStrings.Instance.LegacyPlay);
+        public static Discord.Emoji LegacyStop { get; set; } = new Discord.Emoji(CommonEmojiStrings.Instance.LegacyStop);
+        public static Discord.Emoji LegacySound { get; set; } = new Discord.Emoji(CommonEmojiStrings.Instance.LegacySound);
+        public static Discord.Emoji LegacyLoudSound { get; set; } = new Discord.Emoji(CommonEmojiStrings.Instance.LegacyLoudSound);
+        public static Discord.Emoji LegacyRepeat { get; set; } = new Discord.Emoji(CommonEmojiStrings.Instance.LegacyRepeat);
     }
 
     public class CommonEmojiStrings {
@@ -34,5 +42,13 @@ namespace Bot.Utilities.Emoji {
         public string Play { get; set; } = "<:play:682580118358458368>";
         public string Pause { get; set; } = "<:pause:682580118425960469>";
         public string Stop { get; set; } = "<:stop:682658172615524382>";
+        public string LegacyTrackNext { get; set; } = "⏭️";
+        public string LegacyTrackPrevious { get; set; } = "⏮️";
+        public string LegacyPause { get; set; } = "⏸️";
+        public string LegacyPlay { get; set; } = "▶️";
+        public string LegacyStop { get; set; } = "⏹️";
+        public string LegacySound { get; set; } = "🔉";
+        public string LegacyLoudSound { get; set; } = "🔊";
+        public string LegacyRepeat { get; set; } = "🔁";
     }
 }

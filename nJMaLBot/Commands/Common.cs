@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
 using Bot.Config;
@@ -8,6 +9,7 @@ using Bot.Utilities.Commands;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using Tyrrrz.Extensions;
 
 namespace Bot.Commands {
     [Grouping("utils")]
@@ -25,50 +27,26 @@ namespace Bot.Commands {
 
             await MessageHistoryManager.PrintLog(Convert.ToUInt64(messageId), channelId, (SocketTextChannel) Context.Channel, (IGuildUser) Context.User);
         }
-    }
 
-    [Grouping("admin")]
-    [RequireUserPermission(GuildPermission.Administrator)]
-    public class ServerCommands : AdvancedModuleBase {
-        [Command("setprefix")]
-        [Summary("setprefix0s")]
-        public async Task SetPrefix([Summary("setrefix0_0s")] string prefix) {
-            GuildConfig.Get(Context.Guild.Id).SetServerPrefix(prefix).Save();
-            await (await GetResponseChannel()).SendMessageAsync(Loc.Get("Commands.SetPrefixResponse").Format(prefix));
+        [Command("stats", RunMode = RunMode.Async)]
+        [Summary("stats0s")]
+        public async Task Stats() {
             Context.Message.SafeDelete();
+            ReplyAsync(null, false, (await StatsUtils.PrintStats(null, Loc)).Build()).DelayedDelete(TimeSpan.FromMinutes(5));;
         }
 
-        [Command("setlanguage")]
-        [Summary("setlanguage0s")]
-        public async Task SetLanguage([Summary("setlanguage0_0s")] string language) {
-            if (Localization.Languages.ContainsKey(language)) {
-                GuildConfig.Get(Context.Guild.Id).SetLanguage(language).Save();
-                Context.Message.SafeDelete();
-                (await (await GetResponseChannel()).SendMessageAsync(Localization.Get(Context.Guild.Id, "Localization.Success").Format(language)))
-                   .DelayedDelete(
-                        TimeSpan.FromMinutes(1));
-            }
-            else {
-                (await (await GetResponseChannel()).SendMessageAsync(Localization.Get(Context.Guild.Id, "Localization.Fail")
-                                                                                 .Format(language,
-                                                                                      string.Join(' ', Localization.Languages.Select(pair => $"`{pair.Key}`"))))
-                    ).DelayedDelete(TimeSpan.FromMinutes(1));
-            }
-        }
-
-        [Command("setchannel")]
-        [Summary("setchannel0s")]
-        public async Task SetChannel([Summary("setchannel0_0s")] ChannelFunction func,
-                                     [Summary("setchannel0_1s")] IChannel channel) {
-            GuildConfig.Get(Context.Guild.Id).SetChannel(channel.Id.ToString(), func).Save();
-            await (await GetResponseChannel()).SendMessageAsync(Loc.Get("Commands.SetChannelResponse").Format(channel.Id, func.ToString()));
+        [Command("userstats", RunMode = RunMode.Async)]
+        [Summary("userstats0s")]
+        public async Task UserStats([Summary("userstats0_0s")] IUser user) {
             Context.Message.SafeDelete();
+            ReplyAsync(null, false, (await StatsUtils.PrintStats(user, Loc)).Build()).DelayedDelete(TimeSpan.FromMinutes(5));;
         }
 
-        [Command("setchannel")]
-        [Summary("setchannel0s")]
-        public async Task SetThisChannel([Summary("setchannel0_1s")] ChannelFunction func) {
-            await SetChannel(func, Context.Channel);
+        [Command("userstats", RunMode = RunMode.Async)]
+        [Summary("userstats1s")]
+        public async Task UserStats() {
+            Context.Message.SafeDelete();
+            ReplyAsync(null, false, (await StatsUtils.PrintStats(Context.User, Loc)).Build()).DelayedDelete(TimeSpan.FromMinutes(5));
         }
     }
 }
