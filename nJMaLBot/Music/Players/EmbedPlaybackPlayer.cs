@@ -39,18 +39,13 @@ namespace Bot.Music {
         }
 
         public override async Task SetVolumeAsync(float volume = 1, bool normalize = false) {
-            EnsureNotDestroyed();
-            EnsureConnected();
-
             await base.SetVolumeAsync(volume, normalize);
-            GuildConfig.Get(GuildId).SetVolume(volume).Save();
             UpdateVolume();
         }
 
         public override async Task OnConnectedAsync(VoiceServer voiceServer, VoiceState voiceState) {
-            await base.SetVolumeAsync(GuildConfig.Get(GuildId).Volume);
-            UpdateVolume();
             await base.OnConnectedAsync(voiceServer, voiceState);
+            UpdateVolume();
         }
 
         public override async Task OnTrackEndAsync(TrackEndEventArgs eventArgs) {
@@ -176,7 +171,7 @@ namespace Bot.Music {
         }
 
         private void UpdateVolume() {
-            EmbedBuilder.Fields[1].Value = $"{Convert.ToInt32(Volume * 10f)}% 🔉";
+            EmbedBuilder.Fields[1].Value = $"{Convert.ToInt32(Volume * 100f)}% 🔉";
             UpdateControlMessage();
         }
 

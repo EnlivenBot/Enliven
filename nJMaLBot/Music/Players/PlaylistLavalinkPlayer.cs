@@ -7,7 +7,7 @@ using Lavalink4NET.Events;
 using Lavalink4NET.Player;
 
 namespace Bot.Music.Players {
-    public class PlaylistLavalinkPlayer : LavalinkPlayer {
+    public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer {
         private int _currentTrackIndex;
 
         // ReSharper disable once UnusedParameter.Local
