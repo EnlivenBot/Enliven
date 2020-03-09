@@ -9,6 +9,7 @@ using Bot.Config.Localization;
 using Bot.Config.Localization.Providers;
 using Bot.Music.Players;
 using Bot.Utilities;
+using Bot.Utilities.Collector;
 using Bot.Utilities.Emoji;
 using Discord;
 using Lavalink4NET;
@@ -108,6 +109,8 @@ namespace Bot.Music {
                     properties.Embed = embedBuilder.Build();
                     properties.Content = null;
                 });
+                _collectorsGroup?.DisposeAll();
+                ControlMessage?.RemoveAllReactionsAsync();
                 ControlMessage?.DelayedDelete(TimeSpan.FromMinutes(10));
                 ControlMessage = null;
             }
@@ -123,6 +126,8 @@ namespace Bot.Music {
                 properties.Embed = embedBuilder.Build();
                 properties.Content = null;
             });
+            _collectorsGroup?.DisposeAll();
+            ControlMessage?.RemoveAllReactionsAsync();
             ControlMessage.DelayedDelete(TimeSpan.FromMinutes(10));
             ControlMessage = null;
         }
@@ -134,7 +139,11 @@ namespace Bot.Music {
             var iconUrl = $"https://img.youtube.com/vi/{(string.IsNullOrWhiteSpace(CurrentTrack.TrackIdentifier) ? "" : CurrentTrack.TrackIdentifier)}/0.jpg";
             EmbedBuilder?.WithAuthor(string.IsNullOrWhiteSpace(CurrentTrack.Author) ? "Unknown" : CurrentTrack.Author.SafeSubstring(0, 250), iconUrl)
                         ?.WithThumbnailUrl(iconUrl)?.WithTitle(CurrentTrack.Title.SafeSubstring(0, 250))?.WithUrl(CurrentTrack.Source);
-            IsConstructing = false;
+            if (IsConstructing) {
+                IsConstructing = false;
+                await SetupControlReactions();
+            }
+
             UpdateProgress();
 
             UpdatePlayback = true;
@@ -198,9 +207,10 @@ namespace Bot.Music {
             UpdateControlMessage();
         }
 
-        public void SetControlMessage(IUserMessage message) {
+        public async Task SetControlMessage(IUserMessage message) {
             ControlMessage?.SafeDelete();
             ControlMessage = message;
+            await SetupControlReactions();
             UpdateControlMessage();
         }
 
@@ -257,6 +267,62 @@ namespace Bot.Music {
             catch (Exception) {
                 return "Failed";
             }
+        }
+
+        private CollectorsGroup _collectorsGroup;
+
+        private async Task SetupControlReactions() {
+            if (IsConstructing)
+                return;
+
+            _collectorsGroup?.DisposeAll();
+            await ControlMessage.AddReactionsAsync(new IEmote[] {
+                CommonEmoji.LegacyTrackPrevious, CommonEmoji.LegacyPlay, CommonEmoji.LegacyPause, CommonEmoji.LegacyTrackNext,
+                CommonEmoji.LegacyStop, CommonEmoji.LegacyRepeat, CommonEmoji.LegacySound, CommonEmoji.LegacyLoudSound
+            });
+
+            _collectorsGroup = new CollectorsGroup(
+                CollectorsUtils.CollectReaction(ControlMessage,
+                    reaction => reaction.Emote.Equals(CommonEmoji.LegacyTrackPrevious), async args => {
+                        args.RemoveReason();
+                        await SkipAsync(-1, true);
+                    }, CollectorFilter.IgnoreSelf),
+                CollectorsUtils.CollectReaction(ControlMessage,
+                    reaction => reaction.Emote.Equals(CommonEmoji.LegacyPlay), async args => {
+                        args.RemoveReason();
+                        await TryResume();
+                    }, CollectorFilter.IgnoreSelf),
+                CollectorsUtils.CollectReaction(ControlMessage,
+                    reaction => reaction.Emote.Equals(CommonEmoji.LegacyPause), async args => {
+                        args.RemoveReason();
+                        await TryPause();
+                    }, CollectorFilter.IgnoreSelf),
+                CollectorsUtils.CollectReaction(ControlMessage,
+                    reaction => reaction.Emote.Equals(CommonEmoji.LegacyTrackNext), async args => {
+                        args.RemoveReason();
+                        await SkipAsync(1, true);
+                    }, CollectorFilter.IgnoreSelf),
+                CollectorsUtils.CollectReaction(ControlMessage,
+                    reaction => reaction.Emote.Equals(CommonEmoji.LegacyStop), args => {
+                        args.RemoveReason();
+                        StopAsync(true);
+                    }, CollectorFilter.IgnoreSelf),
+                CollectorsUtils.CollectReaction(ControlMessage,
+                    reaction => reaction.Emote.Equals(CommonEmoji.LegacyRepeat), args => {
+                        args.RemoveReason();
+                        LoopingState = LoopingState.Next();
+                    }, CollectorFilter.IgnoreSelf),
+                CollectorsUtils.CollectReaction(ControlMessage,
+                    reaction => reaction.Emote.Equals(CommonEmoji.LegacySound), async args => {
+                        args.RemoveReason();
+                        await SetVolumeAsync(Volume - 0.1f, true);
+                    }, CollectorFilter.IgnoreSelf),
+                CollectorsUtils.CollectReaction(ControlMessage,
+                    reaction => reaction.Emote.Equals(CommonEmoji.LegacyLoudSound), async args => {
+                        args.RemoveReason(); 
+                        await SetVolumeAsync(Volume + 0.1f, true);
+                    }, CollectorFilter.IgnoreSelf)
+            );
         }
     }
 }
