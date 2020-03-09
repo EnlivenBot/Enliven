@@ -31,55 +31,22 @@ namespace Bot.Commands {
         [Command("stats", RunMode = RunMode.Async)]
         [Summary("stats0s")]
         public async Task Stats() {
-            await PrintStats(null);
+            Context.Message.SafeDelete();
+            ReplyAsync(null, false, (await StatsUtils.PrintStats(null, Loc)).Build()).DelayedDelete(TimeSpan.FromMinutes(5));;
         }
 
         [Command("userstats", RunMode = RunMode.Async)]
         [Summary("userstats0s")]
         public async Task UserStats([Summary("userstats0_0s")] IUser user) {
-            await PrintStats(user);
+            Context.Message.SafeDelete();
+            ReplyAsync(null, false, (await StatsUtils.PrintStats(user, Loc)).Build()).DelayedDelete(TimeSpan.FromMinutes(5));;
         }
 
         [Command("userstats", RunMode = RunMode.Async)]
         [Summary("userstats1s")]
         public async Task UserStats() {
-            await PrintStats(Context.User);
-        }
-
-        [SuppressMessage("ReSharper", "ConditionIsAlwaysTrueOrFalse")]
-        private async Task PrintStats(IUser user) {
-            var stats = GlobalDB.CommandStatistics.FindById(user?.Id.ToString() ?? "Global");
-            var embedBuilder = new EmbedBuilder().WithColor(Color.Gold)
-                                                 .WithTitle(Loc.Get("Statistics.Title"))
-                                                 .WithDescription(user == null
-                                                      ? Loc.Get("Statistics.GlobalStats")
-                                                      : Loc.Get("Statistics.UserStats").Format(user.Username));
-            if (stats == null) {
-                embedBuilder.WithColor(Color.Red)
-                            .WithDescription(user == null ? Loc.Get("Statistics.NoGlobalStats") : Loc.Get("Statistics.NoUserStats").Format(user.Username));
-                await ReplyAsync(null, false, embedBuilder.Build());
-                return;
-            }
-
-            var valueTuples = stats.UsagesList.GroupBy(pair => HelpUtils.CommandAliases.Value[pair.Key].First())
-                                   .Where(pairs => !pairs.Key.IsHiddenCommand())
-                                   .Select(pairs => (pairs.Key.Name.ToString(), pairs.Sum(pair => (double) pair.Value)));
-            embedBuilder.AddField(Loc.Get("Statistics.ByCommands"),
-                string.Join("\n", valueTuples.Select((tuple, i) => $"`{tuple.Item1}` - {tuple.Item2}")));
-
-            if (user == null) {
-                var messageStats = GlobalDB.CommandStatistics.FindById("Messages");
-                if (messageStats != null) {
-                    embedBuilder.AddField(Loc.Get("Statistics.ByMessages"),
-                        messageStats.UsagesList.Select(pair => $"`{Loc.Get("Statistics." + pair.Key)}` - {pair.Value}").JoinToString("\n"));
-                }
-
-                var musicTime = CommandHandler.GetTotalMusicTime();
-                embedBuilder.AddField(Loc.Get("Statistics.ByMusic"),
-                    Loc.Get("Statistics.ByMusicFormatted").Format((int) musicTime.TotalDays, musicTime.Hours, musicTime.Minutes));
-            }
-
-            await ReplyAsync(null, false, embedBuilder.Build());
+            Context.Message.SafeDelete();
+            ReplyAsync(null, false, (await StatsUtils.PrintStats(Context.User, Loc)).Build()).DelayedDelete(TimeSpan.FromMinutes(5));
         }
     }
 }
