@@ -17,7 +17,7 @@ namespace Bot.Utilities.Commands {
             new Temporary<int>(() => Program.Client.Guilds.Sum(guild => guild.VoiceChannels.Count), TimeSpan.FromMinutes(5));
 
         private static Temporary<int> _usersCount =
-            new Temporary<int>(() => Program.Client.Guilds.Sum(guild => guild.Users.Count), TimeSpan.FromMinutes(5));
+            new Temporary<int>(() => Program.Client.Guilds.Sum(guild => guild.MemberCount), TimeSpan.FromMinutes(5));
 
         private static Temporary<int> _commandUsagesCount =
             new Temporary<int>(() => GlobalDB.CommandStatistics.FindById("Global").UsagesList.Sum(pair => (int) pair.Value), TimeSpan.FromMinutes(5));
