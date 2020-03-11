@@ -95,6 +95,9 @@ namespace Bot.Commands {
                 return;
             }
 
+            //For programmers who count from 0
+            if (index == 0) index = 1;
+
             if (player.Playlist.TryGetValue(index - 1, out var track)) {
                 await player.PlayAsync(track, false, new TimeSpan?(), new TimeSpan?());
                 player.WriteToQueueHistory(Loc.Get("MusicQueues.Jumped")
