@@ -5,6 +5,7 @@ using Bot.Config;
 using Bot.Config.Localization;
 using Bot.Utilities;
 using Bot.Utilities.Commands;
+using Bot.Utilities.Modules;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;

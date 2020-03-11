@@ -139,9 +139,9 @@ namespace Bot.Music {
                     uriResult.Scheme == Uri.UriSchemeNetTcp);
         }
 
-        public static async Task<IEnumerable<LavalinkTrack>> QueueLoadMusic(IUserMessage message, string query, EmbedPlaybackPlayer player) {
+        public static async Task QueueLoadMusic(IUserMessage message, string query, EmbedPlaybackPlayer player) {
             var lavalinkTracks = new List<LavalinkTrack>();
-            if (message.Attachments.Count != 0) {
+            if (message != null && message.Attachments.Count != 0) {
                 foreach (var messageAttachment in message.Attachments) {
                     var lavalinkTrack = await Cluster.GetTrackAsync(messageAttachment.Url);
                     if (lavalinkTrack != null)
@@ -152,25 +152,33 @@ namespace Bot.Music {
                     throw new AttachmentAddFailException();
                 }
             }
-            else if (IsValidUrl(query))
-                lavalinkTracks.AddRange(await Cluster.GetTracksAsync(query));
+            else if (string.IsNullOrWhiteSpace(query)) {
+                throw new EmptyQueryException();
+            }
             else {
                 var counter = 0;
-                var tasks = query.Split('\n').Select(s => (counter++, s, Cluster.GetTrackAsync(s, SearchMode.YouTube))).ToList();
-                await Task.WhenAll(tasks.Select((tuple, i) => tuple.Item3));
+                var tasks = query.Split('\n').Select(s => {
+                    var validUrl = IsValidUrl(s);
+                    return (counter++, s, validUrl ? null : Cluster.GetTrackAsync(s, SearchMode.YouTube), validUrl ? Cluster.GetTracksAsync(s) : null);
+                }).ToList();
+                await Task.WhenAll(tasks.Select((tuple, i) => (Task) tuple.Item3 ?? tuple.Item4));
                 LavalinkTrack lastTrack = null;
-                foreach (var valueTuple in tasks.OrderBy(tuple => tuple.Item1)) {
-                    if (valueTuple.Item3.Result == null) continue;
-                    if (lastTrack == null || !lastTrack.Title.Contains(valueTuple.s)) {
-                        lavalinkTracks.Add(valueTuple.Item3.Result);
+                foreach (var (_, s, item3, item4) in tasks.OrderBy(tuple => tuple.Item1)) {
+                    if (item4?.Result != null) {
+                        lastTrack = null;
+                        lavalinkTracks.AddRange(item4.Result);
+                    }
+                    if (item3?.Result == null) continue;
+                    if (lastTrack == null || !lastTrack.Title.Contains(s)) {
+                        lavalinkTracks.Add(item3.Result);
                     }
 
-                    lastTrack = valueTuple.Item3.Result;
+                    lastTrack = item3.Result;
                 }
             }
 
             if (lavalinkTracks.Count == 0) {
-                throw new TrackNotFoundException();
+                throw new NothingFoundException();
             }
 
             var tracks = lavalinkTracks
@@ -180,8 +188,6 @@ namespace Bot.Music {
                          }).ToList();
             await player.PlayAsync(tracks.First(), true);
             player.Playlist.AddRange(tracks.Skip(1));
-
-            return lavalinkTracks;
         }
 
         public static string EscapeTrack(string track) {
@@ -232,5 +238,7 @@ namespace Bot.Music {
 
     public class AttachmentAddFailException : Exception { }
 
-    public class TrackNotFoundException : Exception { }
+    public class NothingFoundException : Exception { }
+    
+    public class EmptyQueryException : Exception { }
 }
