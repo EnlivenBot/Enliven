@@ -20,17 +20,17 @@ using Microsoft.VisualBasic;
 namespace Bot.Commands {
     public class CommandHandler {
         private DiscordSocketClient _client;
-        private CommandService _commands;
+        public CommandService CommandService { get; private set; }
         public List<CommandInfo> AllCommands { get; } = new List<CommandInfo>();
 
         public async Task Install(DiscordSocketClient c) {
             _client = c;
-            _commands = new CommandService();
+            CommandService = new CommandService();
 
-            await _commands.AddModulesAsync(Assembly.GetEntryAssembly(), null);
-            _commands.AddTypeReader(typeof(ChannelFunction), new ChannelFunctionTypeReader());
-            _commands.AddTypeReader(typeof(LoopingState), new LoopingStateTypeReader());
-            foreach (var cmdsModule in _commands.Modules) {
+            await CommandService.AddModulesAsync(Assembly.GetEntryAssembly(), null);
+            CommandService.AddTypeReader(typeof(ChannelFunction), new ChannelFunctionTypeReader());
+            CommandService.AddTypeReader(typeof(LoopingState), new LoopingStateTypeReader());
+            foreach (var cmdsModule in CommandService.Modules) {
                 foreach (var command in cmdsModule.Commands) AllCommands.Add(command);
             }
 
@@ -51,7 +51,7 @@ namespace Bot.Commands {
                 if (string.IsNullOrWhiteSpace(query))
                     query = "help";
 
-                var result = await _commands.ExecuteAsync(context, query, null);
+                var result = await ExecuteCommand(query, context, s.Author.Id.ToString());
                 if (!result.IsSuccess) {
                     switch (result.Error) {
                         case CommandError.UnknownCommand:
@@ -86,9 +86,7 @@ namespace Bot.Commands {
                     msg.SafeDelete();
                 }
                 else {
-                    var commandName = query.IndexOf(" ") > -1 ? query.Substring(0, query.IndexOf(" ")) : query;
-                    RegisterUsage(commandName, s.Author.Id.ToString());
-                    RegisterUsage(commandName, "Global");
+                    
                     if (guild.IsCommandLoggingEnabled)
                         MessageHistoryManager.StartLogToHistory(s, guild);
                     else
@@ -97,6 +95,14 @@ namespace Bot.Commands {
             }
             else
                 MessageHistoryManager.StartLogToHistory(s, guild);
+        }
+
+        private Task<IResult> ExecuteCommand(string query, ICommandContext context, string authorId) {
+            var result = CommandService.ExecuteAsync(context, query, null);
+            var commandName = query.IndexOf(" ") > -1 ? query.Substring(0, query.IndexOf(" ")) : query;
+            RegisterUsage(commandName, authorId);
+            RegisterUsage(commandName, "Global");
+            return result;
         }
 
         private static async Task SendErrorMessage(SocketUserMessage message, ILocalizationProvider loc, string description) {
