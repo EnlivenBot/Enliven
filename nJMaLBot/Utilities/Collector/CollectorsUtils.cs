@@ -18,6 +18,7 @@ namespace Bot.Utilities.Collector {
         }
 
         private static void RegisterHandlers() {
+            if (Program.Client.ConnectionState != ConnectionState.Connected) return;
             Program.Client.ReactionAdded += ClientOnReactionAdded;
             Program.Client.MessageReceived += ClientOnMessageReceived;
         }

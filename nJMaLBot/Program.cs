@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using Bot.Commands;
 using Bot.Config;
 using Bot.Music;
+using Bot.Utilities.Collector;
+using Bot.Utilities.Emoji;
 using Discord;
 using Discord.WebSocket;
 using NLog;
@@ -39,7 +41,7 @@ namespace Bot {
             logger.Info("Start authorization");
 
 
-            Client.ReactionAdded += ReactionAdded;
+            
             Client.Ready += async () => {
                 await Client.SetGameAsync("mentions of itself to get started", null, ActivityType.Listening);
                 OnClientConnect?.Invoke(null, Client);
@@ -51,11 +53,12 @@ namespace Bot {
                 await Client.LoginAsync(TokenType.Bot, GlobalConfig.Instance.BotToken);
             }
             catch (Exception e) {
-                logger.Fatal(e, "Using non valid bot token - {token}", GlobalConfig.Instance.BotToken);
+                logger.Fatal(e, "Failed to connect. Probably token is incorrect - {token}", GlobalConfig.Instance.BotToken);
                 Environment.Exit(-1);
             }
 
             await Client.StartAsync();
+            MessageHistoryManager.SetEmojiHandlers();
 
             Handler = new CommandHandler();
             await Handler.Install(Client);
@@ -72,15 +75,6 @@ namespace Bot {
             while (true) {
                 var input = Console.ReadLine();
             }
-        }
-
-        private static async Task ReactionAdded(Cacheable<IUserMessage, ulong> arg1, ISocketMessageChannel arg2, SocketReaction arg3) {
-            if (arg3.Emote.ToString() != "📖")
-                return;
-            await ((IUserMessage) ((ISocketMessageChannel) Client.GetChannel(arg2.Id)).GetMessageAsync(arg3.MessageId).Result).RemoveReactionAsync(
-                new Emoji("📖"), arg3.User.Value);
-
-            await logger.Swallow(async () => await MessageHistoryManager.PrintLog(arg1.Id, arg2.Id, (SocketTextChannel) arg2, (IGuildUser) arg3.User.Value));
         }
 
         private static void InstallLogger() {
