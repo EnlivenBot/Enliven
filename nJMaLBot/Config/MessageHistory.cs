@@ -8,6 +8,8 @@ using Bot.Config;
 using Bot.Config.Localization;
 using Bot.Config.Localization.Providers;
 using Bot.Utilities;
+using Bot.Utilities.Collector;
+using Bot.Utilities.Emoji;
 using CoreHtmlToImage;
 using DiffMatchPatch;
 using Discord;
@@ -71,6 +73,20 @@ namespace Bot {
             client.MessageDeleted += ClientOnMessageDeleted;
             client.ChannelDestroyed += ClientOnChannelDestroyed;
             client.LeftGuild += ClearGuildLogs;
+        }
+
+        public static void SetEmojiHandlers() {
+            CollectorsUtils.CollectReaction(CommonEmoji.LegacyBook, reaction => true, async eventArgs => {
+                eventArgs.RemoveReason();
+                try {
+                    await PrintLog(eventArgs.Reaction.MessageId, eventArgs.Reaction.Channel.Id,
+                        (SocketTextChannel) eventArgs.Reaction.Channel, (IGuildUser) eventArgs.Reaction.User.Value);
+                }
+                catch (Exception e) {
+                    logger.Error(e, "Faled to print log");
+                    throw;
+                }
+            }, CollectorFilter.IgnoreBots);
         }
 
         public static Task ClearGuildLogs(SocketGuild arg) {
@@ -228,7 +244,7 @@ namespace Bot {
                     }
 
             if (messageLog != null) GlobalDB.Messages.Delete(id);
-            
+
             CommandHandler.RegisterUsage("MessagesDeleted", "Messages");
         }
 

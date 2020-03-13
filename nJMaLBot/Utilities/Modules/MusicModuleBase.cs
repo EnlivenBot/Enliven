@@ -4,12 +4,13 @@ using Bot.Config;
 using Bot.Config.Localization;
 using Bot.Music;
 using Bot.Music.Players;
+using Bot.Utilities.Commands;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using Lavalink4NET.Player;
 
-namespace Bot.Utilities.Commands {
+namespace Bot.Utilities.Modules {
     public class MusicModuleBase : AdvancedModuleBase {
         public IMessageChannel ResponseChannel;
 

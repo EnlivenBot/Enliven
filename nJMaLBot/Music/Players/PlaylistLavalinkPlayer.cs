@@ -39,24 +39,9 @@ namespace Bot.Music.Players {
             if (CurrentTrack != null) {
                 CommandHandler.RegisterMusicTime(TrackPosition);
             }
+
             if (eventArgs.Reason != TrackEndReason.Replaced) await base.OnTrackEndAsync(eventArgs);
-            if (eventArgs.MayStartNext || eventArgs.Reason == TrackEndReason.LoadFailed) await ContinueOnTrackEnd();
-        }
-
-        private async Task ContinueOnTrackEnd() {
-            if (LoopingState == LoopingState.One && CurrentTrack != null) {
-                await PlayAsync(CurrentTrack, false);
-                return;
-            }
-
-            if (Playlist.TryGetValue(CurrentTrackIndex + 1, out var track)) {
-                await PlayAsync(track, false);
-                return;
-            }
-
-            if (LoopingState == LoopingState.All) {
-                await PlayAsync(Playlist.First(), false);
-            }
+            if (eventArgs.MayStartNext || eventArgs.Reason == TrackEndReason.LoadFailed) await SkipAsync();
         }
 
         public virtual async Task<int> PlayAsync(LavalinkTrack track, bool enqueue, TimeSpan? startTime = null, TimeSpan? endTime = null,
@@ -82,15 +67,11 @@ namespace Bot.Music.Players {
                 return;
 
             CurrentTrackIndex += count;
-            CurrentTrackIndex = Math.Min(Math.Max(CurrentTrackIndex, 0), Playlist.Count - 1);
+            if ((force || LoopingState == LoopingState.All) && CurrentTrackIndex > Playlist.Count - 1) CurrentTrackIndex = 0;
+            if (force && CurrentTrackIndex < 0) CurrentTrackIndex = Playlist.Count - 1;
 
             if (Playlist.TryGetValue(CurrentTrackIndex, out var track)) {
                 await PlayAsync(track, false, new TimeSpan?(), new TimeSpan?());
-                return;
-            }
-
-            if (LoopingState != LoopingState.All) {
-                await DisconnectAsync();
                 return;
             }
 

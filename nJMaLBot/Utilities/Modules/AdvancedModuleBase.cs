@@ -1,13 +1,11 @@
 using System;
-using System.Reflection.Emit;
 using System.Threading.Tasks;
 using Bot.Config;
-using Bot.Config.Localization;
 using Bot.Config.Localization.Providers;
 using Discord;
 using Discord.Commands;
 
-namespace Bot.Utilities.Commands {
+namespace Bot.Utilities.Modules {
     public class AdvancedModuleBase : ModuleBase {
         public async Task<IMessageChannel> GetResponseChannel(bool fileSupport = false) {
             var bot = (await Context.Guild.GetCurrentUserAsync()).GetPermissions((IGuildChannel) Context.Channel);
