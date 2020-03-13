@@ -19,6 +19,7 @@ namespace Bot.Commands {
         [Summary("history0s")]
         public async Task PrintChanges(
             [Remainder] [Summary("history0_0s")] string id) {
+            id = id.Trim();
             var channelId = Context.Channel.Id;
             var messageId = id;
             if (id.Contains('-')) {
@@ -27,6 +28,7 @@ namespace Bot.Commands {
             }
 
             await MessageHistoryManager.PrintLog(Convert.ToUInt64(messageId), channelId, (SocketTextChannel) Context.Channel, (IGuildUser) Context.User);
+            Context.Message.SafeDelete();
         }
 
         [Command("stats", RunMode = RunMode.Async)]
