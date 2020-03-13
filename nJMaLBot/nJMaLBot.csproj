@@ -5,6 +5,9 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <RootNamespace>Bot</RootNamespace>
     <AssemblyName>SKP-DB</AssemblyName>
+    <AssemblyVersion>5.0</AssemblyVersion>
+    <FileVersion>5.0</FileVersion>
+    <Version>5.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
