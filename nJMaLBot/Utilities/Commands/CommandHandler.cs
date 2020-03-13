@@ -38,10 +38,15 @@ namespace Bot.Commands {
         }
 
         private async Task HandleCommand(SocketMessage s) {
-            if (!(s is SocketUserMessage msg) || msg.Source != MessageSource.User)
+            if (!(s is SocketUserMessage msg) || msg.Source != MessageSource.User) {
+                MessageHistoryManager.AddMessageToIgnore(s);
                 return;
+            }
             var context = new CommandContext(_client, msg);
-            if (!(s.Channel is SocketGuildChannel guildChannel)) return;
+            if (!(s.Channel is SocketGuildChannel guildChannel)) {
+                MessageHistoryManager.AddMessageToIgnore(s);
+                return;
+            }
 
             var argPos = 0;
             var guild = GuildConfig.Get(guildChannel.Guild.Id);
