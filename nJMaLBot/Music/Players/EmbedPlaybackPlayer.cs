@@ -152,16 +152,39 @@ namespace Bot.Music {
             return toReturn;
         }
 
-        private void UpdateControlMessage() {
+        private Task _modifyAsync;
+        private bool _modifyQueued;
+
+        private async Task UpdateControlMessage(bool background = false) {
             if (IsConstructing)
                 return;
-            ControlMessage?.ModifyAsync(properties => {
-                properties.Embed = EmbedBuilder.Build();
-                properties.Content = "";
-            });
+            
+            //Not thread safe method cuz in this case, thread safety is a waste of time
+            if (this._modifyAsync?.IsCompleted ?? true) {
+                UpdateInternal();
+            }
+            else if (!background) {
+                if (_modifyQueued)
+                    return;
+                try {
+                    _modifyQueued = true;
+                    await this._modifyAsync;
+                    UpdateInternal();
+                }
+                finally {
+                    _modifyQueued = false;
+                }
+            }
+
+            void UpdateInternal() {
+                this._modifyAsync = ControlMessage?.ModifyAsync(properties => {
+                    properties.Embed = EmbedBuilder.Build();
+                    properties.Content = "";
+                });
+            }
         }
 
-        public void UpdateProgress() {
+        public void UpdateProgress(bool background = false) {
             var stateString = State switch {
                 PlayerState.Playing => CommonEmojiStrings.Instance.Play,
                 PlayerState.Paused  => CommonEmojiStrings.Instance.Pause,
@@ -178,7 +201,7 @@ namespace Bot.Music {
             EmbedBuilder.Fields[0].Name = Loc.Get("Music.RequestedBy").Format(requester);
             EmbedBuilder.Fields[0].Value =
                 repeatState + stateString + GetProgressString(progress) + $"  `{TrackPosition:mm':'ss} / {CurrentTrack.Duration:mm':'ss}`";
-            UpdateControlMessage();
+            UpdateControlMessage(background);
         }
 
         private void UpdateVolume() {
@@ -319,13 +342,13 @@ namespace Bot.Music {
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacySound), async args => {
                         args.RemoveReason();
                         await Program.Handler.CommandService.ExecuteAsync(new EmojiCommandContext(Program.Client, args.Reaction),
-                            $"volume {(int)((Volume - 0.1f) * 100)}", null);
+                            $"volume {(int) ((Volume - 0.1f) * 100)}", null);
                     }, CollectorFilter.IgnoreSelf),
                 CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyLoudSound), async args => {
-                        args.RemoveReason(); 
+                        args.RemoveReason();
                         await Program.Handler.CommandService.ExecuteAsync(new EmojiCommandContext(Program.Client, args.Reaction),
-                            $"volume {(int)((Volume + 0.1f) * 100)}", null);
+                            $"volume {(int) ((Volume + 0.1f) * 100)}", null);
                     }, CollectorFilter.IgnoreSelf)
             );
             ControlMessage.AddReactionsAsync(new IEmote[] {

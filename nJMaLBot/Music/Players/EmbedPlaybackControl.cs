@@ -27,7 +27,7 @@ namespace Bot.Music.Players {
                     var embedPlaybackPlayer = embedPlaybackPlayers[i];
                     try {
                         if (embedPlaybackPlayer.UpdatePlayback) {
-                            embedPlaybackPlayer.UpdateProgress();
+                            embedPlaybackPlayer.UpdateProgress(true);
                         }
                     }
                     catch (Exception e) {
