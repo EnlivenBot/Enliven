@@ -114,7 +114,7 @@
     "MessageId": "Message ID: {0}",
     "LogTitle": "Message Changes History",
     "MessageNull": "Failed to get change history: message not found. \nProbable reasons: \n- Wrong ID \n- Message deleted \n- The bot no longer has access to it.",
-    "MessageIgnore": "Failed to get change history, [message]({0}) is ignored. \nProbable reasons: \n- Message written by bot",
+    "MessageIgnore": "Failed to get change history, [message]({0}) is ignored. \nProbable reasons: \n- Message written by bot\n - Logging disabled",
     "MessageWithoutHistory": "Failed to get change history [message]({0}) - not found. \nProbable reasons: \n- Message was written before the bot appeared on the server \n- The bot was offline while writing the message \n- Message was written in the log channel \n \nMessage is logged in. ",
     "OnDeleteWithoutHistory": "Failed to get message change history - not found. \nProbable reasons: \n- Message was written before the bot appeared on the server \n- The bot was offline while writing the message",
     "ImageDescription": "The history of the [message]({0}) is reflected in the image above.",

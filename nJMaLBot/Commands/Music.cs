@@ -7,6 +7,7 @@ using Bot.Music;
 using Bot.Music.Players;
 using Bot.Utilities;
 using Bot.Utilities.Commands;
+using Bot.Utilities.Modules;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -29,12 +30,15 @@ namespace Bot.Commands {
                 logMessage.SafeDelete();
                 return;
             }
-
+            
             player.SetControlMessage(logMessage);
             try {
                 await MusicUtils.QueueLoadMusic(Context.Message, query, player);
             }
-            catch (TrackNotFoundException) {
+            catch (EmptyQueryException) {
+                Context.Message?.SafeDelete();
+            }
+            catch (NothingFoundException) {
                 ReplyFormattedAsync(Loc.Get("Music.NotFound").Format(query.SafeSubstring(0, 512)), true);
                 if (player.Playlist.Count == 0) player.ControlMessage.SafeDelete();
             }
@@ -90,6 +94,9 @@ namespace Bot.Commands {
                 Context.Message.SafeDelete();
                 return;
             }
+
+            //For programmers who count from 0
+            if (index == 0) index = 1;
 
             if (player.Playlist.TryGetValue(index - 1, out var track)) {
                 await player.PlayAsync(track, false, new TimeSpan?(), new TimeSpan?());

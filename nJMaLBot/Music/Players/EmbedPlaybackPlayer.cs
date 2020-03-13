@@ -11,7 +11,9 @@ using Bot.Music.Players;
 using Bot.Utilities;
 using Bot.Utilities.Collector;
 using Bot.Utilities.Emoji;
+using Bot.Utilities.Modules;
 using Discord;
+using Discord.Commands;
 using Lavalink4NET;
 using Lavalink4NET.Events;
 using Lavalink4NET.Player;
@@ -141,7 +143,7 @@ namespace Bot.Music {
                         ?.WithThumbnailUrl(iconUrl)?.WithTitle(CurrentTrack.Title.SafeSubstring(0, 250))?.WithUrl(CurrentTrack.Source);
             if (IsConstructing) {
                 IsConstructing = false;
-                await SetupControlReactions();
+                SetupControlReactions();
             }
 
             UpdateProgress();
@@ -150,16 +152,39 @@ namespace Bot.Music {
             return toReturn;
         }
 
-        private void UpdateControlMessage() {
+        private Task _modifyAsync;
+        private bool _modifyQueued;
+
+        private async Task UpdateControlMessage(bool background = false) {
             if (IsConstructing)
                 return;
-            ControlMessage?.ModifyAsync(properties => {
-                properties.Embed = EmbedBuilder.Build();
-                properties.Content = "";
-            });
+            
+            //Not thread safe method cuz in this case, thread safety is a waste of time
+            if (this._modifyAsync?.IsCompleted ?? true) {
+                UpdateInternal();
+            }
+            else if (!background) {
+                if (_modifyQueued)
+                    return;
+                try {
+                    _modifyQueued = true;
+                    await this._modifyAsync;
+                    UpdateInternal();
+                }
+                finally {
+                    _modifyQueued = false;
+                }
+            }
+
+            void UpdateInternal() {
+                this._modifyAsync = ControlMessage?.ModifyAsync(properties => {
+                    properties.Embed = EmbedBuilder.Build();
+                    properties.Content = "";
+                });
+            }
         }
 
-        public void UpdateProgress() {
+        public void UpdateProgress(bool background = false) {
             var stateString = State switch {
                 PlayerState.Playing => CommonEmojiStrings.Instance.Play,
                 PlayerState.Paused  => CommonEmojiStrings.Instance.Pause,
@@ -176,7 +201,7 @@ namespace Bot.Music {
             EmbedBuilder.Fields[0].Name = Loc.Get("Music.RequestedBy").Format(requester);
             EmbedBuilder.Fields[0].Value =
                 repeatState + stateString + GetProgressString(progress) + $"  `{TrackPosition:mm':'ss} / {CurrentTrack.Duration:mm':'ss}`";
-            UpdateControlMessage();
+            UpdateControlMessage(background);
         }
 
         private void UpdateVolume() {
@@ -207,11 +232,12 @@ namespace Bot.Music {
             UpdateControlMessage();
         }
 
-        public async Task SetControlMessage(IUserMessage message) {
+        public Task SetControlMessage(IUserMessage message) {
             ControlMessage?.SafeDelete();
             ControlMessage = message;
-            await SetupControlReactions();
+            SetupControlReactions();
             UpdateControlMessage();
+            return Task.CompletedTask;
         }
 
         private static string GetProgressString(int progress) {
@@ -271,58 +297,64 @@ namespace Bot.Music {
 
         private CollectorsGroup _collectorsGroup;
 
-        private async Task SetupControlReactions() {
+        private void SetupControlReactions() {
             if (IsConstructing)
                 return;
 
             _collectorsGroup?.DisposeAll();
-            await ControlMessage.AddReactionsAsync(new IEmote[] {
-                CommonEmoji.LegacyTrackPrevious, CommonEmoji.LegacyPlay, CommonEmoji.LegacyPause, CommonEmoji.LegacyTrackNext,
-                CommonEmoji.LegacyStop, CommonEmoji.LegacyRepeat, CommonEmoji.LegacySound, CommonEmoji.LegacyLoudSound
-            });
-
             _collectorsGroup = new CollectorsGroup(
                 CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyTrackPrevious), async args => {
                         args.RemoveReason();
-                        await SkipAsync(-1, true);
+                        await Program.Handler.CommandService.ExecuteAsync(new EmojiCommandContext(Program.Client, args.Reaction), "skip -1", null);
                     }, CollectorFilter.IgnoreSelf),
                 CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyPlay), async args => {
                         args.RemoveReason();
-                        await TryResume();
+                        await Program.Handler.CommandService.ExecuteAsync(new EmojiCommandContext(Program.Client, args.Reaction), "resume", null);
                     }, CollectorFilter.IgnoreSelf),
                 CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyPause), async args => {
                         args.RemoveReason();
-                        await TryPause();
+                        await Program.Handler.CommandService.ExecuteAsync(new EmojiCommandContext(Program.Client, args.Reaction), "pause", null);
                     }, CollectorFilter.IgnoreSelf),
                 CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyTrackNext), async args => {
                         args.RemoveReason();
-                        await SkipAsync(1, true);
+                        await Program.Handler.CommandService.ExecuteAsync(new EmojiCommandContext(Program.Client, args.Reaction), "skip", null);
                     }, CollectorFilter.IgnoreSelf),
                 CollectorsUtils.CollectReaction(ControlMessage,
-                    reaction => reaction.Emote.Equals(CommonEmoji.LegacyStop), args => {
+                    reaction => reaction.Emote.Equals(CommonEmoji.LegacyStop), async args => {
                         args.RemoveReason();
-                        StopAsync(true);
+                        await Program.Handler.CommandService.ExecuteAsync(new EmojiCommandContext(Program.Client, args.Reaction), "stop", null);
                     }, CollectorFilter.IgnoreSelf),
                 CollectorsUtils.CollectReaction(ControlMessage,
-                    reaction => reaction.Emote.Equals(CommonEmoji.LegacyRepeat), args => {
+                    reaction => reaction.Emote.Equals(CommonEmoji.LegacyRepeat), async args => {
                         args.RemoveReason();
-                        LoopingState = LoopingState.Next();
+                        await Program.Handler.CommandService.ExecuteAsync(new EmojiCommandContext(Program.Client, args.Reaction), "repeat", null);
+                    }, CollectorFilter.IgnoreSelf),
+                CollectorsUtils.CollectReaction(ControlMessage,
+                    reaction => reaction.Emote.Equals(CommonEmoji.LegacyShuffle), async args => {
+                        args.RemoveReason();
+                        await Program.Handler.CommandService.ExecuteAsync(new EmojiCommandContext(Program.Client, args.Reaction), "shuffle", null);
                     }, CollectorFilter.IgnoreSelf),
                 CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacySound), async args => {
                         args.RemoveReason();
-                        await SetVolumeAsync(Volume - 0.1f, true);
+                        await Program.Handler.CommandService.ExecuteAsync(new EmojiCommandContext(Program.Client, args.Reaction),
+                            $"volume {(int) ((Volume - 0.1f) * 100)}", null);
                     }, CollectorFilter.IgnoreSelf),
                 CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyLoudSound), async args => {
-                        args.RemoveReason(); 
-                        await SetVolumeAsync(Volume + 0.1f, true);
+                        args.RemoveReason();
+                        await Program.Handler.CommandService.ExecuteAsync(new EmojiCommandContext(Program.Client, args.Reaction),
+                            $"volume {(int) ((Volume + 0.1f) * 100)}", null);
                     }, CollectorFilter.IgnoreSelf)
             );
+            ControlMessage.AddReactionsAsync(new IEmote[] {
+                CommonEmoji.LegacyTrackPrevious, CommonEmoji.LegacyPlay, CommonEmoji.LegacyPause, CommonEmoji.LegacyTrackNext,
+                CommonEmoji.LegacyStop, CommonEmoji.LegacyRepeat, CommonEmoji.LegacyShuffle, CommonEmoji.LegacySound, CommonEmoji.LegacyLoudSound
+            });
         }
     }
 }
