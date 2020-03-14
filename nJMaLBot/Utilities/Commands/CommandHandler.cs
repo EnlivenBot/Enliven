@@ -102,7 +102,7 @@ namespace Bot.Commands {
                 MessageHistoryManager.StartLogToHistory(s, guild);
         }
 
-        private Task<IResult> ExecuteCommand(string query, ICommandContext context, string authorId) {
+        public Task<IResult> ExecuteCommand(string query, ICommandContext context, string authorId) {
             var result = CommandService.ExecuteAsync(context, query, null);
             var commandName = query.IndexOf(" ") > -1 ? query.Substring(0, query.IndexOf(" ")) : query;
             RegisterUsage(commandName, authorId);
