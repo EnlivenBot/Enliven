@@ -72,11 +72,7 @@ namespace Bot.Music.Players {
 
             if (Playlist.TryGetValue(CurrentTrackIndex, out var track)) {
                 await PlayAsync(track, false, new TimeSpan?(), new TimeSpan?());
-                return;
             }
-
-            CurrentTrackIndex = 0;
-            await PlayAsync(Playlist.First(), false);
         }
 
         public virtual void Cleanup() {
