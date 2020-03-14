@@ -306,49 +306,49 @@ namespace Bot.Music {
                 CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyTrackPrevious), async args => {
                         args.RemoveReason();
-                        await Program.Handler.CommandService.ExecuteAsync(new EmojiCommandContext(Program.Client, args.Reaction), "skip -1", null);
+                        await Program.Handler.ExecuteCommand("skip -1", new EmojiCommandContext(Program.Client, args.Reaction), args.Reaction.UserId.ToString());
                     }, CollectorFilter.IgnoreSelf),
                 CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyPlay), async args => {
                         args.RemoveReason();
-                        await Program.Handler.CommandService.ExecuteAsync(new EmojiCommandContext(Program.Client, args.Reaction), "resume", null);
+                        await Program.Handler.ExecuteCommand("resume", new EmojiCommandContext(Program.Client, args.Reaction),  args.Reaction.UserId.ToString());
                     }, CollectorFilter.IgnoreSelf),
                 CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyPause), async args => {
                         args.RemoveReason();
-                        await Program.Handler.CommandService.ExecuteAsync(new EmojiCommandContext(Program.Client, args.Reaction), "pause", null);
+                        await Program.Handler.ExecuteCommand("pause", new EmojiCommandContext(Program.Client, args.Reaction), args.Reaction.UserId.ToString());
                     }, CollectorFilter.IgnoreSelf),
                 CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyTrackNext), async args => {
                         args.RemoveReason();
-                        await Program.Handler.CommandService.ExecuteAsync(new EmojiCommandContext(Program.Client, args.Reaction), "skip", null);
+                        await Program.Handler.ExecuteCommand("skip", new EmojiCommandContext(Program.Client, args.Reaction), args.Reaction.UserId.ToString());
                     }, CollectorFilter.IgnoreSelf),
                 CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyStop), async args => {
                         args.RemoveReason();
-                        await Program.Handler.CommandService.ExecuteAsync(new EmojiCommandContext(Program.Client, args.Reaction), "stop", null);
+                        await Program.Handler.ExecuteCommand("stop", new EmojiCommandContext(Program.Client, args.Reaction), args.Reaction.UserId.ToString());
                     }, CollectorFilter.IgnoreSelf),
                 CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyRepeat), async args => {
                         args.RemoveReason();
-                        await Program.Handler.CommandService.ExecuteAsync(new EmojiCommandContext(Program.Client, args.Reaction), "repeat", null);
+                        await Program.Handler.ExecuteCommand("repeat", new EmojiCommandContext(Program.Client, args.Reaction), args.Reaction.UserId.ToString());
                     }, CollectorFilter.IgnoreSelf),
                 CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyShuffle), async args => {
                         args.RemoveReason();
-                        await Program.Handler.CommandService.ExecuteAsync(new EmojiCommandContext(Program.Client, args.Reaction), "shuffle", null);
+                        await Program.Handler.ExecuteCommand("shuffle", new EmojiCommandContext(Program.Client, args.Reaction), args.Reaction.UserId.ToString());
                     }, CollectorFilter.IgnoreSelf),
                 CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacySound), async args => {
                         args.RemoveReason();
-                        await Program.Handler.CommandService.ExecuteAsync(new EmojiCommandContext(Program.Client, args.Reaction),
-                            $"volume {(int) ((Volume - 0.1f) * 100)}", null);
+                        await Program.Handler.ExecuteCommand($"volume {(int) ((Volume - 0.1f) * 100)}", 
+                            new EmojiCommandContext(Program.Client, args.Reaction), args.Reaction.UserId.ToString());
                     }, CollectorFilter.IgnoreSelf),
                 CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyLoudSound), async args => {
                         args.RemoveReason();
-                        await Program.Handler.CommandService.ExecuteAsync(new EmojiCommandContext(Program.Client, args.Reaction),
-                            $"volume {(int) ((Volume + 0.1f) * 100)}", null);
+                        await Program.Handler.ExecuteCommand($"volume {(int) ((Volume + 0.1f) * 100)}", 
+                            new EmojiCommandContext(Program.Client, args.Reaction), args.Reaction.UserId.ToString());
                     }, CollectorFilter.IgnoreSelf)
             );
             ControlMessage.AddReactionsAsync(new IEmote[] {
