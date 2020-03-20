@@ -16,11 +16,11 @@
   "Music" : {
     "RequestHistory" : "Request history",
     "PlaybackDisposed" : "Playback has stopped",
+    "QueueEmpty" : "The queue is empty. Order tracks via `{0}play [request]`",
     "VolumeOutOfRange" : "Volume out of range: 0% - 150%!",
     "RequestedBy" : "Requested by: {0}",
-    "VolumeUpdated" : "Volume updated: {0}%",
     "Stopped" : "Stopped playing",
-    "NothingPlaying" : "Nothing playing",
+    "NothingPlaying" : "Nothing playing. Order tracks via `{0}play [request]`",
     "Fail" : "Error",
     "Playback" : "Playback",
     "UserStopPlayback" : "**{0}** stopped playback",
@@ -37,7 +37,12 @@
     "NotInVoiceChannel": "{0}, You must be in a voice channel",
     "TrackError": "Track error",
     "DecodingError": "Something went wrong when decoding the track\n[{0}]({1})",
-    "ChannelNotAllowed": "{0}, you can’t play music on this channel. Use <#{1}> for this, or ask the administrator to change this through the server setup."
+    "ChannelNotAllowed": "{0}, you can’t play music on this channel. Use <#{1}> for this, or ask the administrator to change this through the server setup.",
+    "MusicDisabled" : "The bot does not have access to any Lavalink server and cannot play anything. Write to the host owner about this problem.",
+    "ClusterInitializing" : "The playback cluster is initializing. Wait a bit",
+    "NoNodesAvailable" : "There are currently no nodes available for playback. Most likely you need to wait a bit",
+    "PlayerDropped" : "Unfortunately, the node that served your playback has crashed. Try again later.",
+    "PlayerMoved" : "The node that served your playback has crashed. We resumed it on another node."
   },
   "Groups": {
     "music" : "Music",
@@ -45,7 +50,6 @@
     "utils" : "Utilities"
   },
   "Help": {
-    "QueueEmpty" : "The queue is empty. Order tracks via `{0}play [request]`",
     "HelpMessage": "Command help: ",
     "HelpTitle" : "Available commands",
     "HelpDescription" : "Help for all commands and categories",
