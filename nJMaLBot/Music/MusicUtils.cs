@@ -71,26 +71,35 @@ namespace Bot.Music {
                 try {
                     Cluster = new LavalinkCluster(new LavalinkClusterOptions {Nodes = nodes.ToArray()}, new DiscordClientWrapper(Program.Client),
                         _lavalinkLogger) {StayOnline = true};
-                    Task.Run(async () => {
-                        logger.Info("Trying to connect to nodes!");
-                        await Cluster.InitializeAsync();
+                    Cluster.PlayerMoved += (sender, args) => {
+                        var player = args.Player as EmbedPlaybackPlayer;
+                        if (!args.CouldBeMoved) {
+                            player.PrepareShutdown(player.Loc.Get("Music.PlayerDropped"));
+                            player.Dispose();
+                        }
+                        
+                        player.WriteToQueueHistory(player.Loc.Get("Music.PlayerMoved"));
+                        return Task.CompletedTask;
+                    };
+                    logger.Info("Trying to connect to nodes!");
+                    await Cluster.InitializeAsync();
 
-                        logger.Info("Initializing InactivityTrackingService instance with default options");
-                        var inactivityTrackingService = new InactivityTrackingService(Cluster, new DiscordClientWrapper(Program.Client),
-                            new InactivityTrackingOptions {
-                                TrackInactivity = true,
-                                DisconnectDelay = TimeSpan.FromSeconds(30),
-                                PollInterval = TimeSpan.FromSeconds(4)
-                            }, _lavalinkLogger);
-                        inactivityTrackingService.InactivePlayer += async (sender, args) => {
-                            if (args.Player is EmbedPlaybackPlayer embedPlaybackPlayer) {
-                                embedPlaybackPlayer.PrepareShutdown(embedPlaybackPlayer.Loc.Get("Music.NoListenersLeft"));
-                            }
-                        };
-                    });
+                    logger.Info("Initializing InactivityTrackingService instance with default options");
+                    var inactivityTrackingService = new InactivityTrackingService(Cluster, new DiscordClientWrapper(Program.Client),
+                        new InactivityTrackingOptions {
+                            TrackInactivity = true,
+                            DisconnectDelay = TimeSpan.FromSeconds(30),
+                            PollInterval = TimeSpan.FromSeconds(4)
+                        }, _lavalinkLogger);
+                    inactivityTrackingService.InactivePlayer += async (sender, args) => {
+                        if (args.Player is EmbedPlaybackPlayer embedPlaybackPlayer) {
+                            embedPlaybackPlayer.PrepareShutdown(embedPlaybackPlayer.Loc.Get("Music.NoListenersLeft"));
+                        }
+                    };
                 }
                 catch (Exception e) {
                     logger.Fatal(e, "Exception with music cluster");
+                    Cluster = default;
                 }
             }
             else {
