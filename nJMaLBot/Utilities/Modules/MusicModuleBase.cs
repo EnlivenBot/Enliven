@@ -47,6 +47,9 @@ namespace Bot.Utilities.Modules {
                 return null;
             }
 
+            if (!summonToUser)
+                return null;
+
             if (((SocketGuildUser) await userTask).VoiceState.HasValue) {
                 var embedPlaybackPlayer =
                     await MusicUtils.Cluster.JoinAsync<EmbedPlaybackPlayer>(Context.Guild.Id, ((SocketGuildUser) await userTask).VoiceChannel.Id);

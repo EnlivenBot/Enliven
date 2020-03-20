@@ -39,11 +39,11 @@ namespace Bot.Commands {
                 Context.Message?.SafeDelete();
             }
             catch (NothingFoundException) {
-                ReplyFormattedAsync(Loc.Get("Music.NotFound").Format(query.SafeSubstring(0, 512)), true);
+                ReplyFormattedAsync(Loc.Get("Music.NotFound").Format(query.SafeSubstring(0, 512)), true).DelayedDelete(TimeSpan.FromMinutes(10));
                 if (player.Playlist.Count == 0) player.ControlMessage.SafeDelete();
             }
             catch (AttachmentAddFailException) {
-                ReplyFormattedAsync(Loc.Get("Music.AttachmentFail"), true, logMessage);
+                ReplyFormattedAsync(Loc.Get("Music.AttachmentFail"), true, logMessage).DelayedDelete(TimeSpan.FromMinutes(10));
                 if (player.Playlist.Count == 0) player.ControlMessage.SafeDelete();
             }
         }
@@ -53,13 +53,9 @@ namespace Bot.Commands {
         [Summary("stop0s")]
         public async Task Stop() {
             var player = await GetPlayerAsync();
-            if (player == null) {
+            if (player?.CurrentTrack == null) {
+                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(2));;
                 Context.Message.SafeDelete();
-                return;
-            }
-
-            if (player.CurrentTrack == null) {
-                await ReplyFormattedAsync(Loc.Get("Music.NothingPlaying"), true);
                 return;
             }
 
@@ -74,6 +70,7 @@ namespace Bot.Commands {
         public async Task Jump([Summary("jump0_0s")] int index = 1) {
             var player = await GetPlayerAsync();
             if (player == null) {
+                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(2));;
                 Context.Message.SafeDelete();
                 return;
             }
@@ -91,6 +88,7 @@ namespace Bot.Commands {
         public async Task Goto([Summary("goto0_0s")] int index) {
             var player = await GetPlayerAsync();
             if (player == null) {
+                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(2));;
                 Context.Message.SafeDelete();
                 return;
             }
@@ -99,7 +97,7 @@ namespace Bot.Commands {
             if (index == 0) index = 1;
 
             if (player.Playlist.TryGetValue(index - 1, out var track)) {
-                await player.PlayAsync(track, false, new TimeSpan?(), new TimeSpan?());
+                await player.PlayAsync(track, false);
                 player.WriteToQueueHistory(Loc.Get("MusicQueues.Jumped")
                                               .Format(Context.User.Username, player.CurrentTrackIndex + 1,
                                                    player.CurrentTrack.Title.SafeSubstring(0, 40) + "..."));
@@ -118,12 +116,13 @@ namespace Bot.Commands {
         public async Task Volume([Summary("volume0_0s")] int volume = 100) {
             var player = await GetPlayerAsync();
             if (player == null) {
+                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(2));;
                 Context.Message.SafeDelete();
                 return;
             }
 
             if (volume > 150 || volume < 0) {
-                await ReplyFormattedAsync(Loc.Get("Music.VolumeOutOfRange"), true);
+                ReplyFormattedAsync(Loc.Get("Music.VolumeOutOfRange"), true).DelayedDelete(TimeSpan.FromMinutes(1));
                 return;
             }
 
@@ -138,6 +137,7 @@ namespace Bot.Commands {
         public async Task Repeat(LoopingState state) {
             var player = await GetPlayerAsync();
             if (player == null) {
+                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(2));;
                 Context.Message.SafeDelete();
                 return;
             }
@@ -153,6 +153,7 @@ namespace Bot.Commands {
         public async Task Repeat() {
             var player = await GetPlayerAsync();
             if (player == null) {
+                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(2));;
                 Context.Message.SafeDelete();
                 return;
             }
@@ -165,6 +166,7 @@ namespace Bot.Commands {
         public async Task Pause() {
             var player = await GetPlayerAsync();
             if (player == null) {
+                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(2));;
                 Context.Message.SafeDelete();
                 return;
             }
@@ -180,6 +182,7 @@ namespace Bot.Commands {
         public async Task Resume() {
             var player = await GetPlayerAsync();
             if (player == null) {
+                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(2));;
                 Context.Message.SafeDelete();
                 return;
             }
@@ -195,6 +198,7 @@ namespace Bot.Commands {
         public async Task Shuffle() {
             var player = await GetPlayerAsync();
             if (player == null) {
+                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(2));;
                 Context.Message.SafeDelete();
                 return;
             }
