@@ -15,6 +15,7 @@ using Bot.Utilities.Modules;
 using Discord;
 using Discord.Commands;
 using Lavalink4NET;
+using Lavalink4NET.Decoding;
 using Lavalink4NET.Events;
 using Lavalink4NET.Player;
 using Tyrrrz.Extensions;
@@ -158,7 +159,7 @@ namespace Bot.Music {
         private async Task UpdateControlMessage(bool background = false) {
             if (IsConstructing)
                 return;
-            
+
             //Not thread safe method cuz in this case, thread safety is a waste of time
             if (this._modifyAsync?.IsCompleted ?? true) {
                 UpdateInternal();
@@ -259,11 +260,11 @@ namespace Bot.Music {
                 string lastAuthor = null;
                 var authorStringBuilder = new StringBuilder();
                 for (var i = Math.Max(index - 1, 0); i < index + 5; i++) {
-                    if (!playlist.TryGetValue(i, out var track) || !(track is AuthoredLavalinkTrack authoredLavalinkTrack)) continue;
-                    var author = authoredLavalinkTrack.GetRequester();
+                    if (!playlist.TryGetValue(i, out var track)) continue;
+                    var author = (track is AuthoredLavalinkTrack authoredLavalinkTrack) ? authoredLavalinkTrack.GetRequester() : "Unknown";
                     if (author != lastAuthor && lastAuthor != null) FinalizeBlock();
                     authorStringBuilder.Replace("└", "├").Replace("▬", "│");
-                    authorStringBuilder.Append(GetTrackString(authoredLavalinkTrack.Title.Replace("'", "").Replace("#", ""),
+                    authorStringBuilder.Append(GetTrackString(track.Title.Replace("'", "").Replace("#", ""),
                         i + 1, 40, CurrentTrackIndex == i));
                     lastAuthor = author;
                 }
@@ -306,12 +307,13 @@ namespace Bot.Music {
                 CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyTrackPrevious), async args => {
                         args.RemoveReason();
-                        await Program.Handler.ExecuteCommand("skip -1", new EmojiCommandContext(Program.Client, args.Reaction), args.Reaction.UserId.ToString());
+                        await Program.Handler.ExecuteCommand("skip -1", new EmojiCommandContext(Program.Client, args.Reaction),
+                            args.Reaction.UserId.ToString());
                     }, CollectorFilter.IgnoreSelf),
                 CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyPlay), async args => {
                         args.RemoveReason();
-                        await Program.Handler.ExecuteCommand("resume", new EmojiCommandContext(Program.Client, args.Reaction),  args.Reaction.UserId.ToString());
+                        await Program.Handler.ExecuteCommand("resume", new EmojiCommandContext(Program.Client, args.Reaction), args.Reaction.UserId.ToString());
                     }, CollectorFilter.IgnoreSelf),
                 CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyPause), async args => {
@@ -336,18 +338,19 @@ namespace Bot.Music {
                 CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyShuffle), async args => {
                         args.RemoveReason();
-                        await Program.Handler.ExecuteCommand("shuffle", new EmojiCommandContext(Program.Client, args.Reaction), args.Reaction.UserId.ToString());
+                        await Program.Handler.ExecuteCommand("shuffle", new EmojiCommandContext(Program.Client, args.Reaction),
+                            args.Reaction.UserId.ToString());
                     }, CollectorFilter.IgnoreSelf),
                 CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacySound), async args => {
                         args.RemoveReason();
-                        await Program.Handler.ExecuteCommand($"volume {(int) ((Volume - 0.1f) * 100)}", 
+                        await Program.Handler.ExecuteCommand($"volume {(int) ((Volume - 0.1f) * 100)}",
                             new EmojiCommandContext(Program.Client, args.Reaction), args.Reaction.UserId.ToString());
                     }, CollectorFilter.IgnoreSelf),
                 CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyLoudSound), async args => {
                         args.RemoveReason();
-                        await Program.Handler.ExecuteCommand($"volume {(int) ((Volume + 0.1f) * 100)}", 
+                        await Program.Handler.ExecuteCommand($"volume {(int) ((Volume + 0.1f) * 100)}",
                             new EmojiCommandContext(Program.Client, args.Reaction), args.Reaction.UserId.ToString());
                     }, CollectorFilter.IgnoreSelf)
             );
@@ -355,6 +358,34 @@ namespace Bot.Music {
                 CommonEmoji.LegacyTrackPrevious, CommonEmoji.LegacyPlay, CommonEmoji.LegacyPause, CommonEmoji.LegacyTrackNext,
                 CommonEmoji.LegacyStop, CommonEmoji.LegacyRepeat, CommonEmoji.LegacyShuffle, CommonEmoji.LegacySound, CommonEmoji.LegacyLoudSound
             });
+        }
+
+        public override async Task ImportPlaylist(ExportPlaylist playlist, ImportPlaylistOptions options, string requester) {
+            var tracks = playlist.Tracks.Select(s => TrackDecoder.DecodeTrack(s))
+                                 .Select(track => AuthoredLavalinkTrack.FromLavalinkTrack(track, requester)).ToList();
+            if (options == ImportPlaylistOptions.Replace) {
+                try {
+                    await StopAsync();
+                    WriteToQueueHistory(Loc.Get("Music.ImportPlayerStop"));
+                }
+                catch (Exception) {
+                    // ignored
+                }
+
+                if (!Playlist.IsEmpty) {
+                    Playlist.Clear();
+                    WriteToQueueHistory(Loc.Get("Music.ClearPlaylist").Format(requester));
+                }
+            }
+
+            Playlist.AddRange(tracks);
+            WriteToQueueHistory(Loc.Get("Music.AddTracks").Format(requester, tracks.Count));
+
+            if (options != ImportPlaylistOptions.JustAdd) {
+                await PlayAsync(playlist.TrackIndex == -1 ? tracks.First() : tracks[playlist.TrackIndex], false, playlist.TrackPosition);
+                WriteToQueueHistory(Loc.Get("MusicQueues.Jumped")
+                                       .Format(requester, CurrentTrackIndex + 1, CurrentTrack.Title.SafeSubstring(0, 40) + "..."));
+            }
         }
     }
 }

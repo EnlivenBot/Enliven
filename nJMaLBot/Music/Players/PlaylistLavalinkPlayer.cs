@@ -1,7 +1,9 @@
 using System;
+using System.Collections;
 using System.Linq;
 using System.Threading.Tasks;
 using Bot.Commands;
+using Discord;
 using Lavalink4NET;
 using Lavalink4NET.Decoding;
 using Lavalink4NET.Events;
@@ -104,12 +106,23 @@ namespace Bot.Music.Players {
             return exportPlaylist;
         }
 
-        public virtual async Task ImportPlaylist(ExportPlaylist playlist, ImportPlaylistOptions options) {
-            var tracks = playlist.Tracks.Select(s => TrackDecoder.DecodeTrack(s)).ToList();
+        public virtual async Task ImportPlaylist(ExportPlaylist playlist, ImportPlaylistOptions options, string requester) {
+            var tracks = playlist.Tracks.Select(s => TrackDecoder.DecodeTrack(s))
+                                        .Select(track => AuthoredLavalinkTrack.FromLavalinkTrack(track, requester)).ToList();
             if (options == ImportPlaylistOptions.Replace) {
-                await StopAsync();
-                Playlist.Clear();
+                try {
+                    await StopAsync();
+                }
+                catch (Exception) {
+                    // ignored
+                }
+
+                if (!Playlist.IsEmpty) {
+                    Playlist.Clear();
+                }
             }
+
+            
             Playlist.AddRange(tracks);
 
             if (options != ImportPlaylistOptions.JustAdd) {
