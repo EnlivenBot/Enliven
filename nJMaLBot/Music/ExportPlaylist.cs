@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using LiteDB;
 
 namespace Bot.Music {
     public class ExportPlaylist {
@@ -8,12 +9,16 @@ namespace Bot.Music {
         public TimeSpan? TrackPosition { get; set; }
     }
 
+    public class StoredPlaylist : ExportPlaylist {
+        [BsonId] public object Id { get; set; }
+    }
+
     public enum ExportPlaylistOptions {
         AllData,
         IgnoreTrackPosition,
         IgnoreTrackIndex
     }
-    
+
     public enum ImportPlaylistOptions {
         Replace,
         AddAndPlay,
