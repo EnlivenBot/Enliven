@@ -1,10 +1,14 @@
 using System;
+using System.Collections;
 using System.Linq;
 using System.Threading.Tasks;
 using Bot.Commands;
+using Discord;
 using Lavalink4NET;
+using Lavalink4NET.Decoding;
 using Lavalink4NET.Events;
 using Lavalink4NET.Player;
+using Newtonsoft.Json;
 
 namespace Bot.Music.Players {
     public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer {
@@ -90,21 +94,39 @@ namespace Bot.Music.Players {
             return base.StopAsync(disconnect);
         }
 
-        public virtual async Task TryPause() {
-            try {
-                await PauseAsync();
+        public virtual ExportPlaylist GetExportPlaylist(ExportPlaylistOptions options) {
+            var exportPlaylist = new ExportPlaylist {Tracks = Playlist.Select(track => track.Identifier).ToList()};
+            if (options != ExportPlaylistOptions.IgnoreTrackIndex) {
+                exportPlaylist.TrackIndex = CurrentTrackIndex;
             }
-            catch (Exception) {
-                // ignored
+
+            if (options == ExportPlaylistOptions.AllData) {
+                exportPlaylist.TrackPosition = TrackPosition;
             }
+            return exportPlaylist;
         }
 
-        public virtual async Task TryResume() {
-            try {
-                await ResumeAsync();
+        public virtual async Task ImportPlaylist(ExportPlaylist playlist, ImportPlaylistOptions options, string requester) {
+            var tracks = playlist.Tracks.Select(s => TrackDecoder.DecodeTrack(s))
+                                        .Select(track => AuthoredLavalinkTrack.FromLavalinkTrack(track, requester)).ToList();
+            if (options == ImportPlaylistOptions.Replace) {
+                try {
+                    await StopAsync();
+                }
+                catch (Exception) {
+                    // ignored
+                }
+
+                if (!Playlist.IsEmpty) {
+                    Playlist.Clear();
+                }
             }
-            catch (Exception) {
-                // ignored
+
+            
+            Playlist.AddRange(tracks);
+
+            if (options != ImportPlaylistOptions.JustAdd) {
+                await PlayAsync(playlist.TrackIndex == -1 ? tracks.First() : tracks[playlist.TrackIndex], false, playlist.TrackPosition);
             }
         }
     }

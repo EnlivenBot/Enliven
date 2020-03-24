@@ -15,8 +15,10 @@ using Bot.Utilities.Modules;
 using Discord;
 using Discord.Commands;
 using Lavalink4NET;
+using Lavalink4NET.Decoding;
 using Lavalink4NET.Events;
 using Lavalink4NET.Player;
+using LiteDB;
 using Tyrrrz.Extensions;
 
 namespace Bot.Music {
@@ -156,9 +158,9 @@ namespace Bot.Music {
         private bool _modifyQueued;
 
         private async Task UpdateControlMessage(bool background = false) {
-            if (IsConstructing)
+            if (IsConstructing || ControlMessage == null)
                 return;
-            
+
             //Not thread safe method cuz in this case, thread safety is a waste of time
             if (this._modifyAsync?.IsCompleted ?? true) {
                 UpdateInternal();
@@ -259,11 +261,11 @@ namespace Bot.Music {
                 string lastAuthor = null;
                 var authorStringBuilder = new StringBuilder();
                 for (var i = Math.Max(index - 1, 0); i < index + 5; i++) {
-                    if (!playlist.TryGetValue(i, out var track) || !(track is AuthoredLavalinkTrack authoredLavalinkTrack)) continue;
-                    var author = authoredLavalinkTrack.GetRequester();
+                    if (!playlist.TryGetValue(i, out var track)) continue;
+                    var author = (track is AuthoredLavalinkTrack authoredLavalinkTrack) ? authoredLavalinkTrack.GetRequester() : "Unknown";
                     if (author != lastAuthor && lastAuthor != null) FinalizeBlock();
                     authorStringBuilder.Replace("└", "├").Replace("▬", "│");
-                    authorStringBuilder.Append(GetTrackString(authoredLavalinkTrack.Title.Replace("'", "").Replace("#", ""),
+                    authorStringBuilder.Append(GetTrackString(track.Title.Replace("'", "").Replace("#", ""),
                         i + 1, 40, CurrentTrackIndex == i));
                     lastAuthor = author;
                 }
@@ -306,55 +308,125 @@ namespace Bot.Music {
                 CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyTrackPrevious), async args => {
                         args.RemoveReason();
-                        await Program.Handler.ExecuteCommand("skip -1", new EmojiCommandContext(Program.Client, args.Reaction), args.Reaction.UserId.ToString());
+                        await Program.Handler.ExecuteCommand("skip -1", new ReactionCommandContext(Program.Client, args.Reaction),
+                            args.Reaction.UserId.ToString());
                     }, CollectorFilter.IgnoreSelf),
                 CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyPlay), async args => {
                         args.RemoveReason();
-                        await Program.Handler.ExecuteCommand("resume", new EmojiCommandContext(Program.Client, args.Reaction),  args.Reaction.UserId.ToString());
+                        await Program.Handler.ExecuteCommand("resume", new ReactionCommandContext(Program.Client, args.Reaction),
+                            args.Reaction.UserId.ToString());
                     }, CollectorFilter.IgnoreSelf),
                 CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyPause), async args => {
                         args.RemoveReason();
-                        await Program.Handler.ExecuteCommand("pause", new EmojiCommandContext(Program.Client, args.Reaction), args.Reaction.UserId.ToString());
+                        await Program.Handler.ExecuteCommand("pause", new ReactionCommandContext(Program.Client, args.Reaction),
+                            args.Reaction.UserId.ToString());
                     }, CollectorFilter.IgnoreSelf),
                 CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyTrackNext), async args => {
                         args.RemoveReason();
-                        await Program.Handler.ExecuteCommand("skip", new EmojiCommandContext(Program.Client, args.Reaction), args.Reaction.UserId.ToString());
+                        await Program.Handler.ExecuteCommand("skip", new ReactionCommandContext(Program.Client, args.Reaction),
+                            args.Reaction.UserId.ToString());
                     }, CollectorFilter.IgnoreSelf),
                 CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyStop), async args => {
                         args.RemoveReason();
-                        await Program.Handler.ExecuteCommand("stop", new EmojiCommandContext(Program.Client, args.Reaction), args.Reaction.UserId.ToString());
+                        await Program.Handler.ExecuteCommand("stop", new ReactionCommandContext(Program.Client, args.Reaction),
+                            args.Reaction.UserId.ToString());
                     }, CollectorFilter.IgnoreSelf),
                 CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyRepeat), async args => {
                         args.RemoveReason();
-                        await Program.Handler.ExecuteCommand("repeat", new EmojiCommandContext(Program.Client, args.Reaction), args.Reaction.UserId.ToString());
+                        await Program.Handler.ExecuteCommand("repeat", new ReactionCommandContext(Program.Client, args.Reaction),
+                            args.Reaction.UserId.ToString());
                     }, CollectorFilter.IgnoreSelf),
                 CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyShuffle), async args => {
                         args.RemoveReason();
-                        await Program.Handler.ExecuteCommand("shuffle", new EmojiCommandContext(Program.Client, args.Reaction), args.Reaction.UserId.ToString());
+                        await Program.Handler.ExecuteCommand("shuffle", new ReactionCommandContext(Program.Client, args.Reaction),
+                            args.Reaction.UserId.ToString());
                     }, CollectorFilter.IgnoreSelf),
                 CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacySound), async args => {
                         args.RemoveReason();
-                        await Program.Handler.ExecuteCommand($"volume {(int) ((Volume - 0.1f) * 100)}", 
-                            new EmojiCommandContext(Program.Client, args.Reaction), args.Reaction.UserId.ToString());
+                        await Program.Handler.ExecuteCommand($"volume {(int) ((Volume - 0.1f) * 100)}",
+                            new ReactionCommandContext(Program.Client, args.Reaction), args.Reaction.UserId.ToString());
                     }, CollectorFilter.IgnoreSelf),
                 CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyLoudSound), async args => {
                         args.RemoveReason();
-                        await Program.Handler.ExecuteCommand($"volume {(int) ((Volume + 0.1f) * 100)}", 
-                            new EmojiCommandContext(Program.Client, args.Reaction), args.Reaction.UserId.ToString());
+                        await Program.Handler.ExecuteCommand($"volume {(int) ((Volume + 0.1f) * 100)}",
+                            new ReactionCommandContext(Program.Client, args.Reaction), args.Reaction.UserId.ToString());
                     }, CollectorFilter.IgnoreSelf)
             );
             ControlMessage.AddReactionsAsync(new IEmote[] {
                 CommonEmoji.LegacyTrackPrevious, CommonEmoji.LegacyPlay, CommonEmoji.LegacyPause, CommonEmoji.LegacyTrackNext,
                 CommonEmoji.LegacyStop, CommonEmoji.LegacyRepeat, CommonEmoji.LegacyShuffle, CommonEmoji.LegacySound, CommonEmoji.LegacyLoudSound
             });
+        }
+
+        public override async Task ImportPlaylist(ExportPlaylist playlist, ImportPlaylistOptions options, string requester) {
+            var tracks = playlist.Tracks.Select(s => TrackDecoder.DecodeTrack(s))
+                                 .Select(track => AuthoredLavalinkTrack.FromLavalinkTrack(track, requester)).ToList();
+            if (options == ImportPlaylistOptions.Replace) {
+                try {
+                    await StopAsync();
+                    WriteToQueueHistory(Loc.Get("Music.ImportPlayerStop"));
+                }
+                catch (Exception) {
+                    // ignored
+                }
+
+                if (!Playlist.IsEmpty) {
+                    Playlist.Clear();
+                    WriteToQueueHistory(Loc.Get("Music.ClearPlaylist").Format(requester));
+                }
+            }
+
+            Playlist.AddRange(tracks);
+            WriteToQueueHistory(Loc.Get("Music.AddTracks").Format(requester, tracks.Count));
+
+            if (options != ImportPlaylistOptions.JustAdd) {
+                await PlayAsync(playlist.TrackIndex == -1 ? tracks.First() : tracks[playlist.TrackIndex], false, playlist.TrackPosition);
+                WriteToQueueHistory(Loc.Get("MusicQueues.Jumped")
+                                       .Format(requester, CurrentTrackIndex + 1, CurrentTrack.Title.SafeSubstring(0, 40) + "..."));
+            }
+        }
+
+        public async Task OnNodeDropped() {
+            var oldControlMessage = ControlMessage;
+            ControlMessage = null;
+            var playlist = GetExportPlaylist(ExportPlaylistOptions.AllData);
+            var storedPlaylist = new StoredPlaylist {
+                Tracks = playlist.Tracks, TrackIndex = playlist.TrackIndex, TrackPosition = playlist.TrackPosition,
+                Id = "a" + ObjectId.NewObjectId()
+            };
+            GlobalDB.Playlists.Insert(storedPlaylist);
+
+            var embedBuilder = new EmbedBuilder();
+            embedBuilder.WithTitle(Loc.Get("Music.PlaybackStopped"))
+                        .WithDescription(Loc.Get("Music.PlayerDropped")
+                                            .Format(GuildConfig.Get(GuildId).Prefix, storedPlaylist.Id, CommonEmoji.LegacyPlayPause));
+
+            //Waiting for an end of previous modifying
+            await _modifyAsync;
+            oldControlMessage?.ModifyAsync(properties => {
+                properties.Embed = embedBuilder.Build();
+                properties.Content = null;
+            });
+            _collectorsGroup?.DisposeAll();
+            oldControlMessage?.RemoveAllReactionsAsync();
+
+            CollectorsUtils.CollectReaction(oldControlMessage, reaction => reaction.Emote.Equals(CommonEmoji.LegacyPlayPause), async args => {
+                args.RemoveReason();
+                await Program.Handler.ExecuteCommand($"loadplaylist {storedPlaylist.Id}",
+                    new ControllableCommandContext(Program.Client, oldControlMessage)
+                        {User = args.Reaction.User.GetValueOrDefault(Program.Client.GetUser(args.Reaction.UserId))},
+                    args.Reaction.UserId.ToString());
+            }, CollectorFilter.IgnoreBots);
+            await oldControlMessage.AddReactionAsync(CommonEmoji.LegacyPlayPause);
+            Dispose();
         }
     }
 }

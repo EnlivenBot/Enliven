@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Bot.Music;
 using LiteDB;
 
 namespace Bot.Config {
@@ -11,6 +12,7 @@ namespace Bot.Config {
         public static readonly LiteCollection<BsonDocument> IgnoredMessages = Database.GetCollection<BsonDocument>(@"IgnoredMessages");
         public static readonly LiteCollection<MessageHistory> Messages = Database.GetCollection<MessageHistory>(@"MessagesHistory");
         public static readonly LiteCollection<StatisticsPart> CommandStatistics = Database.GetCollection<StatisticsPart>(@"CommandStatistics");
+        public static readonly LiteCollection<StoredPlaylist> Playlists = Database.GetCollection<StoredPlaylist>(@"StoredPlaylists");
         public static LiteDatabase Database => _database.Value;
 
         private static LiteDatabase Init() {

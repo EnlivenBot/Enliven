@@ -15,10 +15,12 @@ using Discord;
 using Lavalink4NET;
 using Lavalink4NET.Cluster;
 using Lavalink4NET.DiscordNet;
+using Lavalink4NET.Events;
 using Lavalink4NET.Logging;
 using Lavalink4NET.Player;
 using Lavalink4NET.Rest;
 using Lavalink4NET.Tracking;
+using LiteDB;
 using NLog;
 using LogLevel = Lavalink4NET.Logging.LogLevel;
 
@@ -71,16 +73,7 @@ namespace Bot.Music {
                 try {
                     Cluster = new LavalinkCluster(new LavalinkClusterOptions {Nodes = nodes.ToArray()}, new DiscordClientWrapper(Program.Client),
                         _lavalinkLogger) {StayOnline = true};
-                    Cluster.PlayerMoved += (sender, args) => {
-                        var player = args.Player as EmbedPlaybackPlayer;
-                        if (!args.CouldBeMoved) {
-                            player.PrepareShutdown(player.Loc.Get("Music.PlayerDropped"));
-                            player.Dispose();
-                        }
-                        
-                        player.WriteToQueueHistory(player.Loc.Get("Music.PlayerMoved"));
-                        return Task.CompletedTask;
-                    };
+                    Cluster.PlayerMoved += ClusterOnPlayerMoved;
                     logger.Info("Trying to connect to nodes!");
                     await Cluster.InitializeAsync();
 
@@ -105,6 +98,17 @@ namespace Bot.Music {
             else {
                 logger.Warn("Nodes not found, music disabled!");
             }
+        }
+
+        private static Task ClusterOnPlayerMoved(object sender, PlayerMovedEventArgs args) {
+            var player = args.Player as EmbedPlaybackPlayer;
+            if (!args.CouldBeMoved) {
+                player.OnNodeDropped();
+            }
+            else {
+                player.WriteToQueueHistory(player.Loc.Get("Music.PlayerMoved"));
+            }
+            return Task.CompletedTask;
         }
 
         public static bool IsValidUrl(string query) {
