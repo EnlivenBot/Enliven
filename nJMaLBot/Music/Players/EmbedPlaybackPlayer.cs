@@ -18,6 +18,7 @@ using Lavalink4NET;
 using Lavalink4NET.Decoding;
 using Lavalink4NET.Events;
 using Lavalink4NET.Player;
+using LiteDB;
 using Tyrrrz.Extensions;
 
 namespace Bot.Music {
@@ -157,7 +158,7 @@ namespace Bot.Music {
         private bool _modifyQueued;
 
         private async Task UpdateControlMessage(bool background = false) {
-            if (IsConstructing)
+            if (IsConstructing || ControlMessage == null)
                 return;
 
             //Not thread safe method cuz in this case, thread safety is a waste of time
@@ -391,6 +392,41 @@ namespace Bot.Music {
                 WriteToQueueHistory(Loc.Get("MusicQueues.Jumped")
                                        .Format(requester, CurrentTrackIndex + 1, CurrentTrack.Title.SafeSubstring(0, 40) + "..."));
             }
+        }
+
+        public async Task OnNodeDropped() {
+            var oldControlMessage = ControlMessage;
+            ControlMessage = null;
+            var playlist = GetExportPlaylist(ExportPlaylistOptions.AllData);
+            var storedPlaylist = new StoredPlaylist {
+                Tracks = playlist.Tracks, TrackIndex = playlist.TrackIndex, TrackPosition = playlist.TrackPosition,
+                Id = "a" + ObjectId.NewObjectId()
+            };
+            GlobalDB.Playlists.Insert(storedPlaylist);
+
+            var embedBuilder = new EmbedBuilder();
+            embedBuilder.WithTitle(Loc.Get("Music.PlaybackStopped"))
+                        .WithDescription(Loc.Get("Music.PlayerDropped")
+                                            .Format(GuildConfig.Get(GuildId).Prefix, storedPlaylist.Id, CommonEmoji.LegacyPlayPause));
+
+            //Waiting for an end of previous modifying
+            await _modifyAsync;
+            oldControlMessage?.ModifyAsync(properties => {
+                properties.Embed = embedBuilder.Build();
+                properties.Content = null;
+            });
+            _collectorsGroup?.DisposeAll();
+            oldControlMessage?.RemoveAllReactionsAsync();
+
+            CollectorsUtils.CollectReaction(oldControlMessage, reaction => reaction.Emote.Equals(CommonEmoji.LegacyPlayPause), async args => {
+                args.RemoveReason();
+                await Program.Handler.ExecuteCommand($"loadplaylist {storedPlaylist.Id}",
+                    new ControllableCommandContext(Program.Client, oldControlMessage)
+                        {User = args.Reaction.User.GetValueOrDefault(Program.Client.GetUser(args.Reaction.UserId))},
+                    args.Reaction.UserId.ToString());
+            }, CollectorFilter.IgnoreBots);
+            await oldControlMessage.AddReactionAsync(CommonEmoji.LegacyPlayPause);
+            Dispose();
         }
     }
 }

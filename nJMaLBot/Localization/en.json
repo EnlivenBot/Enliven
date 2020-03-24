@@ -41,7 +41,7 @@
     "MusicDisabled" : "The bot does not have access to any Lavalink server and cannot play anything. Write to the host owner about this problem.",
     "ClusterInitializing" : "The playback cluster is initializing. Wait a bit",
     "NoNodesAvailable" : "There are currently no nodes available for playback. Most likely you need to wait a bit",
-    "PlayerDropped" : "Unfortunately, the node that served your playback has crashed. Try again later.",
+    "PlayerDropped" : "Unfortunately, the node that served your playback has crashed.\n You can try to replay through `{0}loadplaylist {1}` or by clicking on {2} below",
     "PlayerMoved" : "The node that served your playback has crashed. We resumed it on another node.",
     "PlaylistSaved" : "Playlist saved. ID: `{0}`\n Use `{1}loadplaylist {0}`\n Or `{1}addplaylist {0}`\n Or `{1}runplaylist {0}`\n Details about the commands can be viewed through `{1}help`",
     "PlaylistNotFound" : "Playlist `{0}` not found",

@@ -253,7 +253,6 @@ namespace Bot.Commands {
             var player = await GetPlayerAsync();
             if (player == null || player.Playlist.Count == 0) {
                 ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(2));
-                ;
                 Context.Message.SafeDelete();
                 return;
             }
