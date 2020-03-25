@@ -53,7 +53,7 @@ namespace Bot.Utilities.Modules {
                     return false;
                 }
 
-                if (!needSummon) return false;
+                if (!needSummon) return true;
                 if (user.VoiceState.HasValue) {
                     var perms = (await Context.Guild.GetCurrentUserAsync()).GetPermissions(user.VoiceChannel);
                     if (!perms.Connect) {
