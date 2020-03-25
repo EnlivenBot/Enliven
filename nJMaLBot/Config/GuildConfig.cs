@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using Bot.Commands;
 using Bot.Config.Localization;
 using Bot.Config.Localization.Providers;
@@ -20,20 +21,6 @@ namespace Bot.Config {
 
         public bool IsLoggingEnabled { get; set; } = false;
         public bool IsCommandLoggingEnabled { get; set; } = false;
-
-        public void Save() {
-            GlobalDB.Guilds.Upsert(GuildId, this);
-        }
-
-        public static GuildConfig Get(ulong guildId) {
-            var guildConfig = GlobalDB.Guilds.FindById(guildId);
-            if (guildConfig != null) return guildConfig;
-            
-            guildConfig = new GuildConfig {GuildId = guildId};
-            guildConfig.Save();
-
-            return guildConfig;
-        }
     }
 
     public enum ChannelFunction {
@@ -42,9 +29,25 @@ namespace Bot.Config {
     }
 
     public partial class GuildConfig {
+        private static ConcurrentDictionary<ulong, GuildConfig> _configCache = new ConcurrentDictionary<ulong, GuildConfig>();
+        public static GuildConfig Get(ulong guildId) {
+            return _configCache.GetOrAdd(guildId, arg => {
+                var guildConfig = GlobalDB.Guilds.FindById(arg);
+                if (guildConfig != null) return guildConfig;
+
+                guildConfig = new GuildConfig {GuildId = arg};
+                guildConfig.Save();
+
+                return guildConfig;
+            });
+        }
+        
+        public void Save() {
+            GlobalDB.Guilds.Upsert(GuildId, this);
+        }
+
         public static event EventHandler<string> LocalizationChanged;
         public GuildConfig SetChannel(string channelId, ChannelFunction func) {
-            
             if (channelId == "null")
                 FunctionalChannels.TryRemove(func, out _);
             else
