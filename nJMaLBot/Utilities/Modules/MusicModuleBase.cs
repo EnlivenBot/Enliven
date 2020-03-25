@@ -49,7 +49,7 @@ namespace Bot.Utilities.Modules {
                 var user = Context.User as SocketGuildUser;
                 if (Player != null && Player.State != PlayerState.NotConnected && Player.State != PlayerState.Destroyed && !needSummon) {
                     if (user.VoiceChannel.Id == Player.VoiceChannelId) return true;
-                    ReplyAsync(Loc.Get("Music.OtherVoiceChannel").Format(Context.User.Mention)).DelayedDelete(TimeSpan.FromMinutes(5));
+                    ReplyFormattedAsync(Loc.Get("Music.OtherVoiceChannel").Format(Context.User.Mention), true).DelayedDelete(TimeSpan.FromMinutes(5));
                     return false;
                 }
 
@@ -57,31 +57,26 @@ namespace Bot.Utilities.Modules {
                 if (user.VoiceState.HasValue) {
                     var perms = (await Context.Guild.GetCurrentUserAsync()).GetPermissions(user.VoiceChannel);
                     if (!perms.Connect) {
-                        ReplyAsync(Loc.Get("Music.CantConnect").Format(user.VoiceChannel.Name)).DelayedDelete(TimeSpan.FromMinutes(2));
+                        ReplyFormattedAsync(Loc.Get("Music.CantConnect").Format(user.VoiceChannel.Name), true).DelayedDelete(TimeSpan.FromMinutes(2));
                         return false;
                     }
+
                     Player = await MusicUtils.Cluster.JoinAsync<EmbedPlaybackPlayer>(Context.Guild.Id, user.VoiceChannel.Id);
                     EmbedPlaybackControl.PlaybackPlayers.Add(Player);
                     return true;
                 }
-                ReplyAsync(Loc.Get("Music.NotInVoiceChannel").Format(Context.User.Mention)).DelayedDelete(TimeSpan.FromMinutes(5));
+
+                ReplyFormattedAsync(Loc.Get("Music.NotInVoiceChannel").Format(Context.User.Mention), true).DelayedDelete(TimeSpan.FromMinutes(5));
                 return false;
             }
 
             if (GuildConfig.IsMusicLimited) {
-                var eb = this.GetAuthorEmbedBuilder()
-                             .WithTitle(Loc.Get("Music.Fail"))
-                             .WithDescription(Loc.Get("Music.ChannelNotAllowed").Format(Context.User.Mention, channel.Id));
-                Context.Channel.SendMessageAsync(null, false, eb.Build()).DelayedDelete(TimeSpan.FromMinutes(5));
+                ReplyFormattedAsync(Loc.Get("Music.ChannelNotAllowed").Format(Context.User.Mention, channel.Id), true).DelayedDelete(TimeSpan.FromMinutes(5));
                 return false;
             }
-            else {
-                var eb = this.GetAuthorEmbedBuilder()
-                             .WithTitle(Loc.Get("Music.Playback"))
-                             .WithDescription(Localization.Get(GuildConfig, "Music.PlaybackMoved").Format(channel.Id));
-                Context.Channel.SendMessageAsync(null, false, eb.Build()).DelayedDelete(TimeSpan.FromMinutes(5));
-                return true;
-            }
+
+            ReplyFormattedAsync(Loc.Get("Music.PlaybackMoved").Format(channel.Id), true).DelayedDelete(TimeSpan.FromMinutes(5));
+            return true;
         }
 
         protected override async Task<IUserMessage> ReplyAsync(string message = null, bool isTTS = false, Embed embed = null, RequestOptions options = null) {
@@ -120,6 +115,7 @@ namespace Bot.Utilities.Modules {
             if (!needSummon) {
                 Context.Message.SafeDelete();
             }
+
             base.AfterExecute(command);
         }
     }
