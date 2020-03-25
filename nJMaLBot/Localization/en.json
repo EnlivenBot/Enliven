@@ -48,7 +48,8 @@
     "LoadPlaylist" : "**{0}** starts loading playlist `{1}`",
     "ClearPlaylist" : "**{0}** clears playlist",
     "ImportPlayerStop" : "Player stopped due playlist importing",
-    "AddTracks" : "**{0}** enqueue {1} tracks"
+    "AddTracks" : "**{0}** enqueue {1} tracks",
+    "CantConnect" : "The bot cannot join your voice channel `{0}`"
   },
   "Groups": {
     "music" : "Music",

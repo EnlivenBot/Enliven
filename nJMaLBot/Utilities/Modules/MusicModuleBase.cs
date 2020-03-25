@@ -55,6 +55,11 @@ namespace Bot.Utilities.Modules {
 
                 if (!needSummon) return false;
                 if (user.VoiceState.HasValue) {
+                    var perms = (await Context.Guild.GetCurrentUserAsync()).GetPermissions(user.VoiceChannel);
+                    if (!perms.Connect) {
+                        ReplyAsync(Loc.Get("Music.CantConnect").Format(user.VoiceChannel.Name)).DelayedDelete(TimeSpan.FromMinutes(2));
+                        return false;
+                    }
                     Player = await MusicUtils.Cluster.JoinAsync<EmbedPlaybackPlayer>(Context.Guild.Id, user.VoiceChannel.Id);
                     EmbedPlaybackControl.PlaybackPlayers.Add(Player);
                     return true;
