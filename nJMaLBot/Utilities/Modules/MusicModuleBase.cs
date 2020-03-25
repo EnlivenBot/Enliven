@@ -64,25 +64,24 @@ namespace Bot.Utilities.Modules {
                     EmbedPlaybackControl.PlaybackPlayers.Add(Player);
                     return true;
                 }
-            }
-            else {
-                if (GuildConfig.IsMusicLimited) {
-                    var eb = this.GetAuthorEmbedBuilder()
-                                 .WithTitle(Loc.Get("Music.Fail"))
-                                 .WithDescription(Loc.Get("Music.ChannelNotAllowed").Format(Context.User.Mention, channel.Id));
-                    Context.Channel.SendMessageAsync(null, false, eb.Build()).DelayedDelete(TimeSpan.FromMinutes(5));
-                    return false;
-                }
-                else {
-                    var eb = this.GetAuthorEmbedBuilder()
-                                 .WithTitle(Loc.Get("Music.Playback"))
-                                 .WithDescription(Localization.Get(GuildConfig, "Music.PlaybackMoved").Format(channel.Id));
-                    Context.Channel.SendMessageAsync(null, false, eb.Build()).DelayedDelete(TimeSpan.FromMinutes(5));
-                    return true;
-                }
+                ReplyAsync(Loc.Get("Music.NotInVoiceChannel").Format(Context.User.Mention)).DelayedDelete(TimeSpan.FromMinutes(5));
+                return false;
             }
 
-            return false;
+            if (GuildConfig.IsMusicLimited) {
+                var eb = this.GetAuthorEmbedBuilder()
+                             .WithTitle(Loc.Get("Music.Fail"))
+                             .WithDescription(Loc.Get("Music.ChannelNotAllowed").Format(Context.User.Mention, channel.Id));
+                Context.Channel.SendMessageAsync(null, false, eb.Build()).DelayedDelete(TimeSpan.FromMinutes(5));
+                return false;
+            }
+            else {
+                var eb = this.GetAuthorEmbedBuilder()
+                             .WithTitle(Loc.Get("Music.Playback"))
+                             .WithDescription(Localization.Get(GuildConfig, "Music.PlaybackMoved").Format(channel.Id));
+                Context.Channel.SendMessageAsync(null, false, eb.Build()).DelayedDelete(TimeSpan.FromMinutes(5));
+                return true;
+            }
         }
 
         protected override async Task<IUserMessage> ReplyAsync(string message = null, bool isTTS = false, Embed embed = null, RequestOptions options = null) {
