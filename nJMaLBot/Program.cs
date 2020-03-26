@@ -20,6 +20,7 @@ namespace Bot {
         public static CommandHandler Handler;
         public static event EventHandler<DiscordSocketClient> OnClientConnect;
         private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
+        private static int connectDelay = -1;
 
         private static void Main(string[] args) {
             InstallLogger();
@@ -41,7 +42,6 @@ namespace Bot {
             logger.Info("Start authorization");
 
 
-            
             Client.Ready += async () => {
                 await Client.SetGameAsync("mentions of itself to get started", null, ActivityType.Listening);
                 OnClientConnect?.Invoke(null, Client);
@@ -49,12 +49,19 @@ namespace Bot {
 
             Client.Disconnected += exception => Client_Disconnected(exception, args);
 
+            login:
             try {
+                logger.Info("Trying to login");
                 await Client.LoginAsync(TokenType.Bot, GlobalConfig.Instance.BotToken);
+                connectDelay = 0;
             }
             catch (Exception e) {
                 logger.Fatal(e, "Failed to connect. Probably token is incorrect - {token}", GlobalConfig.Instance.BotToken);
-                Environment.Exit(-1);
+                if (connectDelay == -1) Environment.Exit(-1);
+                logger.Info("Waiting before next attempt - {delay}s", connectDelay);
+                await Task.Delay(TimeSpan.FromSeconds(connectDelay));
+                connectDelay += 5;
+                goto login;
             }
 
             await Client.StartAsync();
