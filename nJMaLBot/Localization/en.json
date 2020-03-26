@@ -51,7 +51,8 @@
     "AddTracks" : "**{0}** enqueue {1} tracks",
     "SearchResultsTitle" : "Search results",
     "SearchResultsDescription" : "{0} search results for `{1}`:\n\n",
-    "NothingFound" : "Nothing found 😩"
+    "NothingFound" : "Nothing found 😩",
+    "CantConnect" : "The bot cannot join your voice channel `{0}`"
   },
   "Groups": {
     "music" : "Music",
