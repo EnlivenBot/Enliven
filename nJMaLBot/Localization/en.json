@@ -48,7 +48,10 @@
     "LoadPlaylist" : "**{0}** starts loading playlist `{1}`",
     "ClearPlaylist" : "**{0}** clears playlist",
     "ImportPlayerStop" : "Player stopped due playlist importing",
-    "AddTracks" : "**{0}** enqueue {1} tracks"
+    "AddTracks" : "**{0}** enqueue {1} tracks",
+    "SearchResultsTitle" : "Search results",
+    "SearchResultsDescription" : "{0} search results for `{1}`:\n\n",
+    "NothingFound" : "Nothing found 😩"
   },
   "Groups": {
     "music" : "Music",
@@ -101,7 +104,8 @@
     "addplaylist0s" : "Adds playlist content to track list",
     "loadplaylist0s" : "Replaces a track list with a playlist",
     "saveplaylist0s" : "Exports the current track list to a playlist",
-    "playlistId" : "Playlist ID to import"
+    "playlistId" : "Playlist ID to import",
+    "youtube0s" : "Advanced track search on YouTube"
   },
   "CommandHandler": {
     "FailedTitle": "Error executing command",
