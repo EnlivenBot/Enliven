@@ -1,14 +1,18 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Bot.Config;
 using Bot.Music;
 using Bot.Music.Players;
 using Bot.Utilities;
+using Bot.Utilities.Collector;
 using Bot.Utilities.Commands;
 using Bot.Utilities.Modules;
 using Discord;
 using Discord.Commands;
+using Lavalink4NET.Rest;
 using LiteDB;
 
 #pragma warning disable 4014
@@ -51,7 +55,7 @@ namespace Bot.Commands {
         public async Task Stop() {
             if (!await IsPreconditionsValid) return;
             if (Player?.CurrentTrack == null) {
-                    ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(2));
+                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(2));
                 return;
             }
 
@@ -65,7 +69,7 @@ namespace Bot.Commands {
         public async Task Jump([Summary("jump0_0s")] int index = 1) {
             if (!await IsPreconditionsValid) return;
             if (Player == null) {
-                    ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(2));
+                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(2));
                 return;
             }
 
@@ -81,7 +85,7 @@ namespace Bot.Commands {
         public async Task Goto([Summary("goto0_0s")] int index) {
             if (!await IsPreconditionsValid) return;
             if (Player == null) {
-                    ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(2));
+                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(2));
                 return;
             }
 
@@ -106,7 +110,7 @@ namespace Bot.Commands {
         public async Task Volume([Summary("volume0_0s")] int volume = 100) {
             if (!await IsPreconditionsValid) return;
             if (Player == null) {
-                    ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(2));
+                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(2));
                 return;
             }
 
@@ -125,7 +129,7 @@ namespace Bot.Commands {
         public async Task Repeat(LoopingState state) {
             if (!await IsPreconditionsValid) return;
             if (Player == null) {
-                    ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(2));
+                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(2));
                 return;
             }
 
@@ -145,7 +149,7 @@ namespace Bot.Commands {
         public async Task Pause() {
             if (!await IsPreconditionsValid) return;
             if (Player == null) {
-                    ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(2));
+                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(2));
                 return;
             }
 
@@ -159,7 +163,7 @@ namespace Bot.Commands {
         public async Task Resume() {
             if (!await IsPreconditionsValid) return;
             if (Player == null) {
-                    ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(2));
+                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(2));
                 return;
             }
 
@@ -173,7 +177,7 @@ namespace Bot.Commands {
         public async Task Shuffle() {
             if (!await IsPreconditionsValid) return;
             if (Player == null) {
-                    ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(2));
+                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(2));
                 return;
             }
 
@@ -280,6 +284,100 @@ namespace Bot.Commands {
             Player.WriteToQueueHistory(Loc.Get("Music.LoadPlaylist").Format(Context.User.Username, id.SafeSubstring(0, 40)));
             Player.ImportPlaylist(playlist, options, Context.User.Username);
             Context?.Message?.SafeDelete();
+        }
+
+        [SummonToUser]
+        [Command("youtube", RunMode = RunMode.Async)]
+        [Alias("y", "yt")]
+        [Summary("youtube0s")]
+        public async Task SearchYoutube([Summary("play0_0s")] [Remainder] string query) {
+            await AdvancedSearch(SearchMode.YouTube, query);
+        }
+        
+        [SummonToUser]
+        [Command("soundcloud", RunMode = RunMode.Async)]
+        [Alias("sc")]
+        [Summary("soundcloud0s")]
+        public async Task SearchSoundCloud([Summary("play0_0s")] [Remainder] string query) {
+            await AdvancedSearch(SearchMode.SoundCloud, query);
+        }
+
+        private async Task AdvancedSearch(SearchMode mode, string query) {
+            if (!await IsPreconditionsValid) return;
+            var tracks = (await MusicUtils.Cluster.GetTracksAsync(query, mode)).ToList();
+            var eb = new EmbedBuilder().WithColor(Color.Gold).WithTitle(Loc.Get("Music.SearchResultsTitle"))
+                                       .WithDescription(Loc.Get("Music.SearchResultsDescription").Format(mode, query.SafeSubstring(0, 40)));
+            if (!tracks.Any()) {
+                eb.Description += Loc.Get("Music.NothingFound");
+            }
+            else {
+                var builder = new StringBuilder();
+                for (var i = 0; i < tracks.Count && builder.Length < 1500 && i < 10; i++) {
+                    var track = tracks[i];
+                    builder.AppendLine($"{i + 1}. [{track.Title}]({track.Source})\n");
+                }
+
+                eb.Description += builder.ToString();
+            }
+
+            var msg = await ReplyAsync(null, false, eb.Build());
+            if (!tracks.Any())
+                return;
+            
+            var controller = CollectorsUtils.CollectReaction(msg, reaction => true, async args => {
+                args.RemoveReason();
+                var i = args.Reaction.Emote.Name switch {
+                    "1️⃣" => 0,
+                    "2️⃣" => 1,
+                    "3️⃣" => 2,
+                    "4️⃣" => 3,
+                    "5️⃣" => 4,
+                    "6️⃣" => 5,
+                    "7️⃣" => 6,
+                    "8️⃣" => 7,
+                    "9️⃣" => 8,
+                    "🔟"  => 9,
+                    "⬅️"  => -2,
+                    _     => -1
+                };
+
+                var authoredLavalinkTracks = new List<AuthoredLavalinkTrack>();
+                if (i == -2) authoredLavalinkTracks.AddRange(tracks.Take(10).Select(track => AuthoredLavalinkTrack.FromLavalinkTrack(track, Context.User.Username)));
+                if (i >= 0 && i <= tracks.Count - 1) authoredLavalinkTracks.Add(AuthoredLavalinkTrack.FromLavalinkTrack(tracks[i], Context.User.Username));
+                switch (authoredLavalinkTracks.Count) {
+                    case 0:
+                        return;
+                    case 1:
+                        Player.WriteToQueueHistory(Loc.Get("MusicQueues.Enqueued")
+                                                      .Format(Context.Message.Author.Username, MusicUtils.EscapeTrack(authoredLavalinkTracks[0].Title)));
+                        break;
+                    default:
+                        Player.WriteToQueueHistory(Loc.Get("Music.AddTracks").Format(Context.Message.Author.Username, authoredLavalinkTracks.Count));
+                        break;
+                }
+
+                var logMessage = await GetLogMessage();
+                await Player.SetControlMessage(logMessage);
+                await Player.PlayAsync(authoredLavalinkTracks.First(), true);
+                Player.Playlist.AddRange(authoredLavalinkTracks.Skip(1));
+
+                args.Controller.Dispose();
+            }, CollectorFilter.IgnoreBots);
+            controller.SetTimeout(TimeSpan.FromMinutes(2));
+            controller.Stop += (sender, args) => msg.SafeDelete();
+            msg.AddReactionsAsync(new IEmote[] {
+                new Emoji("1️⃣"),
+                new Emoji("2️⃣"),
+                new Emoji("3️⃣"),
+                new Emoji("4️⃣"),
+                new Emoji("5️⃣"),
+                new Emoji("6️⃣"),
+                new Emoji("7️⃣"),
+                new Emoji("8️⃣"),
+                new Emoji("9️⃣"),
+                new Emoji("🔟"),
+                new Emoji("⬅️")
+            });
         }
     }
 }
