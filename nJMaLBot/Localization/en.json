@@ -105,7 +105,8 @@
     "loadplaylist0s" : "Replaces a track list with a playlist",
     "saveplaylist0s" : "Exports the current track list to a playlist",
     "playlistId" : "Playlist ID to import",
-    "youtube0s" : "Advanced track search on YouTube"
+    "youtube0s" : "Advanced track search on YouTube",
+    "soundcloud0s" : "Расширенный поиск трека на SoundCloud"
   },
   "CommandHandler": {
     "FailedTitle": "Error executing command",

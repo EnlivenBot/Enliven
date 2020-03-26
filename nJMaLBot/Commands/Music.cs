@@ -291,10 +291,22 @@ namespace Bot.Commands {
         [Alias("y", "yt")]
         [Summary("youtube0s")]
         public async Task SearchYoutube([Summary("play0_0s")] [Remainder] string query) {
+            await AdvancedSearch(SearchMode.YouTube, query);
+        }
+        
+        [SummonToUser]
+        [Command("soundcloud", RunMode = RunMode.Async)]
+        [Alias("sc")]
+        [Summary("soundcloud0s")]
+        public async Task SearchSoundCloud([Summary("play0_0s")] [Remainder] string query) {
+            await AdvancedSearch(SearchMode.SoundCloud, query);
+        }
+
+        private async Task AdvancedSearch(SearchMode mode, string query) {
             if (!await IsPreconditionsValid) return;
-            var tracks = (await MusicUtils.Cluster.GetTracksAsync(query, SearchMode.YouTube)).ToList();
+            var tracks = (await MusicUtils.Cluster.GetTracksAsync(query, mode)).ToList();
             var eb = new EmbedBuilder().WithColor(Color.Gold).WithTitle(Loc.Get("Music.SearchResultsTitle"))
-                                       .WithDescription(Loc.Get("Music.SearchResultsDescription").Format(SearchMode.YouTube, query.SafeSubstring(0, 40)));
+                                       .WithDescription(Loc.Get("Music.SearchResultsDescription").Format(mode, query.SafeSubstring(0, 40)));
             if (!tracks.Any()) {
                 eb.Description += Loc.Get("Music.NothingFound");
             }
