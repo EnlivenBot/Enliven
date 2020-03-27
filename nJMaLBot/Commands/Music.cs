@@ -363,7 +363,7 @@ namespace Bot.Commands {
 
                 args.Controller.Dispose();
             }, CollectorFilter.IgnoreBots);
-            controller.SetTimeout(TimeSpan.FromMinutes(2));
+            controller.SetTimeout(TimeSpan.FromSeconds(30));
             controller.Stop += (sender, args) => msg.SafeDelete();
             msg.AddReactionsAsync(new IEmote[] {
                 new Emoji("1️⃣"),
