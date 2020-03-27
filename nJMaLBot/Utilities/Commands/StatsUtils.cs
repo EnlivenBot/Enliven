@@ -36,7 +36,7 @@ namespace Bot.Utilities.Commands {
             if (stats == null) {
                 embedBuilder.WithColor(Color.Red)
                             .WithDescription(user == null ? loc.Get("Statistics.NoGlobalStats") : loc.Get("Statistics.NoUserStats").Format(user.Username));
-                return embedBuilder;
+                                                    return embedBuilder;
             }
 
             var valueTuples = stats.UsagesList.GroupBy(pair => HelpUtils.CommandAliases.Value[pair.Key].First())
@@ -47,7 +47,7 @@ namespace Bot.Utilities.Commands {
 
             if (user != null) return embedBuilder;
             var messageStats = GlobalDB.CommandStatistics.FindById("Messages");
-            if (messageStats != null) {
+            if (messageStats != null && messageStats.UsagesList.Count != 0) {
                 embedBuilder.AddField(loc.Get("Statistics.ByMessages"),
                     messageStats.UsagesList.Select(pair => $"`{loc.Get("Statistics." + pair.Key)}` - {pair.Value}").JoinToString("\n"));
             }

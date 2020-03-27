@@ -1,6 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Bot.Music;
+using Bot.Utilities.Commands;
 using LiteDB;
 
 namespace Bot.Config {
@@ -18,14 +21,30 @@ namespace Bot.Config {
         private static LiteDatabase Init() {
             if (File.Exists(Path.Combine(Directory.GetCurrentDirectory(), @"DataBase.db"))) {
                 Directory.CreateDirectory("Config");
-                File.Move(Path.Combine(Directory.GetCurrentDirectory(), @"DataBase.db"), 
+                File.Move(Path.Combine(Directory.GetCurrentDirectory(), @"DataBase.db"),
                     Path.Combine(Directory.GetCurrentDirectory(), "Config", @"DataBase.db"));
             }
 
             var tempdb = new LiteDatabase(Path.Combine(Directory.GetCurrentDirectory(), "Config", @"DataBase.db"));
-            //Updating database in future
-            tempdb.UserVersion = 1;
+            UpgradeTo2(tempdb);
+            tempdb.UserVersion = 2;
             return tempdb;
+        }
+
+        private static void UpgradeTo2(LiteDatabase liteDatabase) {
+            if (liteDatabase.UserVersion == 1) {
+                var oldStatsCollection = liteDatabase.GetCollection<ObsoleteStatisticsPart>(@"CommandStatistics");
+                var oldStats = oldStatsCollection.FindAll().ToList();
+                var newStats = oldStats.Select(part => new StatisticsPart {
+                    Id = part.Id, UsagesList = (long.TryParse(part.Id, out _) || part.Id == "Global"
+                            ? part.UsagesList.Where(pair => HelpUtils.CommandAliases.Value.Contains(pair.Key))
+                            : part.UsagesList)
+                       .ToDictionary(pair => pair.Key, pair => (int) pair.Value)
+                });
+                liteDatabase.DropCollection(@"CommandStatistics");
+                var statsCollection = liteDatabase.GetCollection<StatisticsPart>(@"CommandStatistics");
+                statsCollection.InsertBulk(newStats);
+            }
         }
     }
 }
