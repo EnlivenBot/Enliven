@@ -26,11 +26,9 @@ namespace Bot.Commands {
         [Alias("p")]
         [Summary("play0s")]
         public async Task Play([Remainder] [Summary("play0_0s")] string query = null) {
-            var logMessage = GetLogMessage();
-            if (!await IsPreconditionsValid) {
-                (await logMessage).SafeDelete();
+            if (!await IsPreconditionsValid)
                 return;
-            }
+            var logMessage = GetLogMessage();
 
             Player.SetControlMessage(await logMessage);
             try {

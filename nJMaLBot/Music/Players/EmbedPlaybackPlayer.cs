@@ -55,23 +55,14 @@ namespace Bot.Music {
 
         public override async Task OnTrackEndAsync(TrackEndEventArgs eventArgs) {
             if (eventArgs.Reason == TrackEndReason.LoadFailed) {
-                var embedBuilder = new EmbedBuilder();
-                embedBuilder.WithColor(Color.Red).WithTitle(Loc.Get("Music.TrackError"))
-                            .WithDescription(Loc.Get("Music.DecodingError").Format(CurrentTrack.Title, CurrentTrack.Source));
-                await ControlMessage.Channel.SendMessageAsync(null, false, embedBuilder.Build());
+                WriteToQueueHistory(Loc.Get("Music.DecodingError").Format(CurrentTrack.Title, CurrentTrack.Source));
             }
 
             await base.OnTrackEndAsync(eventArgs);
             // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
             switch (State) {
                 case PlayerState.NotPlaying:
-                    UpdateProgress();
-                    UpdatePlayback = false;
-                    break;
                 case PlayerState.Destroyed:
-                    UpdateProgress();
-                    UpdatePlayback = false;
-                    break;
                 case PlayerState.NotConnected:
                     UpdateProgress();
                     UpdatePlayback = false;
