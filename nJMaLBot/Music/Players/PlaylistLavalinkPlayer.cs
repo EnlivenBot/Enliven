@@ -39,13 +39,14 @@ namespace Bot.Music.Players {
         }
 
         public override async Task OnTrackEndAsync(TrackEndEventArgs eventArgs) {
-            if (eventArgs.Reason == TrackEndReason.LoadFailed) Playlist.Remove(CurrentTrack);
+            var oldTrackIndex = CurrentTrackIndex;
             if (CurrentTrack != null) {
                 CommandHandler.RegisterMusicTime(TrackPosition);
             }
 
             if (eventArgs.Reason != TrackEndReason.Replaced) await base.OnTrackEndAsync(eventArgs);
             if (eventArgs.MayStartNext || eventArgs.Reason == TrackEndReason.LoadFailed) await SkipAsync();
+            if (eventArgs.Reason == TrackEndReason.LoadFailed) Playlist.RemoveAt(oldTrackIndex);
         }
 
         public virtual async Task<int> PlayAsync(LavalinkTrack track, bool enqueue, TimeSpan? startTime = null, TimeSpan? endTime = null,
