@@ -48,7 +48,7 @@ namespace Bot.Commands {
         }
 
         [Command("stop", RunMode = RunMode.Async)]
-        [Alias("s")]
+        [Alias("st")]
         [Summary("stop0s")]
         public async Task Stop() {
             if (!await IsPreconditionsValid) return;
@@ -62,7 +62,7 @@ namespace Bot.Commands {
         }
 
         [Command("jump", RunMode = RunMode.Async)]
-        [Alias("j", "skip", "next", "n")]
+        [Alias("j", "skip", "next", "n", "s")]
         [Summary("jump0s")]
         public async Task Jump([Summary("jump0_0s")] int index = 1) {
             if (!await IsPreconditionsValid) return;
@@ -376,6 +376,35 @@ namespace Bot.Commands {
                 new Emoji("🔟"),
                 new Emoji("⬅️")
             });
+        }
+
+        [Command("fastforward", RunMode = RunMode.Async)]
+        [Alias("fast forward", "ff", "fwd")]
+        [Summary("fastforward0s")]
+        public async Task FastForward([Summary("fastforward0_0s")]TimeSpan? timeSpan = null) {
+            if (!await IsPreconditionsValid) return;
+            var time = timeSpan ?? new TimeSpan(0, 0, 10);
+            Player.SeekPositionAsync(Player.TrackPosition + time);
+            Player.WriteToQueueHistory(Loc.Get("MusicQueues.FF").Format(Context.User.Username, Player.CurrentTrackIndex, time.TotalSeconds));
+        }
+        
+        [Command("rewind", RunMode = RunMode.Async)]
+        [Alias("rw")]
+        [Summary("rewind0s")]
+        public async Task Rewind([Summary("fastforward0_0s")]TimeSpan? timeSpan = null) {
+            if (!await IsPreconditionsValid) return;
+            var time = timeSpan ?? new TimeSpan(0, 0, 10);
+            Player.SeekPositionAsync(Player.TrackPosition - time);
+            Player.WriteToQueueHistory(Loc.Get("MusicQueues.Rewind").Format(Context.User.Username, Player.CurrentTrackIndex, time.TotalSeconds));
+        }
+        
+        [Command("seek", RunMode = RunMode.Async)]
+        [Alias("sk", "se")]
+        [Summary("seek0s")]
+        public async Task Seek([Summary("seek0_0s")]TimeSpan position) {
+            if (!await IsPreconditionsValid) return;
+            Player.SeekPositionAsync(position);
+            Player.WriteToQueueHistory(Loc.Get("MusicQueues.Seek").Format(Context.User.Username, Player.CurrentTrackIndex, position));
         }
     }
 }

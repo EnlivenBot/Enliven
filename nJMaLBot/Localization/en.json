@@ -11,7 +11,10 @@
     "RepeatSet" : "**{0}** set repeat mode to {1}",
     "Pause" : "**{0}** pauses playback",
     "Resume" : "**{0}** resumes playback",
-    "Shuffle" : "**{0}** shuffles tracks in queue"
+    "Shuffle" : "**{0}** shuffles tracks in queue",
+    "FF" : "**{0}** fast-forward the {1} track for {2} seconds",
+    "Rewind" : "**{0}** rewind the {1} track for {2} seconds",
+    "Seek" : "**{0}** moved playback of {1} track in {2}"
   },
   "Music" : {
     "RequestHistory" : "Request history",
@@ -107,7 +110,12 @@
     "saveplaylist0s" : "Exports the current track list to a playlist",
     "playlistId" : "Playlist ID to import",
     "youtube0s" : "Advanced track search on YouTube",
-    "soundcloud0s" : "Расширенный поиск трека на SoundCloud"
+    "soundcloud0s" : "Advanced track search on SoundCloud",
+    "fastforward0s" : "Fast forward for a specified time",
+    "fastforward0_0s" : "Amount of time. The default is 10 seconds. For example: `4d3h2m1s`",
+    "rewind0s" : "Rewind for a specified time",
+    "seek0s" : "Sets the playing track's position to the specified position",
+    "seek0_0s" : "Specified position. For example: `4d3h2m1s`"
   },
   "CommandHandler": {
     "FailedTitle": "Error executing command",
