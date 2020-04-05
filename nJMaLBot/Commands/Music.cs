@@ -185,9 +185,9 @@ namespace Bot.Commands {
         [Summary("list0s")]
         public async Task List() {
             if (!await IsPreconditionsValid) return;
-            var logMessage = GetLogMessage();
+            var logMessage = await GetLogMessage();
             if (Player == null || Player.Playlist.IsEmpty) {
-                ReplyFormattedAsync(Loc.Get("Music.QueueEmpty").Format(GuildConfig.Prefix), true, await logMessage);
+                ReplyFormattedAsync(Loc.Get("Music.QueueEmpty").Format(GuildConfig.Prefix), true, logMessage);
                 return;
             }
 
@@ -200,7 +200,7 @@ namespace Bot.Commands {
                 builder.Append(": ");
                 builder.AppendLine(lavalinkTrack.Title);
                 if (queue.Length + builder.Length > 2000) {
-                    PrintList(queue, await logMessage);
+                    await PrintList(queue, logMessage);
                     logMessage = null;
                     queue = new StringBuilder("```py\n");
                 }
@@ -208,12 +208,12 @@ namespace Bot.Commands {
                 queue.Append(builder);
             }
 
-            PrintList(queue, await logMessage);
+            await PrintList(queue, logMessage);
 
-            void PrintList(StringBuilder builder, IUserMessage message = null) {
+            async Task PrintList(StringBuilder builder, IUserMessage message = null) {
                 builder.Append("```");
                 MusicUtils.EscapeTrack(builder);
-                ReplyFormattedAsync(builder.ToString(), false, message);
+                await ReplyFormattedAsync(builder.ToString(), false, message);
             }
         }
 
