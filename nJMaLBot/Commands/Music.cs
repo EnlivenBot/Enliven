@@ -82,11 +82,7 @@ namespace Bot.Commands {
         [Summary("goto0s")]
         public async Task Goto([Summary("goto0_0s")] int index) {
             if (!await IsPreconditionsValid) return;
-            if (Player == null) {
-                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(2));
-                return;
-            }
-
+            
             //For programmers who count from 0
             if (index == 0) index = 1;
 
@@ -405,6 +401,28 @@ namespace Bot.Commands {
             if (!await IsPreconditionsValid) return;
             Player.SeekPositionAsync(position);
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.Seek").Format(Context.User.Username, Player.CurrentTrackIndex, position));
+        }
+        
+        [Command("removerange", RunMode = RunMode.Async)]
+        [Alias("rr", "delr", "dr")]
+        [Summary("remove0s")]
+        public async Task RemoveRange([Summary("remove0_0s")]int start, [Summary("remove0_1s")]int end = -1) {
+            if (!await IsPreconditionsValid) return;
+            start = Math.Max(1, Math.Min(start, Player.Playlist.Count));
+            end = Math.Max(start, Math.Min(end, Player.Playlist.Count));
+            var removesCurrent = Player.CurrentTrackIndex + 1 >= start && Player.CurrentTrackIndex + 1 <= end;
+            Player.Playlist.RemoveRange(start - 1, end - start + 1);
+            Player.WriteToQueueHistory(Loc.Get("MusicQueues.Remove").Format(Context.User.Username, end - start + 1, start, end));
+            if (removesCurrent) {
+                Jump();
+            }
+        }
+        
+        [Command("remove", RunMode = RunMode.Async)]
+        [Alias("rm", "del", "delete")]
+        [Summary("remove0s")]
+        public async Task Remove([Summary("remove0_0s")]int start, [Summary("remove1_1s")]int count = 1) {
+            await RemoveRange(start, start + count - 1);
         }
     }
 }
