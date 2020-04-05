@@ -18,9 +18,7 @@ namespace Bot.Music.Players {
         public PlaylistLavalinkPlayer(LavalinkSocket lavalinkSocket, IDiscordClientWrapper client, ulong guildId, bool disconnectOnStop)
             : base(lavalinkSocket, client, guildId, false) {
             Playlist = new LavalinkPlaylist();
-            Playlist.Update += (sender, args) => {
-                if (CurrentTrack != null) CurrentTrackIndex = Playlist.IndexOf(CurrentTrack);
-            };
+            Playlist.Update += (sender, args) => { UpdateCurrentTrackIndex(); };
         }
 
         public LoopingState LoopingState { get; set; } = LoopingState.Off;
@@ -55,8 +53,8 @@ namespace Bot.Music.Players {
             EnsureConnected();
             if (enqueue) Playlist.Add(track);
             if (enqueue && State == PlayerState.Playing) return Playlist.Count;
-            CurrentTrackIndex = Playlist.IndexOf(track);
             await base.PlayAsync(track, startTime, endTime, noReplace);
+            UpdateCurrentTrackIndex();
             return 0;
         }
 
@@ -104,12 +102,13 @@ namespace Bot.Music.Players {
             if (options == ExportPlaylistOptions.AllData) {
                 exportPlaylist.TrackPosition = TrackPosition;
             }
+
             return exportPlaylist;
         }
 
         public virtual async Task ImportPlaylist(ExportPlaylist playlist, ImportPlaylistOptions options, string requester) {
             var tracks = playlist.Tracks.Select(s => TrackDecoder.DecodeTrack(s))
-                                        .Select(track => AuthoredLavalinkTrack.FromLavalinkTrack(track, requester)).ToList();
+                                 .Select(track => AuthoredLavalinkTrack.FromLavalinkTrack(track, requester)).ToList();
             if (options == ImportPlaylistOptions.Replace) {
                 try {
                     await StopAsync();
@@ -123,11 +122,22 @@ namespace Bot.Music.Players {
                 }
             }
 
-            
+
             Playlist.AddRange(tracks);
 
             if (options != ImportPlaylistOptions.JustAdd) {
                 await PlayAsync(playlist.TrackIndex == -1 ? tracks.First() : tracks[playlist.TrackIndex], false, playlist.TrackPosition);
+            }
+        }
+
+        public void UpdateCurrentTrackIndex() {
+            if (CurrentTrack == null) return;
+            try {
+                if (CurrentTrack.Identifier == Playlist[CurrentTrackIndex].Identifier) return;
+                CurrentTrackIndex = Playlist.IndexOf(CurrentTrack);
+            }
+            catch (Exception e) {
+                CurrentTrackIndex = Playlist.IndexOf(CurrentTrack);
             }
         }
     }
