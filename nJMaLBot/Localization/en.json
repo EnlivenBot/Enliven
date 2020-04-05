@@ -121,7 +121,10 @@
     "remove0s" : "Deletes the specified track (or range) from the playlist",
     "remove0_0s" : "Track number (or the beginning of the range if the second parameter is specified)",
     "remove0_1s" : "End of range",
-    "remove1_1s" : "Number of tracks"
+    "remove1_1s" : "Number of tracks",
+    "move0s" : "Moves a track in queue",
+    "move0_0s" : "Track Index",
+    "move0_1s" : "Desired queue position"
   },
   "CommandHandler": {
     "FailedTitle": "Error executing command",

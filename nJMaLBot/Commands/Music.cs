@@ -424,5 +424,22 @@ namespace Bot.Commands {
         public async Task Remove([Summary("remove0_0s")]int start, [Summary("remove1_1s")]int count = 1) {
             await RemoveRange(start, start + count - 1);
         }
+        
+        [Command("move", RunMode = RunMode.Async)]
+        [Alias("m", "mv")]
+        [Summary("move0s")]
+        public async Task Move([Summary("move0_0s")]int trackIndex, [Summary("move0_1s")]int newIndex = 1) {
+            if (!await IsPreconditionsValid) return;
+            
+            // For programmers
+            if (trackIndex == 0) trackIndex = 1;
+            if (trackIndex < 1 || trackIndex > Player.Playlist.Count) {
+                ReplyFormattedAsync(Loc.Get("Music.TrackIndexWrong").Format(Context.User.Mention, trackIndex, Player.Playlist.Count),
+                    true).DelayedDelete(TimeSpan.FromMinutes(2));
+            }
+            
+            newIndex = Math.Max(1, Math.Min(Player.Playlist.Count, newIndex));
+            Player.Playlist.Move(trackIndex - 1, newIndex - 1);
+        }
     }
 }

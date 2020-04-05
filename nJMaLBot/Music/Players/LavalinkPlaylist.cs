@@ -190,6 +190,19 @@ namespace Bot.Music.Players {
             }
         }
 
+        public void Move(int oldIndex, int newIndex) {
+            lock (_syncRoot) {
+                try {
+                    var track = _list[oldIndex];
+                    _list.RemoveAt(oldIndex);
+                    _list.Insert(newIndex, track);
+                }
+                finally {
+                    OnUpdate();
+                }
+            }
+        }
+
         private void OnUpdate() {
             Update?.Invoke(this, EventArgs.Empty);
         }
