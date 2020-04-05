@@ -118,7 +118,7 @@ namespace Bot.Commands {
         }
 
         [Command("repeat", RunMode = RunMode.Async)]
-        [Alias("r")]
+        [Alias("r", "loop", "l")]
         [Summary("repeat0s")]
         public async Task Repeat(LoopingState state) {
             if (!await IsPreconditionsValid) return;
@@ -128,6 +128,7 @@ namespace Bot.Commands {
             }
 
             Player.LoopingState = state;
+            Player.UpdateProgress();
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.RepeatSet").Format(Context.User.Username, Player.LoopingState.ToString()));
         }
 
@@ -440,6 +441,7 @@ namespace Bot.Commands {
             
             newIndex = Math.Max(1, Math.Min(Player.Playlist.Count, newIndex));
             Player.Playlist.Move(trackIndex - 1, newIndex - 1);
+            Player.WriteToQueueHistory(Loc.Get("MusicQueues.TrackMoved").Format(Context.User.Mention, trackIndex, newIndex));
         }
     }
 }

@@ -16,7 +16,8 @@
     "Rewind" : "**{0}** rewind the `{1}` track for `{2}` seconds",
     "Seek" : "**{0}** moved playback of `{1}` track in `{2}`",
     "Remove" : "**{0}** deletes the `{1}` track - `{2}`",
-    "RemoveRange" : "**{0}** deletes the `{1}` tracks. From `{2}` to `{3}`"
+    "RemoveRange" : "**{0}** deletes the `{1}` tracks. From `{2}` to `{3}`",
+    "TrackMoved" : "**{0}** moves the `{0}` track to `{1}` position"
   },
   "Music" : {
     "RequestHistory" : "Request history",

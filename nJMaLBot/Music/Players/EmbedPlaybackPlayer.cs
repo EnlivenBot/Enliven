@@ -178,7 +178,7 @@ namespace Bot.Music {
         }
 
         public void UpdateProgress(bool background = false) {
-            var stateString = State switch {
+            var playingState = State switch {
                 PlayerState.Playing => CommonEmojiStrings.Instance.Play,
                 PlayerState.Paused  => CommonEmojiStrings.Instance.Pause,
                 _                   => CommonEmojiStrings.Instance.Stop
@@ -192,9 +192,34 @@ namespace Bot.Music {
             var progress = Convert.ToInt32(TrackPosition.TotalSeconds / CurrentTrack.Duration.TotalSeconds * 100);
             var requester = CurrentTrack is AuthoredLavalinkTrack authoredLavalinkTrack ? authoredLavalinkTrack.GetRequester() : "Unknown";
             EmbedBuilder.Fields[0].Name = Loc.Get("Music.RequestedBy").Format(requester);
-            EmbedBuilder.Fields[0].Value =
-                repeatState + stateString + GetProgressString(progress) + $"  `{TrackPosition:mm':'ss} / {CurrentTrack.Duration:mm':'ss}`";
+            EmbedBuilder.Fields[0].Value = GetProgressString(progress) + "\n" + GetProgressInfo();
+                
             UpdateControlMessage(background);
+
+            string GetProgressInfo() {
+                var sb = new StringBuilder("");
+                if ((int) TrackPosition.TotalHours != 0)
+                    sb.Append((int)TrackPosition.TotalHours + ":");
+                sb.Append($"{TrackPosition:mm':'ss} / ");
+                if ((int) CurrentTrack.Duration.TotalHours != 0)
+                    sb.Append((int)CurrentTrack.Duration.TotalHours + ":");
+                sb.Append($"{CurrentTrack.Duration:mm':'ss}");
+                var space = new string(' ', Math.Max(0, (22 - sb.Length) / 2));
+                return playingState + '`' + space + sb + space + '`' + repeatState;
+            }
+
+            static string GetProgressString(int progress) {
+                var builder = new StringBuilder();
+                builder.Append(ProgressEmoji.Start.GetEmoji(progress));
+                progress -= 10;
+                for (var i = 0; i < 8; i++) {
+                    builder.Append(ProgressEmoji.Intermediate.GetEmoji(progress));
+                    progress -= 10;
+                }
+
+                builder.Append(ProgressEmoji.End.GetEmoji(progress));
+                return builder.ToString();
+            }
         }
 
         private void UpdateVolume() {
@@ -231,19 +256,6 @@ namespace Bot.Music {
             SetupControlReactions();
             UpdateControlMessage();
             return Task.CompletedTask;
-        }
-
-        private static string GetProgressString(int progress) {
-            var builder = new StringBuilder();
-            builder.Append(ProgressEmoji.Start.GetEmoji(progress));
-            progress -= 10;
-            for (var i = 0; i < 8; i++) {
-                builder.Append(ProgressEmoji.Intermediate.GetEmoji(progress));
-                progress -= 10;
-            }
-
-            builder.Append(ProgressEmoji.End.GetEmoji(progress));
-            return builder.ToString();
         }
 
         private string GetPlaylistString(LavalinkPlaylist playlist, int index) {
