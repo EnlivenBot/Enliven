@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Net.Mime;
@@ -11,6 +11,8 @@ using Bot.Utilities.Collector;
 using Bot.Utilities.Emoji;
 using Discord;
 using Discord.WebSocket;
+using ICSharpCode.SharpZipLib.Core;
+using ICSharpCode.SharpZipLib.Zip;
 using NLog;
 using NLog.Layouts;
 
@@ -85,6 +87,31 @@ namespace Bot {
         }
 
         private static void InstallLogger() {
+            var logsFolder = Path.Combine(Directory.GetCurrentDirectory(), "Logs");
+            Directory.CreateDirectory(logsFolder);
+            
+            foreach (var file in Directory.GetFiles(logsFolder, "*.log")) {
+                try {
+                    using var fs = File.Create(Path.ChangeExtension(file, ".zip"));
+                    using var zip = new ZipOutputStream(fs);
+                    zip.SetLevel(9);
+                    var zipEntry = new ZipEntry(Path.GetFileName(file));
+                    var fileInfo = new FileInfo(file);
+                    zipEntry.Size = fileInfo.Length;
+                    zipEntry.DateTime = fileInfo.LastWriteTime;
+                    zip.PutNextEntry(zipEntry);
+                    var buffer = new byte[4096];
+                    using (var fsInput = File.OpenRead(file)) {
+                        StreamUtils.Copy(fsInput, zip, buffer);
+                    }
+                    zip.CloseEntry();
+                    File.Delete(file);
+                }
+                catch (Exception e) {
+                    // ignored
+                }
+            }
+
             var config = new NLog.Config.LoggingConfiguration();
 
             var layout = Layout.FromString("${longdate}|${level:uppercase=true}|${logger}|${message}${onexception:${newline}${exception:format=tostring}}");
@@ -95,9 +122,15 @@ namespace Bot {
             };
             var logconsole = new NLog.Targets.ColoredConsoleTarget("logconsole") {Layout = layout};
 
-            // Rules for mapping loggers to targets            
-            config.AddRule(LogLevel.Info, LogLevel.Fatal, logconsole);
+            // Rules for mapping loggers to targets
+            #if DEBUG
+            config.AddRule(LogLevel.Trace, LogLevel.Fatal, logconsole);
             config.AddRule(LogLevel.Debug, LogLevel.Fatal, logfile);
+            #endif
+            #if !DEBUG
+            config.AddRule(LogLevel.Info, LogLevel.Fatal, logconsole);
+            config.AddRule(LogLevel.Trace, LogLevel.Fatal, logfile);
+            #endif
 
             // Apply config           
             NLog.LogManager.Configuration = config;
