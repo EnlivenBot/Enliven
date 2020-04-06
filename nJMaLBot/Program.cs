@@ -40,6 +40,19 @@ namespace Bot {
         private static async Task MainAsync(string[] args) {
             var config = new DiscordSocketConfig {MessageCacheSize = 100};
             Client = new DiscordSocketClient(config);
+            Client.Log += message => {
+                var logLevel = message.Severity switch {
+                    LogSeverity.Critical => LogLevel.Fatal,
+                    LogSeverity.Error    => LogLevel.Error,
+                    LogSeverity.Warning  => LogLevel.Warn,
+                    LogSeverity.Info     => LogLevel.Info,
+                    LogSeverity.Verbose  => LogLevel.Debug,
+                    LogSeverity.Debug    => LogLevel.Trace,
+                    _                    => throw new ArgumentOutOfRangeException()
+                };
+                logger.Log(logLevel, message.Exception, "{message} from {source}", message.Message, message.Source);
+                return Task.CompletedTask;
+            };
 
             logger.Info("Start authorization");
 
