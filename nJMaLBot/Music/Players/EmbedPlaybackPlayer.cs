@@ -394,6 +394,8 @@ namespace Bot.Music {
                 await PlayAsync(playlist.TrackIndex == -1 ? tracks.First() : tracks[playlist.TrackIndex], false, playlist.TrackPosition);
                 WriteToQueueHistory(Loc.Get("MusicQueues.Jumped")
                                        .Format(requester, CurrentTrackIndex + 1, CurrentTrack.Title.SafeSubstring(0, 40) + "..."));
+            }else if (State == PlayerState.NotPlaying) {
+                await PlayAsync(Playlist[0], false);
             }
         }
 
