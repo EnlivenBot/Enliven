@@ -1,12 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Net;
-using System.Reflection;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Bot.Config;
 using Bot.Music.Players;
@@ -20,7 +15,6 @@ using Lavalink4NET.Logging;
 using Lavalink4NET.Player;
 using Lavalink4NET.Rest;
 using Lavalink4NET.Tracking;
-using LiteDB;
 using NLog;
 using LogLevel = Lavalink4NET.Logging.LogLevel;
 
