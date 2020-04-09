@@ -55,7 +55,7 @@ namespace Bot.Music {
 
         public override async Task OnTrackEndAsync(TrackEndEventArgs eventArgs) {
             if (eventArgs.Reason == TrackEndReason.LoadFailed) {
-                WriteToQueueHistory(Loc.Get("Music.DecodingError").Format(CurrentTrack.Title, CurrentTrack.Source));
+                WriteToQueueHistory(Loc.Get("Music.DecodingError").Format(CurrentTrack.Title));
             }
 
             await base.OnTrackEndAsync(eventArgs);

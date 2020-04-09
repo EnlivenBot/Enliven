@@ -42,7 +42,7 @@
     "OtherVoiceChannel": "{0}, You must be in the same voice channel as the bot",
     "NotInVoiceChannel": "{0}, You must be in a voice channel",
     "TrackError": "Track error",
-    "DecodingError": "Something went wrong when decoding the track\n[{0}]({1})",
+    "DecodingError": "Decoding error - {0}",
     "ChannelNotAllowed": "{0}, you can’t play music on this channel. Use <#{1}> for this, or ask the administrator to change this through the server setup.",
     "MusicDisabled" : "The bot does not have access to any Lavalink server and cannot play anything. Write to the host owner about this problem.",
     "ClusterInitializing" : "The playback cluster is initializing. Wait a bit",

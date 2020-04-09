@@ -272,7 +272,7 @@ namespace Bot.Commands {
             Player.SetControlMessage(logMessage);
             var playlist = GlobalDB.Playlists.FindById(id);
             if (playlist == null) {
-                ReplyFormattedAsync(Loc.Get("PlaylistNotFound").Format(id.SafeSubstring(0, 40)), true, logMessage);
+                ReplyFormattedAsync(Loc.Get("Music.PlaylistNotFound").Format(id.SafeSubstring(0, 40)), true, logMessage);
                 return;
             }
 
