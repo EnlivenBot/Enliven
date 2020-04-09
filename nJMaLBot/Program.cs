@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Net.Mime;
@@ -20,9 +20,7 @@ namespace Bot {
     internal class Program {
         public static DiscordSocketClient Client;
         public static CommandHandler Handler;
-        public static event EventHandler<DiscordSocketClient> OnClientConnect;
         private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
-        private static int connectDelay = -1;
 
         private static void Main(string[] args) {
             InstallLogger();
@@ -31,8 +29,6 @@ namespace Bot {
             #endif
             logger.Info("Start Initialising");
 
-            RuntimeHelpers.RunClassConstructor(typeof(MessageHistoryManager).TypeHandle);
-            RuntimeHelpers.RunClassConstructor(typeof(MusicUtils).TypeHandle);
             MainAsync(args).ConfigureAwait(false).GetAwaiter().GetResult();
             ConsoleCommandsHandler();
         }
@@ -53,44 +49,36 @@ namespace Bot {
                 logger.Log(logLevel, message.Exception, "{message} from {source}", message.Message, message.Source);
                 return Task.CompletedTask;
             };
-
-            logger.Info("Start authorization");
-
-
+            
             Client.Ready += async () => {
+                logger.Info("Successefully started client");
                 await Client.SetGameAsync("mentions of itself to get started", null, ActivityType.Listening);
-                OnClientConnect?.Invoke(null, Client);
             };
 
-            Client.Disconnected += exception => Client_Disconnected(exception, args);
-
-            login:
-            try {
-                logger.Info("Trying to login");
-                await Client.LoginAsync(TokenType.Bot, GlobalConfig.Instance.BotToken);
-                connectDelay = 0;
+            logger.Info("Start logining");
+            var connectDelay = 30;
+            while (true) {
+                try {
+                    await Client.LoginAsync(TokenType.Bot, GlobalConfig.Instance.BotToken);
+                    logger.Info("Successefully logged in");
+                    break;
+                }
+                catch (Exception e) {
+                    logger.Fatal(e, "Failed to login. Probably token is incorrect - {token}", GlobalConfig.Instance.BotToken);
+                    logger.Info("Waiting before next attempt - {delay}s", connectDelay);
+                    await Task.Delay(TimeSpan.FromSeconds(connectDelay));
+                    connectDelay += 10;
+                }
             }
-            catch (Exception e) {
-                logger.Fatal(e, "Failed to connect. Probably token is incorrect - {token}", GlobalConfig.Instance.BotToken);
-                if (connectDelay == -1) Environment.Exit(-1);
-                logger.Info("Waiting before next attempt - {delay}s", connectDelay);
-                await Task.Delay(TimeSpan.FromSeconds(connectDelay));
-                connectDelay += 5;
-                goto login;
-            }
 
+            logger.Info("Starting client");
             await Client.StartAsync();
-            MessageHistoryManager.SetEmojiHandlers();
-
+            
             Handler = new CommandHandler();
             await Handler.Install(Client);
-        }
-
-        private static async Task Client_Disconnected(Exception e, string[] args) {
-            Client.Dispose();
-            logger.Warn(e, "Client disconnected");
-            logger.Info("Retrying");
-            await MainAsync(args);
+            
+            MessageHistoryManager.SetHandlers();
+            await MusicUtils.SetHandler();
         }
 
         public static void ConsoleCommandsHandler() {
@@ -102,7 +90,7 @@ namespace Bot {
         private static void InstallLogger() {
             var logsFolder = Path.Combine(Directory.GetCurrentDirectory(), "Logs");
             Directory.CreateDirectory(logsFolder);
-            
+
             foreach (var file in Directory.GetFiles(logsFolder, "*.log")) {
                 try {
                     using var fs = File.Create(Path.ChangeExtension(file, ".zip"));
@@ -117,6 +105,7 @@ namespace Bot {
                     using (var fsInput = File.OpenRead(file)) {
                         StreamUtils.Copy(fsInput, zip, buffer);
                     }
+
                     zip.CloseEntry();
                     File.Delete(file);
                 }
@@ -137,12 +126,12 @@ namespace Bot {
 
             // Rules for mapping loggers to targets
             #if DEBUG
-            config.AddRule(LogLevel.Trace, LogLevel.Fatal, logconsole);
+            config.AddRule(LogLevel.Debug, LogLevel.Fatal, logconsole);
             config.AddRule(LogLevel.Debug, LogLevel.Fatal, logfile);
             #endif
             #if !DEBUG
-            config.AddRule(LogLevel.Info, LogLevel.Fatal, logconsole);
-            config.AddRule(LogLevel.Trace, LogLevel.Fatal, logfile);
+            config.AddRule(LogLevel.Debug, LogLevel.Fatal, logconsole);
+            config.AddRule(LogLevel.Debug, LogLevel.Fatal, logfile);
             #endif
 
             // Apply config           

@@ -64,18 +64,11 @@ namespace Bot {
         private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
         public static readonly diff_match_patch DiffMatchPatch = new diff_match_patch();
 
-        static MessageHistoryManager() {
-            Program.OnClientConnect += (sender, client) => SetHandlers(client);
-        }
-
-        private static void SetHandlers(DiscordSocketClient client) {
-            client.MessageUpdated += async (before, after, channel) => await ClientOnMessageUpdated(await before.GetOrDownloadAsync(), after, channel);
-            client.MessageDeleted += ClientOnMessageDeleted;
-            client.ChannelDestroyed += ClientOnChannelDestroyed;
-            client.LeftGuild += ClearGuildLogs;
-        }
-
-        public static void SetEmojiHandlers() {
+        public static void SetHandlers() {
+            Program.Client.MessageUpdated += async (before, after, channel) => await ClientOnMessageUpdated(await before.GetOrDownloadAsync(), after, channel);
+            Program.Client.MessageDeleted += ClientOnMessageDeleted;
+            Program.Client.ChannelDestroyed += ClientOnChannelDestroyed;
+            Program.Client.LeftGuild += ClearGuildLogs;
             CollectorsUtils.CollectReaction(CommonEmoji.LegacyBook, reaction => true, async eventArgs => {
                 eventArgs.RemoveReason();
                 try {
@@ -88,7 +81,7 @@ namespace Bot {
                 }
             }, CollectorFilter.IgnoreBots);
         }
-
+        
         public static Task ClearGuildLogs(SocketGuild arg) {
             new Task(() => {
                 var socketGuildChannels = arg.Channels.Where(channel => channel is SocketTextChannel _).ToList();

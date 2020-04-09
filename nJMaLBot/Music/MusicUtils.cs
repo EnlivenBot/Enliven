@@ -30,37 +30,23 @@ namespace Bot.Music {
     public static class MusicUtils {
         public static LavalinkCluster Cluster;
         private static Logger logger = LogManager.GetCurrentClassLogger();
-        private static EventLogger _lavalinkLogger;
+        private static EventLogger _lavalinkLogger = new EventLogger();
 
-        static MusicUtils() {
-            Program.OnClientConnect += (sender, client) => { logger.Swallow(SetHandler()); };
-            _lavalinkLogger = new EventLogger();
-            _lavalinkLogger.LogMessage += (sender, args) => {
-                switch (args.Level) {
-                    case LogLevel.Information:
-                        logger.Info(args.Message);
-                        break;
-                    case LogLevel.Error:
-                        logger.Error(args.Exception, args.Message);
-                        break;
-                    case LogLevel.Warning:
-                        logger.Warn(args.Message);
-                        break;
-                    case LogLevel.Debug:
-                        logger.Info(args.Message);
-                        break;
-                    case LogLevel.Trace:
-                        logger.Trace(args.Message);
-                        break;
-                    default:
-                        logger.Warn(args.Message);
-                        break;
-                }
-            };
-        }
-
-        private static async Task SetHandler() {
+        public static async Task SetHandler() {
             logger.Info("Starting music module");
+
+            _lavalinkLogger.LogMessage += (sender, args) => {
+                var logLevel = args.Level switch {
+                    LogLevel.Information => NLog.LogLevel.Info,
+                    LogLevel.Error       => NLog.LogLevel.Error,
+                    LogLevel.Warning     => NLog.LogLevel.Warn,
+                    LogLevel.Debug       => NLog.LogLevel.Debug,
+                    LogLevel.Trace       => NLog.LogLevel.Trace,
+                    _                    => throw new ArgumentOutOfRangeException()
+                };
+                logger.Log(logLevel, args.Message);
+            };
+
             var nodes = new List<LavalinkNodeOptions>(GlobalConfig.Instance.LavalinkNodes.Select(instanceLavalinkNode =>
                 new LavalinkNodeOptions {
                     RestUri = instanceLavalinkNode.RestUri,
@@ -81,7 +67,7 @@ namespace Bot.Music {
                     var inactivityTrackingService = new InactivityTrackingService(Cluster, new DiscordClientWrapper(Program.Client),
                         new InactivityTrackingOptions {
                             TrackInactivity = true,
-                            DisconnectDelay = TimeSpan.FromSeconds(30),
+                            DisconnectDelay = TimeSpan.FromSeconds(60),
                             PollInterval = TimeSpan.FromSeconds(4)
                         }, _lavalinkLogger);
                     inactivityTrackingService.InactivePlayer += async (sender, args) => {
@@ -108,6 +94,7 @@ namespace Bot.Music {
             else {
                 player.WriteToQueueHistory(player.Loc.Get("Music.PlayerMoved"));
             }
+
             return Task.CompletedTask;
         }
 
