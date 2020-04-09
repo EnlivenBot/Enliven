@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Bot.Config;
 using Bot.Config.Localization;
@@ -13,21 +14,92 @@ using Lavalink4NET.Player;
 namespace Bot.Utilities.Modules {
     public class MusicModuleBase : AdvancedModuleBase {
         public IMessageChannel ResponseChannel;
+        public EmbedPlaybackPlayer Player;
+        public Task<bool> IsPreconditionsValid;
 
         protected override async void BeforeExecute(CommandInfo command) {
             base.BeforeExecute(command);
             GetChannel(out ResponseChannel);
+            IsPreconditionsValid = InitialSetup(command);
+        }
+
+        private async Task<bool> InitialSetup(CommandInfo command) {
+            try {
+                Player = MusicUtils.Cluster.GetPlayer<EmbedPlaybackPlayer>(Context.Guild.Id);
+            }
+            catch (NullReferenceException e) {
+                Reply(Loc.Get("Music.MusicDisabled"), true).DelayedDelete(TimeSpan.FromMinutes(5));
+                return false;
+            }
+            catch (InvalidOperationException e) {
+                switch (e.Message) {
+                    case "The cluster has not been initialized.":
+                        Reply(Loc.Get("Music.ClusterInitializing"), true).DelayedDelete(TimeSpan.FromMinutes(5));
+                        break;
+                    case "No node available.":
+                        Reply(Loc.Get("Music.NoNodesAvailable"), true).DelayedDelete(TimeSpan.FromMinutes(5));
+                        break;
+                }
+
+                return false;
+            }
+
+            if (GetChannel(out var musicChannel)) {
+                var needSummon = command.Attributes.FirstOrDefault(attribute => attribute is SummonToUserAttribute) != null;
+                var user = Context.User as SocketGuildUser;
+                if (Player != null && Player.State != PlayerState.NotConnected && Player.State != PlayerState.Destroyed && !needSummon) {
+                    if (user.VoiceChannel.Id == Player.VoiceChannelId) return true;
+                    Reply(Loc.Get("Music.OtherVoiceChannel").Format(Context.User.Mention), true).DelayedDelete(TimeSpan.FromMinutes(5));
+                    return false;
+                }
+
+                if (!needSummon) return true;
+                if (user.VoiceState.HasValue) {
+                    var perms = (await Context.Guild.GetCurrentUserAsync()).GetPermissions(user.VoiceChannel);
+                    if (!perms.Connect) {
+                        Reply(Loc.Get("Music.CantConnect").Format(user.VoiceChannel.Name), true).DelayedDelete(TimeSpan.FromMinutes(2));
+                        return false;
+                    }
+
+                    Player = await MusicUtils.Cluster.JoinAsync<EmbedPlaybackPlayer>(Context.Guild.Id, user.VoiceChannel.Id);
+                    EmbedPlaybackControl.PlaybackPlayers.Add(Player);
+                    return true;
+                }
+
+                Reply(Loc.Get("Music.NotInVoiceChannel").Format(Context.User.Mention), true).DelayedDelete(TimeSpan.FromMinutes(5));
+                return false;
+            }
+
+            if (GuildConfig.IsMusicLimited) {
+                Reply(Loc.Get("Music.ChannelNotAllowed").Format(Context.User.Mention, musicChannel.Id), true).DelayedDelete(TimeSpan.FromMinutes(5));
+                return false;
+            }
+
+            Reply(Loc.Get("Music.PlaybackMoved").Format(musicChannel.Id), false).DelayedDelete(TimeSpan.FromMinutes(5));
+            return true;
+
+
+            async Task<IUserMessage> Reply(string description, bool isFail) {
+                var embed = this.GetAuthorEmbedBuilder().WithTitle(Loc.Get(isFail ? "Music.Fail" : "Music.Playback"))
+                                .WithDescription(description).WithColor(isFail ? Color.Orange : Color.Gold).Build();
+                try {
+                    return await Context.Channel.SendMessageAsync(null, false, embed);
+                }
+                catch (Exception) {
+                    return await (await Context.User.GetOrCreateDMChannelAsync()).SendMessageAsync(null, false, embed);
+                }
+            }
         }
 
         protected override async Task<IUserMessage> ReplyAsync(string message = null, bool isTTS = false, Embed embed = null, RequestOptions options = null) {
             return await ResponseChannel.SendMessageAsync(message, isTTS, embed, options).ConfigureAwait(false);
         }
 
-        protected async Task<IUserMessage> ReplyFormattedAsync(string description, bool isFail = false, IUserMessage previous = null) {
+        protected async Task<IUserMessage> ReplyFormattedAsync(string description, bool isFail = false, IUserMessage previous = null, IMessageChannel channel = null) {
             var embed = this.GetAuthorEmbedBuilder().WithTitle(Loc.Get(isFail ? "Music.Fail" : "Music.Playback"))
-                            .WithDescription(description).WithColor(isFail ? Color.Red : Color.Gold).Build();
+                            .WithDescription(description).WithColor(isFail ? Color.Orange : Color.Gold).Build();
             if (previous == null) {
-                return await ReplyAsync(null, false, embed);
+                return await (channel ?? ResponseChannel).SendMessageAsync(null, false, embed).ConfigureAwait(false);
             }
 
             await previous.ModifyAsync(properties => {
@@ -35,26 +107,6 @@ namespace Bot.Utilities.Modules {
                 properties.Embed = embed;
             });
             return previous;
-        }
-
-        public async Task<EmbedPlaybackPlayer> GetPlayerAsync(bool summonToUser = false) {
-            var player = MusicUtils.Cluster.GetPlayer<EmbedPlaybackPlayer>(Context.Guild.Id);
-            var userTask = Context.Guild.GetUserAsync(Context.User.Id);
-
-            if (player != null && player.State != PlayerState.NotConnected && player.State != PlayerState.Destroyed && !summonToUser) {
-                if (((SocketGuildUser) await userTask).VoiceChannel.Id == player.VoiceChannelId) return player;
-                ReplyAsync(Loc.Get("Music.OtherVoiceChannel").Format(Context.User.Mention)).DelayedDelete(TimeSpan.FromMinutes(5));
-                return null;
-            }
-
-            if (((SocketGuildUser) await userTask).VoiceState.HasValue) {
-                var embedPlaybackPlayer = await MusicUtils.Cluster.JoinAsync<EmbedPlaybackPlayer>(Context.Guild.Id, ((SocketGuildUser) await userTask).VoiceChannel.Id);
-                EmbedPlaybackControl.PlaybackPlayers.Add(embedPlaybackPlayer);
-                return embedPlaybackPlayer;
-            }
-
-            ReplyAsync(Loc.Get("Music.NotInVoiceChannel").Format(Context.User.Mention)).DelayedDelete(TimeSpan.FromMinutes(5));
-            return null;
         }
 
         public bool GetChannel(out IMessageChannel channel) {
@@ -65,22 +117,21 @@ namespace Bot.Utilities.Modules {
         }
 
         public Task<IUserMessage> GetLogMessage() {
-            if (GetChannel(out var channel)) return ReplyAsync(Loc.Get("Music.Loading"));
-            if (GuildConfig.IsMusicLimited) {
-                var eb = this.GetAuthorEmbedBuilder()
-                             .WithTitle(Loc.Get("Music.Fail"))
-                             .WithDescription(Loc.Get("Music.ChannelNotAllowed").Format(Context.User.Mention, channel.Id));
+            return GetChannel(out var channel) ? ReplyAsync(Loc.Get("Music.Loading")) : channel.SendMessageAsync(Loc.Get("Music.Loading"));
+        }
+
+        protected override void AfterExecute(CommandInfo command) {
+            // By a lucky coincidence of circumstances, it is only necessary to clear the message-command when it does not require the player’s summon
+            // That is, it is a command for ordering music
+            var needSummon = command.Attributes.FirstOrDefault(attribute => attribute is SummonToUserAttribute) != null;
+            if (!needSummon) {
                 Context.Message.SafeDelete();
-                Context.Channel.SendMessageAsync(null, false, eb.Build()).DelayedDelete(TimeSpan.FromMinutes(5));
-                return null;
             }
-            else {
-                var eb = this.GetAuthorEmbedBuilder()
-                             .WithTitle(Loc.Get("Music.Playback"))
-                             .WithDescription(Localization.Get(GuildConfig, "Music.PlaybackMoved").Format(channel.Id));
-                Context.Channel.SendMessageAsync(null, false, eb.Build()).DelayedDelete(TimeSpan.FromMinutes(5));
-                return channel.SendMessageAsync(Loc.Get("Music.Loading"));
-            }
+
+            base.AfterExecute(command);
         }
     }
+
+    [AttributeUsage(AttributeTargets.Method, Inherited = false, AllowMultiple = true)]
+    sealed class SummonToUserAttribute : Attribute { }
 }

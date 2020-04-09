@@ -102,11 +102,13 @@ namespace Bot.Commands {
                 MessageHistoryManager.StartLogToHistory(s, guild);
         }
 
-        public Task<IResult> ExecuteCommand(string query, ICommandContext context, string authorId) {
-            var result = CommandService.ExecuteAsync(context, query, null);
-            var commandName = query.IndexOf(" ") > -1 ? query.Substring(0, query.IndexOf(" ")) : query;
-            RegisterUsage(commandName, authorId);
-            RegisterUsage(commandName, "Global");
+        public async Task<IResult> ExecuteCommand(string query, ICommandContext context, string authorId) {
+            var result = await CommandService.ExecuteAsync(context, query, null);
+            if (result.Error != CommandError.UnknownCommand) {
+                var commandName = query.IndexOf(" ") > -1 ? query.Substring(0, query.IndexOf(" ")) : query;
+                RegisterUsage(commandName, authorId);
+                RegisterUsage(commandName, "Global");
+            }
             return result;
         }
 
@@ -150,7 +152,7 @@ namespace Bot.Commands {
                 userUsageCount = 0;
             }
             
-            userStatistics.UsagesList["PlaybackTime"] = (ulong) (userUsageCount + span.TotalSeconds);
+            userStatistics.UsagesList["PlaybackTime"] = (int) (userUsageCount + span.TotalSeconds);
             GlobalDB.CommandStatistics.Upsert(userStatistics);
         }
 

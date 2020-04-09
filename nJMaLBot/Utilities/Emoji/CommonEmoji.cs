@@ -22,6 +22,7 @@ namespace Bot.Utilities.Emoji {
         public static Discord.Emoji LegacyRepeat { get; set; } = new Discord.Emoji(CommonEmojiStrings.Instance.LegacyRepeat);
         public static Discord.Emoji LegacyShuffle { get; set; } = new Discord.Emoji(CommonEmojiStrings.Instance.LegacyShuffle);
         public static Discord.Emoji LegacyBook { get; set; } = new Discord.Emoji(CommonEmojiStrings.Instance.LegacyBook);
+        public static Discord.Emoji LegacyPlayPause { get; set; } = new Discord.Emoji(CommonEmojiStrings.Instance.LogacyPlayPause);
     }
 
     public class CommonEmojiStrings {
@@ -54,5 +55,6 @@ namespace Bot.Utilities.Emoji {
         public string LegacyRepeat { get; set; } = "🔁";
         public string LegacyShuffle { get; set; } = "🔀";
         public string LegacyBook { get; set; } = "📖";
+        public string LogacyPlayPause { get; set; } = "⏯️";
     }
 }

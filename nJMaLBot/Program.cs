@@ -11,6 +11,8 @@ using Bot.Utilities.Collector;
 using Bot.Utilities.Emoji;
 using Discord;
 using Discord.WebSocket;
+using ICSharpCode.SharpZipLib.Core;
+using ICSharpCode.SharpZipLib.Zip;
 using NLog;
 using NLog.Layouts;
 
@@ -18,7 +20,6 @@ namespace Bot {
     internal class Program {
         public static DiscordSocketClient Client;
         public static CommandHandler Handler;
-        public static event EventHandler<DiscordSocketClient> OnClientConnect;
         private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
 
         private static void Main(string[] args) {
@@ -28,8 +29,6 @@ namespace Bot {
             #endif
             logger.Info("Start Initialising");
 
-            RuntimeHelpers.RunClassConstructor(typeof(MessageHistoryManager).TypeHandle);
-            RuntimeHelpers.RunClassConstructor(typeof(MusicUtils).TypeHandle);
             MainAsync(args).ConfigureAwait(false).GetAwaiter().GetResult();
             ConsoleCommandsHandler();
         }
@@ -37,38 +36,49 @@ namespace Bot {
         private static async Task MainAsync(string[] args) {
             var config = new DiscordSocketConfig {MessageCacheSize = 100};
             Client = new DiscordSocketClient(config);
-
-            logger.Info("Start authorization");
-
-
+            Client.Log += message => {
+                var logLevel = message.Severity switch {
+                    LogSeverity.Critical => LogLevel.Fatal,
+                    LogSeverity.Error    => LogLevel.Error,
+                    LogSeverity.Warning  => LogLevel.Warn,
+                    LogSeverity.Info     => LogLevel.Info,
+                    LogSeverity.Verbose  => LogLevel.Debug,
+                    LogSeverity.Debug    => LogLevel.Trace,
+                    _                    => throw new ArgumentOutOfRangeException()
+                };
+                logger.Log(logLevel, message.Exception, "{message} from {source}", message.Message, message.Source);
+                return Task.CompletedTask;
+            };
             
             Client.Ready += async () => {
+                logger.Info("Successefully started client");
                 await Client.SetGameAsync("mentions of itself to get started", null, ActivityType.Listening);
-                OnClientConnect?.Invoke(null, Client);
             };
 
-            Client.Disconnected += exception => Client_Disconnected(exception, args);
-
-            try {
-                await Client.LoginAsync(TokenType.Bot, GlobalConfig.Instance.BotToken);
+            logger.Info("Start logining");
+            var connectDelay = 30;
+            while (true) {
+                try {
+                    await Client.LoginAsync(TokenType.Bot, GlobalConfig.Instance.BotToken);
+                    logger.Info("Successefully logged in");
+                    break;
+                }
+                catch (Exception e) {
+                    logger.Fatal(e, "Failed to login. Probably token is incorrect - {token}", GlobalConfig.Instance.BotToken);
+                    logger.Info("Waiting before next attempt - {delay}s", connectDelay);
+                    await Task.Delay(TimeSpan.FromSeconds(connectDelay));
+                    connectDelay += 10;
+                }
             }
-            catch (Exception e) {
-                logger.Fatal(e, "Failed to connect. Probably token is incorrect - {token}", GlobalConfig.Instance.BotToken);
-                Environment.Exit(-1);
-            }
 
+            logger.Info("Starting client");
             await Client.StartAsync();
-            MessageHistoryManager.SetEmojiHandlers();
-
+            
             Handler = new CommandHandler();
             await Handler.Install(Client);
-        }
-
-        private static async Task Client_Disconnected(Exception e, string[] args) {
-            Client.Dispose();
-            logger.Warn(e, "Client disconnected");
-            logger.Info("Retrying");
-            await MainAsync(args);
+            
+            MessageHistoryManager.SetHandlers();
+            await MusicUtils.SetHandler();
         }
 
         public static void ConsoleCommandsHandler() {
@@ -78,6 +88,32 @@ namespace Bot {
         }
 
         private static void InstallLogger() {
+            var logsFolder = Path.Combine(Directory.GetCurrentDirectory(), "Logs");
+            Directory.CreateDirectory(logsFolder);
+
+            foreach (var file in Directory.GetFiles(logsFolder, "*.log")) {
+                try {
+                    using var fs = File.Create(Path.ChangeExtension(file, ".zip"));
+                    using var zip = new ZipOutputStream(fs);
+                    zip.SetLevel(9);
+                    var zipEntry = new ZipEntry(Path.GetFileName(file));
+                    var fileInfo = new FileInfo(file);
+                    zipEntry.Size = fileInfo.Length;
+                    zipEntry.DateTime = fileInfo.LastWriteTime;
+                    zip.PutNextEntry(zipEntry);
+                    var buffer = new byte[4096];
+                    using (var fsInput = File.OpenRead(file)) {
+                        StreamUtils.Copy(fsInput, zip, buffer);
+                    }
+
+                    zip.CloseEntry();
+                    File.Delete(file);
+                }
+                catch (Exception e) {
+                    // ignored
+                }
+            }
+
             var config = new NLog.Config.LoggingConfiguration();
 
             var layout = Layout.FromString("${longdate}|${level:uppercase=true}|${logger}|${message}${onexception:${newline}${exception:format=tostring}}");
@@ -88,9 +124,15 @@ namespace Bot {
             };
             var logconsole = new NLog.Targets.ColoredConsoleTarget("logconsole") {Layout = layout};
 
-            // Rules for mapping loggers to targets            
-            config.AddRule(LogLevel.Info, LogLevel.Fatal, logconsole);
+            // Rules for mapping loggers to targets
+            #if DEBUG
+            config.AddRule(LogLevel.Debug, LogLevel.Fatal, logconsole);
             config.AddRule(LogLevel.Debug, LogLevel.Fatal, logfile);
+            #endif
+            #if !DEBUG
+            config.AddRule(LogLevel.Debug, LogLevel.Fatal, logconsole);
+            config.AddRule(LogLevel.Debug, LogLevel.Fatal, logfile);
+            #endif
 
             // Apply config           
             NLog.LogManager.Configuration = config;

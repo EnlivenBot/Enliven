@@ -1,10 +1,14 @@
 using System;
+using System.Collections;
 using System.Linq;
 using System.Threading.Tasks;
 using Bot.Commands;
+using Discord;
 using Lavalink4NET;
+using Lavalink4NET.Decoding;
 using Lavalink4NET.Events;
 using Lavalink4NET.Player;
+using Newtonsoft.Json;
 
 namespace Bot.Music.Players {
     public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer {
@@ -14,9 +18,7 @@ namespace Bot.Music.Players {
         public PlaylistLavalinkPlayer(LavalinkSocket lavalinkSocket, IDiscordClientWrapper client, ulong guildId, bool disconnectOnStop)
             : base(lavalinkSocket, client, guildId, false) {
             Playlist = new LavalinkPlaylist();
-            Playlist.Update += (sender, args) => {
-                if (CurrentTrack != null) CurrentTrackIndex = Playlist.IndexOf(CurrentTrack);
-            };
+            Playlist.Update += (sender, args) => { UpdateCurrentTrackIndex(); };
         }
 
         public LoopingState LoopingState { get; set; } = LoopingState.Off;
@@ -35,13 +37,14 @@ namespace Bot.Music.Players {
         }
 
         public override async Task OnTrackEndAsync(TrackEndEventArgs eventArgs) {
-            if (eventArgs.Reason == TrackEndReason.LoadFailed) Playlist.Remove(CurrentTrack);
+            var oldTrackIndex = CurrentTrackIndex;
             if (CurrentTrack != null) {
                 CommandHandler.RegisterMusicTime(TrackPosition);
             }
 
             if (eventArgs.Reason != TrackEndReason.Replaced) await base.OnTrackEndAsync(eventArgs);
             if (eventArgs.MayStartNext || eventArgs.Reason == TrackEndReason.LoadFailed) await SkipAsync();
+            if (eventArgs.Reason == TrackEndReason.LoadFailed) Playlist.RemoveAt(oldTrackIndex);
         }
 
         public virtual async Task<int> PlayAsync(LavalinkTrack track, bool enqueue, TimeSpan? startTime = null, TimeSpan? endTime = null,
@@ -50,8 +53,8 @@ namespace Bot.Music.Players {
             EnsureConnected();
             if (enqueue) Playlist.Add(track);
             if (enqueue && State == PlayerState.Playing) return Playlist.Count;
-            CurrentTrackIndex = Playlist.IndexOf(track);
             await base.PlayAsync(track, startTime, endTime, noReplace);
+            UpdateCurrentTrackIndex();
             return 0;
         }
 
@@ -90,21 +93,51 @@ namespace Bot.Music.Players {
             return base.StopAsync(disconnect);
         }
 
-        public virtual async Task TryPause() {
-            try {
-                await PauseAsync();
+        public virtual ExportPlaylist GetExportPlaylist(ExportPlaylistOptions options) {
+            var exportPlaylist = new ExportPlaylist {Tracks = Playlist.Select(track => track.Identifier).ToList()};
+            if (options != ExportPlaylistOptions.IgnoreTrackIndex) {
+                exportPlaylist.TrackIndex = CurrentTrackIndex;
             }
-            catch (Exception) {
-                // ignored
+
+            if (options == ExportPlaylistOptions.AllData) {
+                exportPlaylist.TrackPosition = TrackPosition;
+            }
+
+            return exportPlaylist;
+        }
+
+        public virtual async Task ImportPlaylist(ExportPlaylist playlist, ImportPlaylistOptions options, string requester) {
+            var tracks = playlist.Tracks.Select(s => TrackDecoder.DecodeTrack(s))
+                                 .Select(track => AuthoredLavalinkTrack.FromLavalinkTrack(track, requester)).ToList();
+            if (options == ImportPlaylistOptions.Replace) {
+                try {
+                    await StopAsync();
+                }
+                catch (Exception) {
+                    // ignored
+                }
+
+                if (!Playlist.IsEmpty) {
+                    Playlist.Clear();
+                }
+            }
+
+
+            Playlist.AddRange(tracks);
+
+            if (options != ImportPlaylistOptions.JustAdd) {
+                await PlayAsync(playlist.TrackIndex == -1 ? tracks.First() : tracks[playlist.TrackIndex], false, playlist.TrackPosition);
             }
         }
 
-        public virtual async Task TryResume() {
+        public void UpdateCurrentTrackIndex() {
+            if (CurrentTrack == null) return;
             try {
-                await ResumeAsync();
+                if (CurrentTrack.Identifier == Playlist[CurrentTrackIndex].Identifier) return;
+                CurrentTrackIndex = Playlist.IndexOf(CurrentTrack);
             }
-            catch (Exception) {
-                // ignored
+            catch (Exception e) {
+                CurrentTrackIndex = Playlist.IndexOf(CurrentTrack);
             }
         }
     }

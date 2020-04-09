@@ -13,12 +13,6 @@ namespace Bot.Utilities.Collector {
     public static class CollectorsUtils {
         private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
         static CollectorsUtils() {
-            Program.OnClientConnect += (sender, client) => { RegisterHandlers(); };
-            RegisterHandlers();
-        }
-
-        private static void RegisterHandlers() {
-            if (Program.Client.ConnectionState != ConnectionState.Connected) return;
             Program.Client.ReactionAdded += ClientOnReactionAdded;
             Program.Client.MessageReceived += ClientOnMessageReceived;
         }
