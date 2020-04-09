@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
@@ -6,10 +7,13 @@ using Bot.Commands;
 using Bot.Config;
 using Bot.Config.Localization.Providers;
 using Discord;
+using NLog;
 using Tyrrrz.Extensions;
 
 namespace Bot.Utilities.Commands {
     public class StatsUtils {
+        private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
+        
         private static Temporary<int> _textChannelsCount =
             new Temporary<int>(() => Program.Client.Guilds.Sum(guild => guild.TextChannels.Count), TimeSpan.FromMinutes(5));
 
@@ -36,12 +40,32 @@ namespace Bot.Utilities.Commands {
             if (stats == null) {
                 embedBuilder.WithColor(Color.Red)
                             .WithDescription(user == null ? loc.Get("Statistics.NoGlobalStats") : loc.Get("Statistics.NoUserStats").Format(user.Username));
-                                                    return embedBuilder;
+                return embedBuilder;
             }
 
-            var valueTuples = stats.UsagesList.GroupBy(pair => HelpUtils.CommandAliases.Value[pair.Key].First())
-                                   .Where(pairs => !pairs.Key.IsHiddenCommand())
-                                   .Select(pairs => (pairs.Key.Name.ToString(), pairs.Sum(pair => (double) pair.Value)));
+            IEnumerable<(string, double)> valueTuples = null;
+            while (true) {
+                try {
+                    valueTuples = stats.UsagesList.GroupBy(pair => HelpUtils.CommandAliases.Value[pair.Key].First())
+                                       .Where(pairs => !pairs.Key.IsHiddenCommand())
+                                       .Select(pairs => (pairs.Key.Name.ToString(), pairs.Sum(pair => (double) pair.Value)))
+                                       .OrderBy(tuple => tuple.Item1).ToList();
+                    break;
+                }
+                catch (InvalidOperationException e) {
+                    if (valueTuples != null) {
+                        logger.Error(e, "Exception while printing stats");
+                        throw;
+                    }
+                    // This exception appears that an element has appeared in ours that is not in the commands
+                    stats.UsagesList = stats.UsagesList.Where(pair => HelpUtils.CommandAliases.Value.Contains(pair.Key))
+                                            .ToDictionary(pair => pair.Key, pair => pair.Value);
+                    GlobalDB.CommandStatistics.Upsert(stats);
+                    // Assigning non null value to avoid endless cycle
+                    valueTuples = new List<(string, double)>();
+                }
+            }
+
             embedBuilder.AddField(loc.Get("Statistics.ByCommands"),
                 string.Join("\n", valueTuples.Select((tuple, i) => $"`{tuple.Item1}` - {tuple.Item2}")));
 
