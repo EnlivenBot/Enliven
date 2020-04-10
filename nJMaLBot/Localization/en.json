@@ -137,6 +137,7 @@
     "ByCommand" : "Help for the command `{0}`"
   },
   "Commands": {
+    "RequestedBy" : "Requested by {0}",
     "SetChannelResponse": "Channel <#{0}> was successfully assigned the role {1}",
     "SetPrefixResponse": "Successfully changed the bot prefix to `{0}`.\nIf you forget the prefix, just mention the bot.",
     "LoggingEnabled" : "Saving message change history enabled",

@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Bot.Utilities.Commands;
+using Bot.Utilities.Modules;
 using Discord;
 using Discord.Commands;
 
@@ -16,7 +17,7 @@ namespace Bot.Utilities {
                 message.SafeDelete();
             });
         }
-        
+
         public static void DelayedDelete(this Task<IUserMessage> message, TimeSpan span) {
             Task.Run(async () => {
                 await Task.Delay(span);
@@ -37,7 +38,7 @@ namespace Bot.Utilities {
             return (info.Attributes.FirstOrDefault(attribute => attribute is GroupingAttribute) ??
                     info.Module.Attributes.FirstOrDefault(attribute => attribute is GroupingAttribute)) as GroupingAttribute;
         }
-        
+
         public static bool IsHiddenCommand(this CommandInfo info) {
             return (info.Attributes.FirstOrDefault(attribute => attribute is HiddenAttribute) ??
                     info.Module.Attributes.FirstOrDefault(attribute => attribute is HiddenAttribute)) != null;
@@ -64,19 +65,19 @@ namespace Bot.Utilities {
 
             return builder.ToString();
         }
-        
-        public static T Next<T>(this T src) where T : struct
-        {
-            if (!typeof(T).IsEnum) throw new ArgumentException(String.Format("Argument {0} is not an Enum", typeof(T).FullName));
 
-            T[] Arr = (T[])Enum.GetValues(src.GetType());
-            int j = Array.IndexOf<T>(Arr, src) + 1;
-            return (Arr.Length==j) ? Arr[0] : Arr[j];            
+        public static T Next<T>(this T src) where T : struct {
+            if (!typeof(T).IsEnum) throw new ArgumentException($"Argument {typeof(T).FullName} is not an Enum");
+
+            var arr = (T[]) Enum.GetValues(src.GetType());
+            var j = Array.IndexOf(arr, src) + 1;
+            return arr.Length == j ? arr[0] : arr[j];
         }
 
-        public static EmbedBuilder GetAuthorEmbedBuilder(this ModuleBase moduleBase) {
+        public static EmbedBuilder GetAuthorEmbedBuilder(this AdvancedModuleBase moduleBase) {
             var embedBuilder = new EmbedBuilder();
-            embedBuilder.WithFooter(moduleBase.Context.User.Username, moduleBase.Context.User.GetAvatarUrl());
+            embedBuilder.WithFooter(moduleBase.Loc.Get("Commands.RequestedBy").Format(moduleBase.Context.User.Username),
+                moduleBase.Context.User.GetAvatarUrl());
             return embedBuilder;
         }
     }
