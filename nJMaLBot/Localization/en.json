@@ -125,7 +125,9 @@
     "remove1_1s" : "Number of tracks",
     "move0s" : "Moves a track in queue",
     "move0_0s" : "Track Index",
-    "move0_1s" : "Desired queue position"
+    "move0_1s" : "Desired queue position",
+    "invite0s" : "Represents a link with which you can invite a bot to a server",
+    "invite0_0s" : "Specify `true` to generate the link without administrator rights"
   },
   "CommandHandler": {
     "FailedTitle": "Error executing command",
@@ -179,5 +181,9 @@
     "MessagesCreated" : "Message creations logged",
     "MessagesChanged" : "Message changes logged",
     "MessagesDeleted" : "Message deletions logged"
+  },
+  "Common": {
+    "Invite" : "Invite",
+    "InviteDescription" : "Here is [your link]({0}) for inviting the bot to another server. Hope to meet you there! 😀"
   }
 }

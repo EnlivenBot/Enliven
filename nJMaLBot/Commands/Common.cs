@@ -51,5 +51,13 @@ namespace Bot.Commands {
             Context.Message.SafeDelete();
             ReplyAsync(null, false, (await StatsUtils.PrintStats(Context.User, Loc)).Build()).DelayedDelete(TimeSpan.FromMinutes(5));
         }
+
+        [Command("invite", RunMode = RunMode.Async)]
+        [Summary("invite0s")]
+        public async Task Invite([Summary("invite0_0s")]bool emptyPermissions = false) {
+            Context.Message.SafeDelete();
+            var inviteUrl = $"https://discordapp.com/api/oauth2/authorize?client_id={Program.Client.CurrentUser.Id}&permissions={(emptyPermissions ? 0 : 8)}&scope=bot";
+            await ReplyFormattedAsync(Loc.Get("Common.Invite"), Loc.Get("Common.InviteDescription").Format(inviteUrl));
+        }
     }
 }
