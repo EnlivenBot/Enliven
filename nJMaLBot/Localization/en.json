@@ -145,9 +145,10 @@
     "CommandLoggingDisabled" : "Saving history for successful commands disabled"
   },
   "MessageHistory": {
-    "PreviousUnavailable": "***Previous entry unavailable",
+    "PreviousUnavailable": "`Previous edits unavailable`",
     "MessageWasDeleted": "Message has been deleted",
-    "LastContent": "Last content:",
+    "LastContent": "***Last content:*** ({0})",
+    "LastContentDescription" : "Last content:\n>>> ",
     "Channel": "Channel",
     "Unavailable": "Unavailable",
     "MessageId": "Message ID: {0}",
