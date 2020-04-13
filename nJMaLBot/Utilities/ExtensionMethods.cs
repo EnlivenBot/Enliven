@@ -16,7 +16,7 @@ namespace Bot.Utilities {
                 message.SafeDelete();
             });
         }
-        
+
         public static void DelayedDelete(this Task<IUserMessage> message, TimeSpan span) {
             Task.Run(async () => {
                 await Task.Delay(span);
@@ -37,7 +37,7 @@ namespace Bot.Utilities {
             return (info.Attributes.FirstOrDefault(attribute => attribute is GroupingAttribute) ??
                     info.Module.Attributes.FirstOrDefault(attribute => attribute is GroupingAttribute)) as GroupingAttribute;
         }
-        
+
         public static bool IsHiddenCommand(this CommandInfo info) {
             return (info.Attributes.FirstOrDefault(attribute => attribute is HiddenAttribute) ??
                     info.Module.Attributes.FirstOrDefault(attribute => attribute is HiddenAttribute)) != null;
@@ -55,6 +55,12 @@ namespace Bot.Utilities {
                                                   : text.Substring(start, length);
         }
 
+        public static string SafeSubstring(this string text, int length, string postContent = "") {
+            if (text == null) return null;
+
+            return text.Length <= length ? text : text.Substring(0, length - postContent.Length) + postContent;
+        }
+
         public static string Repeat(this string s, int count) {
             if (string.IsNullOrEmpty(s)) return string.Empty;
             if (count <= 0) return string.Empty;
@@ -64,14 +70,13 @@ namespace Bot.Utilities {
 
             return builder.ToString();
         }
-        
-        public static T Next<T>(this T src) where T : struct
-        {
+
+        public static T Next<T>(this T src) where T : struct {
             if (!typeof(T).IsEnum) throw new ArgumentException(String.Format("Argument {0} is not an Enum", typeof(T).FullName));
 
-            T[] Arr = (T[])Enum.GetValues(src.GetType());
+            T[] Arr = (T[]) Enum.GetValues(src.GetType());
             int j = Array.IndexOf<T>(Arr, src) + 1;
-            return (Arr.Length==j) ? Arr[0] : Arr[j];            
+            return (Arr.Length == j) ? Arr[0] : Arr[j];
         }
 
         public static EmbedBuilder GetAuthorEmbedBuilder(this ModuleBase moduleBase) {
