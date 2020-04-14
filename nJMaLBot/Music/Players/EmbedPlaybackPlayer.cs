@@ -30,13 +30,14 @@ namespace Bot.Music {
         private bool IsConstructing { get; set; } = true;
         public readonly ILocalizationProvider Loc;
         private StringBuilder _queueHistory = new StringBuilder();
+        public BassBoostMode BassBoostMode = BassBoostMode.Off;
 
         // ReSharper disable once UnusedParameter.Local
         public EmbedPlaybackPlayer(LavalinkSocket lavalinkSocket, IDiscordClientWrapper client, ulong guildId, bool disconnectOnStop)
             : base(lavalinkSocket, client, guildId, disconnectOnStop) {
             Loc = new GuildLocalizationProvider(GuildId);
             EmbedBuilder.AddField("Placeholder", "Placeholder", true);
-            EmbedBuilder.AddField(Loc.Get("Music.Volume"), "Placeholder", true);
+            EmbedBuilder.AddField(Loc.Get("Music.Parameters"), "Placeholder", true);
             EmbedBuilder.AddField(Loc.Get("Music.Queue").Format(0, 0), "Placeholder");
             EmbedBuilder.AddField(Loc.Get("Music.RequestHistory"), "Placeholder");
             Playlist.Update += (sender, args) => UpdatePlaylist();
@@ -45,12 +46,12 @@ namespace Bot.Music {
 
         public override async Task SetVolumeAsync(float volume = 1, bool normalize = false) {
             await base.SetVolumeAsync(volume, normalize);
-            UpdateVolume();
+            UpdateParameters();
         }
 
         public override async Task OnConnectedAsync(VoiceServer voiceServer, VoiceState voiceState) {
             await base.OnConnectedAsync(voiceServer, voiceState);
-            UpdateVolume();
+            UpdateParameters();
         }
 
         public override async Task OnTrackEndAsync(TrackEndEventArgs eventArgs) {
@@ -222,8 +223,9 @@ namespace Bot.Music {
             }
         }
 
-        private void UpdateVolume() {
-            EmbedBuilder.Fields[1].Value = $"{Convert.ToInt32(Volume * 100f)}% 🔉";
+        public void UpdateParameters() {
+            EmbedBuilder.Fields[1].Value = $"🔉 {Convert.ToInt32(Volume * 100f)}%\n" +
+                                           $"🅱️ {BassBoostMode}";
             UpdateControlMessage();
         }
 

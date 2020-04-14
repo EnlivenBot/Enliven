@@ -35,7 +35,6 @@
     "NoListenersLeft" : "Playback stopped - no listeners or tracks left",
     "AttachmentFail" : "It looks like not one of your attachments is music",
     "NotFound" : "No results for `{0}`",
-    "Volume" : "Volume",
     "Loading" : "Loading",
     "Queue" : "Queue - `{0}` of `{1}`",
     "TrackIndexWrong" : "{0}, the playlist does not have a track with the index `{1}`. The valid value is from `1` to `{2}`",
@@ -59,7 +58,8 @@
     "SearchResultsTitle" : "Search results",
     "SearchResultsDescription" : "{0} search results for `{1}`:\n\n",
     "NothingFound" : "Nothing found 😩",
-    "CantConnect" : "The bot cannot join your voice channel `{0}`"
+    "CantConnect" : "The bot cannot join your voice channel `{0}`",
+    "Parameters" : "Parameters"
   },
   "Groups": {
     "music" : "Music",
