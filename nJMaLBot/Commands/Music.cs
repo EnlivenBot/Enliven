@@ -12,6 +12,7 @@ using Bot.Utilities.Commands;
 using Bot.Utilities.Modules;
 using Discord;
 using Discord.Commands;
+using Lavalink4NET.Player;
 using Lavalink4NET.Rest;
 using LiteDB;
 
@@ -82,7 +83,7 @@ namespace Bot.Commands {
         [Summary("goto0s")]
         public async Task Goto([Summary("goto0_0s")] int index) {
             if (!await IsPreconditionsValid) return;
-            
+
             //For programmers who count from 0
             if (index == 0) index = 1;
 
@@ -288,7 +289,7 @@ namespace Bot.Commands {
         public async Task SearchYoutube([Summary("play0_0s")] [Remainder] string query) {
             await AdvancedSearch(SearchMode.YouTube, query);
         }
-        
+
         [SummonToUser]
         [Command("soundcloud", RunMode = RunMode.Async)]
         [Alias("sc")]
@@ -318,7 +319,7 @@ namespace Bot.Commands {
             var msg = await ReplyAsync(null, false, eb.Build());
             if (!tracks.Any())
                 return;
-            
+
             var controller = CollectorsUtils.CollectReaction(msg, reaction => true, async args => {
                 args.RemoveReason();
                 var i = args.Reaction.Emote.Name switch {
@@ -337,7 +338,8 @@ namespace Bot.Commands {
                 };
 
                 var authoredLavalinkTracks = new List<AuthoredLavalinkTrack>();
-                if (i == -2) authoredLavalinkTracks.AddRange(tracks.Take(10).Select(track => AuthoredLavalinkTrack.FromLavalinkTrack(track, Context.User.Username)));
+                if (i == -2)
+                    authoredLavalinkTracks.AddRange(tracks.Take(10).Select(track => AuthoredLavalinkTrack.FromLavalinkTrack(track, Context.User.Username)));
                 if (i >= 0 && i <= tracks.Count - 1) authoredLavalinkTracks.Add(AuthoredLavalinkTrack.FromLavalinkTrack(tracks[i], Context.User.Username));
                 switch (authoredLavalinkTracks.Count) {
                     case 0:
@@ -378,36 +380,36 @@ namespace Bot.Commands {
         [Command("fastforward", RunMode = RunMode.Async)]
         [Alias("fast forward", "ff", "fwd")]
         [Summary("fastforward0s")]
-        public async Task FastForward([Summary("fastforward0_0s")]TimeSpan? timeSpan = null) {
+        public async Task FastForward([Summary("fastforward0_0s")] TimeSpan? timeSpan = null) {
             if (!await IsPreconditionsValid) return;
             var time = timeSpan ?? new TimeSpan(0, 0, 10);
             Player.SeekPositionAsync(Player.TrackPosition + time);
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.FF").Format(Context.User.Username, Player.CurrentTrackIndex, time.TotalSeconds));
         }
-        
+
         [Command("rewind", RunMode = RunMode.Async)]
         [Alias("rw")]
         [Summary("rewind0s")]
-        public async Task Rewind([Summary("fastforward0_0s")]TimeSpan? timeSpan = null) {
+        public async Task Rewind([Summary("fastforward0_0s")] TimeSpan? timeSpan = null) {
             if (!await IsPreconditionsValid) return;
             var time = timeSpan ?? new TimeSpan(0, 0, 10);
             Player.SeekPositionAsync(Player.TrackPosition - time);
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.Rewind").Format(Context.User.Username, Player.CurrentTrackIndex, time.TotalSeconds));
         }
-        
+
         [Command("seek", RunMode = RunMode.Async)]
         [Alias("sk", "se")]
         [Summary("seek0s")]
-        public async Task Seek([Summary("seek0_0s")]TimeSpan position) {
+        public async Task Seek([Summary("seek0_0s")] TimeSpan position) {
             if (!await IsPreconditionsValid) return;
             Player.SeekPositionAsync(position);
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.Seek").Format(Context.User.Username, Player.CurrentTrackIndex, position));
         }
-        
+
         [Command("removerange", RunMode = RunMode.Async)]
         [Alias("rr", "delr", "dr")]
         [Summary("remove0s")]
-        public async Task RemoveRange([Summary("remove0_0s")]int start, [Summary("remove0_1s")]int end = -1) {
+        public async Task RemoveRange([Summary("remove0_0s")] int start, [Summary("remove0_1s")] int end = -1) {
             if (!await IsPreconditionsValid) return;
             start = Math.Max(1, Math.Min(start, Player.Playlist.Count));
             end = Math.Max(start, Math.Min(end, Player.Playlist.Count));
@@ -418,30 +420,63 @@ namespace Bot.Commands {
                 Jump();
             }
         }
-        
+
         [Command("remove", RunMode = RunMode.Async)]
         [Alias("rm", "del", "delete")]
         [Summary("remove0s")]
-        public async Task Remove([Summary("remove0_0s")]int start, [Summary("remove1_1s")]int count = 1) {
+        public async Task Remove([Summary("remove0_0s")] int start, [Summary("remove1_1s")] int count = 1) {
             await RemoveRange(start, start + count - 1);
         }
-        
+
         [Command("move", RunMode = RunMode.Async)]
         [Alias("m", "mv")]
         [Summary("move0s")]
-        public async Task Move([Summary("move0_0s")]int trackIndex, [Summary("move0_1s")]int newIndex = 1) {
+        public async Task Move([Summary("move0_0s")] int trackIndex, [Summary("move0_1s")] int newIndex = 1) {
             if (!await IsPreconditionsValid) return;
-            
+
             // For programmers
             if (trackIndex == 0) trackIndex = 1;
             if (trackIndex < 1 || trackIndex > Player.Playlist.Count) {
                 ReplyFormattedAsync(Loc.Get("Music.TrackIndexWrong").Format(Context.User.Mention, trackIndex, Player.Playlist.Count),
                     true).DelayedDelete(TimeSpan.FromMinutes(2));
             }
-            
+
             newIndex = Math.Max(1, Math.Min(Player.Playlist.Count, newIndex));
             Player.Playlist.Move(trackIndex - 1, newIndex - 1);
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.TrackMoved").Format(Context.User.Mention, trackIndex, newIndex));
+        }
+
+        [Command("bassboost", RunMode = RunMode.Async)]
+        [Alias("bb", "bassboosted")]
+        [Summary("bassboost0s")]
+        public async Task ApplyBassBoost([Summary("bassboost0_0s")] BassBoostMode mode) {
+            if (!await IsPreconditionsValid) return;
+            var bands = new List<EqualizerBand>();
+            switch (mode) {
+                case BassBoostMode.Off:
+                    bands.Add(new EqualizerBand(0, 0f));
+                    bands.Add(new EqualizerBand(1, 0f));
+                    break;
+                case BassBoostMode.Low:
+                    bands.Add(new EqualizerBand(0, 0.25f));
+                    bands.Add(new EqualizerBand(1, 0.15f));
+                    break;
+                case BassBoostMode.Medium:
+                    bands.Add(new EqualizerBand(0, 0.5f));
+                    bands.Add(new EqualizerBand(1, 0.25f));
+                    break;
+                case BassBoostMode.High:
+                    bands.Add(new EqualizerBand(0, 0.75f));
+                    bands.Add(new EqualizerBand(1, 0.5f));
+                    break;
+                case BassBoostMode.Extreme:
+                    bands.Add(new EqualizerBand(0, 1f));
+                    bands.Add(new EqualizerBand(1, 0.75f));
+                    break;
+            }
+
+            await Player.UpdateEqualizerAsync(bands, false);
+            Player.WriteToQueueHistory(Loc.Get("MusicQueues.BassBoostUpdated").Format(Context.User.Username, mode));
         }
     }
 }

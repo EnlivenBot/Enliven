@@ -17,7 +17,8 @@
     "Seek" : "**{0}** moved playback of `{1}` track in `{2}`",
     "Remove" : "**{0}** deletes the `{1}` track - `{2}`",
     "RemoveRange" : "**{0}** deletes the `{1}` tracks. From `{2}` to `{3}`",
-    "TrackMoved" : "**{0}** moves the `{0}` track to `{1}` position"
+    "TrackMoved" : "**{0}** moves the `{0}` track to `{1}` position",
+    "BassBoostUpdated" : "**{0}** set the bass boost mode: `{1}`"
   },
   "Music" : {
     "RequestHistory" : "Request history",
@@ -125,7 +126,9 @@
     "remove1_1s" : "Number of tracks",
     "move0s" : "Moves a track in queue",
     "move0_0s" : "Track Index",
-    "move0_1s" : "Desired queue position"
+    "move0_1s" : "Desired queue position",
+    "bassboost0s" : "Lets you toggle the bass boost",
+    "bassboost0_0s" : "Bass boost mode: `Off`, `Low`, `Medium`, `High`, `Extreme`"
   },
   "CommandHandler": {
     "FailedTitle": "Error executing command",
