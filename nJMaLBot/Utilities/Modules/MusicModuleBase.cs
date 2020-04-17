@@ -61,7 +61,7 @@ namespace Bot.Utilities.Modules {
                         return false;
                     }
 
-                    Player = await MusicUtils.Cluster.JoinAsync<EmbedPlaybackPlayer>(Context.Guild.Id, user.VoiceChannel.Id);
+                    Player = await MusicUtils.Cluster.JoinAsync(() => new EmbedPlaybackPlayer(Context.Guild.Id), Context.Guild.Id, user.VoiceChannel.Id);
                     EmbedPlaybackControl.PlaybackPlayers.Add(Player);
                     return true;
                 }

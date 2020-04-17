@@ -15,8 +15,7 @@ namespace Bot.Music.Players {
         private int _currentTrackIndex;
 
         // ReSharper disable once UnusedParameter.Local
-        public PlaylistLavalinkPlayer(LavalinkSocket lavalinkSocket, IDiscordClientWrapper client, ulong guildId, bool disconnectOnStop)
-            : base(lavalinkSocket, client, guildId, false) {
+        public PlaylistLavalinkPlayer(ulong guildId) : base(guildId) {
             Playlist = new LavalinkPlaylist();
             Playlist.Update += (sender, args) => { UpdateCurrentTrackIndex(); };
         }

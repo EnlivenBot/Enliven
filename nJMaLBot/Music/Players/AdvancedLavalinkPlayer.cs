@@ -6,8 +6,12 @@ using Lavalink4NET.Player;
 
 namespace Bot.Music.Players {
     public class AdvancedLavalinkPlayer : LavalinkPlayer {
-        public AdvancedLavalinkPlayer(LavalinkSocket lavalinkSocket, IDiscordClientWrapper client, ulong guildId, bool disconnectOnStop) : base(lavalinkSocket,
-            client, guildId, disconnectOnStop) { }
+        public GuildConfig GuildConfig;
+        public BassBoostMode BassBoostMode = BassBoostMode.Off;
+
+        public AdvancedLavalinkPlayer(ulong guildId) {
+            GuildConfig = GuildConfig.Get(guildId);
+        }
 
         public override async Task OnConnectedAsync(VoiceServer voiceServer, VoiceState voiceState) {
             await base.SetVolumeAsync(GuildConfig.Get(GuildId).Volume);

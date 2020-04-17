@@ -30,12 +30,10 @@ namespace Bot.Music {
         private bool IsConstructing { get; set; } = true;
         public readonly ILocalizationProvider Loc;
         private StringBuilder _queueHistory = new StringBuilder();
-        public BassBoostMode BassBoostMode = BassBoostMode.Off;
 
         // ReSharper disable once UnusedParameter.Local
-        public EmbedPlaybackPlayer(LavalinkSocket lavalinkSocket, IDiscordClientWrapper client, ulong guildId, bool disconnectOnStop)
-            : base(lavalinkSocket, client, guildId, disconnectOnStop) {
-            Loc = new GuildLocalizationProvider(GuildId);
+        public EmbedPlaybackPlayer(ulong guildId) : base(guildId) {
+            Loc = new GuildLocalizationProvider(guildId);
             EmbedBuilder.AddField("Placeholder", "Placeholder", true);
             EmbedBuilder.AddField(Loc.Get("Music.Parameters"), "Placeholder", true);
             EmbedBuilder.AddField(Loc.Get("Music.Queue").Format(0, 0), "Placeholder");
