@@ -45,7 +45,8 @@ namespace Bot.Music {
                 new LavalinkNodeOptions {
                     RestUri = instanceLavalinkNode.RestUri,
                     WebSocketUri = instanceLavalinkNode.WebSocketUri,
-                    Password = instanceLavalinkNode.Password
+                    Password = instanceLavalinkNode.Password,
+                    DisconnectOnStop = false
                 }));
 
             if (nodes.Count != 0) {
@@ -82,11 +83,11 @@ namespace Bot.Music {
 
         private static Task ClusterOnPlayerMoved(object sender, PlayerMovedEventArgs args) {
             var player = args.Player as EmbedPlaybackPlayer;
-            if (!args.CouldBeMoved) {
-                player.OnNodeDropped();
+            if (args.CouldBeMoved) {
+                player.WriteToQueueHistory(player.Loc.Get("Music.PlayerMoved"));
             }
             else {
-                player.WriteToQueueHistory(player.Loc.Get("Music.PlayerMoved"));
+                player.OnNodeDropped();
             }
 
             return Task.CompletedTask;
