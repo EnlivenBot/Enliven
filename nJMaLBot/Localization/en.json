@@ -37,12 +37,13 @@
     "NotFound" : "No results for `{0}`",
     "Loading" : "Loading",
     "Queue" : "Queue - `{0}` of `{1}`",
+    "QueueEmptyTitle": "Queue is empty",
     "TrackIndexWrong" : "{0}, the playlist does not have a track with the index `{1}`. The valid value is from `1` to `{2}`",
     "PlaybackMoved" : "The playback bar has been moved to the music channel - <#{0}>",
     "OtherVoiceChannel": "{0}, You must be in the same voice channel as the bot",
     "NotInVoiceChannel": "{0}, You must be in a voice channel",
     "TrackError": "Track error",
-    "DecodingError": "Decoding error - {0}",
+    "DecodingError": "**Decoding error** - `{0}`",
     "ChannelNotAllowed": "{0}, you can’t play music on this channel. Use <#{1}> for this, or ask the administrator to change this through the server setup.",
     "MusicDisabled" : "The bot does not have access to any Lavalink server and cannot play anything. Write to the host owner about this problem.",
     "ClusterInitializing" : "The playback cluster is initializing. Wait a bit",
@@ -59,7 +60,9 @@
     "SearchResultsDescription" : "{0} search results for `{1}`:\n\n",
     "NothingFound" : "Nothing found 😩",
     "CantConnect" : "The bot cannot join your voice channel `{0}`",
-    "Parameters" : "Parameters"
+    "Parameters" : "Parameters",
+    "PlaybackNothingPlaying" : "Nothing playing",
+    "Waiting" : "Waiting..."
   },
   "Groups": {
     "music" : "Music",
