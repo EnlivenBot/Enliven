@@ -21,6 +21,8 @@ using Lavalink4NET.Player;
 using LiteDB;
 using Tyrrrz.Extensions;
 
+#pragma warning disable 4014
+
 namespace Bot.Music {
     public sealed class EmbedPlaybackPlayer : PlaylistLavalinkPlayer {
         private string _playlistString;
@@ -52,12 +54,22 @@ namespace Bot.Music {
             UpdateParameters();
         }
 
+        public override Task OnTrackStartedAsync(TrackStartedEventArgs eventArgs) {
+            UpdatePlayback = true;
+            var toReturn = base.OnTrackStartedAsync(eventArgs);
+            UpdateTrackInfo();
+            return toReturn;
+        }
+
         public override async Task OnTrackEndAsync(TrackEndEventArgs eventArgs) {
             if (eventArgs.Reason == TrackEndReason.LoadFailed) {
                 WriteToQueueHistory(Loc.Get("Music.DecodingError").Format(CurrentTrack.Title));
             }
 
             await base.OnTrackEndAsync(eventArgs);
+            
+            UpdateTrackInfo();
+            await UpdateControlMessage();
             // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
             switch (State) {
                 case PlayerState.NotPlaying:
@@ -130,9 +142,6 @@ namespace Bot.Music {
                                                   bool noReplace = false) {
             var toReturn = await base.PlayAsync(track, enqueue, startTime, endTime, noReplace);
 
-            var iconUrl = $"https://img.youtube.com/vi/{(string.IsNullOrWhiteSpace(CurrentTrack.TrackIdentifier) ? "" : CurrentTrack.TrackIdentifier)}/0.jpg";
-            EmbedBuilder?.WithAuthor(string.IsNullOrWhiteSpace(CurrentTrack.Author) ? "Unknown" : CurrentTrack.Author.SafeSubstring(0, 250), iconUrl)
-                        ?.WithThumbnailUrl(iconUrl)?.WithTitle(CurrentTrack.Title.SafeSubstring(0, 250))?.WithUrl(CurrentTrack.Source);
             if (IsConstructing) {
                 IsConstructing = false;
                 SetupControlReactions();
@@ -144,100 +153,6 @@ namespace Bot.Music {
             return toReturn;
         }
 
-        private Task _modifyAsync;
-        private bool _modifyQueued;
-
-        private async Task UpdateControlMessage(bool background = false) {
-            if (IsConstructing || ControlMessage == null)
-                return;
-
-            //Not thread safe method cuz in this case, thread safety is a waste of time
-            if (this._modifyAsync?.IsCompleted ?? true) {
-                UpdateInternal();
-            }
-            else if (!background) {
-                if (_modifyQueued)
-                    return;
-                try {
-                    _modifyQueued = true;
-                    await this._modifyAsync;
-                    UpdateInternal();
-                }
-                finally {
-                    _modifyQueued = false;
-                }
-            }
-
-            void UpdateInternal() {
-                this._modifyAsync = ControlMessage?.ModifyAsync(properties => {
-                    properties.Embed = EmbedBuilder.Build();
-                    properties.Content = "";
-                });
-            }
-        }
-
-        public void UpdateProgress(bool background = false) {
-            var playingState = State switch {
-                PlayerState.Playing => CommonEmojiStrings.Instance.Play,
-                PlayerState.Paused  => CommonEmojiStrings.Instance.Pause,
-                _                   => CommonEmojiStrings.Instance.Stop
-            };
-            var repeatState = LoopingState switch {
-                LoopingState.One => CommonEmojiStrings.Instance.RepeatOnce,
-                LoopingState.All => CommonEmojiStrings.Instance.Repeat,
-                LoopingState.Off => CommonEmojiStrings.Instance.RepeatOff,
-                _                => ""
-            };
-            var progress = Convert.ToInt32(TrackPosition.TotalSeconds / CurrentTrack.Duration.TotalSeconds * 100);
-            var requester = CurrentTrack is AuthoredLavalinkTrack authoredLavalinkTrack ? authoredLavalinkTrack.GetRequester() : "Unknown";
-            EmbedBuilder.Fields[0].Name = Loc.Get("Music.RequestedBy").Format(requester);
-            EmbedBuilder.Fields[0].Value = GetProgressString(progress) + "\n" + GetProgressInfo();
-                
-            UpdateControlMessage(background);
-
-            string GetProgressInfo() {
-                var sb = new StringBuilder("");
-                if ((int) TrackPosition.TotalHours != 0)
-                    sb.Append((int)TrackPosition.TotalHours + ":");
-                sb.Append($"{TrackPosition:mm':'ss} / ");
-                if ((int) CurrentTrack.Duration.TotalHours != 0)
-                    sb.Append((int)CurrentTrack.Duration.TotalHours + ":");
-                sb.Append($"{CurrentTrack.Duration:mm':'ss}");
-                var space = new string(' ', Math.Max(0, (22 - sb.Length) / 2));
-                return playingState + '`' + space + sb + space + '`' + repeatState;
-            }
-
-            static string GetProgressString(int progress) {
-                var builder = new StringBuilder();
-                builder.Append(ProgressEmoji.Start.GetEmoji(progress));
-                progress -= 10;
-                for (var i = 0; i < 8; i++) {
-                    builder.Append(ProgressEmoji.Intermediate.GetEmoji(progress));
-                    progress -= 10;
-                }
-
-                builder.Append(ProgressEmoji.End.GetEmoji(progress));
-                return builder.ToString();
-            }
-        }
-
-        public void UpdateParameters() {
-            EmbedBuilder.Fields[1].Value = $"🔉 {Convert.ToInt32(Volume * 100f)}%\n" +
-                                           $"🅱️ {BassBoostMode}";
-            UpdateControlMessage();
-        }
-
-        private void UpdatePlaylist() {
-            _playlistString = GetPlaylistString(Playlist, CurrentTrackIndex);
-            UpdateQueue();
-        }
-
-        private void UpdateQueue() {
-            EmbedBuilder.Fields[2].Name = Loc.Get("Music.Queue").Format(CurrentTrackIndex + 1, Playlist.Count);
-            EmbedBuilder.Fields[2].Value = _playlistString;
-            UpdateControlMessage();
-        }
-
         public void WriteToQueueHistory(string entry) {
             _queueHistory.AppendLine("- " + entry);
             if (_queueHistory.Length > 512) {
@@ -245,8 +160,7 @@ namespace Bot.Music {
                 if (indexOf >= 0) _queueHistory.Remove(0, indexOf + Environment.NewLine.Length);
             }
 
-            EmbedBuilder.Fields[3].Value = Utilities.Utilities.SplitToLines(_queueHistory.ToString(), 60)
-                                                    .JoinToString("\n").Replace("\n\n", "\n");
+            EmbedBuilder.Fields[3].Value = _queueHistory.ToString().Replace("\n\n", "\n");
             UpdateControlMessage();
         }
 
@@ -300,8 +214,89 @@ namespace Bot.Music {
             }
         }
 
-        private CollectorsGroup _collectorsGroup;
+        public async Task OnNodeDropped() {
+            var oldControlMessage = ControlMessage;
+            ControlMessage = null;
+            var playlist = GetExportPlaylist(ExportPlaylistOptions.AllData);
+            var storedPlaylist = new StoredPlaylist {
+                Tracks = playlist.Tracks, TrackIndex = playlist.TrackIndex, TrackPosition = playlist.TrackPosition,
+                Id = "a" + ObjectId.NewObjectId()
+            };
+            GlobalDB.Playlists.Insert(storedPlaylist);
 
+            var embedBuilder = new EmbedBuilder();
+            embedBuilder.WithTitle(Loc.Get("Music.PlaybackStopped"))
+                        .WithDescription(Loc.Get("Music.PlayerDropped")
+                                            .Format(GuildConfig.Get(GuildId).Prefix, storedPlaylist.Id, CommonEmoji.LegacyPlayPause));
+
+            //Waiting for an end of previous modifying
+            await _modifyAsync;
+            oldControlMessage?.ModifyAsync(properties => {
+                properties.Embed = embedBuilder.Build();
+                properties.Content = null;
+            });
+            _collectorsGroup?.DisposeAll();
+            oldControlMessage?.RemoveAllReactionsAsync();
+
+            CollectorsUtils.CollectReaction(oldControlMessage, reaction => reaction.Emote.Equals(CommonEmoji.LegacyPlayPause), async args => {
+                args.RemoveReason();
+                await Program.Handler.ExecuteCommand($"loadplaylist {storedPlaylist.Id}",
+                    new ControllableCommandContext(Program.Client, oldControlMessage)
+                        {User = args.Reaction.User.GetValueOrDefault(Program.Client.GetUser(args.Reaction.UserId))},
+                    args.Reaction.UserId.ToString());
+            }, CollectorFilter.IgnoreBots);
+            await oldControlMessage.AddReactionAsync(CommonEmoji.LegacyPlayPause);
+            Dispose();
+        }
+
+        public void EnsurePlaying() {
+            // try {
+            //     EnsureConnected();
+            //     EnsureNotDestroyed();
+            // }
+            // catch (Exception e) {
+            //     Dispose();
+            // }
+        }
+
+        #region Playlists
+
+        public override async Task ImportPlaylist(ExportPlaylist playlist, ImportPlaylistOptions options, string requester) {
+            var tracks = playlist.Tracks.Select(s => TrackDecoder.DecodeTrack(s))
+                                 .Select(track => AuthoredLavalinkTrack.FromLavalinkTrack(track, requester)).ToList();
+            if (options == ImportPlaylistOptions.Replace) {
+                try {
+                    await StopAsync();
+                    WriteToQueueHistory(Loc.Get("Music.ImportPlayerStop"));
+                }
+                catch (Exception) {
+                    // ignored
+                }
+
+                if (!Playlist.IsEmpty) {
+                    Playlist.Clear();
+                    WriteToQueueHistory(Loc.Get("Music.ClearPlaylist").Format(requester));
+                }
+            }
+
+            Playlist.AddRange(tracks);
+            WriteToQueueHistory(Loc.Get("Music.AddTracks").Format(requester, tracks.Count));
+
+            if (options != ImportPlaylistOptions.JustAdd) {
+                await PlayAsync(playlist.TrackIndex == -1 ? tracks.First() : tracks[playlist.TrackIndex], false, playlist.TrackPosition);
+                WriteToQueueHistory(Loc.Get("MusicQueues.Jumped")
+                                       .Format(requester, CurrentTrackIndex + 1, CurrentTrack.Title.SafeSubstring(0, 40) + "..."));
+            }
+            else if (State == PlayerState.NotPlaying) {
+                await PlayAsync(Playlist[0], false);
+            }
+        }
+
+        #endregion
+
+        #region Emoji
+
+        private CollectorsGroup _collectorsGroup;
         private void SetupControlReactions() {
             if (IsConstructing)
                 return;
@@ -369,69 +364,131 @@ namespace Bot.Music {
             });
         }
 
-        public override async Task ImportPlaylist(ExportPlaylist playlist, ImportPlaylistOptions options, string requester) {
-            var tracks = playlist.Tracks.Select(s => TrackDecoder.DecodeTrack(s))
-                                 .Select(track => AuthoredLavalinkTrack.FromLavalinkTrack(track, requester)).ToList();
-            if (options == ImportPlaylistOptions.Replace) {
+        #endregion
+
+        #region Embed updates
+
+        private Task _modifyAsync;
+        private bool _modifyQueued;
+
+        private async Task UpdateControlMessage(bool background = false) {
+            if (IsConstructing || ControlMessage == null)
+                return;
+
+            //Not thread safe method cuz in this case, thread safety is a waste of time
+            if (this._modifyAsync?.IsCompleted ?? true) {
+                UpdateInternal();
+            }
+            else if (!background) {
+                if (_modifyQueued)
+                    return;
                 try {
-                    await StopAsync();
-                    WriteToQueueHistory(Loc.Get("Music.ImportPlayerStop"));
+                    _modifyQueued = true;
+                    await this._modifyAsync;
+                    UpdateInternal();
                 }
-                catch (Exception) {
-                    // ignored
-                }
-
-                if (!Playlist.IsEmpty) {
-                    Playlist.Clear();
-                    WriteToQueueHistory(Loc.Get("Music.ClearPlaylist").Format(requester));
+                finally {
+                    _modifyQueued = false;
                 }
             }
 
-            Playlist.AddRange(tracks);
-            WriteToQueueHistory(Loc.Get("Music.AddTracks").Format(requester, tracks.Count));
-
-            if (options != ImportPlaylistOptions.JustAdd) {
-                await PlayAsync(playlist.TrackIndex == -1 ? tracks.First() : tracks[playlist.TrackIndex], false, playlist.TrackPosition);
-                WriteToQueueHistory(Loc.Get("MusicQueues.Jumped")
-                                       .Format(requester, CurrentTrackIndex + 1, CurrentTrack.Title.SafeSubstring(0, 40) + "..."));
-            }else if (State == PlayerState.NotPlaying) {
-                await PlayAsync(Playlist[0], false);
+            void UpdateInternal() {
+                this._modifyAsync = ControlMessage?.ModifyAsync(properties => {
+                    properties.Embed = EmbedBuilder.Build();
+                    properties.Content = "";
+                });
             }
         }
 
-        public async Task OnNodeDropped() {
-            var oldControlMessage = ControlMessage;
-            ControlMessage = null;
-            var playlist = GetExportPlaylist(ExportPlaylistOptions.AllData);
-            var storedPlaylist = new StoredPlaylist {
-                Tracks = playlist.Tracks, TrackIndex = playlist.TrackIndex, TrackPosition = playlist.TrackPosition,
-                Id = "a" + ObjectId.NewObjectId()
-            };
-            GlobalDB.Playlists.Insert(storedPlaylist);
+        public void UpdateProgress(bool background = false) {
+            if (CurrentTrack != null) {
+                var playingState = State switch {
+                    PlayerState.Playing => CommonEmojiStrings.Instance.Play,
+                    PlayerState.Paused  => CommonEmojiStrings.Instance.Pause,
+                    _                   => CommonEmojiStrings.Instance.Stop
+                };
+                var repeatState = LoopingState switch {
+                    LoopingState.One => CommonEmojiStrings.Instance.RepeatOnce,
+                    LoopingState.All => CommonEmojiStrings.Instance.Repeat,
+                    LoopingState.Off => CommonEmojiStrings.Instance.RepeatOff,
+                    _                => ""
+                };
+                var progress = Convert.ToInt32(TrackPosition.TotalSeconds / CurrentTrack.Duration.TotalSeconds * 100);
+                var requester = CurrentTrack is AuthoredLavalinkTrack authoredLavalinkTrack ? authoredLavalinkTrack.GetRequester() : "Unknown";
+                EmbedBuilder.Fields[0].Name = Loc.Get("Music.RequestedBy").Format(requester);
+                EmbedBuilder.Fields[0].Value = GetProgressString(progress) + "\n" + GetProgressInfo(playingState, repeatState);
+            }
+            else {
+                EmbedBuilder.Fields[0].Name = Loc.Get("Music.Playback");
+                EmbedBuilder.Fields[0].Value = Loc.Get("Music.PlaybackNothingPlaying");
+            }
 
-            var embedBuilder = new EmbedBuilder();
-            embedBuilder.WithTitle(Loc.Get("Music.PlaybackStopped"))
-                        .WithDescription(Loc.Get("Music.PlayerDropped")
-                                            .Format(GuildConfig.Get(GuildId).Prefix, storedPlaylist.Id, CommonEmoji.LegacyPlayPause));
+            UpdateControlMessage(background);
 
-            //Waiting for an end of previous modifying
-            await _modifyAsync;
-            oldControlMessage?.ModifyAsync(properties => {
-                properties.Embed = embedBuilder.Build();
-                properties.Content = null;
-            });
-            _collectorsGroup?.DisposeAll();
-            oldControlMessage?.RemoveAllReactionsAsync();
+            string GetProgressInfo(string playingState, string repeatState) {
+                var sb = new StringBuilder("");
+                if ((int) TrackPosition.TotalHours != 0)
+                    sb.Append((int) TrackPosition.TotalHours + ":");
+                sb.Append($"{TrackPosition:mm':'ss} / ");
+                if ((int) CurrentTrack.Duration.TotalHours != 0)
+                    sb.Append((int) CurrentTrack.Duration.TotalHours + ":");
+                sb.Append($"{CurrentTrack.Duration:mm':'ss}");
+                var space = new string(' ', Math.Max(0, (22 - sb.Length) / 2));
+                return playingState + '`' + space + sb + space + '`' + repeatState;
+            }
 
-            CollectorsUtils.CollectReaction(oldControlMessage, reaction => reaction.Emote.Equals(CommonEmoji.LegacyPlayPause), async args => {
-                args.RemoveReason();
-                await Program.Handler.ExecuteCommand($"loadplaylist {storedPlaylist.Id}",
-                    new ControllableCommandContext(Program.Client, oldControlMessage)
-                        {User = args.Reaction.User.GetValueOrDefault(Program.Client.GetUser(args.Reaction.UserId))},
-                    args.Reaction.UserId.ToString());
-            }, CollectorFilter.IgnoreBots);
-            await oldControlMessage.AddReactionAsync(CommonEmoji.LegacyPlayPause);
-            Dispose();
+            static string GetProgressString(int progress) {
+                var builder = new StringBuilder();
+                builder.Append(ProgressEmoji.Start.GetEmoji(progress));
+                progress -= 10;
+                for (var i = 0; i < 8; i++) {
+                    builder.Append(ProgressEmoji.Intermediate.GetEmoji(progress));
+                    progress -= 10;
+                }
+
+                builder.Append(ProgressEmoji.End.GetEmoji(progress));
+                return builder.ToString();
+            }
         }
+        
+        public void UpdateTrackInfo() {
+            if (State != PlayerState.NotPlaying) {
+                var iconUrl =
+                    $"https://img.youtube.com/vi/{(string.IsNullOrWhiteSpace(CurrentTrack.TrackIdentifier) ? "" : CurrentTrack.TrackIdentifier)}/0.jpg";
+                EmbedBuilder?.WithAuthor(string.IsNullOrWhiteSpace(CurrentTrack.Author) ? "Unknown" : CurrentTrack.Author.SafeSubstring(0, 250), iconUrl)
+                            ?.WithTitle(CurrentTrack.Title.SafeSubstring(0, 250))?.WithUrl(CurrentTrack.Source);
+            }
+            else {
+                EmbedBuilder.Author = null;
+                EmbedBuilder.Title = Loc.Get("Music.Waiting");
+                EmbedBuilder.Url = "";
+            }
+        }
+
+        public void UpdateParameters() {
+            EmbedBuilder.Fields[1].Value = $"🔉 {Convert.ToInt32(Volume * 100f)}%\n" +
+                                           $"🅱️ {BassBoostMode}";
+            UpdateControlMessage();
+        }
+
+        private void UpdatePlaylist() {
+            _playlistString = GetPlaylistString(Playlist, CurrentTrackIndex);
+            UpdateQueue();
+        }
+
+        private void UpdateQueue() {
+            if (Playlist.Count == 0) {
+                EmbedBuilder.Fields[2].Name = Loc.Get("Music.QueueEmptyTitle");
+                EmbedBuilder.Fields[2].Value = Loc.Get("Music.QueueEmpty").Format(GuildConfig.Prefix);
+            }
+            else {
+                EmbedBuilder.Fields[2].Name = Loc.Get("Music.Queue").Format(CurrentTrackIndex + 1, Playlist.Count);
+                EmbedBuilder.Fields[2].Value = _playlistString;
+            }
+
+            UpdateControlMessage();
+        }
+
+        #endregion
     }
 }
