@@ -67,7 +67,7 @@ namespace Bot.Music {
             }
 
             await base.OnTrackEndAsync(eventArgs);
-            
+
             UpdateTrackInfo();
             await UpdateControlMessage();
             // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
@@ -249,16 +249,6 @@ namespace Bot.Music {
             Dispose();
         }
 
-        public void EnsurePlaying() {
-            // try {
-            //     EnsureConnected();
-            //     EnsureNotDestroyed();
-            // }
-            // catch (Exception e) {
-            //     Dispose();
-            // }
-        }
-
         #region Playlists
 
         public override async Task ImportPlaylist(ExportPlaylist playlist, ImportPlaylistOptions options, string requester) {
@@ -297,6 +287,7 @@ namespace Bot.Music {
         #region Emoji
 
         private CollectorsGroup _collectorsGroup;
+
         private void SetupControlReactions() {
             if (IsConstructing)
                 return;
@@ -367,6 +358,13 @@ namespace Bot.Music {
         #endregion
 
         #region Embed updates
+
+        public override void UpdatePlayer() {
+            base.UpdatePlayer();
+            if (UpdatePlayback) {
+                UpdateProgress();
+            }
+        }
 
         private Task _modifyAsync;
         private bool _modifyQueued;
@@ -450,7 +448,7 @@ namespace Bot.Music {
                 return builder.ToString();
             }
         }
-        
+
         public void UpdateTrackInfo() {
             if (State != PlayerState.NotPlaying) {
                 var iconUrl =

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -11,7 +12,7 @@ namespace Bot.Music.Players {
     public static class EmbedPlaybackControl {
         private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
         private static Timer _timer;
-        private static readonly Thread UpdateThread = new Thread(Update);
+        private static readonly Thread UpdateThread = new Thread(UpdateCycle);
         public static readonly ObservableCollection<EmbedPlaybackPlayer> PlaybackPlayers = new ObservableCollection<EmbedPlaybackPlayer>();
 
         static EmbedPlaybackControl() {
@@ -19,25 +20,29 @@ namespace Bot.Music.Players {
             UpdateThread.Start();
         }
 
-        private static void Update() {
+        private static void UpdateCycle() {
             while (true) {
                 var waitCycle = WaitCycle();
                 var embedPlaybackPlayers = PlaybackPlayers.ToList();
                 for (var i = 0; i < embedPlaybackPlayers.Count; i++) {
                     var embedPlaybackPlayer = embedPlaybackPlayers[i];
+                    if (embedPlaybackPlayer == null) {
+                        embedPlaybackPlayers.RemoveAt(i);
+                        continue;
+                    }
+
                     try {
-                        if (embedPlaybackPlayer.UpdatePlayback) {
-                            embedPlaybackPlayer.UpdateProgress(true);
-                        }
+                        embedPlaybackPlayer.UpdatePlayer();
                     }
                     catch (Exception e) {
-                        logger.Error(e, "Exception while updating playback");
+                        if (!(e is ObjectDisposedException))
+                            logger.Error(e, "Unhandled exception in player update loop");
+                        embedPlaybackPlayers.Remove(embedPlaybackPlayer);
                     }
                 }
 
                 waitCycle.GetAwaiter().GetResult();
             }
-
             // ReSharper disable once FunctionNeverReturns
         }
 
