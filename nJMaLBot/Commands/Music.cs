@@ -15,6 +15,7 @@ using Discord.Commands;
 using Lavalink4NET.Player;
 using Lavalink4NET.Rest;
 using LiteDB;
+using Tyrrrz.Extensions;
 
 #pragma warning disable 4014
 
@@ -479,6 +480,30 @@ namespace Bot.Commands {
             Player.BassBoostMode = mode;
             Player.UpdateParameters();
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.BassBoostUpdated").Format(Context.User.Username, mode));
+        }
+
+        [Command("changenode", RunMode = RunMode.Async)]
+        [Alias("newnode", "switchnode")]
+        [Summary("changenode0s")]
+        public async Task ChangeNode() {
+            if (!await IsPreconditionsValid)
+                return;
+
+            if (MusicUtils.Cluster.Nodes.Count <= 1) {
+                ReplyFormattedAsync(Loc.Get("Music.OnlyOneNode"), true);
+                return;
+            }
+
+            var currentNode = MusicUtils.Cluster.GetServingNode(Context.Guild.Id);
+            var newNode = MusicUtils.Cluster.Nodes.Where(node => node.IsConnected).Where(node => node != currentNode).RandomOrDefault();
+            if (newNode == null) {
+                ReplyFormattedAsync(Loc.Get("Music.OnlyOneNode"), true);
+                return;
+            }
+
+            await currentNode.MovePlayerAsync(Player, newNode);
+            Player.WriteToQueueHistory(Loc.Get("MusicQueues.NodeChanged").Format(Context.User.Username, newNode.Label));
+            Player.UpdateNodeName();
         }
     }
 }

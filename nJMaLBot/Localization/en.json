@@ -18,7 +18,8 @@
     "Remove" : "**{0}** deletes the `{1}` track - `{2}`",
     "RemoveRange" : "**{0}** deletes the `{1}` tracks. From `{2}` to `{3}`",
     "TrackMoved" : "**{0}** moves the `{0}` track to `{1}` position",
-    "BassBoostUpdated" : "**{0}** set the bass boost mode: `{1}`"
+    "BassBoostUpdated" : "**{0}** set the bass boost mode: `{1}`",
+    "NodeChanged" : "**{0}** moves playback to a new node: `{1}`"
   },
   "Music" : {
     "RequestHistory" : "Request history",
@@ -62,7 +63,8 @@
     "CantConnect" : "The bot cannot join your voice channel `{0}`",
     "Parameters" : "Parameters",
     "PlaybackNothingPlaying" : "Nothing playing",
-    "Waiting" : "Waiting..."
+    "Waiting" : "Waiting...",
+    "OnlyOneNode" : "Unfortunately, only the node you are using is available to the bot right now"
   },
   "Groups": {
     "music" : "Music",
@@ -131,7 +133,8 @@
     "move0_0s" : "Track Index",
     "move0_1s" : "Desired queue position",
     "bassboost0s" : "Lets you toggle the bass boost",
-    "bassboost0_0s" : "Bass boost mode: `Off`, `Low`, `Medium`, `High`, `Extreme`"
+    "bassboost0_0s" : "Bass boost mode: `Off`, `Low`, `Medium`, `High`, `Extreme`",
+    "changenode0s" : "Attempts to move playback to another music node. May help if current lags"
   },
   "CommandHandler": {
     "FailedTitle": "Error executing command",
