@@ -41,13 +41,7 @@ namespace Bot.Music {
                 logger.Log(logLevel, args.Message);
             };
 
-            var nodes = new List<LavalinkNodeOptions>(GlobalConfig.Instance.LavalinkNodes.Select(instanceLavalinkNode =>
-                new LavalinkNodeOptions {
-                    RestUri = instanceLavalinkNode.RestUri,
-                    WebSocketUri = instanceLavalinkNode.WebSocketUri,
-                    Password = instanceLavalinkNode.Password,
-                    DisconnectOnStop = false
-                }));
+            var nodes = new List<LavalinkNodeOptions>(GlobalConfig.Instance.LavalinkNodes.Select(instanceLavalinkNode => instanceLavalinkNode.ToOptions()));
 
             if (nodes.Count != 0) {
                 logger.Info("Start building music cluster");
@@ -85,12 +79,20 @@ namespace Bot.Music {
             var player = args.Player as EmbedPlaybackPlayer;
             if (args.CouldBeMoved) {
                 player.WriteToQueueHistory(player.Loc.Get("Music.PlayerMoved"));
+                player.UpdateNodeName();
             }
             else {
                 player.OnNodeDropped();
             }
 
             return Task.CompletedTask;
+        }
+
+        public static async Task<EmbedPlaybackPlayer> JoinChannel(ulong guildId, ulong voiceChannelId) {
+            var player = await Cluster.JoinAsync(() => new EmbedPlaybackPlayer(guildId), guildId, voiceChannelId);
+            player.UpdateNodeName();
+            EmbedPlaybackControl.PlaybackPlayers.Add(player);
+            return player;
         }
 
         public static bool IsValidUrl(string query) {

@@ -487,6 +487,11 @@ namespace Bot.Music {
             UpdateControlMessage();
         }
 
+        public void UpdateNodeName() {
+            var currentNode = MusicUtils.Cluster.GetServingNode(GuildId);
+            EmbedBuilder.WithFooter($"Powered by {Program.Client.CurrentUser.Username} | {currentNode.Label}");
+        }
+
         #endregion
     }
 }
