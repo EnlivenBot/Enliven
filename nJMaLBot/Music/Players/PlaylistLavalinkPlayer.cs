@@ -77,22 +77,17 @@ namespace Bot.Music.Players {
             }
         }
 
-        public virtual void Cleanup() {
-            Playlist.Clear();
-            CurrentTrackIndex = 0;
-        }
-
         public override async Task DisconnectAsync() {
-            Cleanup();
             await base.DisconnectAsync();
         }
 
-        public override Task StopAsync(bool disconnect = false) {
-            if (disconnect) Cleanup();
-            return base.StopAsync(disconnect);
+        public override void Dispose() {
+            Playlist.Clear();
+            CurrentTrackIndex = 0;
+            base.Dispose();
         }
 
-        public virtual ExportPlaylist GetExportPlaylist(ExportPlaylistOptions options) {
+        public virtual ExportPlaylist ExportPlaylist(ExportPlaylistOptions options) {
             var exportPlaylist = new ExportPlaylist {Tracks = Playlist.Select(track => track.Identifier).ToList()};
             if (options != ExportPlaylistOptions.IgnoreTrackIndex) {
                 exportPlaylist.TrackIndex = CurrentTrackIndex;

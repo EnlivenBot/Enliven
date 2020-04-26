@@ -93,8 +93,37 @@ namespace Bot.Music {
             UpdateProgress();
         }
 
-        public override void Dispose() {
-            Cleanup();
+        public async Task Dispose(LocalizedEntry reason, bool needSave = true) {
+            await Dispose(reason.Get(Loc), needSave);
+        }
+
+        public async Task Dispose(string reason, bool needSave = true) {
+            if (ControlMessage != null) {
+                var oldControlMessage = ControlMessage;
+                ControlMessage = null;
+                var embedBuilder = new EmbedBuilder()
+                                  .WithTitle(Loc.Get("Music.PlaybackStopped"))
+                                  .WithDescription(reason);
+                if (needSave) {
+                    var exportPlaylist = ExportPlaylist(ExportPlaylistOptions.AllData);
+                    var storedPlaylist = exportPlaylist.StorePlaylist("a" + ObjectId.NewObjectId());
+                    embedBuilder.Description += Loc.Get("Music.ResumeViaPlaylists").Format(GuildConfig.Get(GuildId).Prefix, storedPlaylist.Id);
+                }
+                else {
+                    oldControlMessage.DelayedDelete(TimeSpan.FromMinutes(10));
+                }
+
+                await _modifyAsync;
+                oldControlMessage?.ModifyAsync(properties => {
+                    properties.Embed = embedBuilder.Build();
+                    properties.Content = null;
+                });
+                _collectorsGroup?.DisposeAll();
+                oldControlMessage?.RemoveAllReactionsAsync();
+            }
+
+            UpdatePlayback = false;
+            
             try {
                 EmbedPlaybackControl.PlaybackPlayers.Remove(this);
                 base.Dispose();
@@ -104,40 +133,11 @@ namespace Bot.Music {
             }
         }
 
-        public override void Cleanup() {
-            UpdatePlayback = false;
-            if (ControlMessage != null) {
-                var embedBuilder = new EmbedBuilder();
-                embedBuilder.WithTitle(Loc.Get("Music.Playback"))
-                            .WithDescription(Loc.Get("Music.PlaybackDisposed"))
-                            .WithColor(Color.Gold);
-                ControlMessage?.ModifyAsync(properties => {
-                    properties.Embed = embedBuilder.Build();
-                    properties.Content = null;
-                });
-                _collectorsGroup?.DisposeAll();
-                ControlMessage?.RemoveAllReactionsAsync();
-                ControlMessage?.DelayedDelete(TimeSpan.FromMinutes(10));
-                ControlMessage = null;
-            }
-
-            base.Cleanup();
+        public override void Dispose() {
+            Dispose(Loc.Get("Music.PlaybackStopped"));
+            base.Dispose();
         }
-
-        public void PrepareShutdown(string reason) {
-            var embedBuilder = new EmbedBuilder();
-            embedBuilder.WithTitle(Loc.Get("Music.PlaybackStopped"))
-                        .WithDescription(reason);
-            ControlMessage?.ModifyAsync(properties => {
-                properties.Embed = embedBuilder.Build();
-                properties.Content = null;
-            });
-            _collectorsGroup?.DisposeAll();
-            ControlMessage?.RemoveAllReactionsAsync();
-            ControlMessage.DelayedDelete(TimeSpan.FromMinutes(10));
-            ControlMessage = null;
-        }
-
+        
         public override async Task<int> PlayAsync(LavalinkTrack track, bool enqueue, TimeSpan? startTime = null, TimeSpan? endTime = null,
                                                   bool noReplace = false) {
             var toReturn = await base.PlayAsync(track, enqueue, startTime, endTime, noReplace);
@@ -212,41 +212,6 @@ namespace Bot.Music {
             catch (Exception) {
                 return "Failed";
             }
-        }
-
-        public async Task OnNodeDropped() {
-            var oldControlMessage = ControlMessage;
-            ControlMessage = null;
-            var playlist = GetExportPlaylist(ExportPlaylistOptions.AllData);
-            var storedPlaylist = new StoredPlaylist {
-                Tracks = playlist.Tracks, TrackIndex = playlist.TrackIndex, TrackPosition = playlist.TrackPosition,
-                Id = "a" + ObjectId.NewObjectId()
-            };
-            GlobalDB.Playlists.Insert(storedPlaylist);
-
-            var embedBuilder = new EmbedBuilder();
-            embedBuilder.WithTitle(Loc.Get("Music.PlaybackStopped"))
-                        .WithDescription(Loc.Get("Music.PlayerDropped")
-                                            .Format(GuildConfig.Get(GuildId).Prefix, storedPlaylist.Id, CommonEmoji.LegacyPlayPause));
-
-            //Waiting for an end of previous modifying
-            await _modifyAsync;
-            oldControlMessage?.ModifyAsync(properties => {
-                properties.Embed = embedBuilder.Build();
-                properties.Content = null;
-            });
-            _collectorsGroup?.DisposeAll();
-            oldControlMessage?.RemoveAllReactionsAsync();
-
-            CollectorsUtils.CollectReaction(oldControlMessage, reaction => reaction.Emote.Equals(CommonEmoji.LegacyPlayPause), async args => {
-                args.RemoveReason();
-                await Program.Handler.ExecuteCommand($"loadplaylist {storedPlaylist.Id}",
-                    new ControllableCommandContext(Program.Client, oldControlMessage)
-                        {User = args.Reaction.User.GetValueOrDefault(Program.Client.GetUser(args.Reaction.UserId))},
-                    args.Reaction.UserId.ToString());
-            }, CollectorFilter.IgnoreBots);
-            await oldControlMessage.AddReactionAsync(CommonEmoji.LegacyPlayPause);
-            Dispose();
         }
 
         #region Playlists

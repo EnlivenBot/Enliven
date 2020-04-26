@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Bot.Config;
+using Bot.Config.Localization;
 using Bot.Music.Players;
 using Bot.Utilities;
 using Discord;
@@ -61,9 +62,11 @@ namespace Bot.Music {
                         }, _lavalinkLogger);
                     inactivityTrackingService.InactivePlayer += async (sender, args) => {
                         if (args.Player is EmbedPlaybackPlayer embedPlaybackPlayer) {
-                            embedPlaybackPlayer.PrepareShutdown(embedPlaybackPlayer.Loc.Get("Music.NoListenersLeft"));
+                            embedPlaybackPlayer.Dispose(new LocalizedEntry("Music.NoListenersLeft"), false);
                         }
                     };
+                    
+                    AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
                 }
                 catch (Exception e) {
                     logger.Fatal(e, "Exception with music cluster");
@@ -75,6 +78,12 @@ namespace Bot.Music {
             }
         }
 
+        private static void OnProcessExit(object? sender, EventArgs e) {
+            foreach (var embedPlaybackPlayer in Cluster.GetPlayers<EmbedPlaybackPlayer>()) {
+                embedPlaybackPlayer.Dispose();
+            }
+        }
+
         private static Task ClusterOnPlayerMoved(object sender, PlayerMovedEventArgs args) {
             var player = args.Player as EmbedPlaybackPlayer;
             if (args.CouldBeMoved) {
@@ -82,7 +91,7 @@ namespace Bot.Music {
                 player.UpdateNodeName();
             }
             else {
-                player.OnNodeDropped();
+                player.Dispose(new LocalizedEntry("Music.PlayerDropped"));
             }
 
             return Task.CompletedTask;

@@ -59,8 +59,7 @@ namespace Bot.Commands {
                 return;
             }
 
-            Player.PrepareShutdown(Loc.Get("Music.UserStopPlayback").Format(Context.User.Username));
-            await Player.StopAsync(true);
+            Player.Dispose(Loc.Get("Music.UserStopPlayback").Format(Context.User.Username), false);
         }
 
         [Command("jump", RunMode = RunMode.Async)]
@@ -230,7 +229,7 @@ namespace Bot.Commands {
                 return;
             }
 
-            var playlist = Player.GetExportPlaylist(ExportPlaylistOptions.IgnoreTrackIndex);
+            var playlist = Player.ExportPlaylist(ExportPlaylistOptions.IgnoreTrackIndex);
             var storedPlaylist = new StoredPlaylist {
                 Tracks = playlist.Tracks, TrackIndex = playlist.TrackIndex, TrackPosition = playlist.TrackPosition,
                 Id = "u" + ObjectId.NewObjectId()
