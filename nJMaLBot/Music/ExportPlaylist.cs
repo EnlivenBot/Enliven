@@ -9,10 +9,10 @@ namespace Bot.Music {
         public int TrackIndex { get; set; } = -1;
         public TimeSpan? TrackPosition { get; set; }
 
-        public StoredPlaylist StorePlaylist(object id) {
+        public StoredPlaylist StorePlaylist(object id, ulong authorId) {
             var storedPlaylist = new StoredPlaylist {
                 Tracks = Tracks, TrackIndex = TrackIndex, TrackPosition = TrackPosition,
-                Id = id
+                Id = id, AuthorId = authorId, CreationTime = DateTime.Now
             };
             
             GlobalDB.Playlists.Upsert(storedPlaylist);
@@ -23,6 +23,8 @@ namespace Bot.Music {
 
     public class StoredPlaylist : ExportPlaylist {
         [BsonId] public object Id { get; set; }
+        public DateTime CreationTime { get; set; }
+        public ulong AuthorId { get; set; }
     }
 
     public enum ExportPlaylistOptions {

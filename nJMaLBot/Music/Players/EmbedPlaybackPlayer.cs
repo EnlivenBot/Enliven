@@ -106,7 +106,7 @@ namespace Bot.Music {
                                   .WithDescription(reason);
                 if (needSave) {
                     var exportPlaylist = ExportPlaylist(ExportPlaylistOptions.AllData);
-                    var storedPlaylist = exportPlaylist.StorePlaylist("a" + ObjectId.NewObjectId());
+                    var storedPlaylist = exportPlaylist.StorePlaylist("a" + ObjectId.NewObjectId(), 0);
                     embedBuilder.Description += Loc.Get("Music.ResumeViaPlaylists").Format(GuildConfig.Get(GuildId).Prefix, storedPlaylist.Id);
                 }
                 else {
