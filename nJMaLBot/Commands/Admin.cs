@@ -18,7 +18,7 @@ namespace Bot.Commands {
         [Summary("setprefix0s")]
         public async Task SetPrefix([Summary("setrefix0_0s")] string prefix) {
             GuildConfig.Get(Context.Guild.Id).SetServerPrefix(prefix).Save();
-            await (await GetResponseChannel()).SendMessageAsync(Loc.Get("Commands.SetPrefixResponse").Format(prefix));
+            await ReplyFormattedAsync(Loc.Get("Commands.Success"), Loc.Get("Commands.SetPrefixResponse").Format(prefix), TimeSpan.FromMinutes(10));
             Context.Message.SafeDelete();
         }
 
@@ -28,15 +28,11 @@ namespace Bot.Commands {
             if (Localization.Languages.ContainsKey(language)) {
                 GuildConfig.Get(Context.Guild.Id).SetLanguage(language).Save();
                 Context.Message.SafeDelete();
-                (await (await GetResponseChannel()).SendMessageAsync(Localization.Get(Context.Guild.Id, "Localization.Success").Format(language)))
-                   .DelayedDelete(
-                        TimeSpan.FromMinutes(1));
+                await ReplyFormattedAsync(Loc.Get("Commands.Success"), Loc.Get("Localization.Success").Format(language), TimeSpan.FromMinutes(1));
             }
             else {
-                (await (await GetResponseChannel()).SendMessageAsync(Localization.Get(Context.Guild.Id, "Localization.Fail")
-                                                                                 .Format(language,
-                                                                                      string.Join(' ', Localization.Languages.Select(pair => $"`{pair.Key}`"))))
-                    ).DelayedDelete(TimeSpan.FromMinutes(1));
+                var languagesList = string.Join(' ', Localization.Languages.Select(pair => $"`{pair.Key}`"));
+                await ReplyFormattedAsync(Loc.Get("Commands.Fail"), Loc.Get("Localization.Fail").Format(language, languagesList), TimeSpan.FromMinutes(1));
             }
         }
 
@@ -45,7 +41,7 @@ namespace Bot.Commands {
         public async Task SetChannel([Summary("setchannel0_0s")] ChannelFunction func,
                                      [Summary("setchannel0_1s")] IChannel channel) {
             GuildConfig.Get(Context.Guild.Id).SetChannel(channel.Id.ToString(), func).Save();
-            await (await GetResponseChannel()).SendMessageAsync(Loc.Get("Commands.SetChannelResponse").Format(channel.Id, func.ToString()));
+            await ReplyFormattedAsync(Loc.Get("Commands.Success"), Loc.Get("Commands.SetChannelResponse").Format(channel.Id, func.ToString()));
             Context.Message.SafeDelete();
         }
 
@@ -54,7 +50,7 @@ namespace Bot.Commands {
         public async Task SetThisChannel([Summary("setchannel0_1s")] ChannelFunction func) {
             await SetChannel(func, Context.Channel);
         }
-        
+
         [Command("clearhistories", RunMode = RunMode.Async)]
         [Summary("clearhistories0s")]
         public async Task ClearHistories() {

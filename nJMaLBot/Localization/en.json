@@ -5,7 +5,7 @@
   "Data": {
     "Localization": {
       "LocalizationEmpty": "***You didn't select bot's localization on the server.***\nThe default one is for English. Help to change server's language:",
-      "Success": "Successfully changed the bot language to `{0}`.\n* This message will be deleted in a minute.",
+      "Success": "Successfully changed the bot language to `{0}`",
       "Fail": "There is no language {0}.\nAvailable: {1}"
     },
     "MusicQueues": {
@@ -145,7 +145,9 @@
     "Commands": {
       "RequestedBy": "Requested by {0}",
       "SetChannelResponse": "Channel <#{0}> was successfully assigned the role {1}",
-      "SetPrefixResponse": "Successfully changed the bot prefix to `{0}`.\nIf you forget the prefix, just mention the bot.",
+      "Success" : "Bot prefix changed",
+      "Fail" : "Fail",
+      "SetPrefixResponse": "Changed the bot prefix to `{0}`.\nIf you forget the prefix, just mention the bot.",
       "LoggingEnabled": "Saving message change history enabled",
       "LoggingDisabled": "Saving message change history disabled",
       "CommandLoggingEnabled": "Saving history for successful commands enabled",
