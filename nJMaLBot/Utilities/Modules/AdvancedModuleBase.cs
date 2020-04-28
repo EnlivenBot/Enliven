@@ -36,5 +36,11 @@ namespace Bot.Utilities.Modules {
                             .WithDescription(description).WithColor(Color.Gold).Build();
             return await (await GetResponseChannel()).SendMessageAsync(null, false, embed).ConfigureAwait(false);
         }
+        
+        protected async Task<IUserMessage> ReplyFormattedAsync(string title, string description, TimeSpan delayedDeleteTime) {
+            var replyFormattedAsync = ReplyFormattedAsync(title, description);
+            replyFormattedAsync.DelayedDelete(delayedDeleteTime);
+            return await replyFormattedAsync;
+        }
     }
 }
