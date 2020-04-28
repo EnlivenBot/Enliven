@@ -98,6 +98,9 @@ namespace Bot.Music {
         }
 
         public static async Task<EmbedPlaybackPlayer> JoinChannel(ulong guildId, ulong voiceChannelId) {
+            // Clearing previous player, if we have one
+            EmbedPlaybackControl.PlaybackPlayers.FirstOrDefault(playbackPlayer => playbackPlayer.GuildId == guildId)?.Dispose();
+            
             var player = await Cluster.JoinAsync(() => new EmbedPlaybackPlayer(guildId), guildId, voiceChannelId);
             player.UpdateNodeName();
             EmbedPlaybackControl.PlaybackPlayers.Add(player);

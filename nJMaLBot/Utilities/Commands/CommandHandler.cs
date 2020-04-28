@@ -14,9 +14,6 @@ using Bot.Utilities;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
-using Lavalink4NET;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.VisualBasic;
 
 namespace Bot.Commands {
     public class CommandHandler {
