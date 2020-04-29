@@ -19,11 +19,11 @@ using Microsoft.VisualBasic;
 
 namespace Bot.Commands {
     public class CommandHandler {
-        private DiscordSocketClient _client;
+        private DiscordShardedClient _client;
         public CommandService CommandService { get; private set; }
         public List<CommandInfo> AllCommands { get; } = new List<CommandInfo>();
 
-        public async Task Install(DiscordSocketClient c) {
+        public async Task Install(DiscordShardedClient c) {
             _client = c;
             CommandService = new CommandService();
 
