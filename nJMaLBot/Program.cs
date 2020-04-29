@@ -71,6 +71,10 @@ namespace Bot {
             await Client.SetGameAsync("mentions of itself to get started", null, ActivityType.Listening);
             Handler = new CommandHandler();
             await Handler.Install(Client);
+            AppDomain.CurrentDomain.ProcessExit += async (sender, eventArgs) => {
+                await Client.SetStatusAsync(UserStatus.AFK);
+                await Client.SetGameAsync("Reboot...");
+            };
             
             MessageHistoryManager.SetHandlers();
             await MusicUtils.SetHandler();
