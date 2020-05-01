@@ -123,7 +123,7 @@ namespace Bot.Music {
             }
 
             UpdatePlayback = false;
-            
+
             try {
                 EmbedPlaybackControl.PlaybackPlayers.Remove(this);
                 base.Dispose();
@@ -137,7 +137,7 @@ namespace Bot.Music {
             Dispose(Loc.Get("Music.PlaybackStopped"));
             base.Dispose();
         }
-        
+
         public override async Task<int> PlayAsync(LavalinkTrack track, bool enqueue, TimeSpan? startTime = null, TimeSpan? endTime = null,
                                                   bool noReplace = false) {
             var toReturn = await base.PlayAsync(track, enqueue, startTime, endTime, noReplace);
@@ -416,8 +416,7 @@ namespace Bot.Music {
 
         public void UpdateTrackInfo() {
             if (State != PlayerState.NotPlaying) {
-                var iconUrl =
-                    $"https://img.youtube.com/vi/{(string.IsNullOrWhiteSpace(CurrentTrack.TrackIdentifier) ? "" : CurrentTrack.TrackIdentifier)}/0.jpg";
+                var iconUrl = CurrentTrack.Provider == StreamProvider.YouTube ? $"https://img.youtube.com/vi/{CurrentTrack?.TrackIdentifier}/0.jpg" : null;
                 EmbedBuilder?.WithAuthor(string.IsNullOrWhiteSpace(CurrentTrack.Author) ? "Unknown" : CurrentTrack.Author.SafeSubstring(0, 250), iconUrl)
                             ?.WithTitle(CurrentTrack.Title.SafeSubstring(0, 250))?.WithUrl(CurrentTrack.Source);
             }
