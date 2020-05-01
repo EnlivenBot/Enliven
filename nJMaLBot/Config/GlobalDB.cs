@@ -5,6 +5,7 @@ using System.Linq;
 using Bot.Music;
 using Bot.Utilities.Commands;
 using LiteDB;
+using LiteDB.Engine;
 
 namespace Bot.Config {
     public class GlobalDB {
@@ -28,6 +29,9 @@ namespace Bot.Config {
             var tempdb = new LiteDatabase(Path.Combine(Directory.GetCurrentDirectory(), "Config", @"DataBase.db"));
             UpgradeTo2(tempdb);
             tempdb.UserVersion = 2;
+
+            tempdb.Checkpoint();
+            tempdb.Rebuild();
             return tempdb;
         }
 
