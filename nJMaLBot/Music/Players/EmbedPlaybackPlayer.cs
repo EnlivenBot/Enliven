@@ -153,7 +153,7 @@ namespace Bot.Music {
             return toReturn;
         }
 
-        public void WriteToQueueHistory(string entry) {
+        public void WriteToQueueHistory(string entry, bool background = false) {
             _queueHistory.AppendLine("- " + entry);
             while (_queueHistory.Length > 512) {
                 var indexOf = _queueHistory.ToString().IndexOf(Environment.NewLine, StringComparison.Ordinal);
@@ -161,7 +161,7 @@ namespace Bot.Music {
             }
 
             EmbedBuilder.Fields[3].Value = _queueHistory.ToString().Replace("\n\n", "\n");
-            UpdateControlMessage();
+            UpdateControlMessage(background);
         }
 
         public Task SetControlMessage(IUserMessage message) {
