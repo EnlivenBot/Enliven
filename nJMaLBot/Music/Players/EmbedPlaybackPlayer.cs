@@ -155,7 +155,7 @@ namespace Bot.Music {
 
         public void WriteToQueueHistory(string entry) {
             _queueHistory.AppendLine("- " + entry);
-            if (_queueHistory.Length > 512) {
+            while (_queueHistory.Length > 512) {
                 var indexOf = _queueHistory.ToString().IndexOf(Environment.NewLine, StringComparison.Ordinal);
                 if (indexOf >= 0) _queueHistory.Remove(0, indexOf + Environment.NewLine.Length);
             }
