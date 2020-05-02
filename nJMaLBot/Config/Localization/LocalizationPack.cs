@@ -1,4 +1,5 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace Bot.Config.Localization {
     public class LocalizationPack {
@@ -8,5 +9,7 @@ namespace Bot.Config.Localization {
         public string FallbackLanguage { get; set; }
         public string Authors { get; set; }
         public Dictionary<string, Dictionary<string, string>> Data { get; set; }
+        
+        [JsonIgnore] public int TranslationCompleteness { get; set; }
     }
 }

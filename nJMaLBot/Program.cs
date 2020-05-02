@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Bot.Commands;
 using Bot.Config;
+using Bot.Config.Localization;
 using Bot.Music;
 using Bot.Utilities.Collector;
 using Bot.Utilities.Emoji;
@@ -78,6 +79,10 @@ namespace Bot {
             
             MessageHistoryManager.SetHandlers();
             await MusicUtils.SetHandler();
+            
+            // Loading languages
+            // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+            Localization.Languages.ToList();
         }
 
         public static void ConsoleCommandsHandler() {

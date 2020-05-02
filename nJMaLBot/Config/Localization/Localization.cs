@@ -19,8 +19,18 @@ namespace Bot.Config.Localization {
                 var indexes = Directory.GetFiles(Path.Combine(Directory.GetCurrentDirectory(), "Localization"))
                                        .ToDictionary(Path.GetFileNameWithoutExtension);
                 logger.Info("Loaded languages: {lang}.", string.Join(", ", indexes.Select(pair => pair.Key)));
-                return indexes.ToDictionary(variable => variable.Key,
-                        variable => JsonConvert.DeserializeObject<LocalizationPack>(Utilities.Utilities.DownloadString(variable.Value)));
+                var localizationPacks = indexes.ToDictionary(variable => variable.Key,
+                    variable => JsonConvert.DeserializeObject<LocalizationPack>(Utilities.Utilities.DownloadString(variable.Value)));
+
+                var localizationEntries = localizationPacks["en"].Data.SelectMany(groups => groups.Value.Select(pair => groups.Key + pair.Key)).ToList();
+                foreach (var pack in localizationPacks) {
+                    var entriesNotLocalizedCount = pack.Value.Data.SelectMany(groups => groups.Value.Select(pair => groups.Key + pair.Key))
+                                                       .Count(s => localizationEntries.Contains(s));
+
+                    pack.Value.TranslationCompleteness = (int) (entriesNotLocalizedCount / (double)localizationEntries.Count * 100);
+                }
+
+                return localizationPacks;
             }
             catch (Exception e) {
                 logger.Error(e, "Error while downloading libraries");
