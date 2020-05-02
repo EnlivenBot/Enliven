@@ -216,6 +216,22 @@ namespace Bot.Music {
             }
         }
 
+        public override async Task Enqueue(List<AuthoredLavalinkTrack> tracks, bool enqueue) {
+            await base.Enqueue(tracks, enqueue);
+            if (tracks.Count == 1) {
+                var track = tracks.First();
+                WriteToQueueHistory(Loc.Get("MusicQueues.Enqueued").Format(track.GetRequester(), MusicUtils.EscapeTrack(track.Title)), true);
+            }else if (tracks.Count > 1) {
+                var author = tracks.First().GetRequester();
+                WriteToQueueHistory(Loc.Get("MusicQueues.EnqueuedMany").Format(author, tracks.Count), true);
+            }
+        }
+
+        public override Task OnTrackLimitExceed(string author, int count) {
+            WriteToQueueHistory(Loc.Get("MusicQueues.LimitExceed").Format(author, count));
+            return base.OnTrackLimitExceed(author, count);
+        }
+
         #region Playlists
 
         public override async Task ImportPlaylist(ExportPlaylist playlist, ImportPlaylistOptions options, string requester) {

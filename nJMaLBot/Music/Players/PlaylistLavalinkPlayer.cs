@@ -1,6 +1,8 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Bot.Commands;
 using Bot.Utilities;
@@ -134,6 +136,44 @@ namespace Bot.Music.Players {
             catch (Exception e) {
                 CurrentTrackIndex = Playlist.IndexOf(CurrentTrack);
             }
+        }
+
+        private readonly SemaphoreSlim _enqueueLock = new SemaphoreSlim(1);
+
+        public virtual async Task TryEnqueue(IEnumerable<LavalinkTrack> tracks, string author, bool enqueue = true) {
+            await _enqueueLock.WaitAsync();
+            try {
+                var lavalinkTracks = tracks.ToList();
+                var authorCount = Playlist.Tracks.Count(track => track is AuthoredLavalinkTrack authoredTrack && authoredTrack.GetRequester() == author);
+
+                var authoredTracks = lavalinkTracks.Take(1000 - authorCount)
+                                                   .Select(track => AuthoredLavalinkTrack.FromLavalinkTrack(track, author)).ToList();
+
+                await Enqueue(authoredTracks, enqueue);
+
+                var ignoredTracksCount = lavalinkTracks.Count - authoredTracks.Count;
+                if (ignoredTracksCount != 0)
+                {
+                    await OnTrackLimitExceed(author, ignoredTracksCount);
+                }
+            }
+            finally {
+                _enqueueLock.Release();
+            }
+        }
+
+        public virtual async Task Enqueue(List<AuthoredLavalinkTrack> tracks, bool enqueue) {
+            if (tracks.Any()) {
+                await PlayAsync(tracks.First(), enqueue);
+
+                if (tracks.Count > 1) {
+                    Playlist.AddRange(tracks.Skip(1));
+                }
+            }
+        }
+
+        public virtual Task OnTrackLimitExceed(string author, int count) {
+            return Task.CompletedTask;
         }
     }
 

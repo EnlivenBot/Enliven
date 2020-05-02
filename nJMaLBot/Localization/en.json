@@ -6,6 +6,7 @@
   },
   "MusicQueues" : {
     "Enqueued" : "**{0}** enqueue `{1}`",
+    "EnqueuedMany" : "**{0}** enqueued `{1}` tracks",
     "Jumped" : "**{0}** jumped to `{1}` track - `{2}`",
     "NewVolume" : "**{0}** set new volume: `{1}`%",
     "RepeatSet" : "**{0}** set repeat mode to {1}",
@@ -19,7 +20,8 @@
     "RemoveRange" : "**{0}** deletes the `{1}` tracks. From `{2}` to `{3}`",
     "TrackMoved" : "**{0}** moves the `{0}` track to `{1}` position",
     "BassBoostUpdated" : "**{0}** set the bass boost mode: `{1}`",
-    "NodeChanged" : "**{0}** moves playback to a new node: `{1}`"
+    "NodeChanged" : "**{0}** moves playback to a new node: `{1}`",
+    "LimitExceed" : "**{0}** cannot add `{1}` tracks. Playlist already contains 1000 tracks from this user"
   },
   "Music" : {
     "RequestHistory" : "Request history",

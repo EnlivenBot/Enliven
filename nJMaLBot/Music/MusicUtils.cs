@@ -157,13 +157,7 @@ namespace Bot.Music {
                 throw new NothingFoundException();
             }
 
-            var tracks = lavalinkTracks
-                        .Select(track => {
-                             player.WriteToQueueHistory(player.Loc.Get("MusicQueues.Enqueued").Format(message.Author.Username, EscapeTrack(track.Title)), true);
-                             return AuthoredLavalinkTrack.FromLavalinkTrack(track, message.Author);
-                         }).ToList();
-            await player.PlayAsync(tracks.First(), true);
-            player.Playlist.AddRange(tracks.Skip(1));
+            player.TryEnqueue(lavalinkTracks, message?.Author?.Username);
         }
 
         public static string EscapeTrack(string track) {
