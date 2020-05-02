@@ -30,9 +30,9 @@ namespace Bot.Commands {
         public async Task Play([Remainder] [Summary("play0_0s")] string query = null) {
             if (!await IsPreconditionsValid)
                 return;
-            var logMessage = GetLogMessage();
 
-            Player.SetControlMessage(await logMessage);
+            Player.EnqueueControlMessageSend(ResponseChannel);
+            
             try {
                 await MusicUtils.QueueLoadMusic(Context.Message, query, Player);
             }
@@ -44,7 +44,7 @@ namespace Bot.Commands {
                 if (Player.Playlist.Count == 0) Player.ControlMessage.SafeDelete();
             }
             catch (AttachmentAddFailException) {
-                ReplyFormattedAsync(Loc.Get("Music.AttachmentFail"), true, await logMessage).DelayedDelete(TimeSpan.FromMinutes(10));
+                ReplyFormattedAsync(Loc.Get("Music.AttachmentFail"), true).DelayedDelete(TimeSpan.FromMinutes(10));
                 if (Player.Playlist.Count == 0) Player.ControlMessage.SafeDelete();
             }
         }

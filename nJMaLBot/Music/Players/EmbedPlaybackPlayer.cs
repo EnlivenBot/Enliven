@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -20,6 +21,7 @@ using Lavalink4NET.Events;
 using Lavalink4NET.Player;
 using LiteDB;
 using Tyrrrz.Extensions;
+using Timer = System.Threading.Timer;
 
 #pragma warning disable 4014
 
@@ -323,6 +325,23 @@ namespace Bot.Music {
         #endregion
 
         #region Embed updates
+
+        private Timer _controlMessageSendTimer;
+        public async Task EnqueueControlMessageSend(IMessageChannel channel) {
+            if (_controlMessageSendTimer == null) {
+                await SetControlMessage(await channel.SendMessageAsync(Loc.Get("Music.Loading")));
+                
+                _controlMessageSendTimer = new Timer(state => {
+                    _controlMessageSendTimer = null;
+                }, null, 5000, -1);
+            }
+            else {
+                _controlMessageSendTimer = new Timer(async state => {
+                    _controlMessageSendTimer = null;
+                    await SetControlMessage(await channel.SendMessageAsync(Loc.Get("Music.Loading")));
+                }, null, 5000, -1);
+            }
+        }
 
         public override void UpdatePlayer() {
             base.UpdatePlayer();
