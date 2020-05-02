@@ -3,6 +3,7 @@
   "LocalizedName": "Русский",
   "LocalizationFlagEmoji": ":flag_ru:",
   "FallbackLanguage" : "en",
+  "Authors" : "SKProCH",
   "Data": {
     "Localization": {
       "LocalizationEmpty": "***Вы не выбрали локализацию бота на сервере.*** \nПо умолчанию используется английский язык. Изменение языка сервера:",
