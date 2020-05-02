@@ -104,6 +104,9 @@ namespace Bot.Music.Players {
         }
 
         public virtual async Task ImportPlaylist(ExportPlaylist playlist, ImportPlaylistOptions options, string requester) {
+            if (Playlist.Count + playlist.Tracks.Count > 10000) {
+                return;
+            }
             var tracks = playlist.Tracks.Select(s => TrackDecoder.DecodeTrack(s))
                                  .Select(track => AuthoredLavalinkTrack.FromLavalinkTrack(track, requester)).ToList();
             if (options == ImportPlaylistOptions.Replace) {
@@ -118,12 +121,18 @@ namespace Bot.Music.Players {
                     Playlist.Clear();
                 }
             }
-
-
+            
             Playlist.AddRange(tracks);
-
             if (options != ImportPlaylistOptions.JustAdd) {
-                await PlayAsync(playlist.TrackIndex == -1 ? tracks.First() : tracks[playlist.TrackIndex], false, playlist.TrackPosition);
+                var track = playlist.TrackIndex == -1 ? tracks.First() : tracks[playlist.TrackIndex.Normalize(0, playlist.Tracks.Count - 1)];
+                var position = playlist.TrackPosition;
+                if (position != null && position.Value > track.Duration) {
+                    position = TimeSpan.Zero;
+                }
+                await PlayAsync(track, false, position);
+            }
+            else if (State == PlayerState.NotPlaying) {
+                await PlayAsync(Playlist[0], false);
             }
         }
 
