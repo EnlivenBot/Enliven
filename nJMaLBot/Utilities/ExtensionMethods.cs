@@ -84,5 +84,9 @@ namespace Bot.Utilities {
             embedBuilder.WithFooter(moduleBase.Context.User.Username, moduleBase.Context.User.GetAvatarUrl());
             return embedBuilder;
         }
+
+        public static int Normalize(this int value, int min, int max) {
+            return Math.Max(min, Math.Min(max, value));
+        }
     }
 }

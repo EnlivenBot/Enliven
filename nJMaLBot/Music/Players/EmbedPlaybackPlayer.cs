@@ -240,7 +240,12 @@ namespace Bot.Music {
             WriteToQueueHistory(Loc.Get("Music.AddTracks").Format(requester, tracks.Count));
 
             if (options != ImportPlaylistOptions.JustAdd) {
-                await PlayAsync(playlist.TrackIndex == -1 ? tracks.First() : tracks[playlist.TrackIndex], false, playlist.TrackPosition);
+                var track = playlist.TrackIndex == -1 ? tracks.First() : tracks[playlist.TrackIndex.Normalize(0, playlist.Tracks.Count - 1)];
+                var position = playlist.TrackPosition;
+                if (position != null && position.Value > track.Duration) {
+                    position = TimeSpan.Zero;
+                }
+                await PlayAsync(track, false, position);
                 WriteToQueueHistory(Loc.Get("MusicQueues.Jumped")
                                        .Format(requester, CurrentTrackIndex + 1, CurrentTrack.Title.SafeSubstring(0, 40) + "..."));
             }
@@ -327,13 +332,12 @@ namespace Bot.Music {
         #region Embed updates
 
         private Timer _controlMessageSendTimer;
+
         public async Task EnqueueControlMessageSend(IMessageChannel channel) {
             if (_controlMessageSendTimer == null) {
                 await SetControlMessage(await channel.SendMessageAsync(Loc.Get("Music.Loading")));
-                
-                _controlMessageSendTimer = new Timer(state => {
-                    _controlMessageSendTimer = null;
-                }, null, 5000, -1);
+
+                _controlMessageSendTimer = new Timer(state => { _controlMessageSendTimer = null; }, null, 5000, -1);
             }
             else {
                 _controlMessageSendTimer = new Timer(async state => {

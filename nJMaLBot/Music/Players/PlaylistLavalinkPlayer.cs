@@ -3,6 +3,7 @@ using System.Collections;
 using System.Linq;
 using System.Threading.Tasks;
 using Bot.Commands;
+using Bot.Utilities;
 using Discord;
 using Lavalink4NET;
 using Lavalink4NET.Decoding;
@@ -90,7 +91,7 @@ namespace Bot.Music.Players {
         public virtual ExportPlaylist ExportPlaylist(ExportPlaylistOptions options) {
             var exportPlaylist = new ExportPlaylist {Tracks = Playlist.Select(track => track.Identifier).ToList()};
             if (options != ExportPlaylistOptions.IgnoreTrackIndex) {
-                exportPlaylist.TrackIndex = CurrentTrackIndex;
+                exportPlaylist.TrackIndex = CurrentTrackIndex.Normalize(0, Playlist.Count - 1);
             }
 
             if (options == ExportPlaylistOptions.AllData) {
