@@ -2,6 +2,7 @@
   "LanguageName": "English",
   "LocalizedName": "English",
   "LocalizationFlagEmoji": ":flag_us:",
+  "FallbackLanguage" : null,
   "Data": {
     "Localization": {
       "LocalizationEmpty": "***You didn't select bot's localization on the server.***\nThe default one is for English. Help to change server's language:",

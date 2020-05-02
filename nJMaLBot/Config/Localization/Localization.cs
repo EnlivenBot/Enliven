@@ -51,15 +51,15 @@ namespace Bot.Config.Localization {
                 return reqText;
             }
 
-            if (lang == "en") {
-                logger.Error(new Exception($"Failed to load {group}.{id} in en localization"), "Failed to load {group}.{id} in {lang} localization", group, id,
-                    "en");
+            if (pack?.FallbackLanguage == null) {
+                logger.Error(new Exception($"Failed to load {group}.{id} in en localization"), 
+                    "Failed to load {group}.{id} in {lang} localization", group, id, "en");
                 return $"{group}.{id}";
             }
 
             logger.Warn("Failed to load {group}.{id} in {lang} localization", group, id, lang);
             // ReSharper disable once TailRecursiveCall
-            return Get("en", group, id);
+            return Get(pack.FallbackLanguage, group, id);
         }
 
         public static string Get(ulong guildId, string id) {
