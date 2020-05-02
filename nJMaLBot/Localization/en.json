@@ -21,7 +21,8 @@
     "TrackMoved" : "**{0}** moves the `{0}` track to `{1}` position",
     "BassBoostUpdated" : "**{0}** set the bass boost mode: `{1}`",
     "NodeChanged" : "**{0}** moves playback to a new node: `{1}`",
-    "LimitExceed" : "**{0}** cannot add `{1}` tracks. Playlist already contains 1000 tracks from this user"
+    "LimitExceed" : "**{0}** cannot add `{1}` tracks. Queue already contains 1000 tracks from this user",
+    "PlaylistLoadingLimit" : "**{0}** cannot load playlist with `{1}` tracks inside. Queue cannot contains more than 10 000 tracks at time"
   },
   "Music" : {
     "RequestHistory" : "Request history",
