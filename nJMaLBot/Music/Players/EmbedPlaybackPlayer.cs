@@ -221,7 +221,8 @@ namespace Bot.Music {
             if (tracks.Count == 1) {
                 var track = tracks.First();
                 WriteToQueueHistory(Loc.Get("MusicQueues.Enqueued").Format(track.GetRequester(), MusicUtils.EscapeTrack(track.Title)), true);
-            }else if (tracks.Count > 1) {
+            }
+            else if (tracks.Count > 1) {
                 var author = tracks.First().GetRequester();
                 WriteToQueueHistory(Loc.Get("MusicQueues.EnqueuedMany").Format(author, tracks.Count), true);
             }
@@ -239,7 +240,7 @@ namespace Bot.Music {
                 WriteToQueueHistory(Loc.Get("MusicQueues.PlaylistLoadingLimit").Format(requester, playlist.Tracks.Count));
                 return;
             }
-            
+
             var tracks = playlist.Tracks.Select(s => TrackDecoder.DecodeTrack(s))
                                  .Select(track => AuthoredLavalinkTrack.FromLavalinkTrack(track, requester)).ToList();
             if (options == ImportPlaylistOptions.Replace) {
@@ -266,6 +267,7 @@ namespace Bot.Music {
                 if (position != null && position.Value > track.Duration) {
                     position = TimeSpan.Zero;
                 }
+
                 await PlayAsync(track, false, position);
                 WriteToQueueHistory(Loc.Get("MusicQueues.Jumped")
                                        .Format(requester, CurrentTrackIndex + 1, CurrentTrack.Title.SafeSubstring(0, 40) + "..."));
@@ -342,9 +344,25 @@ namespace Bot.Music {
                             new ReactionCommandContext(Program.Client, args.Reaction), args.Reaction.UserId.ToString());
                     }, CollectorFilter.IgnoreSelf)
             );
-            ControlMessage.AddReactionsAsync(new IEmote[] {
+            _addReactionsAsync = ControlMessage.AddReactionsAsync(new IEmote[] {
                 CommonEmoji.LegacyTrackPrevious, CommonEmoji.LegacyPlay, CommonEmoji.LegacyPause, CommonEmoji.LegacyTrackNext,
                 CommonEmoji.LegacyStop, CommonEmoji.LegacyRepeat, CommonEmoji.LegacyShuffle, CommonEmoji.LegacySound, CommonEmoji.LegacyLoudSound
+            });
+
+            CollectorsUtils.CollectMessage(ControlMessage.Channel, message => true, async args => {
+                args.StopCollect();
+                await _addReactionsAsync;
+                ControlMessage.AddReactionAsync(CommonEmoji.LegacyArrowDown);
+                _collectorsGroup.Controllers.Add(CollectorsUtils.CollectReaction(ControlMessage,
+                    reaction => reaction.Emote.Equals(CommonEmoji.LegacyArrowDown), async args => {
+                        args.RemoveReason();
+                        if ((await ControlMessage.Channel.GetMessagesAsync(1).FlattenAsync()).FirstOrDefault()?.Id == ControlMessage.Id) {
+                            return;
+                        }
+                        await Program.Handler.ExecuteCommand($"play",
+                            new ReactionCommandContext(Program.Client, args.Reaction), args.Reaction.UserId.ToString());
+                    }, CollectorFilter.IgnoreSelf));
+                
             });
         }
 
@@ -377,6 +395,7 @@ namespace Bot.Music {
 
         private Task _modifyAsync;
         private bool _modifyQueued;
+        private Task _addReactionsAsync;
 
         private async Task UpdateControlMessage(bool background = false) {
             if (IsConstructing || ControlMessage == null)
