@@ -317,7 +317,7 @@ namespace Bot.Music {
         #region Playlists
 
         public override async Task ImportPlaylist(ExportPlaylist playlist, ImportPlaylistOptions options, string requester) {
-            if (Playlist.Count + playlist.Tracks.Count > 10000) {
+            if (Playlist.Count + playlist.Tracks.Count > 2000) {
                 WriteToQueueHistory(Loc.Get("MusicQueues.PlaylistLoadingLimit").Format(requester, playlist.Tracks.Count));
                 return;
             }

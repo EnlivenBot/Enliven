@@ -181,9 +181,7 @@ namespace Bot.Music.Players {
             await _enqueueLock.WaitAsync();
             try {
                 var lavalinkTracks = tracks.ToList();
-                var authorCount = Playlist.Tracks.Count(track => track is AuthoredLavalinkTrack authoredTrack && authoredTrack.GetRequester() == author);
-
-                var authoredTracks = lavalinkTracks.Take(1000 - authorCount)
+                var authoredTracks = lavalinkTracks.Take(2000 - Playlist.Tracks.Count)
                                                    .Select(track => AuthoredLavalinkTrack.FromLavalinkTrack(track, author)).ToList();
 
                 await Enqueue(authoredTracks, enqueue);
