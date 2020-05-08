@@ -27,7 +27,6 @@ namespace Bot.Music {
         public bool UpdatePlayback = false;
         private EmbedBuilder EmbedBuilder = new EmbedBuilder();
         public IUserMessage ControlMessage { get; private set; }
-        private bool IsConstructing { get; set; } = true;
         public readonly ILocalizationProvider Loc;
         private StringBuilder _queueHistory = new StringBuilder();
 
@@ -40,6 +39,9 @@ namespace Bot.Music {
             EmbedBuilder.AddField(Loc.Get("Music.RequestHistory"), "Placeholder");
             Playlist.Update += (sender, args) => UpdatePlaylist();
             CurrentTrackIndexChange += (sender, args) => UpdatePlaylist();
+            UpdateTrackInfo();
+            UpdateProgress();
+            UpdateQueue();
         }
 
         public override async Task SetVolumeAsync(float volume = 1, bool normalize = false) {
@@ -143,8 +145,7 @@ namespace Bot.Music {
                                                   bool noReplace = false) {
             var toReturn = await base.PlayAsync(track, enqueue, startTime, endTime, noReplace);
 
-            if (IsConstructing) {
-                IsConstructing = false;
+            if (_collectorsGroup == null) {
                 SetupControlReactions();
             }
 
@@ -168,7 +169,6 @@ namespace Bot.Music {
         public Task SetControlMessage(IUserMessage message) {
             ControlMessage?.SafeDelete();
             ControlMessage = message;
-            SetupControlReactions();
             SetupControlReactions();
             UpdateControlMessage();
             return Task.CompletedTask;
@@ -365,9 +365,6 @@ namespace Bot.Music {
         private CollectorsGroup _collectorsGroup;
 
         private void SetupControlReactions() {
-            if (IsConstructing)
-                return;
-
             _collectorsGroup?.DisposeAll();
             _collectorsGroup = new CollectorsGroup(
                 CollectorsUtils.CollectReaction(ControlMessage,
@@ -439,8 +436,8 @@ namespace Bot.Music {
                     // ignored
                 }
 
-                ControlMessage.AddReactionAsync(CommonEmoji.LegacyArrowDown);
-                _collectorsGroup.Controllers.Add(CollectorsUtils.CollectReaction(ControlMessage,
+                ControlMessage?.AddReactionAsync(CommonEmoji.LegacyArrowDown);
+                _collectorsGroup?.Controllers?.Add(CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyArrowDown), async args => {
                         args.RemoveReason();
                         if ((await ControlMessage.Channel.GetMessagesAsync(1).FlattenAsync()).FirstOrDefault()?.Id == ControlMessage.Id) {
@@ -487,7 +484,7 @@ namespace Bot.Music {
         private IUserMessage _queueMessage;
 
         private async Task UpdateControlMessage(bool background = false) {
-            if (IsConstructing || ControlMessage == null)
+            if (ControlMessage == null)
                 return;
 
             //Not thread safe method cuz in this case, thread safety is a waste of time
@@ -567,7 +564,7 @@ namespace Bot.Music {
         }
 
         public void UpdateTrackInfo() {
-            if (State != PlayerState.NotPlaying) {
+            if ((State != PlayerState.NotPlaying || State != PlayerState.NotConnected || State != PlayerState.Destroyed) && CurrentTrack != null) {
                 var iconUrl = CurrentTrack.Provider == StreamProvider.YouTube ? $"https://img.youtube.com/vi/{CurrentTrack?.TrackIdentifier}/0.jpg" : null;
                 EmbedBuilder?.WithAuthor(string.IsNullOrWhiteSpace(CurrentTrack.Author) ? "Unknown" : CurrentTrack.Author.SafeSubstring(0, 250), iconUrl)
                             ?.WithTitle(CurrentTrack.Title.SafeSubstring(0, 250))?.WithUrl(CurrentTrack.Source);
