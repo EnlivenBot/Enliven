@@ -8,10 +8,14 @@ namespace Bot.Config.Localization {
     internal static class Localization {
         private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
 
-        private static readonly Lazy<Dictionary<string, LocalizationPack>> _languages =
-            new Lazy<Dictionary<string, LocalizationPack>>(LoadLanguages);
+        public static readonly Dictionary<string, LocalizationPack> Languages;
+        static Localization() {
+            Languages = LoadLanguages();
+        }
 
-        public static readonly Dictionary<string, LocalizationPack> Languages = _languages.Value;
+        public static void Initialize() {
+            // Dummy method to call static constructor
+        } 
 
         private static Dictionary<string, LocalizationPack> LoadLanguages() {
             logger.Info("Start loading localizations packs...");

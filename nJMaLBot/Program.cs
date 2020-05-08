@@ -66,10 +66,14 @@ namespace Bot {
                     connectDelay += 10;
                 }
             }
+            
+            Localization.Initialize();
+            GlobalDB.Initialize();
 
             logger.Info("Starting client");
             await Client.StartAsync();
             await Client.SetGameAsync("mentions of itself to get started", null, ActivityType.Listening);
+            
             Handler = new CommandHandler();
             await Handler.Install(Client);
             AppDomain.CurrentDomain.ProcessExit += async (sender, eventArgs) => {
@@ -79,10 +83,6 @@ namespace Bot {
             
             MessageHistoryManager.SetHandlers();
             await MusicUtils.SetHandler();
-            
-            // Loading languages
-            // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
-            Localization.Languages.ToList();
         }
 
         public static void ConsoleCommandsHandler() {

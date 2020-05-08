@@ -7,18 +7,34 @@ using Bot.Utilities.Commands;
 using LiteDB;
 
 namespace Bot.Config {
-    public class GlobalDB {
-        private static readonly Lazy<LiteDatabase> _database = new Lazy<LiteDatabase>(Init);
+    // ReSharper disable once InconsistentNaming
+    public static class GlobalDB {
+        private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
+        public static LiteDatabase Database;
 
-        public static readonly ILiteCollection<Entity> GlobalSettings = Database.GetCollection<Entity>(@"Global");
-        public static readonly ILiteCollection<GuildConfig> Guilds = Database.GetCollection<GuildConfig>(@"Guilds");
-        public static readonly ILiteCollection<BsonDocument> IgnoredMessages = Database.GetCollection<BsonDocument>(@"IgnoredMessages");
-        public static readonly ILiteCollection<MessageHistory> Messages = Database.GetCollection<MessageHistory>(@"MessagesHistory");
-        public static readonly ILiteCollection<StatisticsPart> CommandStatistics = Database.GetCollection<StatisticsPart>(@"CommandStatistics");
-        public static readonly ILiteCollection<StoredPlaylist> Playlists = Database.GetCollection<StoredPlaylist>(@"StoredPlaylists");
-        public static LiteDatabase Database => _database.Value;
+        static GlobalDB() {
+            Database = LoadDatabase();
+            GlobalSettings = Database.GetCollection<Entity>(@"Global");
+            Guilds = Database.GetCollection<GuildConfig>(@"Guilds");
+            IgnoredMessages = Database.GetCollection<BsonDocument>(@"IgnoredMessages");
+            Messages = Database.GetCollection<MessageHistory>(@"MessagesHistory");
+            CommandStatistics = Database.GetCollection<StatisticsPart>(@"CommandStatistics");
+            Playlists = Database.GetCollection<StoredPlaylist>(@"StoredPlaylists");
+        }
+        
+        public static void Initialize() {
+            // Dummy method to initialize static properties
+        }
 
-        private static LiteDatabase Init() {
+        public static readonly ILiteCollection<Entity> GlobalSettings;
+        public static readonly ILiteCollection<GuildConfig> Guilds;
+        public static readonly ILiteCollection<BsonDocument> IgnoredMessages;
+        public static readonly ILiteCollection<MessageHistory> Messages;
+        public static readonly ILiteCollection<StatisticsPart> CommandStatistics;
+        public static readonly ILiteCollection<StoredPlaylist> Playlists;
+
+        private static LiteDatabase LoadDatabase() {
+            logger.Info("Loading database");
             if (File.Exists(Path.Combine(Directory.GetCurrentDirectory(), @"DataBase.db"))) {
                 Directory.CreateDirectory("Config");
                 File.Move(Path.Combine(Directory.GetCurrentDirectory(), @"DataBase.db"),
@@ -28,9 +44,12 @@ namespace Bot.Config {
             var tempdb = new LiteDatabase(Path.Combine(Directory.GetCurrentDirectory(), "Config", @"DataBase.db"));
             UpgradeTo2(tempdb);
             tempdb.UserVersion = 2;
+            
+            logger.Info("Database loaded");
             return tempdb;
         }
 
+        #pragma warning disable 618
         private static void UpgradeTo2(LiteDatabase liteDatabase) {
             if (liteDatabase.UserVersion == 1) {
                 var oldStatsCollection = liteDatabase.GetCollection<ObsoleteStatisticsPart>(@"CommandStatistics");
@@ -46,5 +65,6 @@ namespace Bot.Config {
                 statsCollection.InsertBulk(newStats);
             }
         }
+        #pragma warning restore 618
     }
 }
