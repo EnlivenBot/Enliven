@@ -192,30 +192,7 @@ namespace Bot.Commands {
                 return;
             }
 
-            var queue = new StringBuilder("```py\n");
-            for (var index = 0; index < Player.Playlist.Count; index++) {
-                var builder = new StringBuilder();
-                var lavalinkTrack = Player.Playlist[index];
-                builder.Append(Player.CurrentTrackIndex == index ? "@" : " ");
-                builder.Append(index + 1);
-                builder.Append(": ");
-                builder.AppendLine(lavalinkTrack.Title);
-                if (queue.Length + builder.Length > 2000) {
-                    await PrintList(queue, logMessage);
-                    logMessage = null;
-                    queue = new StringBuilder("```py\n");
-                }
-
-                queue.Append(builder);
-            }
-
-            await PrintList(queue, logMessage);
-
-            async Task PrintList(StringBuilder builder, IUserMessage message = null) {
-                builder.Append("```");
-                MusicUtils.EscapeTrack(builder);
-                await ReplyFormattedAsync(builder.ToString(), false, message);
-            }
+            Player.PrintQueue(logMessage);
         }
 
         [Hidden]

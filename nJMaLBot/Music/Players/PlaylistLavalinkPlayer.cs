@@ -1,7 +1,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Bot.Commands;
@@ -20,7 +22,11 @@ namespace Bot.Music.Players {
         // ReSharper disable once UnusedParameter.Local
         public PlaylistLavalinkPlayer(ulong guildId) : base(guildId) {
             Playlist = new LavalinkPlaylist();
-            Playlist.Update += (sender, args) => { UpdateCurrentTrackIndex(); };
+            Playlist.Update += (sender, args) => {
+                UpdateCurrentTrackIndex();
+                QueuePages = null;
+                QueueDeprecated?.Invoke(this, EventArgs.Empty);
+            };
         }
 
         public LoopingState LoopingState { get; set; } = LoopingState.Off;
@@ -37,6 +43,9 @@ namespace Bot.Music.Players {
                     CurrentTrackIndexChange?.Invoke(null, value);
             }
         }
+        
+        private List<string> QueuePages { get; set; }
+        public event EventHandler QueueDeprecated;
 
         public override async Task OnTrackEndAsync(TrackEndEventArgs eventArgs) {
             var oldTrackIndex = CurrentTrackIndex;
@@ -145,6 +154,25 @@ namespace Bot.Music.Players {
             catch (Exception e) {
                 CurrentTrackIndex = Playlist.IndexOf(CurrentTrack);
             }
+        }
+
+        public List<string> GetQueuePages() {
+            if (QueuePages == null) {
+                QueuePages = new List<string>();
+                var stringBuilder = new StringBuilder();
+                for (var i = 0; i < Playlist.Count; i++) {
+                    var text = (CurrentTrackIndex == i ? "@" : " ") + $"{i}: {Playlist[i].Title}\n";
+                    if (stringBuilder.Length + text.Length  > 2000) {
+                        QueuePages.Add(stringBuilder.ToString());
+                        stringBuilder.Clear();
+                    }
+                    stringBuilder.Append(text);
+                }
+            
+                QueuePages.Add(stringBuilder.ToString());
+            }
+            
+            return QueuePages.ToList();
         }
 
         private readonly SemaphoreSlim _enqueueLock = new SemaphoreSlim(1);

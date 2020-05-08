@@ -1,10 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System.Timers;
 using Bot.Config;
 using Bot.Config.Localization;
 using Bot.Config.Localization.Providers;
@@ -14,13 +12,11 @@ using Bot.Utilities.Collector;
 using Bot.Utilities.Emoji;
 using Bot.Utilities.Modules;
 using Discord;
-using Discord.Commands;
 using Lavalink4NET;
 using Lavalink4NET.Decoding;
 using Lavalink4NET.Events;
 using Lavalink4NET.Player;
 using LiteDB;
-using Tyrrrz.Extensions;
 using Timer = System.Threading.Timer;
 
 #pragma warning disable 4014
@@ -123,6 +119,9 @@ namespace Bot.Music {
                 _collectorsGroup?.DisposeAll();
                 oldControlMessage?.RemoveAllReactionsAsync();
             }
+            
+            _queueCollectorsGroup?.DisposeAll();
+            _queueMessage?.SafeDelete();
 
             UpdatePlayback = false;
 
@@ -169,6 +168,7 @@ namespace Bot.Music {
         public Task SetControlMessage(IUserMessage message) {
             ControlMessage?.SafeDelete();
             ControlMessage = message;
+            SetupControlReactions();
             SetupControlReactions();
             UpdateControlMessage();
             return Task.CompletedTask;
@@ -231,6 +231,87 @@ namespace Bot.Music {
         public override Task OnTrackLimitExceed(string author, int count) {
             WriteToQueueHistory(Loc.Get("MusicQueues.LimitExceed").Format(author, count));
             return base.OnTrackLimitExceed(author, count);
+        }
+
+        public async Task PrintQueue(IUserMessage loadingMessage) {
+            _queueMessage?.SafeDelete();
+            _queueMessage = loadingMessage;
+            var pageNumber = 0;
+            var queuePages = GetQueuePages();
+            var embedBuilder = new EmbedBuilder().WithColor(Color.Gold).WithTitle(Loc.Get("MusicQueues.QueueTitle"));
+            UpdateEmbed();
+            await ModifyMessage();
+
+            _queueCollectorsGroup?.DisposeAll();
+            _queueCollectorsGroup = new CollectorsGroup(
+                CollectorsUtils.CollectReaction(loadingMessage, reaction => reaction.Emote.Equals(CommonEmoji.LegacyTrackPrevious), async args => {
+                    args.RemoveReason();
+                    pageNumber = 0;
+                    UpdateEmbed();
+                    await ModifyMessage();
+                }, CollectorFilter.IgnoreBots),
+                CollectorsUtils.CollectReaction(loadingMessage, reaction => reaction.Emote.Equals(CommonEmoji.LegacyTrackNext), async args => {
+                    args.RemoveReason();
+                    pageNumber = queuePages.Count - 1;
+                    UpdateEmbed();
+                    await ModifyMessage();
+                }, CollectorFilter.IgnoreBots),
+                CollectorsUtils.CollectReaction(loadingMessage, reaction => reaction.Emote.Equals(CommonEmoji.LegacyPlay), async args => {
+                    args.RemoveReason();
+                    pageNumber = (pageNumber + 1).Normalize(0, queuePages.Count - 1);
+                    UpdateEmbed();
+                    await ModifyMessage();
+                }, CollectorFilter.IgnoreBots),
+                CollectorsUtils.CollectReaction(loadingMessage, reaction => reaction.Emote.Equals(CommonEmoji.LegacyReverse), async args => {
+                    args.RemoveReason();
+                    pageNumber = (pageNumber - 1).Normalize(0, queuePages.Count - 1);
+                    UpdateEmbed();
+                    await ModifyMessage();
+                }, CollectorFilter.IgnoreBots),
+                CollectorsUtils.CollectReaction(loadingMessage, reaction => reaction.Emote.Equals(CommonEmoji.LegacyFileBox), async args => {
+                    args.RemoveReason();
+                    await args.Reaction.Channel.SendTextAsFile(string.Join("", queuePages),
+                                   $"Playlist {DateTime.Now}, {(loadingMessage.Channel as IGuildChannel)?.Guild?.Name}.txt");
+                    _queueCollectorsGroup?.DisposeAll();
+                    _queueMessage.SafeDelete();
+                }, CollectorFilter.IgnoreBots)
+            );
+
+            loadingMessage.AddReactionsAsync(new IEmote[]
+                {CommonEmoji.LegacyTrackPrevious, CommonEmoji.LegacyReverse, CommonEmoji.LegacyFileBox, CommonEmoji.LegacyPlay, CommonEmoji.LegacyTrackNext});
+
+            this.QueueDeprecated += QueueDeprecated;
+
+            async void QueueDeprecated(object? sender, EventArgs args) {
+                try {
+                    this.QueueDeprecated -= QueueDeprecated;
+                    _queueCollectorsGroup.DisposeAll();
+                    embedBuilder.WithDescription(Loc.Get("MusicQueues.QueueDeprecated").Format(GuildConfig.Prefix));
+                    embedBuilder.Fields.Clear();
+                    await ModifyMessage();
+                }
+                finally {
+                    loadingMessage.DelayedDelete(TimeSpan.FromMinutes(2));
+                }
+            }
+
+            void UpdateEmbed() {
+                embedBuilder.WithDescription($"```py\n{queuePages[pageNumber]}```");
+                if (embedBuilder.Fields.Count == 0) {
+                    embedBuilder.AddField("Placeholder", "Placeholder");
+                }
+                embedBuilder.Fields[0] = new EmbedFieldBuilder {
+                    Name = Loc.Get("MusicQueues.QueuePage").Format(pageNumber + 1, queuePages.Count),
+                    Value = Loc.Get("MusicQueues.QueuePageDescription")
+                };
+            }
+
+            async Task ModifyMessage() {
+                await loadingMessage.ModifyAsync(properties => {
+                    properties.Content = null;
+                    properties.Embed = embedBuilder.Build();
+                });
+            }
         }
 
         #region Playlists
@@ -351,7 +432,13 @@ namespace Bot.Music {
 
             CollectorsUtils.CollectMessage(ControlMessage.Channel, message => true, async args => {
                 args.StopCollect();
-                await _addReactionsAsync;
+                try {
+                    await _addReactionsAsync;
+                }
+                catch (Exception) {
+                    // ignored
+                }
+
                 ControlMessage.AddReactionAsync(CommonEmoji.LegacyArrowDown);
                 _collectorsGroup.Controllers.Add(CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyArrowDown), async args => {
@@ -359,10 +446,10 @@ namespace Bot.Music {
                         if ((await ControlMessage.Channel.GetMessagesAsync(1).FlattenAsync()).FirstOrDefault()?.Id == ControlMessage.Id) {
                             return;
                         }
+
                         await Program.Handler.ExecuteCommand($"play",
                             new ReactionCommandContext(Program.Client, args.Reaction), args.Reaction.UserId.ToString());
                     }, CollectorFilter.IgnoreSelf));
-                
             });
         }
 
@@ -396,6 +483,8 @@ namespace Bot.Music {
         private Task _modifyAsync;
         private bool _modifyQueued;
         private Task _addReactionsAsync;
+        private CollectorsGroup _queueCollectorsGroup;
+        private IUserMessage _queueMessage;
 
         private async Task UpdateControlMessage(bool background = false) {
             if (IsConstructing || ControlMessage == null)

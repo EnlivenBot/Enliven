@@ -22,7 +22,11 @@
     "BassBoostUpdated" : "**{0}** set the bass boost mode: `{1}`",
     "NodeChanged" : "**{0}** moves playback to a new node: `{1}`",
     "LimitExceed" : "**{0}** cannot add `{1}` tracks. Queue already contains 1000 tracks from this user",
-    "PlaylistLoadingLimit" : "**{0}** cannot load playlist with `{1}` tracks inside. Queue cannot contains more than 10 000 tracks at time"
+    "PlaylistLoadingLimit" : "**{0}** cannot load playlist with `{1}` tracks inside. Queue cannot contains more than 10 000 tracks at time",
+    "QueueTitle" : "Queue",
+    "QueuePage" : "Page `{0}` of `{1}`",
+    "QueuePageDescription" : "⏮️⏭️ to move to the beginning or end \n◀️▶️ to move to the next or previous page \n🗃️ to export to a file",
+    "QueueDeprecated" : "The queue has changed, this queue message is not relevant. To view the queue again, use the `{0} queue`"
   },
   "Music" : {
     "RequestHistory" : "Request history",
