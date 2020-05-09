@@ -72,7 +72,8 @@
     "PlaybackNothingPlaying" : "Nothing playing",
     "Waiting" : "Waiting...",
     "OnlyOneNode" : "Unfortunately, only the node you are using is available to the bot right now",
-    "ResumeViaPlaylists" : "\nYou can try to replay through `{0}loadplaylist {1}`"
+    "ResumeViaPlaylists" : "\nYou can try to replay through `{0}loadplaylist {1}`",
+    "Empty" : "Empty"
   },
   "Groups": {
     "music" : "Music",

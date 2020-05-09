@@ -12,36 +12,37 @@ using Bot.Utilities.Collector;
 using Bot.Utilities.Emoji;
 using Bot.Utilities.Modules;
 using Discord;
-using Lavalink4NET;
 using Lavalink4NET.Decoding;
 using Lavalink4NET.Events;
 using Lavalink4NET.Player;
 using LiteDB;
 using Timer = System.Threading.Timer;
 
+#pragma warning disable 1998
+
 #pragma warning disable 4014
 
 namespace Bot.Music {
     public sealed class EmbedPlaybackPlayer : PlaylistLavalinkPlayer {
-        private string _playlistString;
-        public bool UpdatePlayback = false;
+        public bool UpdatePlayback;
         private EmbedBuilder EmbedBuilder = new EmbedBuilder();
         public IUserMessage ControlMessage { get; private set; }
         public readonly ILocalizationProvider Loc;
-        private StringBuilder _queueHistory = new StringBuilder();
+        private readonly StringBuilder _queueHistory = new StringBuilder();
 
         // ReSharper disable once UnusedParameter.Local
         public EmbedPlaybackPlayer(ulong guildId) : base(guildId) {
             Loc = new GuildLocalizationProvider(guildId);
-            EmbedBuilder.AddField("Placeholder", "Placeholder", true);
-            EmbedBuilder.AddField(Loc.Get("Music.Parameters"), "Placeholder", true);
-            EmbedBuilder.AddField(Loc.Get("Music.Queue").Format(0, 0), "Placeholder");
-            EmbedBuilder.AddField(Loc.Get("Music.RequestHistory"), "Placeholder");
-            Playlist.Update += (sender, args) => UpdatePlaylist();
-            CurrentTrackIndexChange += (sender, args) => UpdatePlaylist();
+            EmbedBuilder.AddField(Loc.Get("Music.Empty"), Loc.Get("Music.Empty"), true);
+            EmbedBuilder.AddField(Loc.Get("Music.Parameters"), Loc.Get("Music.Empty"), true);
+            EmbedBuilder.AddField(Loc.Get("Music.Queue").Format(0, 0), Loc.Get("Music.Empty"));
+            EmbedBuilder.AddField(Loc.Get("Music.RequestHistory"), Loc.Get("Music.Empty"));
+            Playlist.Update += (sender, args) => UpdateQueue();
+            CurrentTrackIndexChange += (sender, args) => UpdateQueue();
             UpdateTrackInfo();
             UpdateProgress();
             UpdateQueue();
+            UpdateParameters();
         }
 
         public override async Task SetVolumeAsync(float volume = 1, bool normalize = false) {
@@ -49,16 +50,9 @@ namespace Bot.Music {
             UpdateParameters();
         }
 
-        public override async Task OnConnectedAsync(VoiceServer voiceServer, VoiceState voiceState) {
-            await base.OnConnectedAsync(voiceServer, voiceState);
-            UpdateParameters();
-        }
-
-        public override Task OnTrackStartedAsync(TrackStartedEventArgs eventArgs) {
+        public override async Task OnTrackStartedAsync(TrackStartedEventArgs eventArgs) {
             UpdatePlayback = true;
-            var toReturn = base.OnTrackStartedAsync(eventArgs);
             UpdateTrackInfo();
-            return toReturn;
         }
 
         public override async Task OnTrackEndAsync(TrackEndEventArgs eventArgs) {
@@ -121,7 +115,7 @@ namespace Bot.Music {
                 _collectorsGroup?.DisposeAll();
                 oldControlMessage?.RemoveAllReactionsAsync();
             }
-            
+
             _queueCollectorsGroup?.DisposeAll();
             _queueMessage?.SafeDelete();
 
@@ -141,20 +135,6 @@ namespace Bot.Music {
             base.Dispose();
         }
 
-        public override async Task<int> PlayAsync(LavalinkTrack track, bool enqueue, TimeSpan? startTime = null, TimeSpan? endTime = null,
-                                                  bool noReplace = false) {
-            var toReturn = await base.PlayAsync(track, enqueue, startTime, endTime, noReplace);
-
-            if (_collectorsGroup == null) {
-                SetupControlReactions();
-            }
-
-            UpdateProgress();
-
-            UpdatePlayback = true;
-            return toReturn;
-        }
-
         public void WriteToQueueHistory(string entry, bool background = false) {
             _queueHistory.AppendLine("- " + entry);
             while (_queueHistory.Length > 512) {
@@ -172,39 +152,6 @@ namespace Bot.Music {
             SetupControlReactions();
             UpdateControlMessage();
             return Task.CompletedTask;
-        }
-
-        private string GetPlaylistString(LavalinkPlaylist playlist, int index) {
-            var globalStringBuilder = new StringBuilder();
-            string lastAuthor = null;
-            var authorStringBuilder = new StringBuilder();
-            for (var i = Math.Max(index - 1, 0); i < index + 5; i++) {
-                if (!playlist.TryGetValue(i, out var track)) continue;
-                var author = (track is AuthoredLavalinkTrack authoredLavalinkTrack) ? authoredLavalinkTrack.GetRequester() : "Unknown";
-                if (author != lastAuthor && lastAuthor != null) FinalizeBlock();
-                authorStringBuilder.Replace("└", "├").Replace("▬", "│");
-                authorStringBuilder.Append(GetTrackString(track.Title.Replace("'", "").Replace("#", ""),
-                    i + 1, CurrentTrackIndex == i));
-                lastAuthor = author;
-            }
-
-            FinalizeBlock();
-
-            void FinalizeBlock() {
-                globalStringBuilder.AppendLine($"─────┬────{lastAuthor}");
-                globalStringBuilder.Append(authorStringBuilder.Replace("▬", " "));
-
-                authorStringBuilder.Clear();
-            }
-
-            StringBuilder GetTrackString(string title, int trackNumber, bool isCurrent) {
-                var sb = new StringBuilder();
-                sb.AppendLine($"{(isCurrent ? "@" : " ")}{trackNumber}    ".SafeSubstring(0, 5) + "└" + title);
-
-                return sb;
-            }
-
-            return $"```py\n{globalStringBuilder}```";
         }
 
         public override async Task Enqueue(List<AuthoredLavalinkTrack> tracks, bool enqueue) {
@@ -262,7 +209,7 @@ namespace Bot.Music {
                 CollectorsUtils.CollectReaction(loadingMessage, reaction => reaction.Emote.Equals(CommonEmoji.LegacyFileBox), async args => {
                     args.RemoveReason();
                     await args.Reaction.Channel.SendTextAsFile(string.Join("", queuePages),
-                                   $"Playlist {DateTime.Now}, {(loadingMessage.Channel as IGuildChannel)?.Guild?.Name}.txt");
+                        $"Playlist {DateTime.Now}, {(loadingMessage.Channel as IGuildChannel)?.Guild?.Name}.txt");
                     _queueCollectorsGroup?.DisposeAll();
                     _queueMessage.SafeDelete();
                 }, CollectorFilter.IgnoreBots)
@@ -291,6 +238,7 @@ namespace Bot.Music {
                 if (embedBuilder.Fields.Count == 0) {
                     embedBuilder.AddField("Placeholder", "Placeholder");
                 }
+
                 embedBuilder.Fields[0] = new EmbedFieldBuilder {
                     Name = Loc.Get("MusicQueues.QueuePage").Format(pageNumber + 1, queuePages.Count),
                     Value = Loc.Get("MusicQueues.QueuePageDescription")
@@ -573,11 +521,6 @@ namespace Bot.Music {
             UpdateControlMessage();
         }
 
-        private void UpdatePlaylist() {
-            _playlistString = GetPlaylistString(Playlist, CurrentTrackIndex);
-            UpdateQueue();
-        }
-
         private void UpdateQueue() {
             if (Playlist.Count == 0) {
                 EmbedBuilder.Fields[2].Name = Loc.Get("Music.QueueEmptyTitle");
@@ -585,10 +528,43 @@ namespace Bot.Music {
             }
             else {
                 EmbedBuilder.Fields[2].Name = Loc.Get("Music.Queue").Format(CurrentTrackIndex + 1, Playlist.Count);
-                EmbedBuilder.Fields[2].Value = _playlistString;
+                EmbedBuilder.Fields[2].Value = $"```py\n{GetPlaylistString()}```";
             }
 
             UpdateControlMessage();
+
+            StringBuilder GetPlaylistString() {
+                var globalStringBuilder = new StringBuilder();
+                string lastAuthor = null;
+                var authorStringBuilder = new StringBuilder();
+                for (var i = Math.Max(CurrentTrackIndex - 1, 0); i < CurrentTrackIndex + 5; i++) {
+                    if (!Playlist.TryGetValue(i, out var track)) continue;
+                    var author = (track is AuthoredLavalinkTrack authoredLavalinkTrack) ? authoredLavalinkTrack.GetRequester() : "Unknown";
+                    if (author != lastAuthor && lastAuthor != null) FinalizeBlock();
+                    authorStringBuilder.Replace("└", "├").Replace("▬", "│");
+                    authorStringBuilder.Append(GetTrackString(track.Title.Replace("'", "").Replace("#", ""),
+                        i + 1, CurrentTrackIndex == i));
+                    lastAuthor = author;
+                }
+
+                FinalizeBlock();
+
+                void FinalizeBlock() {
+                    globalStringBuilder.AppendLine($"─────┬────{lastAuthor}");
+                    globalStringBuilder.Append(authorStringBuilder.Replace("▬", " "));
+
+                    authorStringBuilder.Clear();
+                }
+
+                StringBuilder GetTrackString(string title, int trackNumber, bool isCurrent) {
+                    var sb = new StringBuilder();
+                    sb.AppendLine($"{(isCurrent ? "@" : " ")}{trackNumber}    ".SafeSubstring(0, 5) + "└" + title);
+
+                    return sb;
+                }
+
+                return globalStringBuilder;
+            }
         }
 
         public void UpdateNodeName() {
