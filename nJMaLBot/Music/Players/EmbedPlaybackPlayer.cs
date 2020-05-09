@@ -175,45 +175,36 @@ namespace Bot.Music {
         }
 
         private string GetPlaylistString(LavalinkPlaylist playlist, int index) {
-            try {
-                var globalStringBuilder = new StringBuilder();
-                string lastAuthor = null;
-                var authorStringBuilder = new StringBuilder();
-                for (var i = Math.Max(index - 1, 0); i < index + 5; i++) {
-                    if (!playlist.TryGetValue(i, out var track)) continue;
-                    var author = (track is AuthoredLavalinkTrack authoredLavalinkTrack) ? authoredLavalinkTrack.GetRequester() : "Unknown";
-                    if (author != lastAuthor && lastAuthor != null) FinalizeBlock();
-                    authorStringBuilder.Replace("└", "├").Replace("▬", "│");
-                    authorStringBuilder.Append(GetTrackString(track.Title.Replace("'", "").Replace("#", ""),
-                        i + 1, 40, CurrentTrackIndex == i));
-                    lastAuthor = author;
-                }
-
-                FinalizeBlock();
-
-                void FinalizeBlock() {
-                    globalStringBuilder.AppendLine($"────┬────{lastAuthor}");
-                    globalStringBuilder.Append(authorStringBuilder.Replace("▬", " "));
-
-                    authorStringBuilder.Clear();
-                }
-
-                StringBuilder GetTrackString(string title, int trackNumber, int maxLength, bool isCurrent) {
-                    var lines = Utilities.Utilities.SplitToLines(title, maxLength).ToList();
-                    var sb = new StringBuilder();
-                    sb.AppendLine($"{(isCurrent ? "@" : " ")}{trackNumber}   ".SafeSubstring(0, 4) + "└" + lines.First());
-                    foreach (var line in lines.Skip(1)) {
-                        sb.AppendLine((isCurrent ? "@" : " ").PadRight(4) + "▬" + line.SafeSubstring(0, 40));
-                    }
-
-                    return sb;
-                }
-
-                return $"```py\n{globalStringBuilder}```";
+            var globalStringBuilder = new StringBuilder();
+            string lastAuthor = null;
+            var authorStringBuilder = new StringBuilder();
+            for (var i = Math.Max(index - 1, 0); i < index + 5; i++) {
+                if (!playlist.TryGetValue(i, out var track)) continue;
+                var author = (track is AuthoredLavalinkTrack authoredLavalinkTrack) ? authoredLavalinkTrack.GetRequester() : "Unknown";
+                if (author != lastAuthor && lastAuthor != null) FinalizeBlock();
+                authorStringBuilder.Replace("└", "├").Replace("▬", "│");
+                authorStringBuilder.Append(GetTrackString(track.Title.Replace("'", "").Replace("#", ""),
+                    i + 1, CurrentTrackIndex == i));
+                lastAuthor = author;
             }
-            catch (Exception) {
-                return "Failed";
+
+            FinalizeBlock();
+
+            void FinalizeBlock() {
+                globalStringBuilder.AppendLine($"─────┬────{lastAuthor}");
+                globalStringBuilder.Append(authorStringBuilder.Replace("▬", " "));
+
+                authorStringBuilder.Clear();
             }
+
+            StringBuilder GetTrackString(string title, int trackNumber, bool isCurrent) {
+                var sb = new StringBuilder();
+                sb.AppendLine($"{(isCurrent ? "@" : " ")}{trackNumber}    ".SafeSubstring(0, 5) + "└" + title);
+
+                return sb;
+            }
+
+            return $"```py\n{globalStringBuilder}```";
         }
 
         public override async Task Enqueue(List<AuthoredLavalinkTrack> tracks, bool enqueue) {
