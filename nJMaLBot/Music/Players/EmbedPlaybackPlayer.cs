@@ -366,7 +366,7 @@ namespace Bot.Music {
                 CommonEmoji.LegacyStop, CommonEmoji.LegacyRepeat, CommonEmoji.LegacyShuffle, CommonEmoji.LegacySound, CommonEmoji.LegacyLoudSound
             });
 
-            CollectorsUtils.CollectMessage(ControlMessage.Channel, message => true, async args => {
+            _collectorsGroup.Controllers.Add(CollectorsUtils.CollectMessage(ControlMessage.Channel, message => true, async args => {
                 args.StopCollect();
                 try {
                     await _addReactionsAsync;
@@ -375,8 +375,10 @@ namespace Bot.Music {
                     // ignored
                 }
 
-                ControlMessage?.AddReactionAsync(CommonEmoji.LegacyArrowDown);
-                _collectorsGroup?.Controllers?.Add(CollectorsUtils.CollectReaction(ControlMessage,
+                if (ControlMessage == null) return;
+                // Theoretically (Control Message == null) - impossible
+                ControlMessage.AddReactionAsync(CommonEmoji.LegacyArrowDown);
+                _collectorsGroup.Controllers.Add(CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyArrowDown), async args => {
                         args.RemoveReason();
                         if ((await ControlMessage.Channel.GetMessagesAsync(1).FlattenAsync()).FirstOrDefault()?.Id == ControlMessage.Id) {
@@ -386,7 +388,7 @@ namespace Bot.Music {
                         await Program.Handler.ExecuteCommand($"play",
                             new ReactionCommandContext(Program.Client, args.Reaction), args.Reaction.UserId.ToString());
                     }, CollectorFilter.IgnoreSelf));
-            });
+            }));
         }
 
         #endregion
