@@ -1,11 +1,9 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Bot.Music;
 using Bot.Utilities.Commands;
 using LiteDB;
-using LiteDB.Engine;
 
 namespace Bot.Config {
     public class GlobalDB {

@@ -2,10 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Bot.Config;
-using Bot.Config.Localization;
 using Bot.Music;
-using Bot.Music.Players;
-using Bot.Utilities.Commands;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;

@@ -1,10 +1,8 @@
 ﻿using System.Threading.Tasks;
 using Bot.Config;
-using Bot.Utilities;
 using Bot.Utilities.Commands;
 using Bot.Utilities.Modules;
 using Discord.Commands;
-using Discord.WebSocket;
 
 namespace Bot.Commands {
     [Hidden]

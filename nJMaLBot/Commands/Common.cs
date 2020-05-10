@@ -1,16 +1,11 @@
 ﻿using System;
-using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using System.Threading.Tasks;
-using Bot.Config;
-using Bot.Config.Localization;
 using Bot.Utilities;
 using Bot.Utilities.Commands;
 using Bot.Utilities.Modules;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
-using Tyrrrz.Extensions;
 
 namespace Bot.Commands {
     [Grouping("utils")]

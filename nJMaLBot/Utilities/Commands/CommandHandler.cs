@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Bot.Config;
-using Bot.Config.Localization;
 using Bot.Config.Localization.Providers;
 using Bot.Music;
 using Bot.Music.Players;
@@ -15,10 +12,6 @@ using Bot.Utilities.Commands;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
-using HarmonyLib;
-using Lavalink4NET;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.VisualBasic;
 
 namespace Bot.Commands {
     public class CommandHandler {

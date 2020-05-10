@@ -1,19 +1,14 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Bot.Commands;
 using Bot.Utilities;
-using Discord;
-using Lavalink4NET;
 using Lavalink4NET.Decoding;
 using Lavalink4NET.Events;
 using Lavalink4NET.Player;
-using Newtonsoft.Json;
 
 namespace Bot.Music.Players {
     public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer {

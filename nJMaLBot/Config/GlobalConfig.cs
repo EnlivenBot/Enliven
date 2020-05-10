@@ -4,7 +4,6 @@ using System.ComponentModel;
 using System.IO;
 using System.Text.Json.Serialization;
 using Bot.Music;
-using Lavalink4NET;
 using Newtonsoft.Json;
 
 namespace Bot.Config {
