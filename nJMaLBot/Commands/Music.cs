@@ -54,12 +54,9 @@ namespace Bot.Commands {
         [Summary("stop0s")]
         public async Task Stop() {
             if (!await IsPreconditionsValid) return;
-            if (Player?.CurrentTrack == null) {
-                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(2));
-                return;
-            }
 
             Player.Dispose(Loc.Get("Music.UserStopPlayback").Format(Context.User.Username), false);
+            EmbedPlaybackControl.ForceRemove(Context.Guild.Id, Loc.Get("Music.UserStopPlayback").Format(Context.User.Username), false);
         }
 
         [Command("jump", RunMode = RunMode.Async)]
@@ -67,8 +64,8 @@ namespace Bot.Commands {
         [Summary("jump0s")]
         public async Task Jump([Summary("jump0_0s")] int index = 1) {
             if (!await IsPreconditionsValid) return;
-            if (Player == null) {
-                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(2));
+            if (Player == null || Player.Playlist.IsEmpty) {
+                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(1));
                 return;
             }
 
@@ -83,6 +80,10 @@ namespace Bot.Commands {
         [Summary("goto0s")]
         public async Task Goto([Summary("goto0_0s")] int index) {
             if (!await IsPreconditionsValid) return;
+            if (Player == null || Player.Playlist.IsEmpty) {
+                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(1));
+                return;
+            }
 
             //For programmers who count from 0
             if (index == 0) index = 1;
@@ -105,7 +106,7 @@ namespace Bot.Commands {
         public async Task Volume([Summary("volume0_0s")] int volume = 100) {
             if (!await IsPreconditionsValid) return;
             if (Player == null) {
-                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(2));
+                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(1));
                 return;
             }
 
@@ -124,7 +125,7 @@ namespace Bot.Commands {
         public async Task Repeat(LoopingState state) {
             if (!await IsPreconditionsValid) return;
             if (Player == null) {
-                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(2));
+                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(1));
                 return;
             }
 
@@ -145,7 +146,7 @@ namespace Bot.Commands {
         public async Task Pause() {
             if (!await IsPreconditionsValid) return;
             if (Player == null) {
-                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(2));
+                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(1));
                 return;
             }
 
@@ -159,7 +160,7 @@ namespace Bot.Commands {
         public async Task Resume() {
             if (!await IsPreconditionsValid) return;
             if (Player == null) {
-                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(2));
+                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(1));
                 return;
             }
 
@@ -172,8 +173,8 @@ namespace Bot.Commands {
         [Summary("shuffle0s")]
         public async Task Shuffle() {
             if (!await IsPreconditionsValid) return;
-            if (Player == null) {
-                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(2));
+            if (Player == null || Player.Playlist.IsEmpty) {
+                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(1));
                 return;
             }
 
@@ -201,8 +202,8 @@ namespace Bot.Commands {
         [Summary("saveplaylist0s")]
         public async Task SavePlaylist() {
             if (!await IsPreconditionsValid) return;
-            if (Player == null || Player.Playlist.Count == 0) {
-                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(2));
+            if (Player == null || Player.Playlist.IsEmpty) {
+                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(1));
                 return;
             }
 
@@ -242,10 +243,6 @@ namespace Bot.Commands {
         private async Task ExecutePlaylist(string id, ImportPlaylistOptions options) {
             if (!await IsPreconditionsValid) return;
             var logMessage = await GetLogMessage();
-            if (logMessage == null || Player == null) {
-                logMessage.SafeDelete();
-                return;
-            }
 
             Player.SetControlMessage(logMessage);
             var playlist = GlobalDB.Playlists.FindById(id);
@@ -359,6 +356,11 @@ namespace Bot.Commands {
         [Summary("fastforward0s")]
         public async Task FastForward([Summary("fastforward0_0s")] TimeSpan? timeSpan = null) {
             if (!await IsPreconditionsValid) return;
+            if (Player?.CurrentTrack == null) {
+                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(1));
+                return;
+            }
+            
             var time = timeSpan ?? new TimeSpan(0, 0, 10);
             Player.SeekPositionAsync(Player.TrackPosition + time);
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.FF").Format(Context.User.Username, Player.CurrentTrackIndex, time.TotalSeconds));
@@ -369,6 +371,11 @@ namespace Bot.Commands {
         [Summary("rewind0s")]
         public async Task Rewind([Summary("fastforward0_0s")] TimeSpan? timeSpan = null) {
             if (!await IsPreconditionsValid) return;
+            if (Player?.CurrentTrack == null) {
+                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(1));
+                return;
+            }
+            
             var time = timeSpan ?? new TimeSpan(0, 0, 10);
             Player.SeekPositionAsync(Player.TrackPosition - time);
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.Rewind").Format(Context.User.Username, Player.CurrentTrackIndex, time.TotalSeconds));
@@ -379,6 +386,11 @@ namespace Bot.Commands {
         [Summary("seek0s")]
         public async Task Seek([Summary("seek0_0s")] TimeSpan position) {
             if (!await IsPreconditionsValid) return;
+            if (Player?.CurrentTrack == null) {
+                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(1));
+                return;
+            }
+            
             Player.SeekPositionAsync(position);
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.Seek").Format(Context.User.Username, Player.CurrentTrackIndex, position));
         }
@@ -388,8 +400,13 @@ namespace Bot.Commands {
         [Summary("remove0s")]
         public async Task RemoveRange([Summary("remove0_0s")] int start, [Summary("remove0_1s")] int end = -1) {
             if (!await IsPreconditionsValid) return;
-            start = Math.Max(1, Math.Min(start, Player.Playlist.Count));
-            end = Math.Max(start, Math.Min(end, Player.Playlist.Count));
+            if (Player == null || Player.Playlist.IsEmpty) {
+                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(1));
+                return;
+            }
+
+            start = start.Normalize(1, Player.Playlist.Count);
+            end = end.Normalize(start, Player.Playlist.Count);
             var removesCurrent = Player.CurrentTrackIndex + 1 >= start && Player.CurrentTrackIndex + 1 <= end;
             Player.Playlist.RemoveRange(start - 1, end - start + 1);
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.Remove").Format(Context.User.Username, end - start + 1, start, end));
@@ -410,7 +427,11 @@ namespace Bot.Commands {
         [Summary("move0s")]
         public async Task Move([Summary("move0_0s")] int trackIndex, [Summary("move0_1s")] int newIndex = 1) {
             if (!await IsPreconditionsValid) return;
-
+            if (Player == null || Player.Playlist.IsEmpty) {
+                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(1));
+                return;
+            }
+            
             // For programmers
             if (trackIndex == 0) trackIndex = 1;
             if (trackIndex < 1 || trackIndex > Player.Playlist.Count) {
@@ -428,6 +449,11 @@ namespace Bot.Commands {
         [Summary("bassboost0s")]
         public async Task ApplyBassBoost([Summary("bassboost0_0s")] BassBoostMode mode) {
             if (!await IsPreconditionsValid) return;
+            if (Player == null) {
+                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(1));
+                return;
+            }
+            
             var bands = new List<EqualizerBand>();
             switch (mode) {
                 case BassBoostMode.Off:
@@ -462,8 +488,11 @@ namespace Bot.Commands {
         [Alias("newnode", "switchnode")]
         [Summary("changenode0s")]
         public async Task ChangeNode() {
-            if (!await IsPreconditionsValid)
+            if (!await IsPreconditionsValid) return;
+            if (Player == null) {
+                ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(1));
                 return;
+            }
 
             if (MusicUtils.Cluster.Nodes.Count <= 1) {
                 ReplyFormattedAsync(Loc.Get("Music.OnlyOneNode"), true);

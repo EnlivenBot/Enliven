@@ -63,5 +63,21 @@ namespace Bot.Music.Players {
             }, null, 4000, 0);
             return tcs.Task;
         }
+
+        public static async Task ForceRemove(ulong GuildId, string reason, bool needSave) {
+            foreach (var embedPlaybackPlayer in PlaybackPlayers.ToList().Where(player => player.GuildId == GuildId)) {
+                try {
+                    if (string.IsNullOrWhiteSpace(reason)) {
+                        embedPlaybackPlayer.Dispose();
+                    }
+                    else {
+                        await embedPlaybackPlayer.Dispose(reason, needSave);
+                    }
+                }
+                finally {
+                    PlaybackPlayers.Remove(embedPlaybackPlayer);
+                }
+            }
+        }
     }
 }
