@@ -36,7 +36,7 @@ namespace Bot.Commands {
             
             CommandsPatch.ApplyPatch();
 
-            _client.MessageReceived += HandleCommand;
+            _client.MessageReceived += message => Task.Run(() => HandleCommand(message));
         }
 
         private async Task HandleCommand(SocketMessage s) {
@@ -90,19 +90,19 @@ namespace Bot.Commands {
                             break;
                     }
 
-                    MessageHistoryManager.StartLogToHistory(s, guild);
+                    MessageHistoryManager.LogCreatedMessage(s, guild);
                     msg.SafeDelete();
                 }
                 else {
                     
                     if (guild.IsCommandLoggingEnabled)
-                        MessageHistoryManager.StartLogToHistory(s, guild);
+                        MessageHistoryManager.LogCreatedMessage(s, guild);
                     else
                         MessageHistoryManager.AddMessageToIgnore(s);
                 }
             }
             else
-                MessageHistoryManager.StartLogToHistory(s, guild);
+                MessageHistoryManager.LogCreatedMessage(s, guild);
         }
 
         public async Task<IResult> ExecuteCommand(string query, ICommandContext context, string authorId) {

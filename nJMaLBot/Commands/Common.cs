@@ -22,7 +22,8 @@ namespace Bot.Commands {
                 messageId = id.Split('-')[1];
             }
 
-            await MessageHistoryManager.PrintLog(Convert.ToUInt64(messageId), channelId, (SocketTextChannel) Context.Channel, (IGuildUser) Context.User);
+            await MessageHistoryManager.PrintLog(MessageHistory.Get(channelId, Convert.ToUInt64(messageId)),
+                (SocketTextChannel) await GetResponseChannel(), Loc, (IGuildUser) Context.User);
             Context.Message.SafeDelete();
         }
 
