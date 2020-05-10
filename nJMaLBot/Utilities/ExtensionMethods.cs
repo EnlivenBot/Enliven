@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -83,6 +84,20 @@ namespace Bot.Utilities {
             var embedBuilder = new EmbedBuilder();
             embedBuilder.WithFooter(moduleBase.Context.User.Username, moduleBase.Context.User.GetAvatarUrl());
             return embedBuilder;
+        }
+
+        public static int Normalize(this int value, int min, int max) {
+            return Math.Max(min, Math.Min(max, value));
+        }
+
+        public static async Task<IMessage> SendTextAsFile(this IMessageChannel channel, string content, string filename, string text = null, bool isTTS = false,
+                                                          Embed embed = null, RequestOptions options = null, bool isSpoiler = false) {
+            await using var ms = new MemoryStream();
+            TextWriter tw = new StreamWriter(ms);
+            await tw.WriteAsync(content);
+            await tw.FlushAsync();
+            ms.Position = 0;
+            return await channel.SendFileAsync(ms, filename);
         }
     }
 }

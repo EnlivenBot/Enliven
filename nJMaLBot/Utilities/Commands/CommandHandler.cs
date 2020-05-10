@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Bot.Config;
 using Bot.Config.Localization;
 using Bot.Config.Localization.Providers;
+using Bot.Music;
 using Bot.Music.Players;
 using Bot.Utilities;
 using Bot.Utilities.Commands;
@@ -35,10 +36,9 @@ namespace Bot.Commands {
             await CommandService.AddModulesAsync(Assembly.GetEntryAssembly(), null);
             CommandService.AddTypeReader(typeof(ChannelFunction), new ChannelFunctionTypeReader());
             CommandService.AddTypeReader(typeof(LoopingState), new LoopingStateTypeReader());
+            CommandService.AddTypeReader(typeof(BassBoostMode), new BassBoostModeTypeReader());
             foreach (var cmdsModule in CommandService.Modules) {
-                foreach (var command in cmdsModule.Commands) {
-                    AllCommands.Add(command);
-                }
+                foreach (var command in cmdsModule.Commands) AllCommands.Add(command);
             }
             
             CommandsPatch.ApplyPatch();
@@ -101,6 +101,7 @@ namespace Bot.Commands {
                     msg.SafeDelete();
                 }
                 else {
+                    
                     if (guild.IsCommandLoggingEnabled)
                         MessageHistoryManager.StartLogToHistory(s, guild);
                     else
