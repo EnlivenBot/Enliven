@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
 using Discord;
 using Newtonsoft.Json;
 
@@ -22,7 +21,10 @@ namespace Bot.Utilities.Emoji {
         public static Discord.Emoji LegacyRepeat { get; set; } = new Discord.Emoji(CommonEmojiStrings.Instance.LegacyRepeat);
         public static Discord.Emoji LegacyShuffle { get; set; } = new Discord.Emoji(CommonEmojiStrings.Instance.LegacyShuffle);
         public static Discord.Emoji LegacyBook { get; set; } = new Discord.Emoji(CommonEmojiStrings.Instance.LegacyBook);
-        public static Discord.Emoji LegacyPlayPause { get; set; } = new Discord.Emoji(CommonEmojiStrings.Instance.LogacyPlayPause);
+        public static Discord.Emoji LegacyPlayPause { get; set; } = new Discord.Emoji(CommonEmojiStrings.Instance.LegacyPlayPause);
+        public static Discord.Emoji LegacyArrowDown { get; set; } = new Discord.Emoji(CommonEmojiStrings.Instance.LegacyArrowDown);
+        public static Discord.Emoji LegacyFileBox { get; set; } = new Discord.Emoji(CommonEmojiStrings.Instance.LegacyFileBox);
+        public static Discord.Emoji LegacyReverse { get; set; } = new Discord.Emoji(CommonEmojiStrings.Instance.LegacyReverse);
     }
 
     public class CommonEmojiStrings {
@@ -55,6 +57,9 @@ namespace Bot.Utilities.Emoji {
         public string LegacyRepeat { get; set; } = "🔁";
         public string LegacyShuffle { get; set; } = "🔀";
         public string LegacyBook { get; set; } = "📖";
-        public string LogacyPlayPause { get; set; } = "⏯️";
+        public string LegacyPlayPause { get; set; } = "⏯️";
+        public string LegacyArrowDown { get; set; } = "⬇️";
+        public string LegacyFileBox { get; set; } = "🗃️";
+        public string LegacyReverse { get; set; } = "◀️";
     }
 }

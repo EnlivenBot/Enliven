@@ -1,15 +1,10 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
-using System.Net.Mime;
-using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Bot.Commands;
 using Bot.Config;
 using Bot.Config.Localization;
 using Bot.Music;
-using Bot.Utilities.Collector;
-using Bot.Utilities.Emoji;
 using Discord;
 using Discord.WebSocket;
 using ICSharpCode.SharpZipLib.Core;

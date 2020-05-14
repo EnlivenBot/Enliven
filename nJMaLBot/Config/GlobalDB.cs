@@ -44,7 +44,9 @@ namespace Bot.Config {
             var tempdb = new LiteDatabase(Path.Combine(Directory.GetCurrentDirectory(), "Config", @"DataBase.db"));
             UpgradeTo2(tempdb);
             tempdb.UserVersion = 2;
-            
+
+            tempdb.Checkpoint();
+            tempdb.Rebuild();
             logger.Info("Database loaded");
             return tempdb;
         }

@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Bot.Config.Localization.Providers {
+﻿namespace Bot.Config.Localization.Providers {
     public class GuildLocalizationProvider : ILocalizationProvider {
         private GuildConfig _guildConfig;
 

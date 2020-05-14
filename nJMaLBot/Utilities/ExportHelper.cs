@@ -65,7 +65,7 @@ namespace Bot.Utilities {
             var lastString = "";
             foreach (var snapshotPatches in messageHistory.Edits.Select(snapshot =>
                 new Tuple<List<Patch>, MessageHistory.MessageSnapshot>(
-                    diffMatchPatch.patch_fromText(snapshot.Patch), snapshot))) {
+                    diffMatchPatch.patch_fromText(snapshot.Value), snapshot))) {
                 var currentString = diffMatchPatch.patch_apply(snapshotPatches.Item1, lastString)[0].ToString();
                 // var diffs = diffMatchPatch.diff_main(lastString, currentString);
                 // diffMatchPatch.diff_cleanupSemantic(diffs);

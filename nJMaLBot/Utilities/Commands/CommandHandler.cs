@@ -1,40 +1,42 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Bot.Config;
-using Bot.Config.Localization;
 using Bot.Config.Localization.Providers;
+using Bot.Music;
 using Bot.Music.Players;
 using Bot.Utilities;
+using Bot.Utilities.Commands;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
-using Lavalink4NET;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.VisualBasic;
 
 namespace Bot.Commands {
     public class CommandHandler {
         private DiscordShardedClient _client;
         public CommandService CommandService { get; private set; }
         public List<CommandInfo> AllCommands { get; } = new List<CommandInfo>();
+        private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
 
         public async Task Install(DiscordShardedClient c) {
             _client = c;
+            logger.Info("Creating new command service");
             CommandService = new CommandService();
 
+            logger.Info("Adding modules");
             await CommandService.AddModulesAsync(Assembly.GetEntryAssembly(), null);
             CommandService.AddTypeReader(typeof(ChannelFunction), new ChannelFunctionTypeReader());
             CommandService.AddTypeReader(typeof(LoopingState), new LoopingStateTypeReader());
+            CommandService.AddTypeReader(typeof(BassBoostMode), new BassBoostModeTypeReader());
             foreach (var cmdsModule in CommandService.Modules) {
                 foreach (var command in cmdsModule.Commands) AllCommands.Add(command);
             }
+            
+            CommandsPatch.ApplyPatch();
 
-            _client.MessageReceived += HandleCommand;
+            _client.MessageReceived += message => Task.Run(() => HandleCommand(message));
         }
 
         private async Task HandleCommand(SocketMessage s) {
@@ -42,6 +44,7 @@ namespace Bot.Commands {
                 MessageHistoryManager.AddMessageToIgnore(s);
                 return;
             }
+
             var context = new CommandContext(_client, msg);
             if (!(s.Channel is SocketGuildChannel guildChannel)) {
                 MessageHistoryManager.AddMessageToIgnore(s);
@@ -87,19 +90,19 @@ namespace Bot.Commands {
                             break;
                     }
 
-                    MessageHistoryManager.StartLogToHistory(s, guild);
+                    MessageHistoryManager.LogCreatedMessage(s, guild);
                     msg.SafeDelete();
                 }
                 else {
                     
                     if (guild.IsCommandLoggingEnabled)
-                        MessageHistoryManager.StartLogToHistory(s, guild);
+                        MessageHistoryManager.LogCreatedMessage(s, guild);
                     else
                         MessageHistoryManager.AddMessageToIgnore(s);
                 }
             }
             else
-                MessageHistoryManager.StartLogToHistory(s, guild);
+                MessageHistoryManager.LogCreatedMessage(s, guild);
         }
 
         public async Task<IResult> ExecuteCommand(string query, ICommandContext context, string authorId) {
@@ -109,6 +112,7 @@ namespace Bot.Commands {
                 RegisterUsage(commandName, authorId);
                 RegisterUsage(commandName, "Global");
             }
+
             return result;
         }
 
@@ -145,13 +149,13 @@ namespace Bot.Commands {
             userStatistics.UsagesList[command] = ++userUsageCount;
             GlobalDB.CommandStatistics.Upsert(userStatistics);
         }
-        
+
         public static void RegisterMusicTime(TimeSpan span) {
             var userStatistics = GlobalDB.CommandStatistics.FindById("Music") ?? new StatisticsPart {Id = "Music"};
             if (!userStatistics.UsagesList.TryGetValue("PlaybackTime", out var userUsageCount)) {
                 userUsageCount = 0;
             }
-            
+
             userStatistics.UsagesList["PlaybackTime"] = (int) (userUsageCount + span.TotalSeconds);
             GlobalDB.CommandStatistics.Upsert(userStatistics);
         }
@@ -161,7 +165,7 @@ namespace Bot.Commands {
             if (!userStatistics.UsagesList.TryGetValue("PlaybackTime", out var userUsageCount)) {
                 userUsageCount = 0;
             }
-            
+
             return TimeSpan.FromSeconds(userUsageCount);
         }
     }

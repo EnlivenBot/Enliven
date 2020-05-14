@@ -1,8 +1,7 @@
 using System;
-using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Bot.Utilities.Commands;
 using Bot.Utilities.Modules;
@@ -56,6 +55,12 @@ namespace Bot.Utilities {
                                                   : text.Substring(start, length);
         }
 
+        public static string SafeSubstring(this string text, int length, string postContent = "") {
+            if (text == null) return null;
+
+            return text.Length <= length ? text : text.Substring(0, length - postContent.Length) + postContent;
+        }
+
         public static string Repeat(this string s, int count) {
             if (string.IsNullOrEmpty(s)) return string.Empty;
             if (count <= 0) return string.Empty;
@@ -79,6 +84,20 @@ namespace Bot.Utilities {
             embedBuilder.WithFooter(moduleBase.Loc.Get("Commands.RequestedBy").Format(moduleBase.Context.User.Username),
                 moduleBase.Context.User.GetAvatarUrl());
             return embedBuilder;
+        }
+
+        public static int Normalize(this int value, int min, int max) {
+            return Math.Max(min, Math.Min(max, value));
+        }
+
+        public static async Task<IMessage> SendTextAsFile(this IMessageChannel channel, string content, string filename, string text = null, bool isTTS = false,
+                                                          Embed embed = null, RequestOptions options = null, bool isSpoiler = false) {
+            await using var ms = new MemoryStream();
+            TextWriter tw = new StreamWriter(ms);
+            await tw.WriteAsync(content);
+            await tw.FlushAsync();
+            ms.Position = 0;
+            return await channel.SendFileAsync(ms, filename);
         }
     }
 }

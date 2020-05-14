@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Threading;
-using System.Timers;
-using Discord;
 using Timer = System.Threading.Timer;
 
 namespace Bot.Utilities.Collector {

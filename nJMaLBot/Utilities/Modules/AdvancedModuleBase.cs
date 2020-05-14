@@ -6,7 +6,7 @@ using Discord;
 using Discord.Commands;
 
 namespace Bot.Utilities.Modules {
-    public class AdvancedModuleBase : ModuleBase {
+    public class AdvancedModuleBase : PatchableModuleBase {
         public async Task<IMessageChannel> GetResponseChannel(bool fileSupport = false) {
             var bot = (await Context.Guild.GetCurrentUserAsync()).GetPermissions((IGuildChannel) Context.Channel);
             var user = (await Context.Guild.GetUserAsync(Context.User.Id)).GetPermissions((IGuildChannel) Context.Channel);
