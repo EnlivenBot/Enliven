@@ -2,10 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Bot.Config;
-using Bot.Config.Localization;
 using Bot.Music;
-using Bot.Music.Players;
-using Bot.Utilities.Commands;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -45,10 +42,13 @@ namespace Bot.Utilities.Modules {
             }
 
             if (GetChannel(out var musicChannel)) {
-                var needSummon = command.Attributes.FirstOrDefault(attribute => attribute is SummonToUserAttribute) != null;
                 var user = Context.User as SocketGuildUser;
+                if (user?.VoiceChannel?.Id == Player?.VoiceChannelId && user?.VoiceChannel?.Id != null &&
+                    Player.State != PlayerState.NotConnected && Player.State != PlayerState.Destroyed) return true;
+
+                var needSummon = command.Attributes.FirstOrDefault(attribute => attribute is SummonToUserAttribute) != null;
+
                 if (Player != null && Player.State != PlayerState.NotConnected && Player.State != PlayerState.Destroyed && !needSummon) {
-                    if (user.VoiceChannel.Id == Player.VoiceChannelId) return true;
                     Reply(Loc.Get("Music.OtherVoiceChannel").Format(Context.User.Mention), true).DelayedDelete(TimeSpan.FromMinutes(5));
                     return false;
                 }
@@ -61,8 +61,7 @@ namespace Bot.Utilities.Modules {
                         return false;
                     }
 
-                    Player = await MusicUtils.Cluster.JoinAsync<EmbedPlaybackPlayer>(Context.Guild.Id, user.VoiceChannel.Id);
-                    EmbedPlaybackControl.PlaybackPlayers.Add(Player);
+                    Player = await MusicUtils.JoinChannel(Context.Guild.Id, user.VoiceChannel.Id);
                     return true;
                 }
 
@@ -95,7 +94,8 @@ namespace Bot.Utilities.Modules {
             return await ResponseChannel.SendMessageAsync(message, isTTS, embed, options).ConfigureAwait(false);
         }
 
-        protected async Task<IUserMessage> ReplyFormattedAsync(string description, bool isFail = false, IUserMessage previous = null, IMessageChannel channel = null) {
+        protected async Task<IUserMessage> ReplyFormattedAsync(string description, bool isFail = false, IUserMessage previous = null,
+                                                               IMessageChannel channel = null) {
             var embed = this.GetAuthorEmbedBuilder().WithTitle(Loc.Get(isFail ? "Music.Fail" : "Music.Playback"))
                             .WithDescription(description).WithColor(isFail ? Color.Orange : Color.Gold).Build();
             if (previous == null) {

@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Bot.Music;
@@ -28,6 +27,9 @@ namespace Bot.Config {
             var tempdb = new LiteDatabase(Path.Combine(Directory.GetCurrentDirectory(), "Config", @"DataBase.db"));
             UpgradeTo2(tempdb);
             tempdb.UserVersion = 2;
+
+            tempdb.Checkpoint();
+            tempdb.Rebuild();
             return tempdb;
         }
 

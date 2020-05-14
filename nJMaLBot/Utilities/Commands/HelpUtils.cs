@@ -1,10 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Text;
-using Bot.Config;
-using Bot.Config.Localization;
 using Bot.Config.Localization.Providers;
 using Discord;
 using Discord.Commands;

@@ -1,24 +1,27 @@
 using System;
-using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
+using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Bot.Commands;
-using Discord;
-using Lavalink4NET;
+using Bot.Utilities;
 using Lavalink4NET.Decoding;
 using Lavalink4NET.Events;
 using Lavalink4NET.Player;
-using Newtonsoft.Json;
 
 namespace Bot.Music.Players {
     public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer {
         private int _currentTrackIndex;
 
         // ReSharper disable once UnusedParameter.Local
-        public PlaylistLavalinkPlayer(LavalinkSocket lavalinkSocket, IDiscordClientWrapper client, ulong guildId, bool disconnectOnStop)
-            : base(lavalinkSocket, client, guildId, false) {
+        public PlaylistLavalinkPlayer(ulong guildId) : base(guildId) {
             Playlist = new LavalinkPlaylist();
-            Playlist.Update += (sender, args) => { UpdateCurrentTrackIndex(); };
+            Playlist.Update += (sender, args) => {
+                UpdateCurrentTrackIndex();
+                QueuePages = null;
+                QueueDeprecated?.Invoke(this, EventArgs.Empty);
+            };
         }
 
         public LoopingState LoopingState { get; set; } = LoopingState.Off;
@@ -35,6 +38,9 @@ namespace Bot.Music.Players {
                     CurrentTrackIndexChange?.Invoke(null, value);
             }
         }
+        
+        private List<string> QueuePages { get; set; }
+        public event EventHandler QueueDeprecated;
 
         public override async Task OnTrackEndAsync(TrackEndEventArgs eventArgs) {
             var oldTrackIndex = CurrentTrackIndex;
@@ -78,25 +84,20 @@ namespace Bot.Music.Players {
             }
         }
 
-        public virtual void Cleanup() {
-            Playlist.Clear();
-            CurrentTrackIndex = 0;
-        }
-
         public override async Task DisconnectAsync() {
-            Cleanup();
             await base.DisconnectAsync();
         }
 
-        public override Task StopAsync(bool disconnect = false) {
-            if (disconnect) Cleanup();
-            return base.StopAsync(disconnect);
+        public override Task Shutdown(string reason, bool needSave = true) {
+            Playlist.Clear();
+            CurrentTrackIndex = 0;
+            return base.Shutdown(reason, needSave);
         }
 
-        public virtual ExportPlaylist GetExportPlaylist(ExportPlaylistOptions options) {
+        public virtual ExportPlaylist ExportPlaylist(ExportPlaylistOptions options) {
             var exportPlaylist = new ExportPlaylist {Tracks = Playlist.Select(track => track.Identifier).ToList()};
             if (options != ExportPlaylistOptions.IgnoreTrackIndex) {
-                exportPlaylist.TrackIndex = CurrentTrackIndex;
+                exportPlaylist.TrackIndex = CurrentTrackIndex.Normalize(0, Playlist.Count - 1);
             }
 
             if (options == ExportPlaylistOptions.AllData) {
@@ -107,6 +108,9 @@ namespace Bot.Music.Players {
         }
 
         public virtual async Task ImportPlaylist(ExportPlaylist playlist, ImportPlaylistOptions options, string requester) {
+            if (Playlist.Count + playlist.Tracks.Count > 10000) {
+                return;
+            }
             var tracks = playlist.Tracks.Select(s => TrackDecoder.DecodeTrack(s))
                                  .Select(track => AuthoredLavalinkTrack.FromLavalinkTrack(track, requester)).ToList();
             if (options == ImportPlaylistOptions.Replace) {
@@ -121,12 +125,18 @@ namespace Bot.Music.Players {
                     Playlist.Clear();
                 }
             }
-
-
+            
             Playlist.AddRange(tracks);
-
             if (options != ImportPlaylistOptions.JustAdd) {
-                await PlayAsync(playlist.TrackIndex == -1 ? tracks.First() : tracks[playlist.TrackIndex], false, playlist.TrackPosition);
+                var track = playlist.TrackIndex == -1 ? tracks.First() : tracks[playlist.TrackIndex.Normalize(0, playlist.Tracks.Count - 1)];
+                var position = playlist.TrackPosition;
+                if (position != null && position.Value > track.Duration) {
+                    position = TimeSpan.Zero;
+                }
+                await PlayAsync(track, false, position);
+            }
+            else if (State == PlayerState.NotPlaying) {
+                await PlayAsync(Playlist[0], false);
             }
         }
 
@@ -139,6 +149,61 @@ namespace Bot.Music.Players {
             catch (Exception e) {
                 CurrentTrackIndex = Playlist.IndexOf(CurrentTrack);
             }
+        }
+
+        public List<string> GetQueuePages() {
+            if (QueuePages == null) {
+                QueuePages = new List<string>();
+                var stringBuilder = new StringBuilder();
+                for (var i = 0; i < Playlist.Count; i++) {
+                    var text = (CurrentTrackIndex == i ? "@" : " ") + $"{i}: {Playlist[i].Title}\n";
+                    if (stringBuilder.Length + text.Length  > 2000) {
+                        QueuePages.Add(stringBuilder.ToString());
+                        stringBuilder.Clear();
+                    }
+                    stringBuilder.Append(text);
+                }
+            
+                QueuePages.Add(stringBuilder.ToString());
+            }
+            
+            return QueuePages.ToList();
+        }
+
+        private readonly SemaphoreSlim _enqueueLock = new SemaphoreSlim(1);
+
+        public virtual async Task TryEnqueue(IEnumerable<LavalinkTrack> tracks, string author, bool enqueue = true) {
+            await _enqueueLock.WaitAsync();
+            try {
+                var lavalinkTracks = tracks.ToList();
+                var authoredTracks = lavalinkTracks.Take(2000 - Playlist.Tracks.Count)
+                                                   .Select(track => AuthoredLavalinkTrack.FromLavalinkTrack(track, author)).ToList();
+
+                await Enqueue(authoredTracks, enqueue);
+
+                var ignoredTracksCount = lavalinkTracks.Count - authoredTracks.Count;
+                if (ignoredTracksCount != 0)
+                {
+                    await OnTrackLimitExceed(author, ignoredTracksCount);
+                }
+            }
+            finally {
+                _enqueueLock.Release();
+            }
+        }
+
+        public virtual async Task Enqueue(List<AuthoredLavalinkTrack> tracks, bool enqueue) {
+            if (tracks.Any()) {
+                await PlayAsync(tracks.First(), enqueue);
+
+                if (tracks.Count > 1) {
+                    Playlist.AddRange(tracks.Skip(1));
+                }
+            }
+        }
+
+        public virtual Task OnTrackLimitExceed(string author, int count) {
+            return Task.CompletedTask;
         }
     }
 

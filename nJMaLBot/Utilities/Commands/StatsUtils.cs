@@ -7,7 +7,6 @@ using Bot.Commands;
 using Bot.Config;
 using Bot.Config.Localization.Providers;
 using Discord;
-using NLog;
 using Tyrrrz.Extensions;
 
 namespace Bot.Utilities.Commands {

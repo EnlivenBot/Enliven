@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Discord;
 using Discord.WebSocket;
 
@@ -14,7 +15,7 @@ namespace Bot.Utilities.Collector {
             Controller.Dispose();
         }
 
-        public abstract void RemoveReason();
+        public abstract Task RemoveReason();
     }
 
     public class EmoteCollectorEventArgs : CollectorEventArgsBase {
@@ -24,9 +25,12 @@ namespace Bot.Utilities.Collector {
             Reaction = reaction;
         }
 
-        public override void RemoveReason() {
+        public override async Task RemoveReason() {
             try {
-                Reaction.Message.Value.RemoveReactionAsync(Reaction.Emote, Reaction.User.Value);
+                var message = (IUserMessage) (Reaction.Message.IsSpecified
+                    ? Reaction.Message.Value
+                    : await Reaction.Channel.GetMessageAsync(Reaction.MessageId));
+                await message.RemoveReactionAsync(Reaction.Emote, Reaction.User.Value);
             }
             catch (Exception) {
                 // ignored
@@ -41,8 +45,9 @@ namespace Bot.Utilities.Collector {
             Message = message;
         }
 
-        public override void RemoveReason() {
+        public override Task RemoveReason() {
             Message.SafeDelete();
+            return Task.CompletedTask;
         }
     }
 }

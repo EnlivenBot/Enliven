@@ -1,10 +1,6 @@
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using Bot.Commands;
-using Bot.Config.Localization;
 using Bot.Config.Localization.Providers;
-using Bot.Utilities;
 using Bot.Utilities.Commands;
 using Discord;
 using Discord.WebSocket;

@@ -4,8 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Bot.Config;
+using Bot.Config.Localization;
 using Bot.Music.Players;
-using Bot.Utilities;
 using Discord;
 using Lavalink4NET;
 using Lavalink4NET.Cluster;
@@ -41,12 +41,7 @@ namespace Bot.Music {
                 logger.Log(logLevel, args.Message);
             };
 
-            var nodes = new List<LavalinkNodeOptions>(GlobalConfig.Instance.LavalinkNodes.Select(instanceLavalinkNode =>
-                new LavalinkNodeOptions {
-                    RestUri = instanceLavalinkNode.RestUri,
-                    WebSocketUri = instanceLavalinkNode.WebSocketUri,
-                    Password = instanceLavalinkNode.Password
-                }));
+            var nodes = new List<LavalinkNodeOptions>(GlobalConfig.Instance.LavalinkNodes.Select(instanceLavalinkNode => instanceLavalinkNode.ToOptions()));
 
             if (nodes.Count != 0) {
                 logger.Info("Start building music cluster");
@@ -64,11 +59,15 @@ namespace Bot.Music {
                             DisconnectDelay = TimeSpan.FromSeconds(60),
                             PollInterval = TimeSpan.FromSeconds(4)
                         }, _lavalinkLogger);
-                    inactivityTrackingService.InactivePlayer += async (sender, args) => {
+                    inactivityTrackingService.InactivePlayer += (sender, args) => {
                         if (args.Player is EmbedPlaybackPlayer embedPlaybackPlayer) {
-                            embedPlaybackPlayer.PrepareShutdown(embedPlaybackPlayer.Loc.Get("Music.NoListenersLeft"));
+                            embedPlaybackPlayer.Shutdown(new LocalizedEntry("Music.NoListenersLeft"), false);
                         }
+                        
+                        return Task.CompletedTask;
                     };
+                    
+                    AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
                 }
                 catch (Exception e) {
                     logger.Fatal(e, "Exception with music cluster");
@@ -80,16 +79,33 @@ namespace Bot.Music {
             }
         }
 
+        private static void OnProcessExit(object? sender, EventArgs e) {
+            foreach (var embedPlaybackPlayer in Cluster.GetPlayers<EmbedPlaybackPlayer>()) {
+                embedPlaybackPlayer.Shutdown();
+            }
+        }
+
         private static Task ClusterOnPlayerMoved(object sender, PlayerMovedEventArgs args) {
             var player = args.Player as EmbedPlaybackPlayer;
-            if (!args.CouldBeMoved) {
-                player.OnNodeDropped();
+            if (args.CouldBeMoved) {
+                player?.WriteToQueueHistory(player.Loc.Get("Music.PlayerMoved"));
+                player?.UpdateNodeName();
             }
             else {
-                player.WriteToQueueHistory(player.Loc.Get("Music.PlayerMoved"));
+                player?.Shutdown(new LocalizedEntry("Music.PlayerDropped"));
             }
 
             return Task.CompletedTask;
+        }
+
+        public static async Task<EmbedPlaybackPlayer> JoinChannel(ulong guildId, ulong voiceChannelId) {
+            // Clearing previous player, if we have one
+            EmbedPlaybackControl.PlaybackPlayers.FirstOrDefault(playbackPlayer => playbackPlayer.GuildId == guildId)?.Shutdown();
+            
+            var player = await Cluster.JoinAsync(() => new EmbedPlaybackPlayer(guildId), guildId, voiceChannelId);
+            player.UpdateNodeName();
+            EmbedPlaybackControl.PlaybackPlayers.Add(player);
+            return player;
         }
 
         public static bool IsValidUrl(string query) {
@@ -142,13 +158,7 @@ namespace Bot.Music {
                 throw new NothingFoundException();
             }
 
-            var tracks = lavalinkTracks
-                        .Select(track => {
-                             player.WriteToQueueHistory(player.Loc.Get("MusicQueues.Enqueued").Format(message.Author.Username, EscapeTrack(track.Title)));
-                             return AuthoredLavalinkTrack.FromLavalinkTrack(track, message.Author);
-                         }).ToList();
-            await player.PlayAsync(tracks.First(), true);
-            player.Playlist.AddRange(tracks.Skip(1));
+            player.TryEnqueue(lavalinkTracks, message?.Author?.Username);
         }
 
         public static string EscapeTrack(string track) {
