@@ -59,10 +59,12 @@ namespace Bot.Music {
                             DisconnectDelay = TimeSpan.FromSeconds(60),
                             PollInterval = TimeSpan.FromSeconds(4)
                         }, _lavalinkLogger);
-                    inactivityTrackingService.InactivePlayer += async (sender, args) => {
+                    inactivityTrackingService.InactivePlayer += (sender, args) => {
                         if (args.Player is EmbedPlaybackPlayer embedPlaybackPlayer) {
-                            embedPlaybackPlayer.Dispose(new LocalizedEntry("Music.NoListenersLeft"), false);
+                            embedPlaybackPlayer.Shutdown(new LocalizedEntry("Music.NoListenersLeft"), false);
                         }
+                        
+                        return Task.CompletedTask;
                     };
                     
                     AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
@@ -79,18 +81,18 @@ namespace Bot.Music {
 
         private static void OnProcessExit(object? sender, EventArgs e) {
             foreach (var embedPlaybackPlayer in Cluster.GetPlayers<EmbedPlaybackPlayer>()) {
-                embedPlaybackPlayer.Dispose();
+                embedPlaybackPlayer.Shutdown();
             }
         }
 
         private static Task ClusterOnPlayerMoved(object sender, PlayerMovedEventArgs args) {
             var player = args.Player as EmbedPlaybackPlayer;
             if (args.CouldBeMoved) {
-                player.WriteToQueueHistory(player.Loc.Get("Music.PlayerMoved"));
-                player.UpdateNodeName();
+                player?.WriteToQueueHistory(player.Loc.Get("Music.PlayerMoved"));
+                player?.UpdateNodeName();
             }
             else {
-                player.Dispose(new LocalizedEntry("Music.PlayerDropped"));
+                player?.Shutdown(new LocalizedEntry("Music.PlayerDropped"));
             }
 
             return Task.CompletedTask;
@@ -98,7 +100,7 @@ namespace Bot.Music {
 
         public static async Task<EmbedPlaybackPlayer> JoinChannel(ulong guildId, ulong voiceChannelId) {
             // Clearing previous player, if we have one
-            EmbedPlaybackControl.PlaybackPlayers.FirstOrDefault(playbackPlayer => playbackPlayer.GuildId == guildId)?.Dispose();
+            EmbedPlaybackControl.PlaybackPlayers.FirstOrDefault(playbackPlayer => playbackPlayer.GuildId == guildId)?.Shutdown();
             
             var player = await Cluster.JoinAsync(() => new EmbedPlaybackPlayer(guildId), guildId, voiceChannelId);
             player.UpdateNodeName();

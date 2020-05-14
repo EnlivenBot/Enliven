@@ -55,7 +55,7 @@ namespace Bot.Commands {
         public async Task Stop() {
             if (!await IsPreconditionsValid) return;
 
-            Player.Dispose(Loc.Get("Music.UserStopPlayback").Format(Context.User.Username), false);
+            Player.Shutdown(Loc.Get("Music.UserStopPlayback").Format(Context.User.Username), false);
             EmbedPlaybackControl.ForceRemove(Context.Guild.Id, Loc.Get("Music.UserStopPlayback").Format(Context.User.Username), false);
         }
 

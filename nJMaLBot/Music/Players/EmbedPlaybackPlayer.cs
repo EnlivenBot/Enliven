@@ -27,12 +27,10 @@ namespace Bot.Music {
         public bool UpdatePlayback;
         private EmbedBuilder EmbedBuilder = new EmbedBuilder();
         public IUserMessage ControlMessage { get; private set; }
-        public readonly ILocalizationProvider Loc;
         private readonly StringBuilder _queueHistory = new StringBuilder();
 
         // ReSharper disable once UnusedParameter.Local
         public EmbedPlaybackPlayer(ulong guildId) : base(guildId) {
-            Loc = new GuildLocalizationProvider(guildId);
             EmbedBuilder.AddField(Loc.Get("Music.Empty"), Loc.Get("Music.Empty"), true);
             EmbedBuilder.AddField(Loc.Get("Music.Parameters"), Loc.Get("Music.Empty"), true);
             EmbedBuilder.AddField(Loc.Get("Music.Queue").Format(0, 0), Loc.Get("Music.Empty"));
@@ -87,11 +85,7 @@ namespace Bot.Music {
             UpdateProgress();
         }
 
-        public async Task Dispose(LocalizedEntry reason, bool needSave = true) {
-            await Dispose(reason.Get(Loc), needSave);
-        }
-
-        public async Task Dispose(string reason, bool needSave = true) {
+        public override async Task Shutdown(string reason, bool needSave = true) {
             if (ControlMessage != null) {
                 var oldControlMessage = ControlMessage;
                 ControlMessage = null;
@@ -123,16 +117,11 @@ namespace Bot.Music {
 
             try {
                 EmbedPlaybackControl.PlaybackPlayers.Remove(this);
-                base.Dispose();
+                base.Shutdown(reason, needSave);
             }
             catch (Exception) {
                 // ignored
             }
-        }
-
-        public override void Dispose() {
-            Dispose(Loc.Get("Music.PlaybackStopped"));
-            base.Dispose();
         }
 
         public void WriteToQueueHistory(string entry, bool background = false) {

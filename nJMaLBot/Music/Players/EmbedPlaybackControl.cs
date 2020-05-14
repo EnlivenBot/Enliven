@@ -61,14 +61,14 @@ namespace Bot.Music.Players {
             return tcs.Task;
         }
 
-        public static async Task ForceRemove(ulong GuildId, string reason, bool needSave) {
-            foreach (var embedPlaybackPlayer in PlaybackPlayers.ToList().Where(player => player.GuildId == GuildId)) {
+        public static async Task ForceRemove(ulong guildId, string reason, bool needSave) {
+            foreach (var embedPlaybackPlayer in PlaybackPlayers.ToList().Where(player => player.GuildId == guildId)) {
                 try {
                     if (string.IsNullOrWhiteSpace(reason)) {
-                        embedPlaybackPlayer.Dispose();
+                        await embedPlaybackPlayer.Shutdown(needSave);
                     }
                     else {
-                        await embedPlaybackPlayer.Dispose(reason, needSave);
+                        await embedPlaybackPlayer.Shutdown(reason, needSave);
                     }
                 }
                 finally {

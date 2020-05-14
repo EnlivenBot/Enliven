@@ -88,10 +88,10 @@ namespace Bot.Music.Players {
             await base.DisconnectAsync();
         }
 
-        public override void Dispose() {
+        public override Task Shutdown(string reason, bool needSave = true) {
             Playlist.Clear();
             CurrentTrackIndex = 0;
-            base.Dispose();
+            return base.Shutdown(reason, needSave);
         }
 
         public virtual ExportPlaylist ExportPlaylist(ExportPlaylistOptions options) {
