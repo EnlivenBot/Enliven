@@ -1,14 +1,16 @@
 {
   "LanguageName": "English",
   "LocalizedName": "English",
-  "LocalizationFlagEmoji": ":flag_us:",
+  "LocalizationFlagEmoji": "🇺🇸",
   "FallbackLanguage": null,
   "Authors": "SKProCH",
   "Data": {
     "Localization": {
       "LocalizationEmpty": "***You didn't select bot's localization on the server.***\nThe default one is for English. Help to change server's language:",
-      "Success": "Successfully changed the bot language to `{0}`.\n* This message will be deleted in a minute.",
-      "Fail": "There is no language {0}.\nAvailable: {1}"
+      "Success": "Successfully changed the bot language to `{0}`",
+      "Fail": "There is no language {0}.\nAvailable: {1}",
+      "LanguagesList": "Language selection",
+      "LanguageDescription": "```{0}setlanguage {1}```\n Authors - {2}\n Completeness of translation - {3}%"
     },
     "MusicQueues": {
       "Enqueued": "**{0}** enqueue `{1}`",
@@ -110,7 +112,8 @@
       "history0s": "Shows the message change history.\nYou can also put emotion 📖 under the desired message",
       "history0_0s": "ID of the message whose history needs to be displayed. You can also use a pair of `channel ID` -`ID messages`",
       "setprefix0s": "Assigns a prefix for bot commands",
-      "setrefix0_0s": "New prefix",
+      "setprefix0_0s": "New prefix",
+      "language0s": "Display list of available languages",
       "setlanguage0s": "Assigns bot response language",
       "setlanguage0_0s": "Language",
       "setchannel0s": "Specifies the channel that the bot will use for a specific type of message.",
@@ -149,7 +152,9 @@
       "move0_1s": "Desired queue position",
       "bassboost0s": "Lets you toggle the bass boost",
       "bassboost0_0s": "Bass boost mode: `Off`, `Low`, `Medium`, `High`, `Extreme`",
-      "changenode0s": "Attempts to move playback to another music node. May help if current lags"
+      "changenode0s": "Attempts to move playback to another music node. May help if current lags",
+      "invite0s": "Represents a link with which you can invite a bot to a server",
+      "invite0_0s": "Specify `true` to generate the link without administrator rights"
     },
     "CommandHandler": {
       "FailedTitle": "Error executing command",
@@ -161,8 +166,11 @@
       "ByCommand": "Help for the command `{0}`"
     },
     "Commands": {
+      "RequestedBy": "Requested by {0}",
       "SetChannelResponse": "Channel <#{0}> was successfully assigned the role {1}",
-      "SetPrefixResponse": "Successfully changed the bot prefix to `{0}`.\nIf you forget the prefix, just mention the bot.",
+      "Success": "Bot prefix changed",
+      "Fail": "Fail",
+      "SetPrefixResponse": "Changed the bot prefix to `{0}`.\nIf you forget the prefix, just mention the bot.",
       "LoggingEnabled": "Saving message change history enabled",
       "LoggingDisabled": "Saving message change history disabled",
       "CommandLoggingEnabled": "Saving history for successful commands enabled",
