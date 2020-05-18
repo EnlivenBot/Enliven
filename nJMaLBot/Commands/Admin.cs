@@ -15,6 +15,13 @@ namespace Bot.Commands {
     [Grouping("admin")]
     [RequireUserPermission(GuildPermission.Administrator)]
     public class AdminCommands : AdvancedModuleBase {
+        [Hidden]
+        [Command("printwelcome")]
+        public async Task PrintWelcome() {
+            Context.Message.SafeDelete();
+            (await GlobalBehaviors.PrintWelcomeMessage((SocketGuild) Context.Guild, Context.Channel)).DelayedDelete(TimeSpan.FromMinutes(10));
+        }
+        
         [Command("setprefix")]
         [Summary("setprefix0s")]
         public async Task SetPrefix([Summary("setrefix0_0s")] string prefix) {

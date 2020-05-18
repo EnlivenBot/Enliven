@@ -7,6 +7,7 @@ using Bot.Utilities.Commands;
 using Bot.Utilities.Modules;
 using Discord;
 using Discord.Commands;
+using NLog;
 
 namespace Bot.Utilities {
     public static class ExtensionMethods {
@@ -98,6 +99,19 @@ namespace Bot.Utilities {
             await tw.FlushAsync();
             ms.Position = 0;
             return await channel.SendFileAsync(ms, filename);
+        }
+
+        public static void Log(this Logger logger, LogSeverity logSeverity, Exception exception, string message, params object[] args) {
+            var logLevel = logSeverity switch {
+                LogSeverity.Critical => LogLevel.Fatal,
+                LogSeverity.Error    => LogLevel.Error,
+                LogSeverity.Warning  => LogLevel.Warn,
+                LogSeverity.Info     => LogLevel.Info,
+                LogSeverity.Verbose  => LogLevel.Debug,
+                LogSeverity.Debug    => LogLevel.Trace,
+                _                    => throw new ArgumentOutOfRangeException()
+            };
+            logger.Log(logLevel,exception, message, args);
         }
     }
 }

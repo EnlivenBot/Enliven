@@ -5,6 +5,7 @@ using Bot.Commands;
 using Bot.Config;
 using Bot.Config.Localization;
 using Bot.Music;
+using Bot.Utilities;
 using Discord;
 using Discord.WebSocket;
 using ICSharpCode.SharpZipLib.Core;
@@ -33,16 +34,7 @@ namespace Bot {
             var config = new DiscordSocketConfig {MessageCacheSize = 100};
             Client = new DiscordShardedClient(config);
             Client.Log += message => {
-                var logLevel = message.Severity switch {
-                    LogSeverity.Critical => LogLevel.Fatal,
-                    LogSeverity.Error    => LogLevel.Error,
-                    LogSeverity.Warning  => LogLevel.Warn,
-                    LogSeverity.Info     => LogLevel.Info,
-                    LogSeverity.Verbose  => LogLevel.Debug,
-                    LogSeverity.Debug    => LogLevel.Trace,
-                    _                    => throw new ArgumentOutOfRangeException()
-                };
-                logger.Log(logLevel, message.Exception, "{message} from {source}", message.Message, message.Source);
+                logger.Log(message.Severity, message.Exception, "{message} from {source}", message.Message, message.Source);
                 return Task.CompletedTask;
             };
 

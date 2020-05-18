@@ -5,6 +5,17 @@
   "FallbackLanguage": null,
   "Authors": "SKProCH",
   "Data": {
+    "Messages" : {
+      "WelcomeDescription" : "Greetings! 👋\n Thank you for adding me here!\n\n My prefix is ​​`{0}`, or you can just mention me - {1}.\n The list of commands can be viewed through `{0}help`.\n\n Here is a brief overview of my options:",
+      "WelcomeMusicTitle" : "***📻 Music***",
+      "WelcomeMusic" : "You can order tracks from YouTube, SoundCloud, YaMusic and many other services.\n You can control playback through emojis and using commands. You can create and order your own playlists and much more. List of Music Commands - `{0}help music`",
+      "WelcomeLoggingTitle" : ":book: ***Logging***",
+      "WelcomeLogging" : "The bot collects a detailed history and can display all message changes in one place. If necessary, export the log to the image.\n Changes to messages do not clog the log channel, instead the entire history is exported when the message is deleted.\n To enable log collection, write `{0}enablelogging true`. To see the change history, put :book: under the desired message or use the command `{0}help history`",
+      "WelcomeLocalizationTitle" : "🇺🇸 ***Localization***",
+      "WelcomeLocalization": "You can change the bot response language with `{0}language`",
+      "WelcomeInfoTitle" : "ℹ️ **Additional Information**",
+      "WelcomeInfo" : "`{0}help setchannel` - to assign a role to channels (without this, logging will not send reports when a message is deleted, for example)\n `{0}help setprefix` - to change the bot prefix\n `{0}stats` и `{0}userstats` - to view statistics\n `{0}invite` - to receive bot's invitation link"
+    },
     "Localization": {
       "LocalizationEmpty": "***You didn't select bot's localization on the server.***\nThe default one is for English. Help to change server's language:",
       "Success": "Successfully changed the bot language to `{0}`",
