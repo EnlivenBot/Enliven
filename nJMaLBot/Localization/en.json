@@ -14,7 +14,9 @@
       "WelcomeLocalizationTitle" : "🇺🇸 ***Localization***",
       "WelcomeLocalization": "You can change the bot response language with `{0}language`",
       "WelcomeInfoTitle" : "ℹ️ **Additional Information**",
-      "WelcomeInfo" : "`{0}help setchannel` - to assign a role to channels (without this, logging will not send reports when a message is deleted, for example)\n `{0}help setprefix` - to change the bot prefix\n `{0}stats` и `{0}userstats` - to view statistics\n `{0}invite` - to receive bot's invitation link"
+      "WelcomeInfo" : "`{0}help setchannel` - to assign a role to channels (without this, logging will not send reports when a message is deleted, for example)\n `{0}help setprefix` - to change the bot prefix\n `{0}stats` и `{0}userstats` - to view statistics\n `{0}invite` - to receive bot's invitation link",
+      "WelcomeGithubTitle" : "🆘 **Help us**",
+      "WelcomeGithub" : "If **you find an error**, you want to help with localizations or you **have an idea** - open [issue](https://gitlab.com/skprochlab/nJMaLBot/-/issues) or create [Merge Request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html) on [our GitLab](https://gitlab.com/skprochlab/nJMaLBot)!"
     },
     "Localization": {
       "LocalizationEmpty": "***You didn't select bot's localization on the server.***\nThe default one is for English. Help to change server's language:",

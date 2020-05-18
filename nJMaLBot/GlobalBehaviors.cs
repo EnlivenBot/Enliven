@@ -26,6 +26,7 @@ namespace Bot {
             embedBuilder.AddField(loc.Get("Messages.WelcomeLoggingTitle"), loc.Get("Messages.WelcomeLogging").Format(guildConfig.Prefix));
             embedBuilder.AddField(loc.Get("Messages.WelcomeLocalizationTitle"), loc.Get("Messages.WelcomeLocalization").Format(guildConfig.Prefix));
             embedBuilder.AddField(loc.Get("Messages.WelcomeInfoTitle"), loc.Get("Messages.WelcomeInfo").Format(guildConfig.Prefix));
+            embedBuilder.AddField(loc.Get("Messages.WelcomeGithubTitle"), loc.Get("Messages.WelcomeGithub"));
             return await (channel ?? guild.DefaultChannel).SendMessageAsync(null, false, embedBuilder.Build());
         }
 
