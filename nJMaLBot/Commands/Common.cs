@@ -31,21 +31,20 @@ namespace Bot.Commands {
         [Summary("stats0s")]
         public async Task Stats() {
             Context.Message.SafeDelete();
-            ReplyAsync(null, false, (await StatsUtils.PrintStats(null, Loc)).Build()).DelayedDelete(TimeSpan.FromMinutes(5));;
+            ReplyAsync(null, false, (await StatsUtils.BuildStats(null, Loc)).Build()).DelayedDelete(TimeSpan.FromMinutes(5));;
         }
 
         [Command("userstats", RunMode = RunMode.Async)]
         [Summary("userstats0s")]
         public async Task UserStats([Summary("userstats0_0s")] IUser user) {
             Context.Message.SafeDelete();
-            ReplyAsync(null, false, (await StatsUtils.PrintStats(user, Loc)).Build()).DelayedDelete(TimeSpan.FromMinutes(5));;
+            ReplyAsync(null, false, (await StatsUtils.BuildStats(user, Loc)).Build()).DelayedDelete(TimeSpan.FromMinutes(5));;
         }
 
         [Command("userstats", RunMode = RunMode.Async)]
         [Summary("userstats1s")]
         public async Task UserStats() {
-            Context.Message.SafeDelete();
-            ReplyAsync(null, false, (await StatsUtils.PrintStats(Context.User, Loc)).Build()).DelayedDelete(TimeSpan.FromMinutes(5));
+            await UserStats(Context.User);
         }
 
         [Command("invite", RunMode = RunMode.Async)]

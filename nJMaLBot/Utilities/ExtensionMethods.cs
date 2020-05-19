@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Bot.Config.Localization.Providers;
 using Bot.Utilities.Commands;
 using Bot.Utilities.Modules;
 using Discord;
@@ -37,6 +38,10 @@ namespace Bot.Utilities {
         public static GroupingAttribute GetGroup(this CommandInfo info) {
             return (info.Attributes.FirstOrDefault(attribute => attribute is GroupingAttribute) ??
                     info.Module.Attributes.FirstOrDefault(attribute => attribute is GroupingAttribute)) as GroupingAttribute;
+        }
+        
+        public static string GetLocalizedName(this GroupingAttribute groupingAttribute, ILocalizationProvider loc) {
+            return loc.Get($"Groups.{groupingAttribute?.GroupName ?? ""}");
         }
 
         public static bool IsHiddenCommand(this CommandInfo info) {

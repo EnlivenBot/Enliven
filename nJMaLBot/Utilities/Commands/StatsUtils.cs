@@ -7,6 +7,7 @@ using Bot.Commands;
 using Bot.Config;
 using Bot.Config.Localization.Providers;
 using Discord;
+using Discord.Commands;
 using Tyrrrz.Extensions;
 
 namespace Bot.Utilities.Commands {
@@ -29,7 +30,7 @@ namespace Bot.Utilities.Commands {
             new Temporary<int>(() => GlobalDB.CommandStatistics.Count(), TimeSpan.FromMinutes(5));
 
         [SuppressMessage("ReSharper", "ConditionIsAlwaysTrueOrFalse")]
-        public static async Task<EmbedBuilder> PrintStats(IUser user, ILocalizationProvider loc) {
+        public static async Task<EmbedBuilder> BuildStats(IUser user, ILocalizationProvider loc) {
             var stats = GlobalDB.CommandStatistics.FindById(user?.Id.ToString() ?? "Global");
             var embedBuilder = new EmbedBuilder().WithColor(Color.Gold)
                                                  .WithTitle(loc.Get("Statistics.Title"))
@@ -42,13 +43,13 @@ namespace Bot.Utilities.Commands {
                 return embedBuilder;
             }
 
-            IEnumerable<(string, double)> valueTuples = null;
+            List<(CommandInfo Key, double)> valueTuples = null;
             while (true) {
                 try {
                     valueTuples = stats.UsagesList.GroupBy(pair => HelpUtils.CommandAliases.Value[pair.Key].First())
                                        .Where(pairs => !pairs.Key.IsHiddenCommand())
-                                       .Select(pairs => (pairs.Key.Name.ToString(), pairs.Sum(pair => (double) pair.Value)))
-                                       .OrderBy(tuple => tuple.Item1).ToList();
+                                       .Select(pairs => (pairs.Key, pairs.Sum(pair => (double) pair.Value)))
+                                       .OrderBy(tuple => tuple.Item1.GetGroup()?.GroupName).ToList();
                     break;
                 }
                 catch (InvalidOperationException e) {
@@ -61,12 +62,14 @@ namespace Bot.Utilities.Commands {
                                             .ToDictionary(pair => pair.Key, pair => pair.Value);
                     GlobalDB.CommandStatistics.Upsert(stats);
                     // Assigning non null value to avoid endless cycle
-                    valueTuples = new List<(string, double)>();
+                    valueTuples = new List<(CommandInfo, double)>();
                 }
             }
-
-            embedBuilder.AddField(loc.Get("Statistics.ByCommands"),
-                string.Join("\n", valueTuples.Select((tuple, i) => $"`{tuple.Item1}` - {tuple.Item2}")));
+            
+            foreach (var grouping in valueTuples.GroupBy(tuple => tuple.Key.GetGroup()).OrderByDescending(tuples => tuples.Count())) {
+                embedBuilder.AddField(grouping.Key.GetLocalizedName(loc),
+                    string.Join("\n", grouping.ToList().Select((tuple, i) => $"`{tuple.Item1.Name}` - {tuple.Item2}")), true);
+            }
 
             if (user != null) return embedBuilder;
             var messageStats = GlobalDB.CommandStatistics.FindById("Messages");

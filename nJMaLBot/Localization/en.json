@@ -97,6 +97,7 @@
       "Empty": "Empty"
     },
     "Groups": {
+      "" : "Other",
       "music": "Music",
       "admin": "Administrative",
       "utils": "Utilities"
