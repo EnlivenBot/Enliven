@@ -3,7 +3,9 @@ using System.IO;
 using System.Threading.Tasks;
 using Bot.Commands;
 using Bot.Config;
+using Bot.Config.Localization;
 using Bot.Music;
+using Bot.Utilities;
 using Discord;
 using Discord.WebSocket;
 using ICSharpCode.SharpZipLib.Core;
@@ -13,7 +15,7 @@ using NLog.Layouts;
 
 namespace Bot {
     internal class Program {
-        public static DiscordSocketClient Client;
+        public static DiscordShardedClient Client;
         public static CommandHandler Handler;
         private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
 
@@ -30,24 +32,10 @@ namespace Bot {
 
         private static async Task MainAsync(string[] args) {
             var config = new DiscordSocketConfig {MessageCacheSize = 100};
-            Client = new DiscordSocketClient(config);
+            Client = new DiscordShardedClient(config);
             Client.Log += message => {
-                var logLevel = message.Severity switch {
-                    LogSeverity.Critical => LogLevel.Fatal,
-                    LogSeverity.Error    => LogLevel.Error,
-                    LogSeverity.Warning  => LogLevel.Warn,
-                    LogSeverity.Info     => LogLevel.Info,
-                    LogSeverity.Verbose  => LogLevel.Debug,
-                    LogSeverity.Debug    => LogLevel.Trace,
-                    _                    => throw new ArgumentOutOfRangeException()
-                };
-                logger.Log(logLevel, message.Exception, "{message} from {source}", message.Message, message.Source);
+                logger.Log(message.Severity, message.Exception, "{message} from {source}", message.Message, message.Source);
                 return Task.CompletedTask;
-            };
-            
-            Client.Ready += async () => {
-                logger.Info("Successefully started client");
-                await Client.SetGameAsync("mentions of itself to get started", null, ActivityType.Listening);
             };
 
             logger.Info("Start logining");
@@ -65,12 +53,20 @@ namespace Bot {
                     connectDelay += 10;
                 }
             }
+            
+            Localization.Initialize();
+            GlobalDB.Initialize();
 
             logger.Info("Starting client");
             await Client.StartAsync();
+            await Client.SetGameAsync("mentions of itself to get started", null, ActivityType.Listening);
             
             Handler = new CommandHandler();
             await Handler.Install(Client);
+            AppDomain.CurrentDomain.ProcessExit += async (sender, eventArgs) => {
+                await Client.SetStatusAsync(UserStatus.AFK);
+                await Client.SetGameAsync("Reboot...");
+            };
             
             MessageHistoryManager.SetHandlers();
             await MusicUtils.SetHandler();

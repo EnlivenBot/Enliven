@@ -3,9 +3,12 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Bot.Config.Localization.Providers;
 using Bot.Utilities.Commands;
+using Bot.Utilities.Modules;
 using Discord;
 using Discord.Commands;
+using NLog;
 
 namespace Bot.Utilities {
     public static class ExtensionMethods {
@@ -35,6 +38,10 @@ namespace Bot.Utilities {
         public static GroupingAttribute GetGroup(this CommandInfo info) {
             return (info.Attributes.FirstOrDefault(attribute => attribute is GroupingAttribute) ??
                     info.Module.Attributes.FirstOrDefault(attribute => attribute is GroupingAttribute)) as GroupingAttribute;
+        }
+        
+        public static string GetLocalizedName(this GroupingAttribute groupingAttribute, ILocalizationProvider loc) {
+            return loc.Get($"Groups.{groupingAttribute?.GroupName ?? ""}");
         }
 
         public static bool IsHiddenCommand(this CommandInfo info) {
@@ -71,16 +78,17 @@ namespace Bot.Utilities {
         }
 
         public static T Next<T>(this T src) where T : struct {
-            if (!typeof(T).IsEnum) throw new ArgumentException(String.Format("Argument {0} is not an Enum", typeof(T).FullName));
+            if (!typeof(T).IsEnum) throw new ArgumentException($"Argument {typeof(T).FullName} is not an Enum");
 
-            T[] Arr = (T[]) Enum.GetValues(src.GetType());
-            int j = Array.IndexOf<T>(Arr, src) + 1;
-            return (Arr.Length == j) ? Arr[0] : Arr[j];
+            var arr = (T[]) Enum.GetValues(src.GetType());
+            var j = Array.IndexOf(arr, src) + 1;
+            return arr.Length == j ? arr[0] : arr[j];
         }
 
-        public static EmbedBuilder GetAuthorEmbedBuilder(this ModuleBase moduleBase) {
+        public static EmbedBuilder GetAuthorEmbedBuilder(this AdvancedModuleBase moduleBase) {
             var embedBuilder = new EmbedBuilder();
-            embedBuilder.WithFooter(moduleBase.Context.User.Username, moduleBase.Context.User.GetAvatarUrl());
+            embedBuilder.WithFooter(moduleBase.Loc.Get("Commands.RequestedBy").Format(moduleBase.Context.User.Username),
+                moduleBase.Context.User.GetAvatarUrl());
             return embedBuilder;
         }
 
@@ -96,6 +104,19 @@ namespace Bot.Utilities {
             await tw.FlushAsync();
             ms.Position = 0;
             return await channel.SendFileAsync(ms, filename);
+        }
+
+        public static void Log(this Logger logger, LogSeverity logSeverity, Exception exception, string message, params object[] args) {
+            var logLevel = logSeverity switch {
+                LogSeverity.Critical => LogLevel.Fatal,
+                LogSeverity.Error    => LogLevel.Error,
+                LogSeverity.Warning  => LogLevel.Warn,
+                LogSeverity.Info     => LogLevel.Info,
+                LogSeverity.Verbose  => LogLevel.Debug,
+                LogSeverity.Debug    => LogLevel.Trace,
+                _                    => throw new ArgumentOutOfRangeException()
+            };
+            logger.Log(logLevel,exception, message, args);
         }
     }
 }
