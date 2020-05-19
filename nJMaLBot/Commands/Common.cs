@@ -31,21 +31,28 @@ namespace Bot.Commands {
         [Summary("stats0s")]
         public async Task Stats() {
             Context.Message.SafeDelete();
-            ReplyAsync(null, false, (await StatsUtils.PrintStats(null, Loc)).Build()).DelayedDelete(TimeSpan.FromMinutes(5));;
+            ReplyAsync(null, false, (await StatsUtils.BuildStats(null, Loc)).Build()).DelayedDelete(TimeSpan.FromMinutes(5));;
         }
 
         [Command("userstats", RunMode = RunMode.Async)]
         [Summary("userstats0s")]
         public async Task UserStats([Summary("userstats0_0s")] IUser user) {
             Context.Message.SafeDelete();
-            ReplyAsync(null, false, (await StatsUtils.PrintStats(user, Loc)).Build()).DelayedDelete(TimeSpan.FromMinutes(5));;
+            ReplyAsync(null, false, (await StatsUtils.BuildStats(user, Loc)).Build()).DelayedDelete(TimeSpan.FromMinutes(5));;
         }
 
         [Command("userstats", RunMode = RunMode.Async)]
         [Summary("userstats1s")]
         public async Task UserStats() {
+            await UserStats(Context.User);
+        }
+
+        [Command("invite", RunMode = RunMode.Async)]
+        [Summary("invite0s")]
+        public async Task Invite([Summary("invite0_0s")]bool emptyPermissions = false) {
             Context.Message.SafeDelete();
-            ReplyAsync(null, false, (await StatsUtils.PrintStats(Context.User, Loc)).Build()).DelayedDelete(TimeSpan.FromMinutes(5));
+            var inviteUrl = $"https://discordapp.com/api/oauth2/authorize?client_id={Program.Client.CurrentUser.Id}&permissions={(emptyPermissions ? 0 : 8)}&scope=bot";
+            await ReplyFormattedAsync(Loc.Get("Common.Invite"), Loc.Get("Common.InviteDescription").Format(inviteUrl));
         }
     }
 }

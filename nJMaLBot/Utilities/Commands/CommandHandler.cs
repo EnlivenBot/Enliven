@@ -15,12 +15,12 @@ using Discord.WebSocket;
 
 namespace Bot.Commands {
     public class CommandHandler {
-        private DiscordSocketClient _client;
+        private DiscordShardedClient _client;
         public CommandService CommandService { get; private set; }
         public List<CommandInfo> AllCommands { get; } = new List<CommandInfo>();
         private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
 
-        public async Task Install(DiscordSocketClient c) {
+        public async Task Install(DiscordShardedClient c) {
             _client = c;
             logger.Info("Creating new command service");
             CommandService = new CommandService();

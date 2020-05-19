@@ -8,31 +8,41 @@ namespace Bot.Config.Localization {
     internal static class Localization {
         private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
 
-        private static readonly Lazy<Dictionary<string, Dictionary<string, Dictionary<string, string>>>> _languages =
-            new Lazy<Dictionary<string, Dictionary<string, Dictionary<string, string>>>>(LoadLanguages);
+        public static readonly Dictionary<string, LocalizationPack> Languages;
+        static Localization() {
+            Languages = LoadLanguages();
+        }
 
-        public static readonly Dictionary<string, Dictionary<string, Dictionary<string, string>>> Languages = _languages.Value;
+        public static void Initialize() {
+            // Dummy method to call static constructor
+        } 
 
-        private static Dictionary<string, Dictionary<string, Dictionary<string, string>>> LoadLanguages() {
+        private static Dictionary<string, LocalizationPack> LoadLanguages() {
             logger.Info("Start loading localizations packs...");
             try {
                 var indexes = Directory.GetFiles(Path.Combine(Directory.GetCurrentDirectory(), "Localization"))
                                        .ToDictionary(Path.GetFileNameWithoutExtension);
                 logger.Info("Loaded languages: {lang}.", string.Join(", ", indexes.Select(pair => pair.Key)));
-                return
-                    indexes.ToDictionary(variable => variable.Key,
-                        variable =>
-                            JsonConvert.DeserializeObject<Dictionary<string, Dictionary<string, string>>>(
-                                Utilities.Utilities.DownloadString(variable.Value)));
+                var localizationPacks = indexes.ToDictionary(variable => variable.Key,
+                    variable => JsonConvert.DeserializeObject<LocalizationPack>(Utilities.Utilities.DownloadString(variable.Value)));
+
+                var localizationEntries = localizationPacks["en"].Data.SelectMany(groups => groups.Value.Select(pair => groups.Key + pair.Key)).ToList();
+                foreach (var pack in localizationPacks) {
+                    var entriesNotLocalizedCount = pack.Value.Data.SelectMany(groups => groups.Value.Select(pair => groups.Key + pair.Key))
+                                                       .Count(s => localizationEntries.Contains(s));
+
+                    pack.Value.TranslationCompleteness = (int) (entriesNotLocalizedCount / (double)localizationEntries.Count * 100);
+                }
+
+                return localizationPacks;
             }
             catch (Exception e) {
                 logger.Error(e, "Error while downloading libraries");
                 logger.Info("Loading default (en) pack.");
-                return new Dictionary<string, Dictionary<string, Dictionary<string, string>>> {
+                return new Dictionary<string, LocalizationPack> {
                     {
                         "en",
-                        JsonConvert.DeserializeObject<Dictionary<string, Dictionary<string, string>>>
-                            (File.ReadAllText(Path.Combine(Directory.GetCurrentDirectory(), "Localization/en.json")))
+                        JsonConvert.DeserializeObject<LocalizationPack>(File.ReadAllText(Path.Combine(Directory.GetCurrentDirectory(), "Localization/en.json")))
                     }
                 };
             }
@@ -49,20 +59,21 @@ namespace Bot.Config.Localization {
 
         public static string Get(string lang, string group, string id) {
             logger.Trace("Requested {group}.{id} in {lang} localization", group, id, lang);
-            if (Languages.TryGetValue(lang, out var reqLang) &&
-                reqLang.TryGetValue(group, out var reqGroup) &&
+            if (Languages.TryGetValue(lang, out var pack) &&
+                pack.Data.TryGetValue(group, out var reqGroup) &&
                 reqGroup.TryGetValue(id, out var reqText)) {
                 return reqText;
             }
 
-            if (lang == "en") {
-                logger.Error(new Exception($"Failed to load {group}.{id} in en localization"),"Failed to load {group}.{id} in {lang} localization", group, id, "en");
+            if (pack?.FallbackLanguage == null) {
+                logger.Error(new Exception($"Failed to load {group}.{id} in en localization"), 
+                    "Failed to load {group}.{id} in {lang} localization", group, id, "en");
                 return $"{group}.{id}";
             }
 
             logger.Warn("Failed to load {group}.{id} in {lang} localization", group, id, lang);
             // ReSharper disable once TailRecursiveCall
-            return Get("en", group, id);
+            return Get(pack.FallbackLanguage, group, id);
         }
 
         public static string Get(ulong guildId, string id) {
