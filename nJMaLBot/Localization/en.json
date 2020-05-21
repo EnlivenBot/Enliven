@@ -167,8 +167,7 @@
       "bassboost0s": "Lets you toggle the bass boost",
       "bassboost0_0s": "Bass boost mode: `Off`, `Low`, `Medium`, `High`, `Extreme`",
       "changenode0s": "Attempts to move playback to another music node. May help if current lags",
-      "invite0s": "Represents a link with which you can invite a bot to a server",
-      "invite0_0s": "Specify `true` to generate the link without administrator rights"
+      "invite0s": "Represents a link with which you can invite a bot to a server"
     },
     "CommandHandler": {
       "FailedTitle": "Error executing command",
