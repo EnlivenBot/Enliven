@@ -30,12 +30,15 @@ namespace Bot.Music.Players {
             await base.SetVolumeAsync(volume, false);
             GuildConfig.Get(GuildId).SetVolume(volume).Save();
         }
-        
+
+        public bool IsShutdowned { get; private set; }
+
         public virtual void Shutdown(LocalizedEntry reason, bool needSave = true) {
             Shutdown(reason.Get(Loc), needSave);
         }
 
         public virtual Task Shutdown(string reason, bool needSave = true) {
+            IsShutdowned = true;
             base.Dispose();
             return Task.CompletedTask;
         }
@@ -50,7 +53,7 @@ namespace Bot.Music.Players {
         /// </summary>
         [Obsolete]
         public override void Dispose() {
-            logger.Error("Player disposed. Stacktrace: \n{stacktrace}", new System.Diagnostics.StackTrace().ToString());
+            if (!IsShutdowned) logger.Error("Player disposed. Stacktrace: \n{stacktrace}", new System.Diagnostics.StackTrace().ToString());
             Shutdown();
         }
 
