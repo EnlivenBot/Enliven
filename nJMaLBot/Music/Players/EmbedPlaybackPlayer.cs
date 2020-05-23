@@ -494,7 +494,12 @@ namespace Bot.Music {
         }
 
         public void UpdateTrackInfo() {
-            if ((State != PlayerState.NotPlaying || State != PlayerState.NotConnected || State != PlayerState.Destroyed) && CurrentTrack != null) {
+            if (CurrentTrackIndex >= Playlist.Count && Playlist.Count != 0) {
+                EmbedBuilder.Author = null;
+                EmbedBuilder.Title = Loc.Get("Music.QueueEnd");
+                EmbedBuilder.Url = "";
+            }
+            else if ((State != PlayerState.NotPlaying || State != PlayerState.NotConnected || State != PlayerState.Destroyed) && CurrentTrack != null) {
                 var iconUrl = CurrentTrack.Provider == StreamProvider.YouTube ? $"https://img.youtube.com/vi/{CurrentTrack?.TrackIdentifier}/0.jpg" : null;
                 EmbedBuilder?.WithAuthor(string.IsNullOrWhiteSpace(CurrentTrack.Author) ? "Unknown" : CurrentTrack.Author.SafeSubstring(0, 250), iconUrl)
                             ?.WithTitle(CurrentTrack.Title.SafeSubstring(0, 250))?.WithUrl(CurrentTrack.Source);
@@ -521,7 +526,7 @@ namespace Bot.Music {
                 EmbedBuilder.Fields[2].Name = Loc.Get("Music.Queue").Format(CurrentTrackIndex + 1, Playlist.Count);
                 EmbedBuilder.Fields[2].Value = $"```py\n{GetPlaylistString()}```";
             }
-
+            
             UpdateControlMessage();
 
             StringBuilder GetPlaylistString() {
