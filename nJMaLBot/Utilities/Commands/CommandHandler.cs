@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -19,6 +20,7 @@ namespace Bot.Commands {
         public CommandService CommandService { get; private set; }
         public List<CommandInfo> AllCommands { get; } = new List<CommandInfo>();
         private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
+        public static FuzzySearch FuzzySearch { get; set; } = new FuzzySearch();
 
         public async Task Install(DiscordShardedClient c) {
             _client = c;
@@ -33,7 +35,12 @@ namespace Bot.Commands {
             foreach (var cmdsModule in CommandService.Modules) {
                 foreach (var command in cmdsModule.Commands) AllCommands.Add(command);
             }
-            
+
+            logger.Info("Adding commands to fuzzy search");
+            foreach (var alias in AllCommands.SelectMany(commandInfo => commandInfo.Aliases)) {
+                FuzzySearch.AddData(alias);
+            }
+
             CommandsPatch.ApplyPatch();
 
             _client.MessageReceived += message => Task.Run(() => HandleCommand(message));
@@ -45,36 +52,43 @@ namespace Bot.Commands {
                 return;
             }
 
-            var context = new CommandContext(_client, msg);
             if (!(s.Channel is SocketGuildChannel guildChannel)) {
                 MessageHistoryManager.AddMessageToIgnore(s);
                 return;
             }
 
+            var context = new CommandContext(_client, msg);
             var argPos = 0;
             var guild = GuildConfig.Get(guildChannel.Guild.Id);
             var loc = new GuildLocalizationProvider(guild);
-            if (msg.HasStringPrefix(guild.Prefix, ref argPos) || HasMentionPrefix(msg, _client.CurrentUser, ref argPos)) {
-                var query = msg.Content.SafeSubstring(argPos, 800);
-                if (string.IsNullOrWhiteSpace(query))
+
+            var hasStringPrefix = msg.HasStringPrefix(guild.Prefix, ref argPos);
+            var hasMentionPrefix = HasMentionPrefix(msg, _client.CurrentUser, ref argPos);
+
+            if (hasStringPrefix || hasMentionPrefix) {
+                var query = msg.Content.Try(s1 => s1.Substring(argPos), "");
+                if (string.IsNullOrWhiteSpace(query) && hasMentionPrefix)
                     query = "help";
+                var command = ParseCommand(query, out var args);
 
                 var result = await ExecuteCommand(query, context, s.Author.Id.ToString());
+                if (!result.IsSuccess && result.Error == CommandError.UnknownCommand) {
+                    var searchResult = FuzzySearch.Search(command);
+                    var searchMatch = searchResult.GetFullMatch();
+                    if (searchMatch != null) {
+                        command = searchMatch.SimilarTo;
+                        query = command + " " + args;
+                        result = await ExecuteCommand(query, context, s.Author.Id.ToString());
+                    }
+                }
+
                 if (!result.IsSuccess) {
                     switch (result.Error) {
-                        case CommandError.UnknownCommand:
-                            await SendErrorMessage(msg, loc, string.Format(loc.Get("CommandHandler.UnknownCommand"),
-                                query, guild.Prefix));
-                            break;
                         case CommandError.ParseFailed:
-                            await SendErrorMessage(msg, loc, string.Format(loc.Get("CommandHandler.ParseFailed"),
-                                guild.Prefix,
-                                Regex.Match(s.Content, $@"(?<={guild.Prefix})[a-z]{{2,}}(?= )?").Value));
+                            await SendErrorMessage(msg, loc, string.Format(loc.Get("CommandHandler.ParseFailed"), guild.Prefix, command));
                             break;
                         case CommandError.BadArgCount:
-                            await SendErrorMessage(msg, loc, string.Format(loc.Get("CommandHandler.BadArgCount"),
-                                guild.Prefix,
-                                Regex.Match(s.Content, $@"(?<={guild.Prefix})[a-z]{{2,}}(?= )?").Value));
+                            await SendErrorMessage(msg, loc, string.Format(loc.Get("CommandHandler.BadArgCount"), guild.Prefix, command));
                             break;
                         case CommandError.UnmetPrecondition:
                             await SendErrorMessage(msg, loc, loc.Get("CommandHandler.UnmetPrecondition"));
@@ -90,15 +104,13 @@ namespace Bot.Commands {
                             break;
                     }
 
-                    MessageHistoryManager.LogCreatedMessage(s, guild);
-                    msg.SafeDelete();
+                    MessageHistoryManager.LogCreatedMessage(msg, guild);
                 }
                 else {
-                    
                     if (guild.IsCommandLoggingEnabled)
-                        MessageHistoryManager.LogCreatedMessage(s, guild);
+                        MessageHistoryManager.LogCreatedMessage(msg, guild);
                     else
-                        MessageHistoryManager.AddMessageToIgnore(s);
+                        MessageHistoryManager.AddMessageToIgnore(msg);
                 }
             }
             else
@@ -167,6 +179,18 @@ namespace Bot.Commands {
             }
 
             return TimeSpan.FromSeconds(userUsageCount);
+        }
+
+        private static string ParseCommand(string input, out string args) {
+            var command = input.Substring(0, input.IndexOf(" ") > 0 ? input.IndexOf(" ") : input.Length);
+            try {
+                args = input.Substring(command.Length + 1);
+            }
+            catch {
+                args = "";
+            }
+
+            return command;
         }
     }
 }
