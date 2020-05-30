@@ -176,7 +176,7 @@
       "BadArgCount": "Error - the wrong number of arguments for the command. Verify the correctness through `{0}help {1}`",
       "ParseFailed": "An error occurred while trying to parse the command. Check the arguments through `{0}help {1}`",
       "Exception": "Error executing command:\n ```{0}```",
-      "UnknownCommand": "Command `{0}` not found! Use the command `{1}help` for a list of commands.",
+      "UnknownCommand": "Command `{0}` not found!\nPerhaps you wanted to use one of them: {1}\n Use the command `{1}help` for a list of commands.",
       "ByCommand": "Help for the command `{0}`"
     },
     "Commands": {

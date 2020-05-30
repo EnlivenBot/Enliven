@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
@@ -9,10 +10,13 @@ using Bot.Config.Localization.Providers;
 using Bot.Music;
 using Bot.Music.Players;
 using Bot.Utilities;
+using Bot.Utilities.Collector;
 using Bot.Utilities.Commands;
+using Bot.Utilities.Emoji;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using Tyrrrz.Extensions;
 
 namespace Bot.Commands {
     public class CommandHandler {
@@ -37,7 +41,7 @@ namespace Bot.Commands {
             }
 
             logger.Info("Adding commands to fuzzy search");
-            foreach (var alias in AllCommands.SelectMany(commandInfo => commandInfo.Aliases)) {
+            foreach (var alias in AllCommands.SelectMany(commandInfo => commandInfo.Aliases).GroupBy(s => s).Select(grouping => grouping.First())) {
                 FuzzySearch.AddData(alias);
             }
 
@@ -67,6 +71,7 @@ namespace Bot.Commands {
 
             if (hasStringPrefix || hasMentionPrefix) {
                 var query = msg.Content.Try(s1 => s1.Substring(argPos), "");
+                if (string.IsNullOrEmpty(query)) query = " ";
                 if (string.IsNullOrWhiteSpace(query) && hasMentionPrefix)
                     query = "help";
                 var command = ParseCommand(query, out var args);
@@ -74,11 +79,24 @@ namespace Bot.Commands {
                 var result = await ExecuteCommand(query, context, s.Author.Id.ToString());
                 if (!result.IsSuccess && result.Error == CommandError.UnknownCommand) {
                     var searchResult = FuzzySearch.Search(command);
-                    var searchMatch = searchResult.GetFullMatch();
-                    if (searchMatch != null) {
-                        command = searchMatch.SimilarTo;
+                    var bestMatch = searchResult.GetFullMatch();
+                    if (bestMatch != null) {
+                        command = bestMatch.SimilarTo;
                         query = command + " " + args;
                         result = await ExecuteCommand(query, context, s.Author.Id.ToString());
+                    }
+                    else {
+                        CollectorController collector = null;
+                        collector = CollectorsUtils.CollectReaction(msg, reaction => reaction.UserId == msg.Author.Id, async eventArgs => {
+                            await eventArgs.RemoveReason();
+                            collector.Dispose();
+                            await SendErrorMessage(msg, loc, loc.Get("CommandHandler.UnknownCommand")
+                                                                .Format(command.SafeSubstring(40, "..."),
+                                                                     searchResult.GetBestMatches(3).Select(match => $"`{match.SimilarTo}`").JoinToString(", "),
+                                                                     guild.Prefix));
+                        });
+                        await msg.AddReactionAsync(CommonEmoji.Help);
+                        return;
                     }
                 }
 
