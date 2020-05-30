@@ -80,6 +80,8 @@ namespace Bot.Commands {
                 if (!result.IsSuccess && result.Error == CommandError.UnknownCommand) {
                     var searchResult = FuzzySearch.Search(command);
                     var bestMatch = searchResult.GetFullMatch();
+                    
+                    // Check for a another keyboard layout
                     if (bestMatch != null) {
                         command = bestMatch.SimilarTo;
                         query = command + " " + args;
@@ -89,7 +91,18 @@ namespace Bot.Commands {
                         CollectorController collector = null;
                         collector = CollectorsUtils.CollectReaction(msg, reaction => reaction.UserId == msg.Author.Id, async eventArgs => {
                             await eventArgs.RemoveReason();
+                            // ReSharper disable once AccessToModifiedClosure
+                            // ReSharper disable once PossibleNullReferenceException
                             collector.Dispose();
+                            try {
+                                #pragma warning disable 4014
+                                msg.RemoveReactionAsync(CommonEmoji.Help, Program.Client.CurrentUser);
+                                #pragma warning restore 4014
+                            }
+                            catch {
+                                // ignored
+                            }
+
                             await SendErrorMessage(msg, loc, loc.Get("CommandHandler.UnknownCommand")
                                                                 .Format(command.SafeSubstring(40, "..."),
                                                                      searchResult.GetBestMatches(3).Select(match => $"`{match.SimilarTo}`").JoinToString(", "),
@@ -152,9 +165,10 @@ namespace Bot.Commands {
 
         private static Embed BuildErrorEmbed(SocketUserMessage message, ILocalizationProvider loc, string description) {
             var builder = new EmbedBuilder();
-            builder.WithAuthor(message.Author.Username, message.Author.GetAvatarUrl());
-            builder.WithTitle(loc.Get("CommandHandler.FailedTitle"));
-            builder.WithDescription(description);
+            builder.WithFooter(loc.Get("Commands.RequestedBy").Format(message.Author.Username), message.Author.GetAvatarUrl())
+                   .WithColor(Color.Orange);
+            builder.WithTitle(loc.Get("CommandHandler.FailedTitle"))
+                   .WithDescription(description);
             return builder.Build();
         }
 
