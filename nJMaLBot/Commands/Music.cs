@@ -352,7 +352,7 @@ namespace Bot.Commands {
         }
 
         [Command("fastforward", RunMode = RunMode.Async)]
-        [Alias("fast forward", "ff", "fwd")]
+        [Alias("ff", "fwd")]
         [Summary("fastforward0s")]
         public async Task FastForward([Summary("fastforward0_0s")] TimeSpan? timeSpan = null) {
             if (!await IsPreconditionsValid) return;
