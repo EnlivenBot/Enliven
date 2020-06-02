@@ -28,6 +28,8 @@ namespace Bot.Music {
         private EmbedBuilder EmbedBuilder = new EmbedBuilder();
         public IUserMessage ControlMessage { get; private set; }
         private readonly StringBuilder _queueHistory = new StringBuilder();
+        private readonly TextConstructor warningConstructor = new TextConstructor();
+        private bool IsExternalEmojiAllowed = true;
 
         // ReSharper disable once UnusedParameter.Local
         public EmbedPlaybackPlayer(ulong guildId) : base(guildId) {
@@ -41,6 +43,20 @@ namespace Bot.Music {
             UpdateProgress();
             UpdateQueue();
             UpdateParameters();
+            warningConstructor.EnabledChanged += WarningConstructorOnEnabledChanged;
+        }
+
+        private void WarningConstructorOnEnabledChanged(object? sender, bool e) {
+            var c = (TextConstructor) sender;
+            var nowEnabled = c.IsEnabled;
+            if (e && !nowEnabled) {
+                EmbedBuilder.Fields.RemoveAt(4);
+            }
+            else if (!e && nowEnabled) {
+                EmbedBuilder.AddField(Loc.Get("Music.Warning"), c.FormValue(Loc));
+            }else if (nowEnabled) {
+                EmbedBuilder.Fields[4].Value = c.FormValue(Loc);
+            }
         }
 
         public override async Task SetVolumeAsync(float volume = 1, bool normalize = false) {
@@ -140,7 +156,16 @@ namespace Bot.Music {
             ControlMessage = message;
             SetupControlReactions();
             UpdateControlMessage();
+            SetupWarnings();
             return Task.CompletedTask;
+        }
+        
+        private async Task SetupWarnings() {
+            var guildUser = (await Guild.GetUserAsync(Program.Client.CurrentUser.Id)).GetPermissions((IGuildChannel) ControlMessage.Channel);
+            IsExternalEmojiAllowed = guildUser.UseExternalEmojis;
+            warningConstructor.Add("EmojiRemoval", new LocalizedEntry("Music.WarningEmojiRemoval"), !guildUser.ManageMessages);
+            warningConstructor.Add("EmojiAdding", new LocalizedEntry("Music.WarningEmojiAdding"), !guildUser.AddReactions);
+            warningConstructor.Add("CustomEmoji", new LocalizedEntry("Music.WarningCustomEmoji"), !guildUser.UseExternalEmojis);
         }
 
         public override async Task Enqueue(List<AuthoredLavalinkTrack> tracks, bool enqueue) {
@@ -290,11 +315,11 @@ namespace Bot.Music {
 
         #region Emoji
 
-        private CollectorsGroup _collectorsGroup;
+        private CollectorsGroup _collectorsGroup = new CollectorsGroup();
 
         private void SetupControlReactions() {
             _collectorsGroup?.DisposeAll();
-            _collectorsGroup = new CollectorsGroup(
+            _collectorsGroup?.Add(
                 CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyTrackPrevious), async args => {
                         args.RemoveReason();
@@ -526,7 +551,7 @@ namespace Bot.Music {
                 EmbedBuilder.Fields[2].Name = Loc.Get("Music.Queue").Format(CurrentTrackIndex + 1, Playlist.Count);
                 EmbedBuilder.Fields[2].Value = $"```py\n{GetPlaylistString()}```";
             }
-            
+
             UpdateControlMessage();
 
             StringBuilder GetPlaylistString() {
@@ -569,5 +594,49 @@ namespace Bot.Music {
         }
 
         #endregion
+    }
+
+    public class TextConstructor {
+        public Dictionary<string, (bool, LocalizedEntry)> Entries = new Dictionary<string, (bool, LocalizedEntry)>();
+        public bool IsEnabled => Entries.Any(pair => pair.Value.Item1);
+        public event EventHandler<bool> EnabledChanged;
+        private bool _isPreviouslyEnabled = false;
+
+        public void Toggle(string id, bool value) {
+            try {
+                var valueTuple = Entries[id];
+                valueTuple.Item1 = value;
+                Entries[id] = valueTuple;
+                OnEnabledChanged();
+            }
+            catch {
+                // ignored
+            }
+        }
+
+        public void Add(string id, LocalizedEntry value, bool isEnabled = false) {
+            Entries[id] =  (isEnabled, value);
+            OnEnabledChanged();
+        }
+
+        public bool Remove(string id) {
+            var toReturn = Entries.Remove(id);
+            OnEnabledChanged();
+            return toReturn;
+        }
+
+        protected virtual void OnEnabledChanged() {
+            EnabledChanged?.Invoke(this, _isPreviouslyEnabled);
+            _isPreviouslyEnabled = IsEnabled;
+        }
+
+        public string FormValue(ILocalizationProvider loc) {
+            var stringBuilder = new StringBuilder();
+            foreach (var entry in Entries.Where(pair => pair.Value.Item1)) {
+                stringBuilder.AppendLine(entry.Value.Item2.Get(loc));
+            }
+
+            return stringBuilder.ToString();
+        }
     }
 }

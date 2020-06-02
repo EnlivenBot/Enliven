@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Bot.Config;
 using Bot.Config.Localization;
 using Bot.Config.Localization.Providers;
+using Discord;
 using Lavalink4NET;
 using Lavalink4NET.Player;
 
@@ -10,12 +11,14 @@ namespace Bot.Music.Players {
     public class AdvancedLavalinkPlayer : LavalinkPlayer {
         protected static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
         public GuildConfig GuildConfig;
+        public IGuild Guild;
         public readonly ILocalizationProvider Loc;
         public BassBoostMode BassBoostMode = BassBoostMode.Off;
         private int _updateFailCount;
         internal int UpdateFailThreshold = 2;
 
         public AdvancedLavalinkPlayer(ulong guildId) {
+            Guild = Program.Client.GetGuild(guildId);
             GuildConfig = GuildConfig.Get(guildId);
             Loc = new GuildLocalizationProvider(GuildConfig);
         }
