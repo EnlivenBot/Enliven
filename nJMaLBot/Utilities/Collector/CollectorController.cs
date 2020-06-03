@@ -3,6 +3,7 @@ using Timer = System.Threading.Timer;
 
 namespace Bot.Utilities.Collector {
     public class CollectorController {
+        public event EventHandler<CollectorEventArgsBase> RemoveArgsFailed;
         private Timer _timer;
 
         public void SetTimeout(TimeSpan timeout) {
@@ -14,6 +15,10 @@ namespace Bot.Utilities.Collector {
         public void Dispose() {
             Stop?.Invoke(null, EventArgs.Empty);
             _timer?.Dispose();
+        }
+
+        public virtual void OnRemoveArgsFailed(CollectorEventArgsBase e) {
+            RemoveArgsFailed?.Invoke(this, e);
         }
     }
 

@@ -360,6 +360,11 @@ namespace Bot.Commands {
                 ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(1));
                 return;
             }
+
+            if (!Player.CurrentTrack.IsSeekable) {
+                ReplyFormattedAsync(Loc.Get("Music.TrackNotSeekable").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromSeconds(1));
+                return;
+            }
             
             var time = timeSpan ?? new TimeSpan(0, 0, 10);
             Player.SeekPositionAsync(Player.TrackPosition + time);
@@ -376,6 +381,11 @@ namespace Bot.Commands {
                 return;
             }
             
+            if (!Player.CurrentTrack.IsSeekable) {
+                ReplyFormattedAsync(Loc.Get("Music.TrackNotSeekable").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromSeconds(1));
+                return;
+            }
+            
             var time = timeSpan ?? new TimeSpan(0, 0, 10);
             Player.SeekPositionAsync(Player.TrackPosition - time);
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.Rewind").Format(Context.User.Username, Player.CurrentTrackIndex, time.TotalSeconds));
@@ -388,6 +398,11 @@ namespace Bot.Commands {
             if (!await IsPreconditionsValid) return;
             if (Player?.CurrentTrack == null) {
                 ReplyFormattedAsync(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromMinutes(1));
+                return;
+            }
+            
+            if (!Player.CurrentTrack.IsSeekable) {
+                ReplyFormattedAsync(Loc.Get("Music.TrackNotSeekable").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromSeconds(1));
                 return;
             }
             
