@@ -50,6 +50,7 @@ namespace Bot.Music.Players {
         
         private List<string> QueuePages { get; set; }
         public event EventHandler QueueDeprecated;
+        public string LoadFailedId = "";
 
         public override async Task OnTrackEndAsync(TrackEndEventArgs eventArgs) {
             var oldTrackIndex = CurrentTrackIndex;
@@ -58,8 +59,22 @@ namespace Bot.Music.Players {
             }
 
             if (eventArgs.Reason != TrackEndReason.Replaced) await base.OnTrackEndAsync(eventArgs);
-            if (eventArgs.MayStartNext || eventArgs.Reason == TrackEndReason.LoadFailed) await SkipAsync();
-            if (eventArgs.Reason == TrackEndReason.LoadFailed) Playlist.RemoveAt(oldTrackIndex);
+            if (eventArgs.Reason == TrackEndReason.LoadFailed) {
+                if (LoadFailedId == CurrentTrack?.Identifier) {
+                    if (eventArgs.MayStartNext) {
+                        await SkipAsync();
+                    }
+                    Playlist.RemoveAt(oldTrackIndex);
+                }
+                else {
+                    LoadFailedId = CurrentTrack?.Identifier;
+                    await PlayAsync(CurrentTrack, false, TrackPosition);
+                }
+            }
+
+            if (eventArgs.MayStartNext || eventArgs.Reason == TrackEndReason.LoadFailed) {
+                await SkipAsync();
+            }
         }
 
         public virtual async Task<int> PlayAsync(LavalinkTrack track, bool enqueue, TimeSpan? startTime = null, TimeSpan? endTime = null,

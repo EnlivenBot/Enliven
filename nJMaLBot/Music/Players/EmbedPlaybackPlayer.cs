@@ -71,7 +71,8 @@ namespace Bot.Music {
 
         public override async Task OnTrackEndAsync(TrackEndEventArgs eventArgs) {
             if (eventArgs.Reason == TrackEndReason.LoadFailed) {
-                WriteToQueueHistory(Loc.Get("Music.DecodingError").Format(CurrentTrack.Title));
+                WriteToQueueHistory(Loc.Get(CurrentTrack.Identifier == LoadFailedId ? "Music.DecodingErrorRemove" : "Music.DecodingError")
+                                       .Format(CurrentTrack.Title.SafeSubstring(40, "...")));
             }
 
             await base.OnTrackEndAsync(eventArgs);
@@ -493,6 +494,7 @@ namespace Bot.Music {
                         sb.Append((int) CurrentTrack.Duration.TotalHours + ":");
                     sb.Append($"{CurrentTrack.Duration:mm':'ss}");
                 }
+
                 var space = new string(' ', Math.Max(0, (22 - sb.Length) / 2));
                 return playingState + '`' + space + sb + space + '`' + repeatState;
             }
