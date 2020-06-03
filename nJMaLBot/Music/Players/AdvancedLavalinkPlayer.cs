@@ -3,7 +3,9 @@ using System.Threading.Tasks;
 using Bot.Config;
 using Bot.Config.Localization;
 using Bot.Config.Localization.Providers;
+using Bot.Utilities.Emoji;
 using Discord;
+using HarmonyLib;
 using Lavalink4NET;
 using Lavalink4NET.Player;
 
@@ -16,6 +18,8 @@ namespace Bot.Music.Players {
         public BassBoostMode BassBoostMode = BassBoostMode.Off;
         private int _updateFailCount;
         internal int UpdateFailThreshold = 2;
+        public string StateString = "?";
+        public bool IsExternalEmojiAllowed { get; set; }= true;
 
         public AdvancedLavalinkPlayer(ulong guildId) {
             Guild = Program.Client.GetGuild(guildId);
@@ -80,6 +84,23 @@ namespace Bot.Music.Players {
                 logger.Info("Player {guildId} disposed due to state {state}", GuildId, State);
                 Shutdown();
                 throw new ObjectDisposedException("Player", $"Player disposed due to {State}");
+            }
+        }
+
+        public void OnStateChanged() {
+            if (IsExternalEmojiAllowed) {
+                StateString = State switch {
+                    PlayerState.Playing => CommonEmojiStrings.Instance.Play,
+                    PlayerState.Paused  => CommonEmojiStrings.Instance.Pause,
+                    _                   => CommonEmojiStrings.Instance.Stop
+                };
+            }
+            else {
+                StateString = State switch {
+                    PlayerState.Playing => "▶",
+                    PlayerState.Paused  => "⏸",
+                    _                   => "?"
+                };
             }
         }
     }

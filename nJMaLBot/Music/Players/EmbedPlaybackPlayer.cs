@@ -29,7 +29,6 @@ namespace Bot.Music {
         public IUserMessage ControlMessage { get; private set; }
         private readonly StringBuilder _queueHistory = new StringBuilder();
         private readonly TextConstructor warningConstructor = new TextConstructor();
-        private bool IsExternalEmojiAllowed = true;
 
         // ReSharper disable once UnusedParameter.Local
         public EmbedPlaybackPlayer(ulong guildId) : base(guildId) {
@@ -54,7 +53,8 @@ namespace Bot.Music {
             }
             else if (!e && nowEnabled) {
                 EmbedBuilder.AddField(Loc.Get("Music.Warning"), c.FormValue(Loc));
-            }else if (nowEnabled) {
+            }
+            else if (nowEnabled) {
                 EmbedBuilder.Fields[4].Value = c.FormValue(Loc);
             }
         }
@@ -159,7 +159,7 @@ namespace Bot.Music {
             SetupWarnings();
             return Task.CompletedTask;
         }
-        
+
         private async Task SetupWarnings() {
             var guildUser = (await Guild.GetUserAsync(Program.Client.CurrentUser.Id)).GetPermissions((IGuildChannel) ControlMessage.Channel);
             IsExternalEmojiAllowed = guildUser.UseExternalEmojis;
@@ -469,21 +469,11 @@ namespace Bot.Music {
 
         public void UpdateProgress(bool background = false) {
             if (CurrentTrack != null) {
-                var playingState = State switch {
-                    PlayerState.Playing => CommonEmojiStrings.Instance.Play,
-                    PlayerState.Paused  => CommonEmojiStrings.Instance.Pause,
-                    _                   => CommonEmojiStrings.Instance.Stop
-                };
-                var repeatState = LoopingState switch {
-                    LoopingState.One => CommonEmojiStrings.Instance.RepeatOnce,
-                    LoopingState.All => CommonEmojiStrings.Instance.Repeat,
-                    LoopingState.Off => CommonEmojiStrings.Instance.RepeatOff,
-                    _                => ""
-                };
                 var progress = Convert.ToInt32(TrackPosition.TotalSeconds / CurrentTrack.Duration.TotalSeconds * 100);
                 var requester = CurrentTrack is AuthoredLavalinkTrack authoredLavalinkTrack ? authoredLavalinkTrack.GetRequester() : "Unknown";
                 EmbedBuilder.Fields[0].Name = Loc.Get("Music.RequestedBy").Format(requester);
-                EmbedBuilder.Fields[0].Value = GetProgressString(progress) + "\n" + GetProgressInfo(playingState, repeatState);
+                EmbedBuilder.Fields[0].Value = (IsExternalEmojiAllowed ? ProgressEmoji.CustomEmojiPack : ProgressEmoji.TextEmojiPack).GetProgress(progress)
+                                             + "\n" + GetProgressInfo(StateString, LoopingStateString);
             }
             else {
                 EmbedBuilder.Fields[0].Name = Loc.Get("Music.Playback");
@@ -502,19 +492,6 @@ namespace Bot.Music {
                 sb.Append($"{CurrentTrack.Duration:mm':'ss}");
                 var space = new string(' ', Math.Max(0, (22 - sb.Length) / 2));
                 return playingState + '`' + space + sb + space + '`' + repeatState;
-            }
-
-            static string GetProgressString(int progress) {
-                var builder = new StringBuilder();
-                builder.Append(ProgressEmoji.Start.GetEmoji(progress));
-                progress -= 10;
-                for (var i = 0; i < 8; i++) {
-                    builder.Append(ProgressEmoji.Intermediate.GetEmoji(progress));
-                    progress -= 10;
-                }
-
-                builder.Append(ProgressEmoji.End.GetEmoji(progress));
-                return builder.ToString();
             }
         }
 
@@ -615,7 +592,7 @@ namespace Bot.Music {
         }
 
         public void Add(string id, LocalizedEntry value, bool isEnabled = false) {
-            Entries[id] =  (isEnabled, value);
+            Entries[id] = (isEnabled, value);
             OnEnabledChanged();
         }
 

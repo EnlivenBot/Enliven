@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bot.Commands;
 using Bot.Utilities;
+using Bot.Utilities.Emoji;
 using Lavalink4NET.Decoding;
 using Lavalink4NET.Events;
 using Lavalink4NET.Player;
@@ -24,7 +25,15 @@ namespace Bot.Music.Players {
             };
         }
 
-        public LoopingState LoopingState { get; set; } = LoopingState.Off;
+        public string LoopingStateString;
+        public LoopingState LoopingState {
+            get => _loopingState;
+            set {
+                _loopingState = value; 
+                OnRepeatStateChanged();
+            }
+        }
+
         public LavalinkPlaylist Playlist { get; }
 
         public event EventHandler<int> CurrentTrackIndexChange;
@@ -171,6 +180,7 @@ namespace Bot.Music.Players {
         }
 
         private readonly SemaphoreSlim _enqueueLock = new SemaphoreSlim(1);
+        private LoopingState _loopingState = LoopingState.Off;
 
         public virtual async Task TryEnqueue(IEnumerable<LavalinkTrack> tracks, string author, bool enqueue = true) {
             await _enqueueLock.WaitAsync();
@@ -204,6 +214,25 @@ namespace Bot.Music.Players {
 
         public virtual Task OnTrackLimitExceed(string author, int count) {
             return Task.CompletedTask;
+        }
+
+        public void OnRepeatStateChanged() {
+            if (IsExternalEmojiAllowed) {
+                LoopingStateString = LoopingState switch {
+                    LoopingState.One => CommonEmojiStrings.Instance.RepeatOnce,
+                    LoopingState.All => CommonEmojiStrings.Instance.Repeat,
+                    LoopingState.Off => CommonEmojiStrings.Instance.RepeatOff,
+                    _                => ""
+                };
+            }
+            else {
+                LoopingStateString = LoopingState switch {
+                    LoopingState.One => "🔂",
+                    LoopingState.All => "🔁",
+                    LoopingState.Off => "❌",
+                    _                => ""
+                };
+            }
         }
     }
 
