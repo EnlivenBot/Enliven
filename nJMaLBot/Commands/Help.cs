@@ -15,6 +15,7 @@ namespace Bot.Commands {
             var eb = this.GetAuthorEmbedBuilder()
                          .WithTitle(Loc.Get("Help.HelpTitle"))
                          .WithColor(Color.Gold)
+                         .WithDescription(Loc.Get("Help.HelpPrefix").Format(GuildConfig.Prefix, Program.Client.CurrentUser.Mention))
                          .AddField($"{GuildConfig.Prefix}help", Loc.Get("Help.HelpDescription"))
                          .WithFields(HelpUtils.CommandsGroups.Value.Select(pair =>
                               new EmbedFieldBuilder {

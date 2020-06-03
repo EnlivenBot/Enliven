@@ -110,6 +110,7 @@
       "utils": "Utilities"
     },
     "Help": {
+      "HelpPrefix" : "Current bot prefix `{0}` or ping ({1})",
       "HelpMessage": "Command help: ",
       "HelpTitle": "Available commands",
       "HelpDescription": "Help for all commands and categories",
