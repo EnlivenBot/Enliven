@@ -473,7 +473,7 @@ namespace Bot.Music {
                 var requester = CurrentTrack is AuthoredLavalinkTrack authoredLavalinkTrack ? authoredLavalinkTrack.GetRequester() : "Unknown";
                 EmbedBuilder.Fields[0].Name = Loc.Get("Music.RequestedBy").Format(requester);
                 EmbedBuilder.Fields[0].Value = (IsExternalEmojiAllowed ? ProgressEmoji.CustomEmojiPack : ProgressEmoji.TextEmojiPack).GetProgress(progress)
-                                             + "\n" + GetProgressInfo(StateString, LoopingStateString);
+                                             + "\n" + GetProgressInfo(StateString, LoopingStateString, CurrentTrack.IsSeekable);
             }
             else {
                 EmbedBuilder.Fields[0].Name = Loc.Get("Music.Playback");
@@ -482,14 +482,17 @@ namespace Bot.Music {
 
             UpdateControlMessage(background);
 
-            string GetProgressInfo(string playingState, string repeatState) {
+            string GetProgressInfo(string playingState, string repeatState, bool isSeekable) {
                 var sb = new StringBuilder("");
                 if ((int) TrackPosition.TotalHours != 0)
                     sb.Append((int) TrackPosition.TotalHours + ":");
-                sb.Append($"{TrackPosition:mm':'ss} / ");
-                if ((int) CurrentTrack.Duration.TotalHours != 0)
-                    sb.Append((int) CurrentTrack.Duration.TotalHours + ":");
-                sb.Append($"{CurrentTrack.Duration:mm':'ss}");
+                sb.Append($"{TrackPosition:mm':'ss}");
+                if (isSeekable) {
+                    sb.Append(" / ");
+                    if ((int) CurrentTrack.Duration.TotalHours != 0)
+                        sb.Append((int) CurrentTrack.Duration.TotalHours + ":");
+                    sb.Append($"{CurrentTrack.Duration:mm':'ss}");
+                }
                 var space = new string(' ', Math.Max(0, (22 - sb.Length) / 2));
                 return playingState + '`' + space + sb + space + '`' + repeatState;
             }

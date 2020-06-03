@@ -99,7 +99,8 @@
       "Warning" : "**Warning**",
       "WarningEmojiRemoval" : "❗The bot can not remove reactions for users as intended. To do this, he needs permission `MANAGE_MESSAGES`",
       "WarningEmojiAdding" : "‼️Management through reactions is not available - the bot cannot add them to the message. To do this, he needs разрешение `ADD_REACTIONS`",
-      "WarningCustomEmoji" : "‼️Custom reactions for a beautiful display of the player are not available for the bot. To do this, he needs permission `USE_EXTERNAL_EMOJIS`"
+      "WarningCustomEmoji" : "‼️Custom reactions for a beautiful display of the player are not available for the bot. To do this, he needs permission `USE_EXTERNAL_EMOJIS`",
+      "TrackNotSeekable" : "{0}, unfortunately this track is not seek-able"
     },
     "Groups": {
       "" : "Other",
