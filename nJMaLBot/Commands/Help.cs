@@ -21,6 +21,7 @@ namespace Bot.Commands {
                                   Name = pair.Value.GroupNameTemplate.Format(Loc.Get($"Groups.{pair.Key}"), GuildConfig.Prefix),
                                   Value = pair.Value.GroupTextTemplate.Format(GuildConfig.Prefix)
                               }));
+            eb.AddField(Loc.Get("Common.Vote"), Loc.Get("Common.VoteDescription"));
             (await (await GetResponseChannel()).SendMessageAsync(null, false, eb.Build())).DelayedDelete(TimeSpan.FromMinutes(10));
         }
 
