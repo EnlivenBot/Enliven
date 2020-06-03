@@ -234,7 +234,9 @@
     },
     "Common": {
       "Invite": "Invite",
-      "InviteDescription": "Here is [your link]({0}) for inviting the bot to another server. Hope to meet you there! 😀"
+      "InviteDescription": "Here is [your link]({0}) for inviting the bot to another server. Hope to meet you there! 😀",
+      "Vote": "**Support Us**",
+      "VoteDescription" : "You can **free** support us by voting for the bot:\n[Here (every 12 hours)](https://top.gg/bot/606760964183949314)\n[Here (every 24 hours)](https://discordbotlist.com/bots/enliven)\n[Here (write a review)](https://bots.ondiscord.xyz/bots/606760964183949314)\n Or you can just look at it [here](https://discord.bots.gg/bots/606760964183949314)\n\nDo not forget about [our GitLab](https://gitlab.com/skprochlab/nJMaLBot), where you can write errors and suggestions"
     }
   }
 }
