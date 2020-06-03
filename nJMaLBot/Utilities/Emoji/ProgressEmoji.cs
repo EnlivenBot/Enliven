@@ -1,15 +1,30 @@
 using System;
 using System.IO;
+using System.Text;
 using Newtonsoft.Json;
 
 namespace Bot.Utilities.Emoji {
     public class ProgressEmojiList {
-        public string Part0 { get; set; } = "<:start0:667802061202522112>";
-        public string Part2 { get; set; } = "<:start2:667802134246457345>";
-        public string Part4 { get; set; } = "<:start4:667802171311390721>";
-        public string Part6 { get; set; } = "<:start6:667802208087179295>";
-        public string Part8 { get; set; } = "<:start8:667802227229982731>";
-        public string Part10 { get; set; } = "<:start10:667802240790167573>";
+        public ProgressEmojiList() { }
+
+        public ProgressEmojiList(string part0, string part2, string part4, string part6, string part8, string part10) {
+            Part0 = part0;
+            Part2 = part2;
+            Part4 = part4;
+            Part6 = part6;
+            Part8 = part8;
+            Part10 = part10;
+        }
+
+        public ProgressEmojiList(string part) : this(part, part, part, part, part, part) { }
+        public ProgressEmojiList(string empty, string full) : this(empty, empty, empty, full, full, full) { }
+        public ProgressEmojiList(string empty, string half, string full) : this(empty, empty, half, half, full, full) { }
+        public string Part0 { get; set; }
+        public string Part2 { get; set; }
+        public string Part4 { get; set; }
+        public string Part6 { get; set; }
+        public string Part8 { get; set; }
+        public string Part10 { get; set; }
     }
 
     public static class ProgressEmoji {
@@ -66,9 +81,21 @@ namespace Bot.Utilities.Emoji {
             return emoji;
         });
 
-        public static ProgressEmojiList Start => _start.Value;
-        public static ProgressEmojiList Intermediate => _intermediate.Value;
-        public static ProgressEmojiList End => _end.Value;
+        private static Lazy<ProgressEmojiPack> _customEmojiPack = new Lazy<ProgressEmojiPack>(() => new ProgressEmojiPack {
+            Start = _start.Value,
+            End = _end.Value,
+            Intermediate = _intermediate.Value
+        });
+
+        public static ProgressEmojiPack CustomEmojiPack => _customEmojiPack.Value;
+
+        private static Lazy<ProgressEmojiPack> _textEmojiPack = new Lazy<ProgressEmojiPack>(() => new ProgressEmojiPack {
+            Start = new ProgressEmojiList("<-", "<="),
+            End = new ProgressEmojiList("->", "=>"),
+            Intermediate = new ProgressEmojiList("―", "▬", "==")
+        });
+
+        public static ProgressEmojiPack TextEmojiPack => _textEmojiPack.Value;
 
         public static string GetEmoji(this ProgressEmojiList emojiList, int progress) {
             if (progress <= 0)
@@ -87,6 +114,26 @@ namespace Bot.Utilities.Emoji {
                 return emojiList.Part8;
 
             return emojiList.Part10;
+        }
+
+        public class ProgressEmojiPack {
+            public ProgressEmojiList Start { get; set; }
+            public ProgressEmojiList Intermediate { get; set; }
+            public ProgressEmojiList End { get; set; }
+
+            public string GetProgress(int progress) {
+                var builder = new StringBuilder();
+                builder.Append(Start.GetEmoji(progress));
+                progress -= 10;
+
+                for (var i = 0; i < 8; i++) {
+                    builder.Append(Intermediate.GetEmoji(progress));
+                    progress -= 10;
+                }
+
+                builder.Append(End.GetEmoji(progress));
+                return builder.ToString();
+            }
         }
     }
 }

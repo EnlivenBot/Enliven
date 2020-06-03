@@ -3,6 +3,9 @@ using System.Threading.Tasks;
 using Bot.Config;
 using Bot.Config.Localization;
 using Bot.Config.Localization.Providers;
+using Bot.Utilities.Emoji;
+using Discord;
+using HarmonyLib;
 using Lavalink4NET;
 using Lavalink4NET.Player;
 
@@ -10,12 +13,16 @@ namespace Bot.Music.Players {
     public class AdvancedLavalinkPlayer : LavalinkPlayer {
         protected static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
         public GuildConfig GuildConfig;
+        public IGuild Guild;
         public readonly ILocalizationProvider Loc;
         public BassBoostMode BassBoostMode = BassBoostMode.Off;
         private int _updateFailCount;
         internal int UpdateFailThreshold = 2;
+        public string StateString = "?";
+        public bool IsExternalEmojiAllowed { get; set; }= true;
 
         public AdvancedLavalinkPlayer(ulong guildId) {
+            Guild = Program.Client.GetGuild(guildId);
             GuildConfig = GuildConfig.Get(guildId);
             Loc = new GuildLocalizationProvider(GuildConfig);
         }
@@ -30,12 +37,15 @@ namespace Bot.Music.Players {
             await base.SetVolumeAsync(volume, false);
             GuildConfig.Get(GuildId).SetVolume(volume).Save();
         }
-        
+
+        public bool IsShutdowned { get; private set; }
+
         public virtual void Shutdown(LocalizedEntry reason, bool needSave = true) {
             Shutdown(reason.Get(Loc), needSave);
         }
 
         public virtual Task Shutdown(string reason, bool needSave = true) {
+            IsShutdowned = true;
             base.Dispose();
             return Task.CompletedTask;
         }
@@ -50,7 +60,7 @@ namespace Bot.Music.Players {
         /// </summary>
         [Obsolete]
         public override void Dispose() {
-            logger.Error("Player disposed. Stacktrace: \n{stacktrace}", new System.Diagnostics.StackTrace().ToString());
+            if (!IsShutdowned) logger.Error("Player disposed. Stacktrace: \n{stacktrace}", new System.Diagnostics.StackTrace().ToString());
             Shutdown();
         }
 
@@ -74,6 +84,23 @@ namespace Bot.Music.Players {
                 logger.Info("Player {guildId} disposed due to state {state}", GuildId, State);
                 Shutdown();
                 throw new ObjectDisposedException("Player", $"Player disposed due to {State}");
+            }
+        }
+
+        public void OnStateChanged() {
+            if (IsExternalEmojiAllowed) {
+                StateString = State switch {
+                    PlayerState.Playing => CommonEmojiStrings.Instance.Play,
+                    PlayerState.Paused  => CommonEmojiStrings.Instance.Pause,
+                    _                   => CommonEmojiStrings.Instance.Stop
+                };
+            }
+            else {
+                StateString = State switch {
+                    PlayerState.Playing => "▶",
+                    PlayerState.Paused  => "⏸",
+                    _                   => "?"
+                };
             }
         }
     }

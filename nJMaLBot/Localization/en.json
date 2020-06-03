@@ -73,6 +73,7 @@
       "NotInVoiceChannel": "{0}, You must be in a voice channel",
       "TrackError": "Track error",
       "DecodingError": "**Decoding error** - `{0}`",
+      "DecodingErrorRemove": "**Decoding error** - `{0}`. Track removed.",
       "ChannelNotAllowed": "{0}, you can’t play music on this channel. Use <#{1}> for this, or ask the administrator to change this through the server setup.",
       "MusicDisabled": "The bot does not have access to any Lavalink server and cannot play anything. Write to the host owner about this problem.",
       "ClusterInitializing": "The playback cluster is initializing. Wait a bit",
@@ -92,9 +93,15 @@
       "Parameters": "Parameters",
       "PlaybackNothingPlaying": "Nothing playing",
       "Waiting": "Waiting...",
+      "QueueEnd" : "End of queue reached",
       "OnlyOneNode": "Unfortunately, only the node you are using is available to the bot right now",
       "ResumeViaPlaylists": "\nYou can try to replay through `{0}loadplaylist {1}`",
-      "Empty": "Empty"
+      "Empty": "Empty",
+      "Warning" : "**Warning**",
+      "WarningEmojiRemoval" : "❗The bot can not remove reactions for users as intended. To do this, he needs permission `MANAGE_MESSAGES`",
+      "WarningEmojiAdding" : "‼️Management through reactions is not available - the bot cannot add them to the message. To do this, he needs разрешение `ADD_REACTIONS`",
+      "WarningCustomEmoji" : "‼️Custom reactions for a beautiful display of the player are not available for the bot. To do this, he needs permission `USE_EXTERNAL_EMOJIS`",
+      "TrackNotSeekable" : "{0}, unfortunately this track is not seek-able"
     },
     "Groups": {
       "" : "Other",
@@ -167,8 +174,7 @@
       "bassboost0s": "Lets you toggle the bass boost",
       "bassboost0_0s": "Bass boost mode: `Off`, `Low`, `Medium`, `High`, `Extreme`",
       "changenode0s": "Attempts to move playback to another music node. May help if current lags",
-      "invite0s": "Represents a link with which you can invite a bot to a server",
-      "invite0_0s": "Specify `true` to generate the link without administrator rights"
+      "invite0s": "Represents a link with which you can invite a bot to a server"
     },
     "CommandHandler": {
       "FailedTitle": "Error executing command",
@@ -176,7 +182,7 @@
       "BadArgCount": "Error - the wrong number of arguments for the command. Verify the correctness through `{0}help {1}`",
       "ParseFailed": "An error occurred while trying to parse the command. Check the arguments through `{0}help {1}`",
       "Exception": "Error executing command:\n ```{0}```",
-      "UnknownCommand": "Command `{0}` not found! Use the command `{1}help` for a list of commands.",
+      "UnknownCommand": "Command `{0}` not found!\nPerhaps you wanted to use one of them: {1}\n Use the command `{1}help` for a list of commands.",
       "ByCommand": "Help for the command `{0}`"
     },
     "Commands": {

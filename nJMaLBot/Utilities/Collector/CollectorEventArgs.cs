@@ -33,7 +33,7 @@ namespace Bot.Utilities.Collector {
                 await message.RemoveReactionAsync(Reaction.Emote, Reaction.User.Value);
             }
             catch (Exception) {
-                // ignored
+                Controller.OnRemoveArgsFailed(this);
             }
         }
     }
@@ -45,9 +45,13 @@ namespace Bot.Utilities.Collector {
             Message = message;
         }
 
-        public override Task RemoveReason() {
-            Message.SafeDelete();
-            return Task.CompletedTask;
+        public override async Task RemoveReason() {
+            try {
+                await Message.DeleteAsync();
+            }
+            catch {
+                Controller.OnRemoveArgsFailed(this);
+            }
         }
     }
 }

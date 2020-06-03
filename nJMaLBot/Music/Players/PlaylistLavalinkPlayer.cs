@@ -6,9 +6,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bot.Commands;
 using Bot.Utilities;
+using Bot.Utilities.Emoji;
 using Lavalink4NET.Decoding;
 using Lavalink4NET.Events;
 using Lavalink4NET.Player;
+using Tyrrrz.Extensions;
 
 namespace Bot.Music.Players {
     public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer {
@@ -24,7 +26,16 @@ namespace Bot.Music.Players {
             };
         }
 
-        public LoopingState LoopingState { get; set; } = LoopingState.Off;
+        public string LoopingStateString;
+
+        public LoopingState LoopingState {
+            get => _loopingState;
+            set {
+                _loopingState = value;
+                OnRepeatStateChanged();
+            }
+        }
+
         public LavalinkPlaylist Playlist { get; }
 
         public event EventHandler<int> CurrentTrackIndexChange;
@@ -38,9 +49,11 @@ namespace Bot.Music.Players {
                     CurrentTrackIndexChange?.Invoke(null, value);
             }
         }
-        
+
         private List<string> QueuePages { get; set; }
         public event EventHandler QueueDeprecated;
+        public string LoadFailedId = "";
+        public int LoadFailedRemoves = 0;
 
         public override async Task OnTrackEndAsync(TrackEndEventArgs eventArgs) {
             var oldTrackIndex = CurrentTrackIndex;
@@ -49,8 +62,38 @@ namespace Bot.Music.Players {
             }
 
             if (eventArgs.Reason != TrackEndReason.Replaced) await base.OnTrackEndAsync(eventArgs);
-            if (eventArgs.MayStartNext || eventArgs.Reason == TrackEndReason.LoadFailed) await SkipAsync();
-            if (eventArgs.Reason == TrackEndReason.LoadFailed) Playlist.RemoveAt(oldTrackIndex);
+            if (eventArgs.Reason == TrackEndReason.LoadFailed) {
+                if (LoadFailedId == CurrentTrack?.Identifier) {
+                    await SkipAsync();
+                    Playlist.RemoveAt(oldTrackIndex);
+                    LoadFailedRemoves++;
+                }
+                else {
+                    LoadFailedId = CurrentTrack?.Identifier;
+                    await PlayAsync(CurrentTrack, false, TrackPosition);
+                }
+            }
+            else {
+                LoadFailedRemoves = 0;
+            }
+
+            if (LoadFailedRemoves > 2) {
+                try {
+                    var currentNode = MusicUtils.Cluster.GetServingNode(Guild.Id);
+                    var newNode = MusicUtils.Cluster.Nodes.Where(node => node.IsConnected).Where(node => node != currentNode).RandomOrDefault();
+                    if (newNode != null) {
+                        await currentNode.MovePlayerAsync(this, newNode);
+                        WriteToQueueHistory(Loc.Get("MusicQueues.NodeChanged").Format("SYSTEM", newNode.Label));
+                    }
+                }
+                finally {
+                    LoadFailedRemoves = 0;
+                }
+            }
+
+            if (eventArgs.MayStartNext && eventArgs.Reason != TrackEndReason.LoadFailed) {
+                await SkipAsync();
+            }
         }
 
         public virtual async Task<int> PlayAsync(LavalinkTrack track, bool enqueue, TimeSpan? startTime = null, TimeSpan? endTime = null,
@@ -111,6 +154,7 @@ namespace Bot.Music.Players {
             if (Playlist.Count + playlist.Tracks.Count > 10000) {
                 return;
             }
+
             var tracks = playlist.Tracks.Select(s => TrackDecoder.DecodeTrack(s))
                                  .Select(track => AuthoredLavalinkTrack.FromLavalinkTrack(track, requester)).ToList();
             if (options == ImportPlaylistOptions.Replace) {
@@ -125,7 +169,7 @@ namespace Bot.Music.Players {
                     Playlist.Clear();
                 }
             }
-            
+
             Playlist.AddRange(tracks);
             if (options != ImportPlaylistOptions.JustAdd) {
                 var track = playlist.TrackIndex == -1 ? tracks.First() : tracks[playlist.TrackIndex.Normalize(0, playlist.Tracks.Count - 1)];
@@ -133,6 +177,7 @@ namespace Bot.Music.Players {
                 if (position != null && position.Value > track.Duration) {
                     position = TimeSpan.Zero;
                 }
+
                 await PlayAsync(track, false, position);
             }
             else if (State == PlayerState.NotPlaying) {
@@ -157,20 +202,22 @@ namespace Bot.Music.Players {
                 var stringBuilder = new StringBuilder();
                 for (var i = 0; i < Playlist.Count; i++) {
                     var text = (CurrentTrackIndex == i ? "@" : " ") + $"{i}: {Playlist[i].Title}\n";
-                    if (stringBuilder.Length + text.Length  > 2000) {
+                    if (stringBuilder.Length + text.Length > 2000) {
                         QueuePages.Add(stringBuilder.ToString());
                         stringBuilder.Clear();
                     }
+
                     stringBuilder.Append(text);
                 }
-            
+
                 QueuePages.Add(stringBuilder.ToString());
             }
-            
+
             return QueuePages.ToList();
         }
 
         private readonly SemaphoreSlim _enqueueLock = new SemaphoreSlim(1);
+        private LoopingState _loopingState = LoopingState.Off;
 
         public virtual async Task TryEnqueue(IEnumerable<LavalinkTrack> tracks, string author, bool enqueue = true) {
             await _enqueueLock.WaitAsync();
@@ -182,8 +229,7 @@ namespace Bot.Music.Players {
                 await Enqueue(authoredTracks, enqueue);
 
                 var ignoredTracksCount = lavalinkTracks.Count - authoredTracks.Count;
-                if (ignoredTracksCount != 0)
-                {
+                if (ignoredTracksCount != 0) {
                     await OnTrackLimitExceed(author, ignoredTracksCount);
                 }
             }
@@ -204,6 +250,29 @@ namespace Bot.Music.Players {
 
         public virtual Task OnTrackLimitExceed(string author, int count) {
             return Task.CompletedTask;
+        }
+
+        public void OnRepeatStateChanged() {
+            if (IsExternalEmojiAllowed) {
+                LoopingStateString = LoopingState switch {
+                    LoopingState.One => CommonEmojiStrings.Instance.RepeatOnce,
+                    LoopingState.All => CommonEmojiStrings.Instance.Repeat,
+                    LoopingState.Off => CommonEmojiStrings.Instance.RepeatOff,
+                    _                => ""
+                };
+            }
+            else {
+                LoopingStateString = LoopingState switch {
+                    LoopingState.One => "🔂",
+                    LoopingState.All => "🔁",
+                    LoopingState.Off => "❌",
+                    _                => ""
+                };
+            }
+        }
+
+        public virtual void WriteToQueueHistory(string entry, bool background = false) {
+            
         }
     }
 

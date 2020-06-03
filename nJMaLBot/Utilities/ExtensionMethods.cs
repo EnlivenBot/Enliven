@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -117,6 +118,24 @@ namespace Bot.Utilities {
                 _                    => throw new ArgumentOutOfRangeException()
             };
             logger.Log(logLevel,exception, message, args);
+        }
+
+        public static TResult Try<TSource, TResult>(this TSource o, Func<TSource, TResult> action, Func<TSource, TResult> onFail) {
+            try {
+                return action(o);
+            }
+            catch {
+                return onFail(o);
+            }
+        }
+        
+        public static TResult Try<TSource, TResult>(this TSource o, Func<TSource, TResult> action, TResult onFail) {
+            try {
+                return action(o);
+            }
+            catch {
+                return onFail;
+            }
         }
     }
 }

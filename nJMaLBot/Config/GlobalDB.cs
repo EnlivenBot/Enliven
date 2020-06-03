@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using Bot.Music;
 using Bot.Utilities.Commands;
 using LiteDB;
@@ -32,6 +33,7 @@ namespace Bot.Config {
         public static readonly ILiteCollection<MessageHistory> Messages;
         public static readonly ILiteCollection<StatisticsPart> CommandStatistics;
         public static readonly ILiteCollection<StoredPlaylist> Playlists;
+        private static Timer _timer;
 
         private static LiteDatabase LoadDatabase() {
             logger.Info("Loading database");
@@ -47,6 +49,9 @@ namespace Bot.Config {
 
             tempdb.Checkpoint();
             tempdb.Rebuild();
+            tempdb.CheckpointSize = 100;
+            // Seems like this ^ dont work properly
+            _timer = new Timer(state => tempdb.Checkpoint(), null, TimeSpan.FromMinutes(30), TimeSpan.FromMinutes(30));
             logger.Info("Database loaded");
             return tempdb;
         }

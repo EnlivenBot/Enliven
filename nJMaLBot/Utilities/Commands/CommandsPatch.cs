@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Bot.Music.Players;
 using Bot.Utilities.Modules;
 using Discord.Commands;
 using HarmonyLib;
+using Lavalink4NET.Player;
 
 // ReSharper disable InconsistentNaming
 
@@ -25,11 +27,35 @@ namespace Bot.Utilities.Commands {
                 logger.Info("Patching {methodName}", methodInfo.Name);
                 harmony.Patch(methodInfo, null, null, null, commandFinalizer);
             }
+            harmony.PatchAll();
         }
 
         static void Finalizer(Exception __exception, PatchableModuleBase __instance) {
             if (__exception != null) {
                 logger.Error(__exception, "Command {commandName} execution failed with error", __instance.CurrentCommandInfo.Name);
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(LavalinkPlayer))]
+    public class LavalinkPlayerPatch {
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(LavalinkPlayer), "State", MethodType.Setter)]
+        static void OnStateChanged(LavalinkPlayer __instance) {
+            if (__instance is AdvancedLavalinkPlayer player) {
+                player.OnStateChanged();
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(AdvancedLavalinkPlayer))]
+    public class PlaylistLavalinkPlayerPatch {
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(AdvancedLavalinkPlayer), "IsExternalEmojiAllowed", MethodType.Setter)]
+        static void OnRepeatStateChanged(AdvancedLavalinkPlayer __instance) {
+            if (__instance is PlaylistLavalinkPlayer player) {
+                player.OnRepeatStateChanged();
+                player.OnStateChanged();
             }
         }
     }
