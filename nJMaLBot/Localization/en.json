@@ -59,9 +59,9 @@
       "NothingPlaying": "Nothing playing. Order tracks via `{0}play [request]`",
       "Fail": "Error",
       "Playback": "Playback",
-      "UserStopPlayback": "**{0}** stopped playback",
+      "UserStopPlayback": "**{0}** stopped playback\n\nHelp us by voting (`vote` command)",
       "PlaybackStopped": "Playback stopped",
-      "NoListenersLeft": "Playback stopped - no listeners or tracks left",
+      "NoListenersLeft": "Playback stopped - no listeners or tracks left\n\nHelp us by voting (`vote` command)",
       "AttachmentFail": "It looks like not one of your attachments is music",
       "NotFound": "No results for `{0}`",
       "Loading": "Loading",
@@ -187,7 +187,7 @@
       "ByCommand": "Help for the command `{0}`"
     },
     "Commands": {
-      "RequestedBy": "Requested by {0}",
+      "RequestedBy": "Requested by {0} | Help us by voting",
       "SetChannelResponse": "Channel <#{0}> was successfully assigned the role {1}",
       "Success": "Bot prefix changed",
       "Fail": "Fail",
@@ -235,7 +235,9 @@
     },
     "Common": {
       "Invite": "Invite",
-      "InviteDescription": "Here is [your link]({0}) for inviting the bot to another server. Hope to meet you there! 😀"
+      "InviteDescription": "Here is [your link]({0}) for inviting the bot to another server. Hope to meet you there! 😀",
+      "Vote": "**Support Us**",
+      "VoteDescription" : "You can **free** support us by voting for the bot:\n[Here (every 12 hours)](https://top.gg/bot/606760964183949314)\n[Here (every 24 hours)](https://discordbotlist.com/bots/enliven)\n[Here (write a review)](https://bots.ondiscord.xyz/bots/606760964183949314)\n Or you can just look at it [here](https://discord.bots.gg/bots/606760964183949314)\n\nDo not forget about [our GitLab](https://gitlab.com/skprochlab/nJMaLBot), where you can write errors and suggestions"
     }
   }
 }
