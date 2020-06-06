@@ -64,6 +64,11 @@ namespace Bot.Music {
             UpdateParameters();
         }
 
+        public override void SetBassBoostMode(BassBoostMode mode) {
+            base.SetBassBoostMode(mode);
+            UpdateParameters();
+        }
+
         public override async Task OnTrackStartedAsync(TrackStartedEventArgs eventArgs) {
             UpdatePlayback = true;
             UpdateTrackInfo();
@@ -473,8 +478,20 @@ namespace Bot.Music {
                 var progress = Convert.ToInt32(TrackPosition.TotalSeconds / CurrentTrack.Duration.TotalSeconds * 100);
                 var requester = CurrentTrack is AuthoredLavalinkTrack authoredLavalinkTrack ? authoredLavalinkTrack.GetRequester() : "Unknown";
                 EmbedBuilder.Fields[0].Name = Loc.Get("Music.RequestedBy").Format(requester);
+                
+                var stateString = State switch {
+                    PlayerState.Playing => IsExternalEmojiAllowed ? CommonEmojiStrings.Instance.Play : "▶",
+                    PlayerState.Paused  => IsExternalEmojiAllowed ? CommonEmojiStrings.Instance.Pause : "⏸",
+                    _                   => IsExternalEmojiAllowed ? CommonEmojiStrings.Instance.Stop : "⏹"
+                };
+                
+                var loopingStateString = LoopingState switch {
+                    LoopingState.One => IsExternalEmojiAllowed ? CommonEmojiStrings.Instance.RepeatOnce : "🔂",
+                    LoopingState.All => IsExternalEmojiAllowed ? CommonEmojiStrings.Instance.Repeat : "🔁",
+                    LoopingState.Off => IsExternalEmojiAllowed ? CommonEmojiStrings.Instance.RepeatOff : "❌",
+                };
                 EmbedBuilder.Fields[0].Value = (IsExternalEmojiAllowed ? ProgressEmoji.CustomEmojiPack : ProgressEmoji.TextEmojiPack).GetProgress(progress)
-                                             + "\n" + GetProgressInfo(StateString, LoopingStateString, CurrentTrack.IsSeekable);
+                                             + "\n" + GetProgressInfo(stateString, loopingStateString, CurrentTrack.IsSeekable);
             }
             else {
                 EmbedBuilder.Fields[0].Name = Loc.Get("Music.Playback");

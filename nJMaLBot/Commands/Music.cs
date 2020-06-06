@@ -494,8 +494,7 @@ namespace Bot.Commands {
             }
 
             await Player.UpdateEqualizerAsync(bands, false);
-            Player.BassBoostMode = mode;
-            Player.UpdateParameters();
+            Player.SetBassBoostMode(mode);
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.BassBoostUpdated").Format(Context.User.Username, mode));
         }
 
