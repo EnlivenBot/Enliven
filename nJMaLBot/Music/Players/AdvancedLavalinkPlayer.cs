@@ -18,7 +18,7 @@ namespace Bot.Music.Players {
         public BassBoostMode BassBoostMode = BassBoostMode.Off;
         private int _updateFailCount;
         internal int UpdateFailThreshold = 2;
-        public string StateString = "?";
+        public string StateString { get; set; } = "?";
         public bool IsExternalEmojiAllowed { get; set; }= true;
 
         public AdvancedLavalinkPlayer(ulong guildId) {

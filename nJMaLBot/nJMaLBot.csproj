@@ -10,6 +10,10 @@
     <Version>8</Version>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <Optimize>false</Optimize>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="CoreHtmlToImage" Version="1.0.5" />
     <PackageReference Include="Discord.Net" Version="2.2.0" />

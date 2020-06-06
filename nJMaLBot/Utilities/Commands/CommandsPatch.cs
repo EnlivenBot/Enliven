@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using Bot.Music.Players;
 using Bot.Utilities.Modules;
 using Discord.Commands;
@@ -22,17 +23,18 @@ namespace Bot.Utilities.Commands {
                                   .ToList() ?? new List<MethodInfo>();
 
             var harmony = new Harmony("com.skproch.njmalbot.bot");
-            var commandFinalizer = new HarmonyMethod(AccessTools.FirstMethod(typeof(CommandsPatch), info => info.Name == "Finalizer"));
+            var commandPostfix = new HarmonyMethod(AccessTools.FirstMethod(typeof(CommandsPatch), info => info.Name == "Postfix"));
             foreach (var methodInfo in methods) {
                 logger.Info("Patching {methodName}", methodInfo.Name);
-                harmony.Patch(methodInfo, null, null, null, commandFinalizer);
+                harmony.Patch(methodInfo, null, commandPostfix, null, null);
             }
+
             harmony.PatchAll();
         }
 
-        static void Finalizer(Exception __exception, PatchableModuleBase __instance) {
-            if (__exception != null) {
-                logger.Error(__exception, "Command {commandName} execution failed with error", __instance.CurrentCommandInfo.Name);
+        static void Postfix(ref Task __result, PatchableModuleBase __instance) {
+            if (__result.Exception != null) {
+                logger.Error(__result.Exception.Flatten(), "Command {commandName} execution failed with error", __instance.CurrentCommandInfo.Name);
             }
         }
     }
