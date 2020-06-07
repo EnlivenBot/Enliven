@@ -63,10 +63,10 @@ namespace Bot.Music {
                         if (args.Player is EmbedPlaybackPlayer embedPlaybackPlayer) {
                             embedPlaybackPlayer.Shutdown(new LocalizedEntry("Music.NoListenersLeft"), false);
                         }
-                        
+
                         return Task.CompletedTask;
                     };
-                    
+
                     AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
                 }
                 catch (Exception e) {
@@ -101,7 +101,7 @@ namespace Bot.Music {
         public static async Task<EmbedPlaybackPlayer> JoinChannel(ulong guildId, ulong voiceChannelId) {
             // Clearing previous player, if we have one
             EmbedPlaybackControl.PlaybackPlayers.FirstOrDefault(playbackPlayer => playbackPlayer.GuildId == guildId)?.Shutdown();
-            
+
             var player = await Cluster.JoinAsync(() => new EmbedPlaybackPlayer(guildId), guildId, voiceChannelId);
             player.UpdateNodeName();
             EmbedPlaybackControl.PlaybackPlayers.Add(player);
@@ -115,13 +115,25 @@ namespace Bot.Music {
                     uriResult.Scheme == Uri.UriSchemeNetTcp);
         }
 
+        public static async Task<IEnumerable<LavalinkTrack>> SearchMusic(string query) {
+            if (IsValidUrl(query)) {
+                var lavalinkTracks = await Cluster.GetTracksAsync(query);
+                return lavalinkTracks;
+            }
+            else {
+                // Search two times
+                var lavalinkTrack = await Cluster.GetTrackAsync(query, SearchMode.YouTube) ?? await Cluster.GetTrackAsync(query, SearchMode.YouTube);
+                return new List<LavalinkTrack> {lavalinkTrack};
+            }
+        }
+
         public static async Task QueueLoadMusic(IUserMessage message, string query, EmbedPlaybackPlayer player) {
             var lavalinkTracks = new List<LavalinkTrack>();
             if (message != null && message.Attachments.Count != 0) {
                 foreach (var messageAttachment in message.Attachments) {
-                    var lavalinkTrack = await Cluster.GetTrackAsync(messageAttachment.Url);
+                    var lavalinkTrack = await SearchMusic(messageAttachment.Url);
                     if (lavalinkTrack != null)
-                        lavalinkTracks.Add(lavalinkTrack);
+                        lavalinkTracks.AddRange(lavalinkTrack);
                 }
 
                 if (lavalinkTracks.Count == 0) {
@@ -133,24 +145,12 @@ namespace Bot.Music {
             }
             else {
                 var counter = 0;
-                var tasks = query.Split('\n').Select(s => {
-                    var validUrl = IsValidUrl(s);
-                    return (counter++, s, validUrl ? null : Cluster.GetTrackAsync(s, SearchMode.YouTube), validUrl ? Cluster.GetTracksAsync(s) : null);
-                }).ToList();
-                await Task.WhenAll(tasks.Select((tuple, i) => (Task) tuple.Item3 ?? tuple.Item4));
-                LavalinkTrack lastTrack = null;
-                foreach (var (_, s, item3, item4) in tasks.OrderBy(tuple => tuple.Item1)) {
-                    if (item4?.Result != null) {
-                        lastTrack = null;
-                        lavalinkTracks.AddRange(item4.Result);
+                var tasks = query.Split('\n').Select(s => (counter++, s, SearchMusic(s))).ToList();
+                await Task.WhenAll(tasks.Select((tuple, i) => tuple.Item3));
+                foreach (var (_, s, tracks) in tasks.OrderBy(tuple => tuple.Item1)) {
+                    if (tracks?.Result != null) {
+                        lavalinkTracks.AddRange(tracks.Result);
                     }
-
-                    if (item3?.Result == null) continue;
-                    if (lastTrack == null || !lastTrack.Title.Contains(s)) {
-                        lavalinkTracks.Add(item3.Result);
-                    }
-
-                    lastTrack = item3.Result;
                 }
             }
 
