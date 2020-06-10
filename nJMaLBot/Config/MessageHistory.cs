@@ -60,7 +60,7 @@ namespace Bot {
         public void AddSnapshot(DateTimeOffset editTime, string newContent) {
             Edits.Add(new MessageSnapshot {
                 EditTimestamp = editTime,
-                Value = MessageHistoryManager.DiffMatchPatch.patch_toText(MessageHistoryManager.DiffMatchPatch.patch_make(GetLastContent(), newContent))
+                Value = DiffMatchPatch.DiffMatchPatch.patch_toText(MessageHistoryManager.DiffMatchPatch.patch_make(GetLastContent(), newContent))
             });
         }
 
@@ -101,13 +101,13 @@ namespace Bot {
 
         public string GetLastContent() {
             return MessageHistoryManager.DiffMatchPatch.patch_apply(
-                Edits.SelectMany(s1 => MessageHistoryManager.DiffMatchPatch.patch_fromText(s1.Value)).ToList(), "")[0].ToString();
+                Edits.SelectMany(s1 => DiffMatchPatch.DiffMatchPatch.patch_fromText(s1.Value)).ToList(), "")[0].ToString();
         }
 
         public IEnumerable<MessageSnapshot> GetSnapshots(ILocalizationProvider loc) {
             var snapshots = new List<MessageSnapshot>();
             foreach (var edit in Edits) {
-                var snapshot = MessageHistoryManager.DiffMatchPatch.patch_apply(MessageHistoryManager.DiffMatchPatch.patch_fromText(edit.Value),
+                var snapshot = MessageHistoryManager.DiffMatchPatch.patch_apply(DiffMatchPatch.DiffMatchPatch.patch_fromText(edit.Value),
                     snapshots.Count == 0 ? "" : snapshots.Last().Value)[0].ToString();
                 if (snapshot == "###Unavailable$$$") {
                     snapshot = loc.Get("MessageHistory.PreviousUnavailable");

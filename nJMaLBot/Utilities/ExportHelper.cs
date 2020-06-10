@@ -41,7 +41,7 @@ namespace Bot.Utilities {
 
         public static async Task ExportHistoryAsync(MessageHistory messageHistory, string outputPath) {
             // Create context
-            var diffMatchPatch = new diff_match_patch();
+            var diffMatchPatch = new DiffMatchPatch.DiffMatchPatch();
             var guild = (SocketGuild) ((IGuildChannel) Program.Client.GetChannel(messageHistory.ChannelId)).Guild;
             var mentionableUsers = new HashSet<User>(IdBasedEqualityComparer.Instance);
             var mentionableChannels = guild.TextChannels;
@@ -65,7 +65,7 @@ namespace Bot.Utilities {
             var lastString = "";
             foreach (var snapshotPatches in messageHistory.Edits.Select(snapshot =>
                 new Tuple<List<Patch>, MessageHistory.MessageSnapshot>(
-                    diffMatchPatch.patch_fromText(snapshot.Value), snapshot))) {
+                    DiffMatchPatch.DiffMatchPatch.patch_fromText(snapshot.Value), snapshot))) {
                 var currentString = diffMatchPatch.patch_apply(snapshotPatches.Item1, lastString)[0].ToString();
                 // var diffs = diffMatchPatch.diff_main(lastString, currentString);
                 // diffMatchPatch.diff_cleanupSemantic(diffs);
