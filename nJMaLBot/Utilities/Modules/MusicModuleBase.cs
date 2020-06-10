@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Bot.Config;
@@ -8,11 +9,15 @@ using Discord.Commands;
 using Discord.WebSocket;
 using Lavalink4NET.Player;
 
+#pragma warning disable 4014
+
 namespace Bot.Utilities.Modules {
     public class MusicModuleBase : AdvancedModuleBase {
         public IMessageChannel ResponseChannel;
         public EmbedPlaybackPlayer Player;
         public Task<bool> IsPreconditionsValid;
+        public static Dictionary<ulong, NonSpamMessageController> ErrorsMessagesControllers { get; set; } = new Dictionary<ulong, NonSpamMessageController>();
+        public NonSpamMessageController ErrorMessageController;
 
         protected override async void BeforeExecute(CommandInfo command) {
             base.BeforeExecute(command);
@@ -21,20 +26,28 @@ namespace Bot.Utilities.Modules {
         }
 
         private async Task<bool> InitialSetup(CommandInfo command) {
+            if (!ErrorsMessagesControllers.TryGetValue(Context.Channel.Id, out var nonSpamMessageController)) {
+                nonSpamMessageController = new NonSpamMessageController(Context.Channel, Loc.Get("Music.Fail"))
+                                          .AddChannel(await Context.User.GetOrCreateDMChannelAsync()).UpdateTimeout(TimeSpan.FromMinutes(2));
+                ErrorsMessagesControllers[Context.Channel.Id] = nonSpamMessageController;
+            }
+
+            ErrorMessageController = nonSpamMessageController;
+
             try {
                 Player = MusicUtils.Cluster.GetPlayer<EmbedPlaybackPlayer>(Context.Guild.Id);
             }
             catch (NullReferenceException e) {
-                Reply(Loc.Get("Music.MusicDisabled"), true).DelayedDelete(TimeSpan.FromMinutes(5));
+                nonSpamMessageController.AddEntry(Loc.Get("Music.MusicDisabled")).Update();
                 return false;
             }
             catch (InvalidOperationException e) {
                 switch (e.Message) {
                     case "The cluster has not been initialized.":
-                        Reply(Loc.Get("Music.ClusterInitializing"), true).DelayedDelete(TimeSpan.FromMinutes(5));
+                        nonSpamMessageController.AddEntry(Loc.Get("Music.ClusterInitializing")).Update();
                         break;
                     case "No node available.":
-                        Reply(Loc.Get("Music.NoNodesAvailable"), true).DelayedDelete(TimeSpan.FromMinutes(5));
+                        nonSpamMessageController.AddEntry(Loc.Get("Music.NoNodesAvailable")).Update();
                         break;
                 }
 
@@ -49,7 +62,7 @@ namespace Bot.Utilities.Modules {
                 var needSummon = command.Attributes.FirstOrDefault(attribute => attribute is SummonToUserAttribute) != null;
 
                 if (Player != null && Player.State != PlayerState.NotConnected && Player.State != PlayerState.Destroyed && !needSummon) {
-                    Reply(Loc.Get("Music.OtherVoiceChannel").Format(Context.User.Mention), true).DelayedDelete(TimeSpan.FromMinutes(5));
+                    nonSpamMessageController.AddEntry(Loc.Get("Music.OtherVoiceChannel").Format(Context.User.Mention)).Update();
                     return false;
                 }
 
@@ -57,7 +70,7 @@ namespace Bot.Utilities.Modules {
                 if (user.VoiceState.HasValue) {
                     var perms = (await Context.Guild.GetCurrentUserAsync()).GetPermissions(user.VoiceChannel);
                     if (!perms.Connect) {
-                        Reply(Loc.Get("Music.CantConnect").Format(user.VoiceChannel.Name), true).DelayedDelete(TimeSpan.FromMinutes(2));
+                        nonSpamMessageController.AddEntry(Loc.Get("Music.CantConnect").Format(user.VoiceChannel.Name)).Update();
                         return false;
                     }
 
@@ -65,29 +78,17 @@ namespace Bot.Utilities.Modules {
                     return true;
                 }
 
-                Reply(Loc.Get("Music.NotInVoiceChannel").Format(Context.User.Mention), true).DelayedDelete(TimeSpan.FromMinutes(5));
+                nonSpamMessageController.AddEntry(Loc.Get("Music.NotInVoiceChannel").Format(Context.User.Mention)).Update();
                 return false;
             }
 
             if (GuildConfig.IsMusicLimited) {
-                Reply(Loc.Get("Music.ChannelNotAllowed").Format(Context.User.Mention, musicChannel.Id), true).DelayedDelete(TimeSpan.FromMinutes(5));
+                nonSpamMessageController.AddEntry(Loc.Get("Music.ChannelNotAllowed").Format(Context.User.Mention, musicChannel.Id)).Update();
                 return false;
             }
 
-            Reply(Loc.Get("Music.PlaybackMoved").Format(musicChannel.Id), false).DelayedDelete(TimeSpan.FromMinutes(5));
+            nonSpamMessageController.AddEntry(Loc.Get("Music.PlaybackMoved").Format(musicChannel.Id)).Update();
             return true;
-
-
-            async Task<IUserMessage> Reply(string description, bool isFail) {
-                var embed = this.GetAuthorEmbedBuilder().WithTitle(Loc.Get(isFail ? "Music.Fail" : "Music.Playback"))
-                                .WithDescription(description).WithColor(isFail ? Color.Orange : Color.Gold).Build();
-                try {
-                    return await Context.Channel.SendMessageAsync(null, false, embed);
-                }
-                catch (Exception) {
-                    return await (await Context.User.GetOrCreateDMChannelAsync()).SendMessageAsync(null, false, embed);
-                }
-            }
         }
 
         protected override async Task<IUserMessage> ReplyAsync(string message = null, bool isTTS = false, Embed embed = null, RequestOptions options = null) {
