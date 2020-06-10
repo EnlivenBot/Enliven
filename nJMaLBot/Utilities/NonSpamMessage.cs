@@ -1,13 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Discord;
 using NLog.Fluent;
+using Tyrrrz.Extensions;
 
 namespace Bot.Utilities {
     public class NonSpamMessageController {
+        public static readonly Regex UserMentionRegex = new Regex(@"(?<!<@)!?(\d+)(?=>)");
+        
         private Task _modifyAsync;
         private bool _modifyQueued;
         public EmbedBuilder EmbedBuilder { get; set; }
@@ -17,6 +21,7 @@ namespace Bot.Utilities {
         private Dictionary<string, int> Entries { get; set; } = new Dictionary<string, int>();
 
         private List<IMessageChannel> TargetChannels { get; set; } = new List<IMessageChannel>();
+        private HashSet<string> Mentions { get; set; } = new HashSet<string>();
 
         public NonSpamMessageController(IMessageChannel channel, string title, Color embedColor = default) {
             TargetChannels.Add(channel);
@@ -30,6 +35,8 @@ namespace Bot.Utilities {
         }
 
         public NonSpamMessageController AddEntry(string entry) {
+            var matchCollection = UserMentionRegex.Matches(entry);
+            Mentions.AddRange(matchCollection.Select(match => $"<@{match.Value}>"));
             if (Entries.TryGetValue(entry, out var count)) {
                 Entries[entry] = count + 1;
             }
@@ -45,6 +52,7 @@ namespace Bot.Utilities {
             if (timeout != null) {
                 _deletionTimer = new Timer(state => {
                     Entries.Clear();
+                    Mentions.Clear();
                     AssemblyEmbed();
                     Message.SafeDelete();
                     Message = null;
@@ -95,7 +103,7 @@ namespace Bot.Utilities {
                             else {
                                 await Message.ModifyAsync(properties => {
                                     properties.Embed = AssemblyEmbed().Build();
-                                    properties.Content = "";
+                                    properties.Content = string.Join(", ", Mentions);
                                 });
                             }
                         }
