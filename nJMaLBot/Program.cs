@@ -18,6 +18,7 @@ namespace Bot {
         public static DiscordShardedClient Client;
         public static CommandHandler Handler;
         private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
+        private static ReliabilityService _reliabilityService;
 
         private static void Main(string[] args) {
             InstallLogger();
@@ -33,10 +34,13 @@ namespace Bot {
         private static async Task MainAsync(string[] args) {
             var config = new DiscordSocketConfig {MessageCacheSize = 100};
             Client = new DiscordShardedClient(config);
-            Client.Log += message => {
+
+            Task OnClientLog(LogMessage message) {
                 logger.Log(message.Severity, message.Exception, "{message} from {source}", message.Message, message.Source);
                 return Task.CompletedTask;
-            };
+            }
+
+            Client.Log += OnClientLog;
 
             logger.Info("Start logining");
             var connectDelay = 30;
@@ -60,7 +64,8 @@ namespace Bot {
             logger.Info("Starting client");
             await Client.StartAsync();
             await Client.SetGameAsync("mentions of itself to get started", null, ActivityType.Listening);
-            
+            _reliabilityService = new ReliabilityService(Client, OnClientLog);
+
             Handler = new CommandHandler();
             await Handler.Install(Client);
             AppDomain.CurrentDomain.ProcessExit += async (sender, eventArgs) => {

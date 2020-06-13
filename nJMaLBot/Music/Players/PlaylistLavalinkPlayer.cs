@@ -26,15 +26,7 @@ namespace Bot.Music.Players {
             };
         }
 
-        public string LoopingStateString;
-
-        public LoopingState LoopingState {
-            get => _loopingState;
-            set {
-                _loopingState = value;
-                OnRepeatStateChanged();
-            }
-        }
+        public LoopingState LoopingState { get; set; } = LoopingState.Off;
 
         public LavalinkPlaylist Playlist { get; }
 
@@ -217,7 +209,6 @@ namespace Bot.Music.Players {
         }
 
         private readonly SemaphoreSlim _enqueueLock = new SemaphoreSlim(1);
-        private LoopingState _loopingState = LoopingState.Off;
 
         public virtual async Task TryEnqueue(IEnumerable<LavalinkTrack> tracks, string author, bool enqueue = true) {
             await _enqueueLock.WaitAsync();
@@ -250,25 +241,6 @@ namespace Bot.Music.Players {
 
         public virtual Task OnTrackLimitExceed(string author, int count) {
             return Task.CompletedTask;
-        }
-
-        public void OnRepeatStateChanged() {
-            if (IsExternalEmojiAllowed) {
-                LoopingStateString = LoopingState switch {
-                    LoopingState.One => CommonEmojiStrings.Instance.RepeatOnce,
-                    LoopingState.All => CommonEmojiStrings.Instance.Repeat,
-                    LoopingState.Off => CommonEmojiStrings.Instance.RepeatOff,
-                    _                => ""
-                };
-            }
-            else {
-                LoopingStateString = LoopingState switch {
-                    LoopingState.One => "🔂",
-                    LoopingState.All => "🔁",
-                    LoopingState.Off => "❌",
-                    _                => ""
-                };
-            }
         }
 
         public virtual void WriteToQueueHistory(string entry, bool background = false) {

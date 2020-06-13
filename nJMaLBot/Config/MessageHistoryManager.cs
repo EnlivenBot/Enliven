@@ -19,7 +19,7 @@ using LiteDB;
 namespace Bot {
     public static class MessageHistoryManager {
         private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
-        public static readonly diff_match_patch DiffMatchPatch = new diff_match_patch();
+        public static readonly DiffMatchPatch.DiffMatchPatch DiffMatchPatch = new DiffMatchPatch.DiffMatchPatch();
 
         public static void SetHandlers() {
             // Message created handled located in CommandHandler
@@ -252,7 +252,7 @@ namespace Bot {
                 ChannelId = textChannel.Id, MessageId = arg.Id,
                 Edits = new List<MessageHistory.MessageSnapshot> {
                     new MessageHistory.MessageSnapshot
-                        {EditTimestamp = arg.CreatedAt, Value = DiffMatchPatch.patch_toText(DiffMatchPatch.patch_make("", arg.Content))}
+                        {EditTimestamp = arg.CreatedAt, Value = global::DiffMatchPatch.DiffMatchPatch.patch_toText(DiffMatchPatch.patch_make("", arg.Content))}
                 }
             }.Save();
             CommandHandler.RegisterUsage("MessagesCreated", "Messages");

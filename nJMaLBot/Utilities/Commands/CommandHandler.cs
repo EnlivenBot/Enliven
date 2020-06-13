@@ -45,7 +45,7 @@ namespace Bot.Commands {
                 FuzzySearch.AddData(alias);
             }
 
-            CommandsPatch.ApplyPatch();
+            Patch.ApplyPatch();
 
             _client.MessageReceived += message => Task.Run(() => HandleCommand(message));
         }

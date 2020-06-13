@@ -15,12 +15,14 @@ namespace Bot.Commands {
             var eb = this.GetAuthorEmbedBuilder()
                          .WithTitle(Loc.Get("Help.HelpTitle"))
                          .WithColor(Color.Gold)
+                         .WithDescription(Loc.Get("Help.HelpPrefix").Format(GuildConfig.Prefix, Program.Client.CurrentUser.Mention))
                          .AddField($"{GuildConfig.Prefix}help", Loc.Get("Help.HelpDescription"))
                          .WithFields(HelpUtils.CommandsGroups.Value.Select(pair =>
                               new EmbedFieldBuilder {
                                   Name = pair.Value.GroupNameTemplate.Format(Loc.Get($"Groups.{pair.Key}"), GuildConfig.Prefix),
                                   Value = pair.Value.GroupTextTemplate.Format(GuildConfig.Prefix)
                               }));
+            eb.AddField(Loc.Get("Common.Vote"), Loc.Get("Common.VoteDescription"));
             (await (await GetResponseChannel()).SendMessageAsync(null, false, eb.Build())).DelayedDelete(TimeSpan.FromMinutes(10));
         }
 

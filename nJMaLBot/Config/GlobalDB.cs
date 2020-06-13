@@ -33,7 +33,8 @@ namespace Bot.Config {
         public static readonly ILiteCollection<MessageHistory> Messages;
         public static readonly ILiteCollection<StatisticsPart> CommandStatistics;
         public static readonly ILiteCollection<StoredPlaylist> Playlists;
-        private static Timer _timer;
+        private static Timer _checkpointTimer;
+        private static Timer _rebuildTimer;
 
         private static LiteDatabase LoadDatabase() {
             logger.Info("Loading database");
@@ -47,11 +48,10 @@ namespace Bot.Config {
             UpgradeTo2(tempdb);
             tempdb.UserVersion = 2;
 
-            tempdb.Checkpoint();
-            tempdb.Rebuild();
-            tempdb.CheckpointSize = 100;
+            tempdb.CheckpointSize = 1000;
             // Seems like this ^ dont work properly
-            _timer = new Timer(state => tempdb.Checkpoint(), null, TimeSpan.FromMinutes(30), TimeSpan.FromMinutes(30));
+            _checkpointTimer = new Timer(state => tempdb.Checkpoint(), null, TimeSpan.FromMinutes(3), TimeSpan.FromMinutes(30));
+            _rebuildTimer = new Timer(state => tempdb.Rebuild(), null, TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(180));
             logger.Info("Database loaded");
             return tempdb;
         }
