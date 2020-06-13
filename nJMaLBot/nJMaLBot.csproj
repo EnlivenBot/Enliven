@@ -5,9 +5,9 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <RootNamespace>Bot</RootNamespace>
     <AssemblyName>SKP-DB</AssemblyName>
-    <AssemblyVersion>8</AssemblyVersion>
-    <FileVersion>8</FileVersion>
-    <Version>8</Version>
+    <AssemblyVersion>8.1</AssemblyVersion>
+    <FileVersion>8.1</FileVersion>
+    <Version>8.1</Version>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
