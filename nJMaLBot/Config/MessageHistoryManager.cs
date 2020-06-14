@@ -78,10 +78,10 @@ namespace Bot {
                                                          .AddField(loc.Get("MessageHistory.Channel"), $"<#{history.ChannelId}>", true);
                     if (history.HistoryExists) {
                         embedBuilder.AddField(loc.Get("MessageHistory.Requester"), $"{history.GetAuthor()?.Username} <@{history.AuthorId}>", true);
-                        var canFitToEmbed = history.CanFitToEmbed(loc, true);
+                        var canFitToEmbed = history.CanFitToEmbed(loc);
 
                         if (canFitToEmbed) {
-                            embedBuilder.Fields.InsertRange(0, history.GetEditsAsFields(loc, true));
+                            embedBuilder.Fields.InsertRange(0, history.GetEditsAsFields(loc));
                             await ((ISocketMessageChannel) logChannel).SendMessageAsync(null, false, embedBuilder.Build());
                         }
                         else {
@@ -190,10 +190,10 @@ namespace Bot {
                     embedBuilder.Description = loc.Get("MessageHistory.ViewMessageExists").Format((await realMessage).GetJumpUrl());
                 }
 
-                var canFitToEmbed = history.CanFitToEmbed(loc, true);
+                var canFitToEmbed = history.CanFitToEmbed(loc);
 
                 if (canFitToEmbed) {
-                    embedBuilder.Fields.InsertRange(0, history.GetEditsAsFields(loc, true));
+                    embedBuilder.Fields.InsertRange(0, history.GetEditsAsFields(loc));
                     logMessage = await outputChannel.SendMessageAsync(null, false, embedBuilder.Build());
                 }
                 else {

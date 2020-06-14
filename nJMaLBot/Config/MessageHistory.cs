@@ -27,8 +27,9 @@ namespace Bot {
         [BsonField("E")] public List<MessageSnapshot> Edits { get; set; } = new List<MessageSnapshot>();
 
         [BsonIgnore] public bool HistoryExists => Edits.Count != 0;
-        
-        [BsonIgnore] public bool IsIgnored  {
+
+        [BsonIgnore]
+        public bool IsIgnored {
             get {
                 var author = GetAuthor();
                 if (author?.IsBot == true || author?.IsWebhook == true) {
@@ -44,7 +45,7 @@ namespace Bot {
         }
 
         public static MessageHistory Get(ulong channelId, ulong messageId, ulong authorId = default) {
-            return GlobalDB.Messages.FindById($"{channelId}:{messageId}")?? new MessageHistory {
+            return GlobalDB.Messages.FindById($"{channelId}:{messageId}") ?? new MessageHistory {
                 AuthorId = authorId, MessageId = messageId, ChannelId = channelId
             };
         }
@@ -64,7 +65,7 @@ namespace Bot {
             });
         }
 
-        public bool CanFitToEmbed(ILocalizationProvider loc, bool includeLastContent) {
+        public bool CanFitToEmbed(ILocalizationProvider loc) {
             if (Edits.Count > 20)
                 return false;
             var commonCount = 0;
@@ -78,8 +79,7 @@ namespace Bot {
                 lastSnapshot = edit;
             }
 
-            if (!includeLastContent) return true;
-            return commonCount + lastSnapshot.Value.Length + loc.Get("MessageHistory.LastContent").Format(lastSnapshot.EditTimestamp).Length <= 5500;
+            return commonCount - lastSnapshot.EditTimestamp.ToString().Length + loc.Get("MessageHistory.LastContent").Format(lastSnapshot.EditTimestamp).Length <= 5500;
         }
 
         public SocketGuildUser GetAuthor() {
@@ -118,18 +118,13 @@ namespace Bot {
             }
         }
 
-        public IEnumerable<EmbedFieldBuilder> GetEditsAsFields(ILocalizationProvider loc, bool includeLastContent) {
+        public IEnumerable<EmbedFieldBuilder> GetEditsAsFields(ILocalizationProvider loc) {
             var embedFields = GetSnapshots(loc)
                              .Select(messageSnapshot => new EmbedFieldBuilder
                                   {Name = messageSnapshot.EditTimestamp.ToString(), Value = ">>> " + messageSnapshot.Value}).ToList();
 
-            if (includeLastContent) {
-                var lastContent = embedFields.Last();
-                var embedFieldBuilder = new EmbedFieldBuilder {
-                    Name = loc.Get("MessageHistory.LastContent").Format(lastContent.Name), Value = lastContent.Value
-                };
-                embedFields.Insert(0, embedFieldBuilder);
-            }
+            var lastContent = embedFields.Last();
+            lastContent.Name = loc.Get("MessageHistory.LastContent").Format(lastContent.Name);
 
             return embedFields;
         }
