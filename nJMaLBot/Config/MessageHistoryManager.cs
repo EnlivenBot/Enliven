@@ -64,7 +64,7 @@ namespace Bot {
 
                     var history = MessageHistory.Get(arg2.Id, arg1.Id);
                     if (history.IsIgnored) {
-                        GlobalDB.IgnoredMessages.Delete($"{textChannel.Id}:{arg1.Id}");
+                        IgnoredMessages.RemoveIgnore(textChannel.Id.ToString(), arg1.Id.ToString());
                         return;
                     }
 
@@ -236,12 +236,12 @@ namespace Bot {
 
         public static void LogCreatedMessage(IMessage arg, GuildConfig config) {
             if (!config.IsLoggingEnabled) {
-                AddMessageToIgnore(arg);
+                IgnoredMessages.AddMessageToIgnore(arg);
                 return;
             }
 
             if (arg.Author.IsBot || arg.Author.IsWebhook) {
-                AddMessageToIgnore(arg);
+                IgnoredMessages.AddMessageToIgnore(arg);
                 return;
             }
 
@@ -256,11 +256,6 @@ namespace Bot {
                 }
             }.Save();
             CommandHandler.RegisterUsage("MessagesCreated", "Messages");
-        }
-
-        public static void AddMessageToIgnore(IMessage arg) {
-            var id = $"{arg.Channel.Id}:{arg.Id}";
-            GlobalDB.IgnoredMessages.Insert(id, new BsonDocument());
         }
     }
 }
