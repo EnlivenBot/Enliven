@@ -73,8 +73,8 @@ namespace Bot {
                 await Client.SetGameAsync("Reboot...");
             };
             
-            MessageHistoryManager.SetHandlers();
-            await MusicUtils.SetHandler();
+            MessageHistoryManager.Initialize();
+            MusicUtils.Initialize();
         }
 
         public static void ConsoleCommandsHandler() {

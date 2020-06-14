@@ -21,7 +21,7 @@ namespace Bot {
         private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
         public static readonly DiffMatchPatch.DiffMatchPatch DiffMatchPatch = new DiffMatchPatch.DiffMatchPatch();
 
-        public static void SetHandlers() {
+        static MessageHistoryManager() {
             // Message created handled located in CommandHandler
             Program.Client.MessageUpdated += ClientOnMessageUpdated;
             Program.Client.MessageDeleted += ClientOnMessageDeleted;
@@ -40,6 +40,10 @@ namespace Bot {
                     throw;
                 }
             }, CollectorFilter.IgnoreBots);
+        }
+
+        public static void Initialize() {
+            // Dummy method to initialize static properties
         }
 
         private static Task ClientOnMessageUpdated(Cacheable<IMessage, ulong> arg1, SocketMessage arg2, ISocketMessageChannel arg3) {
@@ -216,7 +220,7 @@ namespace Bot {
                 else {
                     embedBuilder.WithDescription(loc.Get("MessageHistory.MessageNull"));
                 }
-                
+
                 logMessage = await outputChannel.SendMessageAsync(null, false, embedBuilder.Build());
             }
 
