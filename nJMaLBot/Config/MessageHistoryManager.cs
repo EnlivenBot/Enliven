@@ -99,7 +99,7 @@ namespace Bot {
                         else {
                             embedBuilder.WithDescription(loc.Get("MessageHistory.LastContentDescription")
                                                             .Format(history.GetLastContent().SafeSubstring(1900, "...")));
-                            var logImage = await RenderLog(history);
+                            var logImage = await RenderLog(loc, history);
                             await ((ISocketMessageChannel) logChannel).SendFileAsync(logImage,
                                 $"History-{history.ChannelId}-{history.MessageId}.jpg",
                                 "===========================================", false, embedBuilder.Build());
@@ -172,21 +172,14 @@ namespace Bot {
             return Task.CompletedTask;
         }
 
-        private static async Task<MemoryStream> RenderLog(MessageHistory messageHistory) {
-            try {
-                await ExportHelper.ExportHistoryAsync(messageHistory, Path.Combine(Directory.GetCurrentDirectory(), $"{messageHistory.Id}.html"));
-                using (var re1 = new GcHtmlRenderer(File.ReadAllText(Path.Combine(Directory.GetCurrentDirectory(), $"{messageHistory.Id}.html")))) {
-                    var pngSettings = new PngSettings {FullPage = true, WindowSize = new Size(512, 1)};
+        private static async Task<MemoryStream> RenderLog(ILocalizationProvider provider, MessageHistory messageHistory) {
+            using var re1 = new GcHtmlRenderer(await messageHistory.ExportToHtml(provider));
+            var pngSettings = new PngSettings {FullPage = true, WindowSize = new Size(512, 1)};
 
-                    var stream = new MemoryStream();
-                    re1.RenderToPng(stream, pngSettings);
-                    stream.Position = 0;
-                    return stream;
-                }
-            }
-            finally {
-                File.Delete(Path.Combine(Directory.GetCurrentDirectory(), $"{messageHistory.Id}.html"));
-            }
+            var stream = new MemoryStream();
+            re1.RenderToPng(stream, pngSettings);
+            stream.Position = 0;
+            return stream;
         }
 
         public static async Task PrintLog(MessageHistory history, SocketTextChannel outputChannel, ILocalizationProvider loc, IGuildUser requester) {
@@ -214,7 +207,7 @@ namespace Bot {
                     logMessage = await outputChannel.SendMessageAsync(null, false, embedBuilder.Build());
                 }
                 else {
-                    var logImage = await RenderLog(history);
+                    var logImage = await RenderLog(loc, history);
                     logMessage = await outputChannel.SendFileAsync(logImage, $"History-{history.ChannelId}-{history.MessageId}.png",
                         null, false, embedBuilder.Build());
                 }

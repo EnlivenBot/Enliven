@@ -1,13 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Bot.Config;
-using Bot.Config.Localization;
 using Bot.Config.Localization.Providers;
+using Bot.Logging.Rendering;
 using Bot.Utilities;
+using DiffMatchPatch;
 using Discord;
 using Discord.WebSocket;
+using DiscordChatExporter.Domain.Discord.Models;
 using LiteDB;
+using MessageType = DiscordChatExporter.Domain.Discord.Models.MessageType;
 
 namespace Bot {
     public class MessageHistory {
@@ -79,7 +86,8 @@ namespace Bot {
                 lastSnapshot = edit;
             }
 
-            return commonCount - lastSnapshot.EditTimestamp.ToString().Length + loc.Get("MessageHistory.LastContent").Format(lastSnapshot.EditTimestamp).Length <= 5500;
+            return commonCount - lastSnapshot.EditTimestamp.ToString().Length +
+                loc.Get("MessageHistory.LastContent").Format(lastSnapshot.EditTimestamp).Length <= 5500;
         }
 
         public SocketGuildUser GetAuthor() {
@@ -104,17 +112,25 @@ namespace Bot {
                 Edits.SelectMany(s1 => DiffMatchPatch.DiffMatchPatch.patch_fromText(s1.Value)).ToList(), "")[0].ToString();
         }
 
-        public IEnumerable<MessageSnapshot> GetSnapshots(ILocalizationProvider loc) {
+        public IEnumerable<MessageSnapshot> GetSnapshots(ILocalizationProvider loc, bool injectDiffsHighlight = false) {
             var snapshots = new List<MessageSnapshot>();
+            var formattedSnapshots = new List<MessageSnapshot>();
             foreach (var edit in Edits) {
-                var snapshot = MessageHistoryManager.DiffMatchPatch.patch_apply(DiffMatchPatch.DiffMatchPatch.patch_fromText(edit.Value),
-                    snapshots.Count == 0 ? "" : snapshots.Last().Value)[0].ToString();
+                var last = snapshots.Count == 0 ? "" : snapshots.Last().Value;
+                var snapshot = MessageHistoryManager.DiffMatchPatch.patch_apply(DiffMatchPatch.DiffMatchPatch.patch_fromText(edit.Value), last)[0].ToString();
                 if (snapshot == "###Unavailable$$$") {
                     snapshot = loc.Get("MessageHistory.PreviousUnavailable");
                 }
 
                 snapshots.Add(new MessageSnapshot {EditTimestamp = edit.EditTimestamp, Value = snapshot});
-                yield return snapshots.Last();
+                if (injectDiffsHighlight && snapshots.Count > 1) {
+                    var diffMain = MessageHistoryManager.DiffMatchPatch.diff_main(last, snapshot);
+                    MessageHistoryManager.DiffMatchPatch.diff_cleanupSemantic(diffMain);
+                    yield return new MessageSnapshot {EditTimestamp = edit.EditTimestamp, Value = DiffsToHtmlEncode(diffMain)};
+                }
+                else {
+                    yield return snapshots.Last();
+                }
             }
         }
 
@@ -127,6 +143,85 @@ namespace Bot {
             lastContent.Name = loc.Get("MessageHistory.LastContent").Format(lastContent.Name);
 
             return embedFields;
+        }
+
+        public async Task<string> ExportToHtml(ILocalizationProvider loc, bool injectDiffsHighlight = true) {
+            // Create context
+            var context = LogExportContext.Create(ChannelId, out var members);
+            var stream = new MemoryStream();
+
+            // Render messages
+            var renderer = new LogMessageWriter(stream, context, "Dark");
+            try {
+                var user = ConstructUser(AuthorId);
+                var member = Member.CreateForUser(user);
+                members.Add(member);
+
+                await renderer.WritePreambleAsync();
+                foreach (var messageSnapshot in GetSnapshots(loc, injectDiffsHighlight)) {
+                    foreach (var userMention in GetUserMentions(messageSnapshot.Value)) members.Add(Member.CreateForUser(userMention));
+
+                    await renderer.WriteMessageAsync(new Message(MessageId.ToString(), MessageType.Default, user, messageSnapshot.EditTimestamp,
+                        null, false, messageSnapshot.Value,
+                        new List<DiscordChatExporter.Domain.Discord.Models.Attachment>(), new List<DiscordChatExporter.Domain.Discord.Models.Embed>(),
+                        new List<Reaction>(), members.Select(member1 => member1.User).ToList()));
+                }
+
+                await renderer.WritePostambleAsync();
+                try {
+                    stream.Position = 0;
+                    var readToEndAsync = await new StreamReader(stream).ReadToEndAsync();
+                    return HtmlDiffsUnEncode(readToEndAsync);
+                }
+                finally {
+                    await renderer.DisposeAsync();
+                }
+            }
+            finally {
+                await renderer.DisposeAsync();
+            }
+        }
+
+        private static IEnumerable<User> GetUserMentions(string text) {
+            foreach (Match m in Regex.Matches(text, @"(?<=<@|<@!)[0-9]{18}(?=>)", RegexOptions.Multiline))
+                yield return ConstructUser(Convert.ToUInt64(m.Value));
+        }
+
+        private static User ConstructUser(ulong userId) {
+            return ConstructUser(Program.Client.GetUser(userId));
+        }
+
+        private static User ConstructUser(SocketUser user) {
+            return new User(user.Id.ToString(), user.IsBot, user.DiscriminatorValue, user.Username, user.AvatarId);
+        }
+
+        private static string DiffsToHtmlEncode(List<Diff> diffs) {
+            var html = new StringBuilder();
+            foreach (var aDiff in diffs) {
+                // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
+                switch (aDiff.Operation) {
+                    case Operation.Insert:
+                        html.Append("࢔")
+                            .Append(aDiff.Text)
+                            .Append("࢕");
+                        break;
+                    case Operation.Delete:
+                        html.Append("࢖")
+                            .Append(aDiff.Text)
+                            .Append("ࢗ");
+                        break;
+                    case Operation.Equal:
+                        html.Append(aDiff.Text);
+                        break;
+                }
+            }
+
+            return html.ToString();
+        }
+
+        private static string HtmlDiffsUnEncode(string encoded) {
+            return encoded.Replace("࢔", "<span style=\"background:DarkGreen;\">").Replace("࢕", "</span>")
+                          .Replace("࢖", "<span class=\"removed\">").Replace("ࢗ", "</span>");
         }
     }
 }
