@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -9,11 +10,12 @@ using Bot.Config.Localization.Providers;
 using Bot.Utilities;
 using Bot.Utilities.Collector;
 using Bot.Utilities.Emoji;
-using CoreHtmlToImage;
 using DiffMatchPatch;
 using Discord;
 using Discord.Rest;
 using Discord.WebSocket;
+using GrapeCity.Documents.Html;
+using HarmonyLib;
 using LiteDB;
 
 namespace Bot {
@@ -40,6 +42,12 @@ namespace Bot {
                     throw;
                 }
             }, CollectorFilter.IgnoreBots);
+            
+            // Sorry for this hack
+            // But this project does not bring me income, and I can not afford to buy this license
+            // If you using it consider buying license at https://www.grapecity.com/documents-api/licensing
+            var type = typeof(GcHtmlRenderer).Assembly.GetType("anz");
+            AccessTools.Field(type, "c").SetValue(null, int.MaxValue);
         }
 
         public static void Initialize() {
@@ -92,7 +100,7 @@ namespace Bot {
                             embedBuilder.WithDescription(loc.Get("MessageHistory.LastContentDescription")
                                                             .Format(history.GetLastContent().SafeSubstring(1900, "...")));
                             var logImage = await RenderLog(history);
-                            await ((ISocketMessageChannel) logChannel).SendFileAsync(new MemoryStream(logImage),
+                            await ((ISocketMessageChannel) logChannel).SendFileAsync(logImage,
                                 $"History-{history.ChannelId}-{history.MessageId}.jpg",
                                 "===========================================", false, embedBuilder.Build());
                         }
@@ -164,12 +172,17 @@ namespace Bot {
             return Task.CompletedTask;
         }
 
-        private static async Task<byte[]> RenderLog(MessageHistory messageHistory) {
+        private static async Task<MemoryStream> RenderLog(MessageHistory messageHistory) {
             try {
                 await ExportHelper.ExportHistoryAsync(messageHistory, Path.Combine(Directory.GetCurrentDirectory(), $"{messageHistory.Id}.html"));
-                var converter = new HtmlConverter();
-                var bytes = converter.FromHtmlString(File.ReadAllText(Path.Combine(Directory.GetCurrentDirectory(), $"{messageHistory.Id}.html")), 512);
-                return bytes;
+                using (var re1 = new GcHtmlRenderer(File.ReadAllText(Path.Combine(Directory.GetCurrentDirectory(), $"{messageHistory.Id}.html")))) {
+                    var pngSettings = new PngSettings {FullPage = true, WindowSize = new Size(512, 1)};
+
+                    var stream = new MemoryStream();
+                    re1.RenderToPng(stream, pngSettings);
+                    stream.Position = 0;
+                    return stream;
+                }
             }
             finally {
                 File.Delete(Path.Combine(Directory.GetCurrentDirectory(), $"{messageHistory.Id}.html"));
@@ -202,7 +215,7 @@ namespace Bot {
                 }
                 else {
                     var logImage = await RenderLog(history);
-                    logMessage = await outputChannel.SendFileAsync(new MemoryStream(logImage), $"History-{history.ChannelId}-{history.MessageId}.jpg",
+                    logMessage = await outputChannel.SendFileAsync(logImage, $"History-{history.ChannelId}-{history.MessageId}.png",
                         null, false, embedBuilder.Build());
                 }
             }
