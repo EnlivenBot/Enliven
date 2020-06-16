@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -9,11 +10,12 @@ using Bot.Config.Localization.Providers;
 using Bot.Utilities;
 using Bot.Utilities.Collector;
 using Bot.Utilities.Emoji;
-using CoreHtmlToImage;
 using DiffMatchPatch;
 using Discord;
 using Discord.Rest;
 using Discord.WebSocket;
+using GrapeCity.Documents.Html;
+using HarmonyLib;
 using LiteDB;
 
 namespace Bot {
@@ -21,7 +23,7 @@ namespace Bot {
         private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
         public static readonly DiffMatchPatch.DiffMatchPatch DiffMatchPatch = new DiffMatchPatch.DiffMatchPatch();
 
-        public static void SetHandlers() {
+        static MessageHistoryManager() {
             // Message created handled located in CommandHandler
             Program.Client.MessageUpdated += ClientOnMessageUpdated;
             Program.Client.MessageDeleted += ClientOnMessageDeleted;
@@ -40,6 +42,16 @@ namespace Bot {
                     throw;
                 }
             }, CollectorFilter.IgnoreBots);
+            
+            // Sorry for this hack
+            // But this project does not bring me income, and I can not afford to buy this license
+            // If you using it consider buying license at https://www.grapecity.com/documents-api/licensing
+            var type = typeof(GcHtmlRenderer).Assembly.GetType("anz");
+            AccessTools.Field(type, "c").SetValue(null, int.MaxValue);
+        }
+
+        public static void Initialize() {
+            // Dummy method to initialize static properties
         }
 
         private static Task ClientOnMessageUpdated(Cacheable<IMessage, ulong> arg1, SocketMessage arg2, ISocketMessageChannel arg3) {
@@ -78,17 +90,17 @@ namespace Bot {
                                                          .AddField(loc.Get("MessageHistory.Channel"), $"<#{history.ChannelId}>", true);
                     if (history.HistoryExists) {
                         embedBuilder.AddField(loc.Get("MessageHistory.Requester"), $"{history.GetAuthor()?.Username} <@{history.AuthorId}>", true);
-                        var canFitToEmbed = history.CanFitToEmbed(loc, true);
+                        var canFitToEmbed = history.CanFitToEmbed(loc);
 
                         if (canFitToEmbed) {
-                            embedBuilder.Fields.InsertRange(0, history.GetEditsAsFields(loc, true));
+                            embedBuilder.Fields.InsertRange(0, history.GetEditsAsFields(loc));
                             await ((ISocketMessageChannel) logChannel).SendMessageAsync(null, false, embedBuilder.Build());
                         }
                         else {
                             embedBuilder.WithDescription(loc.Get("MessageHistory.LastContentDescription")
                                                             .Format(history.GetLastContent().SafeSubstring(1900, "...")));
-                            var logImage = await RenderLog(history);
-                            await ((ISocketMessageChannel) logChannel).SendFileAsync(new MemoryStream(logImage),
+                            var logImage = await RenderLog(loc, history);
+                            await ((ISocketMessageChannel) logChannel).SendFileAsync(logImage,
                                 $"History-{history.ChannelId}-{history.MessageId}.jpg",
                                 "===========================================", false, embedBuilder.Build());
                         }
@@ -160,16 +172,14 @@ namespace Bot {
             return Task.CompletedTask;
         }
 
-        private static async Task<byte[]> RenderLog(MessageHistory messageHistory) {
-            try {
-                await ExportHelper.ExportHistoryAsync(messageHistory, Path.Combine(Directory.GetCurrentDirectory(), $"{messageHistory.Id}.html"));
-                var converter = new HtmlConverter();
-                var bytes = converter.FromHtmlString(File.ReadAllText(Path.Combine(Directory.GetCurrentDirectory(), $"{messageHistory.Id}.html")), 512);
-                return bytes;
-            }
-            finally {
-                File.Delete(Path.Combine(Directory.GetCurrentDirectory(), $"{messageHistory.Id}.html"));
-            }
+        private static async Task<MemoryStream> RenderLog(ILocalizationProvider provider, MessageHistory messageHistory) {
+            using var re1 = new GcHtmlRenderer(await messageHistory.ExportToHtml(provider));
+            var pngSettings = new PngSettings {FullPage = true, WindowSize = new Size(512, 1)};
+
+            var stream = new MemoryStream();
+            re1.RenderToPng(stream, pngSettings);
+            stream.Position = 0;
+            return stream;
         }
 
         public static async Task PrintLog(MessageHistory history, SocketTextChannel outputChannel, ILocalizationProvider loc, IGuildUser requester) {
@@ -190,15 +200,15 @@ namespace Bot {
                     embedBuilder.Description = loc.Get("MessageHistory.ViewMessageExists").Format((await realMessage).GetJumpUrl());
                 }
 
-                var canFitToEmbed = history.CanFitToEmbed(loc, true);
+                var canFitToEmbed = history.CanFitToEmbed(loc);
 
                 if (canFitToEmbed) {
-                    embedBuilder.Fields.InsertRange(0, history.GetEditsAsFields(loc, true));
+                    embedBuilder.Fields.InsertRange(0, history.GetEditsAsFields(loc));
                     logMessage = await outputChannel.SendMessageAsync(null, false, embedBuilder.Build());
                 }
                 else {
-                    var logImage = await RenderLog(history);
-                    logMessage = await outputChannel.SendFileAsync(new MemoryStream(logImage), $"History-{history.ChannelId}-{history.MessageId}.jpg",
+                    var logImage = await RenderLog(loc, history);
+                    logMessage = await outputChannel.SendFileAsync(logImage, $"History-{history.ChannelId}-{history.MessageId}.png",
                         null, false, embedBuilder.Build());
                 }
             }
@@ -216,7 +226,7 @@ namespace Bot {
                 else {
                     embedBuilder.WithDescription(loc.Get("MessageHistory.MessageNull"));
                 }
-                
+
                 logMessage = await outputChannel.SendMessageAsync(null, false, embedBuilder.Build());
             }
 
