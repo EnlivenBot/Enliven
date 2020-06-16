@@ -52,12 +52,12 @@ namespace Bot.Commands {
 
         private async Task HandleCommand(SocketMessage s) {
             if (!(s is SocketUserMessage msg) || msg.Source != MessageSource.User) {
-                MessageHistoryManager.AddMessageToIgnore(s);
+                IgnoredMessages.AddMessageToIgnore(s);
                 return;
             }
 
             if (!(s.Channel is SocketGuildChannel guildChannel)) {
-                MessageHistoryManager.AddMessageToIgnore(s);
+                IgnoredMessages.AddMessageToIgnore(s);
                 return;
             }
 
@@ -141,7 +141,7 @@ namespace Bot.Commands {
                     if (guild.IsCommandLoggingEnabled)
                         MessageHistoryManager.LogCreatedMessage(msg, guild);
                     else
-                        MessageHistoryManager.AddMessageToIgnore(msg);
+                        IgnoredMessages.AddMessageToIgnore(msg);
                 }
             }
             else

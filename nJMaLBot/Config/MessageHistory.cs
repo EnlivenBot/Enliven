@@ -43,7 +43,7 @@ namespace Bot {
                     return true;
                 }
 
-                return GlobalDB.IgnoredMessages.FindById($"{ChannelId}:{MessageId}") != null;
+                return IgnoredMessages.IsIgnored(ChannelId.ToString(), MessageId.ToString());
             }
         }
 

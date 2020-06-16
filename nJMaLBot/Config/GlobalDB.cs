@@ -17,7 +17,6 @@ namespace Bot.Config {
             Database = LoadDatabase();
             GlobalSettings = Database.GetCollection<Entity>(@"Global");
             Guilds = Database.GetCollection<GuildConfig>(@"Guilds");
-            IgnoredMessages = Database.GetCollection<BsonDocument>(@"IgnoredMessages");
             Messages = Database.GetCollection<MessageHistory>(@"MessagesHistory");
             CommandStatistics = Database.GetCollection<StatisticsPart>(@"CommandStatistics");
             Playlists = Database.GetCollection<StoredPlaylist>(@"StoredPlaylists");
@@ -29,7 +28,6 @@ namespace Bot.Config {
 
         public static readonly ILiteCollection<Entity> GlobalSettings;
         public static readonly ILiteCollection<GuildConfig> Guilds;
-        public static readonly ILiteCollection<BsonDocument> IgnoredMessages;
         public static readonly ILiteCollection<MessageHistory> Messages;
         public static readonly ILiteCollection<StatisticsPart> CommandStatistics;
         public static readonly ILiteCollection<StoredPlaylist> Playlists;
@@ -46,7 +44,8 @@ namespace Bot.Config {
 
             var tempdb = new LiteDatabase(Path.Combine(Directory.GetCurrentDirectory(), "Config", @"DataBase.db"));
             UpgradeTo2(tempdb);
-            tempdb.UserVersion = 2;
+            UpgradeTo3(tempdb);
+            tempdb.UserVersion = 3;
 
             tempdb.CheckpointSize = 1000;
             // Seems like this ^ dont work properly
@@ -70,6 +69,25 @@ namespace Bot.Config {
                 liteDatabase.DropCollection(@"CommandStatistics");
                 var statsCollection = liteDatabase.GetCollection<StatisticsPart>(@"CommandStatistics");
                 statsCollection.InsertBulk(newStats);
+            }
+        }
+
+        private static void UpgradeTo3(LiteDatabase liteDatabase) {
+            if (liteDatabase.UserVersion == 2) {
+                logger.Info("Upgrading database to version 3");
+                var oldIgnoredMessages = liteDatabase.GetCollection<BsonDocument>(@"IgnoredMessages");
+                var sortedIgnoredMessages = oldIgnoredMessages.FindAll()
+                                                              .Select(document => document.ToString().Split(':'))
+                                                              .GroupBy(strings => strings[0]).Select(grouping => new ListedEntry
+                                                                   {Id = grouping.Key, Data = grouping.Select(strings => strings[1]).ToList()});
+                liteDatabase.DropCollection(@"IgnoredMessages");
+                var newIgnoredMessages = liteDatabase.GetCollection<ListedEntry>(@"IgnoredMessages");
+                newIgnoredMessages.Upsert(sortedIgnoredMessages);
+                
+                logger.Info("Database upgraded to version 3. Making a checkpoint");
+                liteDatabase.Checkpoint();
+                liteDatabase.Rebuild();
+                logger.Info("Checkpoint done");
             }
         }
         #pragma warning restore 618
