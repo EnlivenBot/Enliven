@@ -30,42 +30,44 @@ namespace Bot.Music {
             logger.Info("Starting music module");
 
             _lavalinkLogger.LogMessage += LavalinkLoggerOnLogMessage;
-            
-            var nodes = new List<LavalinkNodeOptions>(GlobalConfig.Instance.LavalinkNodes.Select(instanceLavalinkNode => instanceLavalinkNode.ToOptions()));
-            if (nodes.Count != 0) {
-                logger.Info("Start building music cluster");
-                try {
-                    Cluster = new LavalinkCluster(new LavalinkClusterOptions {Nodes = nodes.ToArray()}, new DiscordClientWrapper(Program.Client),
-                        _lavalinkLogger) {StayOnline = true};
-                    Cluster.PlayerMoved += ClusterOnPlayerMoved;
-                    logger.Info("Trying to connect to nodes!");
-                    Cluster.InitializeAsync().GetAwaiter().GetResult();
 
-                    logger.Info("Initializing InactivityTrackingService instance with default options");
-                    var inactivityTrackingService = new InactivityTrackingService(Cluster, new DiscordClientWrapper(Program.Client),
-                        new InactivityTrackingOptions {
-                            TrackInactivity = true,
-                            DisconnectDelay = TimeSpan.FromSeconds(60),
-                            PollInterval = TimeSpan.FromSeconds(4)
-                        }, _lavalinkLogger);
-                    inactivityTrackingService.InactivePlayer += (sender, args) => {
-                        if (args.Player is EmbedPlaybackPlayer embedPlaybackPlayer) {
-                            embedPlaybackPlayer.Shutdown(new LocalizedEntry("Music.NoListenersLeft"), false);
-                        }
+            Task.Run(async () => {
+                var nodes = new List<LavalinkNodeOptions>(GlobalConfig.Instance.LavalinkNodes.Select(instanceLavalinkNode => instanceLavalinkNode.ToOptions()));
+                if (nodes.Count != 0) {
+                    logger.Info("Start building music cluster");
+                    try {
+                        Cluster = new LavalinkCluster(new LavalinkClusterOptions {Nodes = nodes.ToArray()}, new DiscordClientWrapper(Program.Client),
+                            _lavalinkLogger) {StayOnline = true};
+                        Cluster.PlayerMoved += ClusterOnPlayerMoved;
+                        logger.Info("Trying to connect to nodes!");
+                        await Cluster.InitializeAsync();
 
-                        return Task.CompletedTask;
-                    };
+                        logger.Info("Initializing InactivityTrackingService instance with default options");
+                        var inactivityTrackingService = new InactivityTrackingService(Cluster, new DiscordClientWrapper(Program.Client),
+                            new InactivityTrackingOptions {
+                                TrackInactivity = true,
+                                DisconnectDelay = TimeSpan.FromSeconds(60),
+                                PollInterval = TimeSpan.FromSeconds(4)
+                            }, _lavalinkLogger);
+                        inactivityTrackingService.InactivePlayer += (sender, args) => {
+                            if (args.Player is EmbedPlaybackPlayer embedPlaybackPlayer) {
+                                embedPlaybackPlayer.Shutdown(new LocalizedEntry("Music.NoListenersLeft"), false);
+                            }
 
-                    AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
+                            return Task.CompletedTask;
+                        };
+
+                        AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
+                    }
+                    catch (Exception e) {
+                        logger.Fatal(e, "Exception with music cluster");
+                        Cluster = default;
+                    }
                 }
-                catch (Exception e) {
-                    logger.Fatal(e, "Exception with music cluster");
-                    Cluster = default;
+                else {
+                    logger.Warn("Nodes not found, music disabled!");
                 }
-            }
-            else {
-                logger.Warn("Nodes not found, music disabled!");
-            }
+            });
         }
 
         private static void LavalinkLoggerOnLogMessage(object? sender, LogMessageEventArgs e) {
