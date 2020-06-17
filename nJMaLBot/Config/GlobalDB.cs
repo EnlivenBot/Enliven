@@ -170,42 +170,33 @@ namespace Bot.Config {
 
         [DbUpgrade(4)]
         private static void UpgradeTo4(LiteDatabase liteDatabase) {
-            if (liteDatabase.UserVersion == 3) {
-                var regex0 = new Regex(Regex.Escape("-1,17"));
-                var regex1 = new Regex(Regex.Escape("\n-###Unavailable$$$"));
-                logger.Info("Upgrading database to version 4");
-                var messages = liteDatabase.GetCollection<MessageHistory>(@"MessagesHistory");
-                foreach (var messageHistory in messages.FindAll().ToList()) {
-                    if (messageHistory.Edits.Count == 0) {
+            var regex0 = new Regex(Regex.Escape("-1,17"));
+            var regex1 = new Regex(Regex.Escape("\n-###Unavailable$$$"));
+            var messages = liteDatabase.GetCollection<MessageHistory>(@"MessagesHistory");
+            foreach (var messageHistory in messages.FindAll().ToList()) {
+                if (messageHistory.Edits.Count == 0) {
+                    messages.Delete(messageHistory.Id);
+                }
+                else {
+                    if (messageHistory.Edits[0].Value != "@@ -0,0 +1,17 @@\n+###Unavailable$$$") continue;
+                    if (messageHistory.Edits.Count == 1) {
                         messages.Delete(messageHistory.Id);
                     }
                     else {
-                        if (messageHistory.Edits[0].Value != "@@ -0,0 +1,17 @@\n+###Unavailable$$$") continue;
-                        if (messageHistory.Edits.Count == 1) {
+                        messageHistory.IsHistoryUnavailable = true;
+                        messageHistory.Edits.RemoveAt(0);
+                        var value = messageHistory.Edits[0].Value;
+                        value = regex0.Replace(value, "-0,0", 1);
+                        value = regex1.Replace(value, "", 1);
+                        if (value == "@@ -0,0 +0,0 @@") {
                             messages.Delete(messageHistory.Id);
                         }
                         else {
-                            messageHistory.IsHistoryUnavailable = true;
-                            messageHistory.Edits.RemoveAt(0);
-                            var value = messageHistory.Edits[0].Value;
-                            value = regex0.Replace(value, "-0,0", 1);
-                            value = regex1.Replace(value, "", 1);
-                            if (value == "@@ -0,0 +0,0 @@") {
-                                messages.Delete(messageHistory.Id);
-                            }
-                            else {
-                                messageHistory.Edits[0].Value = value;
-                                var changes = messageHistory.GetSnapshots(new LangLocalizationProvider("en"), false);
-                                messages.Upsert(messageHistory);
-                            }
+                            messageHistory.Edits[0].Value = value;
+                            messages.Upsert(messageHistory);
                         }
                     }
                 }
-                
-                logger.Info("Database upgraded to version 4. Making a checkpoint");
-                liteDatabase.Checkpoint();
-                liteDatabase.Rebuild();
-                logger.Info("Checkpoint done");
             }
         }
         #pragma warning restore 618
