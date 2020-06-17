@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -9,6 +8,8 @@ using Bot.Utilities.Commands;
 using HarmonyLib;
 using LiteDB;
 
+#pragma warning disable 8632
+
 namespace Bot.Config {
     // ReSharper disable once InconsistentNaming
     public static class GlobalDB {
@@ -16,7 +17,7 @@ namespace Bot.Config {
         public static LiteDatabase Database;
 
         static GlobalDB() {
-            Database = LoadDatabase();
+            Database = InitializeDatabase();
             GlobalSettings = Database.GetCollection<Entity>(@"Global");
             Guilds = Database.GetCollection<GuildConfig>(@"Guilds");
             Messages = Database.GetCollection<MessageHistory>(@"MessagesHistory");
@@ -36,7 +37,7 @@ namespace Bot.Config {
         private static Timer _checkpointTimer;
         private static Timer _rebuildTimer;
 
-        private static LiteDatabase LoadDatabase() {
+        private static LiteDatabase InitializeDatabase() {
             logger.Info("Loading database");
             if (File.Exists(Path.Combine(Directory.GetCurrentDirectory(), @"DataBase.db"))) {
                 Directory.CreateDirectory("Config");
@@ -44,15 +45,24 @@ namespace Bot.Config {
                     Path.Combine(Directory.GetCurrentDirectory(), "Config", @"DataBase.db"));
             }
 
-            var tempdb = new LiteDatabase(Path.Combine(Directory.GetCurrentDirectory(), "Config", @"DataBase.db"));
+            var tempdb = LoadDatabase();
             tempdb.CheckpointSize = 1000;
 
             PerformUpgrades(tempdb);
-            
+            tempdb.Checkpoint();
+
             _checkpointTimer = new Timer(state => tempdb.Checkpoint(), null, TimeSpan.FromMinutes(3), TimeSpan.FromMinutes(30));
             _rebuildTimer = new Timer(state => tempdb.Rebuild(), null, TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(180));
             logger.Info("Database loaded");
             return tempdb;
+        }
+
+        private static LiteDatabase LoadDatabase() {
+            return new LiteDatabase(GetDatabasePath());
+        }
+
+        private static string GetDatabasePath() {
+            return Path.Combine(Directory.GetCurrentDirectory(), "Config", @"DataBase.db");
         }
 
         private static void PerformUpgrades(LiteDatabase liteDatabase) {
@@ -63,37 +73,67 @@ namespace Bot.Config {
                                    .SelectMany(AccessTools.GetDeclaredMethods)
                                    .Where(m => m.GetCustomAttributes(typeof(DbUpgradeAttribute), false).Length > 0)
                                     // ReSharper disable once PossibleNullReferenceException
-                                   .Select(info => (((DbUpgradeAttribute) info.GetCustomAttribute(typeof(DbUpgradeAttribute))).Version, info))
-                                   .OrderBy(tuple => tuple.Version)
+                                   .Select(info => ((DbUpgradeAttribute) info.GetCustomAttribute(typeof(DbUpgradeAttribute)), info))
+                                   .OrderBy(tuple => tuple.Item1.Version)
                                    .ToList();
-            foreach (var upgrade in upgrades.SkipWhile((tuple, i) => tuple.Version <= liteDatabase.UserVersion)) {
-                logger.Info("Upgrading database to version {version}", upgrade.Version);
-                try {
-                    liteDatabase.BeginTrans();
-                    #pragma warning disable 8632
-                    upgrade.info.Invoke(null, new object?[] {liteDatabase});
-                    #pragma warning restore 8632
-                    liteDatabase.Commit();
+            foreach (var upgrade in upgrades.SkipWhile((tuple, i) => tuple.Item1.Version <= liteDatabase.UserVersion)) {
+                logger.Info("Upgrading database to version {version}", upgrade.Item1.Version);
 
-                    liteDatabase.UserVersion = upgrade.Version;
-                    logger.Info("Database upgraded to version {version}. Making a checkpoint", upgrade.Version);
+                if (upgrade.Item1.TransactionsFriendly) {
+                    liteDatabase.BeginTrans();
+                }
+                else {
+                    logger.Info("Upgrade does not support transactions. We make a backup.");
                     liteDatabase.Checkpoint();
-                    liteDatabase.Rebuild();
-                    logger.Info("Checkpoint done");
+                    liteDatabase.Dispose();
+                    File.Copy(GetDatabasePath(), Path.ChangeExtension(GetDatabasePath(), ".bak"), true);
+                    logger.Info("Backup maked");
+                    liteDatabase = LoadDatabase();
+                }
+
+                try {
+                    upgrade.info.Invoke(null, new object?[] {liteDatabase});
+                    if (upgrade.Item1.TransactionsFriendly) {
+                        liteDatabase.Commit();
+                    }
                 }
                 catch (Exception e) {
                     logger.Fatal(e, "Error while upgrading database");
                     logger.Fatal("Rollbacking changes");
-                    liteDatabase.Rollback();
+                    if (upgrade.Item1.TransactionsFriendly) {
+                        liteDatabase.Rollback();
+                    }
+                    else {
+                        liteDatabase.Checkpoint();
+                        liteDatabase.Dispose();
+                        File.Copy(Path.ChangeExtension(GetDatabasePath(), ".bak"), GetDatabasePath(), true);
+                    }
+
                     throw;
                 }
+                finally {
+                    if (!upgrade.Item1.TransactionsFriendly) {
+                        try {
+                            File.Delete(Path.ChangeExtension(GetDatabasePath(), ".bak"));
+                        }
+                        catch (Exception e) {
+                            // ignored
+                        }
+                    }
+                }
+
+                liteDatabase.UserVersion = upgrade.Item1.Version;
+                logger.Info("Database upgraded to version {version}. Making a checkpoint", upgrade.Item1.Version);
+                liteDatabase.Checkpoint();
+                liteDatabase.Rebuild();
+                logger.Info("Checkpoint done");
             }
-            
+
             liteDatabase.CheckpointSize = liteDatabaseCheckpointSize;
         }
 
         #pragma warning disable 618
-        [DbUpgradeAttribute(2)]
+        [DbUpgradeAttribute(2, false)]
         private static void UpgradeTo2(LiteDatabase liteDatabase) {
             var oldStatsCollection = liteDatabase.GetCollection<ObsoleteStatisticsPart>(@"CommandStatistics");
             var oldStats = oldStatsCollection.FindAll().ToList();
@@ -108,7 +148,7 @@ namespace Bot.Config {
             statsCollection.InsertBulk(newStats);
         }
 
-        [DbUpgradeAttribute(3)]
+        [DbUpgradeAttribute(3, false)]
         private static void UpgradeTo3(LiteDatabase liteDatabase) {
             logger.Info("Upgrading database to version 3");
             var oldIgnoredMessages = liteDatabase.GetCollection<BsonDocument>(@"IgnoredMessages");
@@ -129,12 +169,14 @@ namespace Bot.Config {
 
         [AttributeUsage(AttributeTargets.Method, Inherited = false, AllowMultiple = true)]
         private sealed class DbUpgradeAttribute : Attribute {
-            public int Version { get; set; }
+            public int Version { get; }
+            public bool TransactionsFriendly { get; }
 
             // See the attribute guidelines at 
             //  http://go.microsoft.com/fwlink/?LinkId=85236
-            public DbUpgradeAttribute(int version) {
+            public DbUpgradeAttribute(int version, bool transactionsFriendly = true) {
                 Version = version;
+                TransactionsFriendly = transactionsFriendly;
             }
         }
     }
