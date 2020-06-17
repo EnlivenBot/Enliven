@@ -193,6 +193,45 @@ namespace Bot.Config {
                     }
                 }
             }
+
+            Task.Run(async () => {
+                await Program.WaitStartAsync;
+                foreach (var messageHistoryGroup in messages.FindAll().ToList().GroupBy(history => history.ChannelId)) {
+                    try {
+                        var socketChannel = Program.Client.GetChannel(messageHistoryGroup.Key) as ITextChannel;
+                        if (socketChannel == null) {
+                            foreach (var messageHistory in messageHistoryGroup) {
+                                messages.Delete(messageHistory.Id);
+                            }
+                        }
+                        else {
+                            foreach (var messageHistory in messageHistoryGroup) {
+                                try {
+                                    var message = await socketChannel.GetMessageAsync(messageHistory.MessageId);
+                                    if (message == null) {
+                                        messages.Delete(messageHistory.Id);
+                                    }
+                                    else {
+                                        messageHistory.AuthorId = message.Author.Id;
+                                        messageHistory.Save();
+                                    }
+                                }
+                                catch (Exception) {
+                                    messages.Delete(messageHistory.Id);
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception) {
+                        foreach (var messageHistory in messageHistoryGroup) {
+                            messages.Delete(messageHistory.Id);
+                        }
+                    }
+                }
+                
+                liteDatabase.Checkpoint();
+                liteDatabase.Rebuild();
+            });
         }
         #pragma warning restore 618
 
