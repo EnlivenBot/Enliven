@@ -19,6 +19,8 @@ namespace Bot {
         public static CommandHandler Handler;
         private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
         private static ReliabilityService _reliabilityService;
+        private static readonly TaskCompletionSource<bool> waitStartSource = new TaskCompletionSource<bool>();
+        public static Task WaitStartAsync = waitStartSource.Task;
 
         private static void Main(string[] args) {
             InstallLogger();
@@ -65,6 +67,7 @@ namespace Bot {
             await Client.StartAsync();
             await Client.SetGameAsync("mentions of itself to get started", null, ActivityType.Listening);
             _reliabilityService = new ReliabilityService(Client, OnClientLog);
+            waitStartSource.SetResult(true);
 
             Handler = new CommandHandler();
             await Handler.Install(Client);
