@@ -26,23 +26,12 @@ namespace Bot.Music {
         private static Logger logger = LogManager.GetCurrentClassLogger();
         private static EventLogger _lavalinkLogger = new EventLogger();
 
-        public static async Task SetHandler() {
+        static MusicUtils() {
             logger.Info("Starting music module");
 
-            _lavalinkLogger.LogMessage += (sender, args) => {
-                var logLevel = args.Level switch {
-                    LogLevel.Information => NLog.LogLevel.Info,
-                    LogLevel.Error       => NLog.LogLevel.Error,
-                    LogLevel.Warning     => NLog.LogLevel.Warn,
-                    LogLevel.Debug       => NLog.LogLevel.Debug,
-                    LogLevel.Trace       => NLog.LogLevel.Trace,
-                    _                    => throw new ArgumentOutOfRangeException()
-                };
-                logger.Log(logLevel, args.Message);
-            };
-
+            _lavalinkLogger.LogMessage += LavalinkLoggerOnLogMessage;
+            
             var nodes = new List<LavalinkNodeOptions>(GlobalConfig.Instance.LavalinkNodes.Select(instanceLavalinkNode => instanceLavalinkNode.ToOptions()));
-
             if (nodes.Count != 0) {
                 logger.Info("Start building music cluster");
                 try {
@@ -50,7 +39,7 @@ namespace Bot.Music {
                         _lavalinkLogger) {StayOnline = true};
                     Cluster.PlayerMoved += ClusterOnPlayerMoved;
                     logger.Info("Trying to connect to nodes!");
-                    await Cluster.InitializeAsync();
+                    Cluster.InitializeAsync().GetAwaiter().GetResult();
 
                     logger.Info("Initializing InactivityTrackingService instance with default options");
                     var inactivityTrackingService = new InactivityTrackingService(Cluster, new DiscordClientWrapper(Program.Client),
@@ -77,6 +66,22 @@ namespace Bot.Music {
             else {
                 logger.Warn("Nodes not found, music disabled!");
             }
+        }
+
+        private static void LavalinkLoggerOnLogMessage(object? sender, LogMessageEventArgs e) {
+            var logLevel = e.Level switch {
+                LogLevel.Information => NLog.LogLevel.Info,
+                LogLevel.Error       => NLog.LogLevel.Error,
+                LogLevel.Warning     => NLog.LogLevel.Warn,
+                LogLevel.Debug       => NLog.LogLevel.Debug,
+                LogLevel.Trace       => NLog.LogLevel.Trace,
+                _                    => throw new ArgumentOutOfRangeException()
+            };
+            logger.Log(logLevel, e.Message);
+        }
+
+        public static void Initialize() {
+            // Dummy method to initialize static properties
         }
 
         private static void OnProcessExit(object? sender, EventArgs e) {
