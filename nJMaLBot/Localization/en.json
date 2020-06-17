@@ -214,7 +214,8 @@
       "Author": "Author",
       "Requester": "Requester",
       "ChannelDeleted": "Channel {0} ({1}) on {2} was deleted. Cleared {3} messages.",
-      "GuildLogCleared": "The bot cleared the message history of the guild {0} ({1}). Cleared {2} posts."
+      "GuildLogCleared": "The bot cleared the message history of the guild {0} ({1}). Cleared {2} posts.",
+      "ViewMessageExists": "View change history [of this post]({0})"
     },
     "Statistics": {
       "Title": "Statistics",
