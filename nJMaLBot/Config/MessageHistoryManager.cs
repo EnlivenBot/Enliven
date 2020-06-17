@@ -58,7 +58,7 @@ namespace Bot {
             Task.Run(() => {
                 var history = MessageHistory.Get(arg2);
                 if (history.Edits.Count == 0) {
-                    history.AddSnapshot(arg2.CreatedAt, "###Unavailable$$$");
+                    history.IsHistoryUnavailable = true;
                 }
 
                 history.AddSnapshot(arg2);

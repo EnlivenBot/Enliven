@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -22,6 +22,8 @@ namespace Bot {
             public DateTimeOffset EditTimestamp { get; set; }
             public string Value { get; set; }
         }
+
+        [BsonField("U")] public bool IsHistoryUnavailable { get; set; }
 
         [BsonId] public string Id => $"{ChannelId}:{MessageId}";
 
@@ -114,7 +116,10 @@ namespace Bot {
 
         public IEnumerable<MessageSnapshot> GetSnapshots(ILocalizationProvider loc, bool injectDiffsHighlight = false) {
             var snapshots = new List<MessageSnapshot>();
-            var formattedSnapshots = new List<MessageSnapshot>();
+            if (IsHistoryUnavailable) {
+                yield return new MessageSnapshot {Value = loc.Get("MessageHistory.PreviousUnavailable"), EditTimestamp = default};
+            }
+
             foreach (var edit in Edits) {
                 var last = snapshots.Count == 0 ? "" : snapshots.Last().Value;
                 var snapshot = MessageHistoryManager.DiffMatchPatch.patch_apply(DiffMatchPatch.DiffMatchPatch.patch_fromText(edit.Value), last)[0].ToString();
