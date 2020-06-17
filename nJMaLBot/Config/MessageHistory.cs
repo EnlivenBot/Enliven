@@ -60,7 +60,7 @@ namespace Bot {
         }
 
         public static MessageHistory Get(IMessage message) {
-            return Get(message.Channel.Id, message.Id);
+            return Get(message.Channel.Id, message.Id, message.Author.Id);
         }
 
         public void AddSnapshot(IMessage message) {
@@ -93,20 +93,12 @@ namespace Bot {
         }
 
         public SocketGuildUser GetAuthor() {
-            return Program.Client.GetUser(AuthorId) as SocketGuildUser;
-        }
-
-        public EmbedBuilder GetEmbed(ILocalizationProvider loc) {
-            var author = GetAuthor();
-            var lastContent = GetLastContent();
-            var eb = new EmbedBuilder();
-            eb.AddField(loc.Get("MessageHistory.LastContent"),
-                   $@">>> {lastContent.SafeSubstring(1000, "...")}")
-              .AddField(loc.Get("MessageHistory.Author"), $"{author?.Username} (<@{AuthorId}>)", true)
-              .AddField(loc.Get("MessageHistory.Channel"), $"<#{ChannelId}>", true)
-              .WithFooter(loc.Get("MessageHistory.MessageId").Format(MessageId))
-              .WithCurrentTimestamp();
-            return eb;
+            try {
+                return Program.Client.GetUser(AuthorId) as SocketGuildUser;
+            }
+            catch (Exception) {
+                return null;
+            }
         }
 
         public string GetLastContent() {
@@ -227,6 +219,17 @@ namespace Bot {
         private static string HtmlDiffsUnEncode(string encoded) {
             return encoded.Replace("࢔", "<span style=\"background:DarkGreen;\">").Replace("࢕", "</span>")
                           .Replace("࢖", "<span class=\"removed\">").Replace("ࢗ", "</span>");
+        }
+        
+        public async Task<IUserMessage> GetRealMessage() {
+            try {
+                var textChannel = (ITextChannel) Program.Client.GetChannel(ChannelId);
+                var messageAsync = await textChannel?.GetMessageAsync(MessageId);
+                return messageAsync as IUserMessage;
+            }
+            catch (Exception) {
+                return null;
+            }
         }
     }
 }

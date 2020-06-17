@@ -183,7 +183,7 @@ namespace Bot {
         }
 
         public static async Task PrintLog(MessageHistory history, SocketTextChannel outputChannel, ILocalizationProvider loc, IGuildUser requester) {
-            var realMessage = GetRealMessage(history.ChannelId, history.MessageId);
+            var realMessage = history.GetRealMessage();
             RestUserMessage logMessage = null;
             var embedBuilder = new EmbedBuilder().WithCurrentTimestamp()
                                                  .WithTitle(loc.Get("MessageHistory.LogTitle"))
@@ -231,17 +231,6 @@ namespace Bot {
             }
 
             logMessage?.DelayedDelete(TimeSpan.FromMinutes(10));
-
-            async Task<IUserMessage> GetRealMessage(ulong channelId, ulong messageId) {
-                try {
-                    var textChannel = (ITextChannel) Program.Client.GetChannel(channelId);
-                    var messageAsync = await textChannel?.GetMessageAsync(messageId);
-                    return messageAsync as IUserMessage;
-                }
-                catch (Exception) {
-                    return null;
-                }
-            }
         }
 
         public static void LogCreatedMessage(IMessage arg, GuildConfig config) {
