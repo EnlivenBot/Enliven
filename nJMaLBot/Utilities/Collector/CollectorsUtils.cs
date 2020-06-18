@@ -13,6 +13,7 @@ namespace Bot.Utilities.Collector {
     public static class CollectorsUtils {
         private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
         static CollectorsUtils() {
+            if (Program.CmdOptions.Observer) return;
             Program.Client.ReactionAdded += ClientOnReactionAdded;
             Program.Client.MessageReceived += ClientOnMessageReceived;
         }

@@ -47,7 +47,9 @@ namespace Bot.Commands {
 
             Patch.ApplyPatch();
 
-            _client.MessageReceived += message => Task.Run(() => HandleCommand(message));
+            if (!Program.CmdOptions.Observer) 
+                _client.MessageReceived += message => Task.Run(() => HandleCommand(message));
+            
         }
 
         private async Task HandleCommand(SocketMessage s) {

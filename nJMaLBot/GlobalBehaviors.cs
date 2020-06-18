@@ -7,7 +7,8 @@ using Discord.WebSocket;
 namespace Bot {
     public static class GlobalBehaviors {
         static GlobalBehaviors() {
-            Program.Client.JoinedGuild += ClientOnJoinedGuild;
+            if (!Program.CmdOptions.Observer) 
+                Program.Client.JoinedGuild += ClientOnJoinedGuild;
         }
 
         private static async Task ClientOnJoinedGuild(SocketGuild arg) {
