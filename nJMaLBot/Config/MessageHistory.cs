@@ -37,18 +37,6 @@ namespace Bot {
 
         [BsonIgnore] public bool HistoryExists => Edits.Count != 0;
 
-        [BsonIgnore]
-        public bool IsIgnored {
-            get {
-                var author = GetAuthor();
-                if (author?.IsBot == true || author?.IsWebhook == true) {
-                    return true;
-                }
-
-                return IgnoredMessages.IsIgnored(ChannelId.ToString(), MessageId.ToString());
-            }
-        }
-
         public void Save() {
             GlobalDB.Messages.Upsert(this);
         }

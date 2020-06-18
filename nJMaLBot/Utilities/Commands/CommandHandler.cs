@@ -47,19 +47,14 @@ namespace Bot.Commands {
 
             Patch.ApplyPatch();
 
-            if (!Program.CmdOptions.Observer) 
+            if (!Program.CmdOptions.Observer)
                 _client.MessageReceived += message => Task.Run(() => HandleCommand(message));
-            
         }
 
         private async Task HandleCommand(SocketMessage s) {
-            if (!(s is SocketUserMessage msg) || msg.Source != MessageSource.User) {
-                IgnoredMessages.AddMessageToIgnore(s);
-                return;
-            }
-
-            if (!(s.Channel is SocketGuildChannel guildChannel)) {
-                IgnoredMessages.AddMessageToIgnore(s);
+            if (!(s is SocketUserMessage msg)
+             || msg.Source != MessageSource.User
+             || !(s.Channel is SocketGuildChannel guildChannel)) {
                 return;
             }
 
@@ -82,7 +77,7 @@ namespace Bot.Commands {
                 if (!result.IsSuccess && result.Error == CommandError.UnknownCommand) {
                     var searchResult = FuzzySearch.Search(command);
                     var bestMatch = searchResult.GetFullMatch();
-                    
+
                     // Check for a another keyboard layout
                     if (bestMatch != null) {
                         command = bestMatch.SimilarTo;
@@ -139,11 +134,8 @@ namespace Bot.Commands {
 
                     MessageHistoryManager.LogCreatedMessage(msg, guild);
                 }
-                else {
-                    if (guild.IsCommandLoggingEnabled)
-                        MessageHistoryManager.LogCreatedMessage(msg, guild);
-                    else
-                        IgnoredMessages.AddMessageToIgnore(msg);
+                else if (guild.IsCommandLoggingEnabled) {
+                    MessageHistoryManager.LogCreatedMessage(msg, guild);
                 }
             }
             else

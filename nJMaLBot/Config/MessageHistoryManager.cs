@@ -43,7 +43,7 @@ namespace Bot {
                     throw;
                 }
             }, CollectorFilter.IgnoreBots);
-            
+
             // Sorry for this hack
             // But this project does not bring me income, and I can not afford to buy this license
             // If you using it consider buying license at https://www.grapecity.com/documents-api/licensing
@@ -76,8 +76,7 @@ namespace Bot {
                     if (!(arg2 is ITextChannel textChannel)) return;
 
                     var history = MessageHistory.Get(arg2.Id, arg1.Id);
-                    if (history.IsIgnored) {
-                        IgnoredMessages.RemoveIgnore(textChannel.Id.ToString(), arg1.Id.ToString());
+                    if (!history.HistoryExists) {
                         return;
                     }
 
@@ -215,14 +214,9 @@ namespace Bot {
             }
             else {
                 if (await realMessage != null) {
-                    if (history.IsIgnored) {
-                        embedBuilder.WithDescription(loc.Get("MessageHistory.MessageIgnore").Format((await realMessage)?.GetJumpUrl()));
-                    }
-                    else {
-                        embedBuilder.WithDescription(loc.Get("MessageHistory.MessageWithoutHistory").Format((await realMessage).GetJumpUrl()));
-                        if (Program.Client.GetChannel(history.ChannelId) is SocketGuildChannel guildChannel)
-                            LogCreatedMessage(await realMessage, GuildConfig.Get(guildChannel.Guild.Id));
-                    }
+                    embedBuilder.WithDescription(loc.Get("MessageHistory.MessageWithoutHistory").Format((await realMessage).GetJumpUrl()));
+                    if (Program.Client.GetChannel(history.ChannelId) is SocketGuildChannel guildChannel)
+                        LogCreatedMessage(await realMessage, GuildConfig.Get(guildChannel.Guild.Id));
                 }
                 else {
                     embedBuilder.WithDescription(loc.Get("MessageHistory.MessageNull"));
@@ -235,13 +229,7 @@ namespace Bot {
         }
 
         public static void LogCreatedMessage(IMessage arg, GuildConfig config) {
-            if (!config.IsLoggingEnabled) {
-                IgnoredMessages.AddMessageToIgnore(arg);
-                return;
-            }
-
-            if (arg.Author.IsBot || arg.Author.IsWebhook) {
-                IgnoredMessages.AddMessageToIgnore(arg);
+            if (!config.IsLoggingEnabled || arg.Author.IsBot || arg.Author.IsWebhook) {
                 return;
             }
 

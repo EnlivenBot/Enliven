@@ -235,6 +235,11 @@ namespace Bot.Config {
         }
         #pragma warning restore 618
 
+        [DbUpgrade(5, false)]
+        private static void UpgradeTo5(LiteDatabase liteDatabase) {
+            liteDatabase.DropCollection("IgnoredMessages");
+        }
+
         [AttributeUsage(AttributeTargets.Method, Inherited = false, AllowMultiple = true)]
         private sealed class DbUpgradeAttribute : Attribute {
             public int Version { get; }
