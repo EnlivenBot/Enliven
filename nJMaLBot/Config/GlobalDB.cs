@@ -11,6 +11,7 @@ using Bot.Utilities.Commands;
 using Discord;
 using HarmonyLib;
 using LiteDB;
+using LiteDB.Engine;
 
 #pragma warning disable 8632
 
@@ -76,7 +77,7 @@ namespace Bot.Config {
                                    .SelectMany(AccessTools.GetDeclaredMethods)
                                    .Where(m => m.GetCustomAttributes(typeof(DbUpgradeAttribute), false).Length > 0)
                                     // ReSharper disable once PossibleNullReferenceException
-                                   .Select(info => ((DbUpgradeAttribute) info.GetCustomAttribute(typeof(DbUpgradeAttribute)), info))
+                                   .Select(info => ((DbUpgradeAttribute) info.GetCustomAttribute(typeof(DbUpgradeAttribute))!, info))
                                    .OrderBy(tuple => tuple.Item1.Version)
                                    .ToList();
             foreach (var upgrade in upgrades.SkipWhile((tuple, i) => tuple.Item1.Version <= Database.UserVersion)) {
@@ -125,11 +126,46 @@ namespace Bot.Config {
                     }
                 }
 
-                Database.UserVersion = upgrade.Item1.Version;
-                logger.Info("Database upgraded to version {version}. Making a checkpoint", upgrade.Item1.Version);
-                Database.Checkpoint();
-                Database.Rebuild();
+                logger.Info("Making a checkpoint");
+                try {
+                    Database.Checkpoint();
+                    Database.Rebuild();
+                }
+                catch (Exception e) {
+                    // This is very bad
+                    // We broke the database
+                    logger.Fatal(e, "Database file broken");
+                    logger.Fatal("Doing backup");
+                    File.Copy(GetDatabasePath(), Path.Combine(Path.GetDirectoryName(GetDatabasePath())!, DateTime.Now.ToString("yyyy-dd-M--HH-mm-ss") + ".bak"),
+                        true);
+                    logger.Fatal("Trying to copy intact information");
+                    using (LiteDatabase newDb = new LiteDatabase("newDb.db")) {
+                        foreach (var collectionName in Database.GetCollectionNames()) {
+                            try {
+                                var collection = newDb.GetCollection(collectionName);
+                                foreach (var bsonDocument in Database.GetCollection(collectionName).FindAll()) {
+                                    try {
+                                        collection.Insert(bsonDocument);
+                                    }
+                                    catch (Exception exception) {
+                                        logger.Error(exception, "Database recreation error. Collection - {collectionName}", collectionName);
+                                    }
+                                }
+                            }
+                            catch (Exception exception) {
+                                logger.Error(exception, "Database recreation error. Collection - {collectionName}", collectionName);
+                            }
+                        }
+                    }
+
+                    Database.Dispose();
+                    File.Move("newDb.db", GetDatabasePath(), true);
+                    Database = LoadDatabase();
+                }
+
                 logger.Info("Checkpoint done");
+                logger.Info("Database upgraded to version {version}", upgrade.Item1.Version);
+                Database.UserVersion = upgrade.Item1.Version;
             }
 
             Database.CheckpointSize = liteDatabaseCheckpointSize;
@@ -228,7 +264,7 @@ namespace Bot.Config {
                         }
                     }
                 }
-                
+
                 liteDatabase.Checkpoint();
                 liteDatabase.Rebuild();
             });
