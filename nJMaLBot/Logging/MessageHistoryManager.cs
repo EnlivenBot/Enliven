@@ -241,7 +241,8 @@ namespace Bot.Logging {
                 Edits = new List<MessageHistory.MessageSnapshot> {
                     new MessageHistory.MessageSnapshot
                         {EditTimestamp = arg.CreatedAt, Value = global::DiffMatchPatch.DiffMatchPatch.patch_toText(DiffMatchPatch.patch_make("", arg.Content))}
-                }
+                },
+                Attachments = arg.Attachments.Select(attachment => attachment.ProxyUrl).ToList()
             }.Save();
             CommandHandler.RegisterUsage("MessagesCreated", "Messages");
         }

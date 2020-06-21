@@ -25,6 +25,8 @@ namespace Bot.Logging {
             public string Value { get; set; } = null!;
         }
 
+        [BsonField("At")] public List<string>? Attachments { get; set; }
+
         [BsonField("U")] public bool IsHistoryUnavailable { get; set; }
 
         [BsonId] public string Id => $"{ChannelId}:{MessageId}";
