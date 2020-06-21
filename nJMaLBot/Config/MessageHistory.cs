@@ -56,6 +56,7 @@ namespace Bot {
         }
 
         public void AddSnapshot(DateTimeOffset editTime, string newContent) {
+            newContent ??= "";
             Edits.Add(new MessageSnapshot {
                 EditTimestamp = editTime,
                 Value = DiffMatchPatch.DiffMatchPatch.patch_toText(MessageHistoryManager.DiffMatchPatch.patch_make(GetLastContent(), newContent))
