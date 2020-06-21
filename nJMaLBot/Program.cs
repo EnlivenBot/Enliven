@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using Bot.Commands;
@@ -38,7 +38,6 @@ namespace Bot {
             logger.Info("Start Initialising");
 
             MainAsync(args).ConfigureAwait(false).GetAwaiter().GetResult();
-            ConsoleCommandsHandler();
         }
 
         private static async Task MainAsync(string[] args) {
@@ -86,12 +85,7 @@ namespace Bot {
             
             MessageHistoryManager.Initialize();
             MusicUtils.Initialize();
-        }
-
-        public static void ConsoleCommandsHandler() {
-            while (true) {
-                var input = Console.ReadLine();
-            }
+            await Task.Delay(-1);
         }
 
         private static void InstallLogger() {
