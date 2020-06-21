@@ -89,10 +89,13 @@ namespace Bot.Logging {
                                                          .WithFooter(loc.Get("MessageHistory.MessageId").Format(history.MessageId))
                                                          .AddField(loc.Get("MessageHistory.Channel"), $"<#{history.ChannelId}>", true);
                     if (history.HistoryExists) {
+                        if (history.Attachments != null && history.Attachments.Count != 0) {
+                            embedBuilder.AddField(loc.Get("MessageHistory.AttachmentsTitle"),
+                                loc.Get("MessageHistory.Attachments").Format(string.Join(", ", history.Attachments.Select((s, i) => $"[{i}]({s})"))));
+                        }
                         embedBuilder.AddField(loc.Get("MessageHistory.Requester"), $"{history.GetAuthor()?.Username} <@{history.AuthorId}>", true);
-                        var canFitToEmbed = history.CanFitToEmbed(loc);
 
-                        if (canFitToEmbed) {
+                        if (history.CanFitToEmbed(loc)) {
                             embedBuilder.Fields.InsertRange(0, history.GetEditsAsFields(loc));
                             await ((ISocketMessageChannel) logChannel).SendMessageAsync(null, false, embedBuilder.Build());
                         }
@@ -196,13 +199,16 @@ namespace Bot.Logging {
             }
 
             if (history.HistoryExists) {
+                if (history.Attachments != null && history.Attachments.Count != 0) {
+                    embedBuilder.AddField(loc.Get("MessageHistory.AttachmentsTitle"),
+                        loc.Get("MessageHistory.Attachments").Format(string.Join(", ", history.Attachments.Select((s, i) => $"[{i + 1}]({s})"))));
+                }
+
                 if (await realMessage != null) {
                     embedBuilder.Description = loc.Get("MessageHistory.ViewMessageExists").Format((await realMessage).GetJumpUrl());
                 }
 
-                var canFitToEmbed = history.CanFitToEmbed(loc);
-
-                if (canFitToEmbed) {
+                if (history.CanFitToEmbed(loc)) {
                     embedBuilder.Fields.InsertRange(0, history.GetEditsAsFields(loc));
                     logMessage = await outputChannel.SendMessageAsync(null, false, embedBuilder.Build());
                 }
@@ -242,7 +248,7 @@ namespace Bot.Logging {
                     new MessageHistory.MessageSnapshot
                         {EditTimestamp = arg.CreatedAt, Value = global::DiffMatchPatch.DiffMatchPatch.patch_toText(DiffMatchPatch.patch_make("", arg.Content))}
                 },
-                Attachments = arg.Attachments.Select(attachment => attachment.ProxyUrl).ToList()
+                Attachments = arg.Attachments.Select(attachment => attachment.Url).ToList()
             }.Save();
             CommandHandler.RegisterUsage("MessagesCreated", "Messages");
         }

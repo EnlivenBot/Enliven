@@ -70,7 +70,9 @@ namespace Bot.Logging {
         public bool CanFitToEmbed(ILocalizationProvider loc) {
             if (Edits.Count > 20)
                 return false;
-            var commonCount = 0;
+            var commonCount = Attachments != null && Attachments.Count != 0
+                ? loc.Get("MessageHistory.Attachments").Length + Attachments.Select(s => s.Length + 6).Sum()
+                : 0;
             MessageSnapshot? lastSnapshot = null;
             foreach (var edit in GetSnapshots(loc)) {
                 if (edit.Value.Length > 1020)
