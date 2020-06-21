@@ -4,23 +4,23 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Bot.Commands;
 using Bot.Config;
 using Bot.Config.Localization.Providers;
 using Bot.Utilities;
 using Bot.Utilities.Collector;
+using Bot.Utilities.Commands;
 using Bot.Utilities.Emoji;
-using DiffMatchPatch;
 using Discord;
 using Discord.Rest;
 using Discord.WebSocket;
 using GrapeCity.Documents.Html;
 using HarmonyLib;
-using LiteDB;
+using NLog;
 
-namespace Bot {
+namespace Bot.Logging {
     public static class MessageHistoryManager {
-        private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
+        // ReSharper disable once InconsistentNaming
+        private static readonly Logger logger = LogManager.GetCurrentClassLogger();
         public static readonly DiffMatchPatch.DiffMatchPatch DiffMatchPatch = new DiffMatchPatch.DiffMatchPatch();
 
         static MessageHistoryManager() {

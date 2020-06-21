@@ -22,7 +22,7 @@ namespace Bot.Music {
     }
 
     public class StoredPlaylist : ExportPlaylist {
-        [BsonId] public object Id { get; set; }
+        [BsonId] public object Id { get; set; } = null!;
         public DateTime CreationTime { get; set; }
         public ulong AuthorId { get; set; }
     }

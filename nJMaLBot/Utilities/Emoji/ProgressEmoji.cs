@@ -2,11 +2,10 @@ using System;
 using System.IO;
 using System.Text;
 using Newtonsoft.Json;
+using NLog;
 
 namespace Bot.Utilities.Emoji {
     public class ProgressEmojiList {
-        public ProgressEmojiList() { }
-
         public ProgressEmojiList(string part0, string part2, string part4, string part6, string part8, string part10) {
             Part0 = part0;
             Part2 = part2;
@@ -28,21 +27,21 @@ namespace Bot.Utilities.Emoji {
     }
 
     public static class ProgressEmoji {
-        private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
+        private static Logger logger = LogManager.GetCurrentClassLogger();
 
         private static Lazy<ProgressEmojiList> _start = new Lazy<ProgressEmojiList>(() => {
             logger.Info("Start loading ProgressStartEmoji");
             if (File.Exists(Path.Combine("Config", "ProgressStartEmoji.json")))
                 return JsonConvert.DeserializeObject<ProgressEmojiList>(File.ReadAllText(Path.Combine("Config", "ProgressStartEmoji.json")));
             logger.Info("ProgressStartEmoji.json not found, generating");
-            var emoji = new ProgressEmojiList {
-                Part0 = "<:start0:667802061202522112>",
-                Part2 = "<:start2:667802134246457345>",
-                Part4 = "<:start4:667802171311390721>",
-                Part6 = "<:start6:667802208087179295>",
-                Part8 = "<:start8:667802227229982731>",
-                Part10 = "<:start10:667802240790167573>"
-            };
+            var emoji = new ProgressEmojiList(
+                "<:start0:667802061202522112>",
+                "<:start2:667802134246457345>",
+                "<:start4:667802171311390721>",
+                "<:start6:667802208087179295>",
+                "<:start8:667802227229982731>",
+                "<:start10:667802240790167573>"
+            );
             File.WriteAllText(Path.Combine("Config", "ProgressStartEmoji.json"), JsonConvert.SerializeObject(emoji, Formatting.Indented));
             return emoji;
         });
@@ -52,14 +51,14 @@ namespace Bot.Utilities.Emoji {
             if (File.Exists(Path.Combine("Config", "ProgressIntermediateEmoji.json")))
                 return JsonConvert.DeserializeObject<ProgressEmojiList>(File.ReadAllText(Path.Combine("Config", "ProgressIntermediateEmoji.json")));
             logger.Info("ProgressIntermediateEmoji.json not found, generating");
-            var emoji = new ProgressEmojiList {
-                Part0 = "<:intermediate0:667802273987952663>",
-                Part2 = "<:intermediate2:667802286193377318>",
-                Part4 = "<:intermediate4:667802300714057747>",
-                Part6 = "<:intermediate6:667802315926929420>",
-                Part8 = "<:intermediate8:667802328782471175>",
-                Part10 = "<:intermediate10:667802348017418240>"
-            };
+            var emoji = new ProgressEmojiList(
+                "<:intermediate0:667802273987952663>",
+                "<:intermediate2:667802286193377318>",
+                "<:intermediate4:667802300714057747>",
+                "<:intermediate6:667802315926929420>",
+                "<:intermediate8:667802328782471175>",
+                "<:intermediate10:667802348017418240>"
+            );
             File.WriteAllText(Path.Combine("Config", "ProgressIntermediateEmoji.json"), JsonConvert.SerializeObject(emoji, Formatting.Indented));
             return emoji;
         });
@@ -69,31 +68,25 @@ namespace Bot.Utilities.Emoji {
             if (File.Exists(Path.Combine("Config", "ProgressEndEmoji.json")))
                 return JsonConvert.DeserializeObject<ProgressEmojiList>(File.ReadAllText(Path.Combine("Config", "ProgressEndEmoji.json")));
             logger.Info("ProgressEndEmoji.json not found, generating");
-            var emoji = new ProgressEmojiList {
-                Part0 = "<:end0:667802364027338756>",
-                Part2 = "<:end2:667802384063266838>",
-                Part4 = "<:end4:667802394452557824>",
-                Part6 = "<:end6:667802408461533194>",
-                Part8 = "<:end8:667802418435588096>",
-                Part10 = "<:end10:667802433233354762>"
-            };
+            var emoji = new ProgressEmojiList(
+                "<:end0:667802364027338756>",
+                "<:end2:667802384063266838>",
+                "<:end4:667802394452557824>",
+                "<:end6:667802408461533194>",
+                "<:end8:667802418435588096>",
+                "<:end10:667802433233354762>"
+            );
             File.WriteAllText(Path.Combine("Config", "ProgressEndEmoji.json"), JsonConvert.SerializeObject(emoji, Formatting.Indented));
             return emoji;
         });
 
-        private static Lazy<ProgressEmojiPack> _customEmojiPack = new Lazy<ProgressEmojiPack>(() => new ProgressEmojiPack {
-            Start = _start.Value,
-            End = _end.Value,
-            Intermediate = _intermediate.Value
-        });
+        private static Lazy<ProgressEmojiPack> _customEmojiPack = new Lazy<ProgressEmojiPack>(() =>
+            new ProgressEmojiPack(_start.Value, _intermediate.Value, _end.Value));
 
         public static ProgressEmojiPack CustomEmojiPack => _customEmojiPack.Value;
 
-        private static Lazy<ProgressEmojiPack> _textEmojiPack = new Lazy<ProgressEmojiPack>(() => new ProgressEmojiPack {
-            Start = new ProgressEmojiList("<-", "<="),
-            End = new ProgressEmojiList("->", "=>"),
-            Intermediate = new ProgressEmojiList("―", "▬", "==")
-        });
+        private static Lazy<ProgressEmojiPack> _textEmojiPack = new Lazy<ProgressEmojiPack>(() =>
+            new ProgressEmojiPack(new ProgressEmojiList("<-", "<="), new ProgressEmojiList("―", "▬", "=="), new ProgressEmojiList("->", "=>")));
 
         public static ProgressEmojiPack TextEmojiPack => _textEmojiPack.Value;
 
@@ -117,9 +110,15 @@ namespace Bot.Utilities.Emoji {
         }
 
         public class ProgressEmojiPack {
-            public ProgressEmojiList Start { get; set; }
-            public ProgressEmojiList Intermediate { get; set; }
-            public ProgressEmojiList End { get; set; }
+            public ProgressEmojiPack(ProgressEmojiList start, ProgressEmojiList intermediate, ProgressEmojiList end) {
+                Start = start;
+                Intermediate = intermediate;
+                End = end;
+            }
+
+            private ProgressEmojiList Start { get; }
+            private ProgressEmojiList Intermediate { get; }
+            private ProgressEmojiList End { get; }
 
             public string GetProgress(int progress) {
                 var builder = new StringBuilder();

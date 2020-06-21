@@ -34,7 +34,7 @@ namespace Bot.Utilities.Commands {
             return CommandAliases.Value[command].Select(info => new EmbedFieldBuilder {
                 Name = loc.Get("Help.CommandTitle").Format(command, GetAliasesString(info.Aliases, loc)),
                 Value = $"{loc.Get($"Help.{info.Summary}")}\n" +
-                        $"```css\n" +
+                        "```css\n" +
                         $"{prefix}{info.Name} {(info.Parameters.Count == 0 ? "" : $"[{string.Join("] [", info.Parameters.Select(x => x.Name))}]")}```" +
                         (info.Parameters.Count == 0
                             ? ""
@@ -63,9 +63,9 @@ namespace Bot.Utilities.Commands {
     }
 
     public class CommandGroup {
-        public string GroupId { get; set; }
-        public string GroupNameTemplate { get; set; }
-        public string GroupTextTemplate { get; set; }
-        public List<CommandInfo> Commands { get; set; }
+        public string GroupId { get; set; } = null!;
+        public string GroupNameTemplate { get; set; } = null!;
+        public string GroupTextTemplate { get; set; } = null!;
+        public List<CommandInfo> Commands { get; set; } = null!;
     }
 }

@@ -4,11 +4,13 @@ using System.Collections.Specialized;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using NLog;
 
 namespace Bot.Music.Players {
     public static class EmbedPlaybackControl {
-        private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
-        private static Timer _timer;
+        private static Logger logger = LogManager.GetCurrentClassLogger();
+        // ReSharper disable once NotAccessedField.Local
+        private static Timer _timer = null!;
         private static readonly Thread UpdateThread = new Thread(UpdateCycle);
         public static readonly ObservableCollection<EmbedPlaybackPlayer> PlaybackPlayers = new ObservableCollection<EmbedPlaybackPlayer>();
 
@@ -47,12 +49,12 @@ namespace Bot.Music.Players {
             var tcs = new TaskCompletionSource<bool>();
             _timer = new Timer(state => {
                 if (PlaybackPlayers.Count == 0) {
-                    NotifyCollectionChangedEventHandler playbackPlayersOnCollectionChanged = null;
-                    playbackPlayersOnCollectionChanged = new NotifyCollectionChangedEventHandler((sender, args) => {
-                        PlaybackPlayers.CollectionChanged -= playbackPlayersOnCollectionChanged;
+                    void PlaybackPlayersOnCollectionChanged(object sender, NotifyCollectionChangedEventArgs args) {
+                        PlaybackPlayers.CollectionChanged -= PlaybackPlayersOnCollectionChanged;
                         tcs.SetResult(true);
-                    });
-                    PlaybackPlayers.CollectionChanged += playbackPlayersOnCollectionChanged;
+                    }
+
+                    PlaybackPlayers.CollectionChanged += PlaybackPlayersOnCollectionChanged;
                 }
                 else {
                     tcs.SetResult(true);

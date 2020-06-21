@@ -6,21 +6,21 @@ using Bot.Utilities;
 
 namespace Bot.Config.Localization {
     public class LocalizedEntry {
-        public LocalizedEntry(string @group, string id) {
-            Group = @group;
+        public LocalizedEntry(string group, string id) {
+            Group = group;
             Id = id;
         }
 
         public LocalizedEntry(string id) : this(id.Split(".")[0], id.Split(".")[1]) { }
 
-        private bool _isCalculated = false;
+        private bool _isCalculated;
         private List<Func<object>> FormatArgs { get; set; } = new List<Func<object>>();
         
         public string Group { get; set; }
         public string Id { get; set; }
 
-        private ILocalizationProvider _provider;
-        private string _cache;
+        private ILocalizationProvider _provider = null!;
+        private string _cache = null!;
         public string Get(ILocalizationProvider provider) {
             if (_isCalculated || _provider != provider) {
                 _cache = provider.Get(Group, Id).Format(FormatArgs.Select(func => func()));

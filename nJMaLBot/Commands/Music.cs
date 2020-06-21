@@ -27,7 +27,7 @@ namespace Bot.Commands {
         [Command("play", RunMode = RunMode.Async)]
         [Alias("p")]
         [Summary("play0s")]
-        public async Task Play([Remainder] [Summary("play0_0s")] string query = null) {
+        public async Task Play([Remainder] [Summary("play0_0s")] string? query = null) {
             if (!await IsPreconditionsValid)
                 return;
 
@@ -89,7 +89,7 @@ namespace Bot.Commands {
             if (index == 0) index = 1;
 
             if (Player.Playlist.TryGetValue(index - 1, out var track)) {
-                await Player.PlayAsync(track, false);
+                await Player.PlayAsync(track!, false);
                 Player.WriteToQueueHistory(Loc.Get("MusicQueues.Jumped")
                                               .Format(Context.User.Username, Player.CurrentTrackIndex + 1,
                                                    Player.CurrentTrack.Title.SafeSubstring(0, 40) + "..."));
@@ -508,7 +508,7 @@ namespace Bot.Commands {
                 return;
             }
 
-            if (MusicUtils.Cluster.Nodes.Count <= 1) {
+            if (MusicUtils.Cluster!.Nodes.Count <= 1) {
                 ReplyFormattedAsync(Loc.Get("Music.OnlyOneNode"), true);
                 return;
             }

@@ -5,17 +5,16 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Discord;
-using NLog.Fluent;
 using Tyrrrz.Extensions;
 
 namespace Bot.Utilities {
     public class NonSpamMessageController {
         public static readonly Regex UserMentionRegex = new Regex(@"(?<!<@)!?(\d+)(?=>)");
         
-        private Task _modifyAsync;
+        private Task? _modifyAsync;
         private bool _modifyQueued;
         public EmbedBuilder EmbedBuilder { get; set; }
-        public IUserMessage Message { get; private set; }
+        public IUserMessage? Message { get; private set; }
 
         public string Title { get; set; }
         private Dictionary<string, int> Entries { get; set; } = new Dictionary<string, int>();
@@ -79,7 +78,7 @@ namespace Bot.Utilities {
                 //Not thread safe method cuz in this case, thread safety is a waste of time
                 if (_modifyAsync?.IsCompleted ?? true) {
                     UpdateInternal();
-                    await _modifyAsync;
+                    if (_modifyAsync != null) await _modifyAsync;
                 }
                 else {
                     if (_modifyQueued)
@@ -101,13 +100,13 @@ namespace Bot.Utilities {
                                 await ForceResend();
                             }
                             else {
-                                await Message.ModifyAsync(properties => {
+                                await Message!.ModifyAsync(properties => {
                                     properties.Embed = AssemblyEmbed().Build();
                                     properties.Content = string.Join(", ", Mentions);
                                 });
                             }
                         }
-                        catch (Exception e) {
+                        catch (Exception) {
                             // ignored
                         }
                     });
@@ -121,19 +120,19 @@ namespace Bot.Utilities {
         private async Task<bool> NeedResend() {
             try {
                 if (DateTime.Now - LastCheck > TimeSpan.FromSeconds(20)) {
-                    return (await currentChannel.GetMessagesAsync(3).FlattenAsync()).FirstOrDefault(message => message.Id == Message.Id) == null;
+                    return (await _currentChannel!.GetMessagesAsync(3).FlattenAsync()).FirstOrDefault(message => message.Id == Message!.Id) == null;
                 }
 
                 return false;
             }
-            catch (Exception e) {
+            catch (Exception) {
                 return true;
             }
         }
 
         private SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1);
-        private Timer _deletionTimer;
-        private IMessageChannel currentChannel;
+        private Timer? _deletionTimer;
+        private IMessageChannel? _currentChannel;
 
         public async Task ForceResend() {
             if (_semaphoreSlim.CurrentCount == 0) {
@@ -156,11 +155,11 @@ namespace Bot.Utilities {
                         var sendMessage = channel.SendMessageAsync(null, false, AssemblyEmbed().Build());
                         _modifyAsync = sendMessage;
                         Message = await sendMessage;
-                        currentChannel = channel;
+                        _currentChannel = channel;
                         LastCheck = DateTime.Now;
                         break;
                     }
-                    catch (Exception e) {
+                    catch (Exception) {
                         // ignored
                     }
                 }

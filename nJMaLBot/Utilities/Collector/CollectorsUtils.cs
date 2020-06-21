@@ -6,12 +6,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using Discord;
 using Discord.WebSocket;
+using NLog;
 
 #pragma warning disable 1998
 
 namespace Bot.Utilities.Collector {
     public static class CollectorsUtils {
-        private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
+        private static Logger logger = LogManager.GetCurrentClassLogger();
         static CollectorsUtils() {
             if (Program.CmdOptions.Observer) return;
             Program.Client.ReactionAdded += ClientOnReactionAdded;

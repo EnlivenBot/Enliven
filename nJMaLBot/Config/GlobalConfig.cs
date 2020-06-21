@@ -6,8 +6,11 @@ using System.Text.Json.Serialization;
 using Bot.Music;
 using Newtonsoft.Json;
 
+// ReSharper disable CollectionNeverUpdated.Global
+
 namespace Bot.Config {
     internal class GlobalConfig {
+        // ReSharper disable once InconsistentNaming
         private static readonly Lazy<GlobalConfig> _globalConfig = new Lazy<GlobalConfig>(() => {
             if (File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "config.json"))) {
                 Directory.CreateDirectory("Config");
@@ -29,6 +32,7 @@ namespace Bot.Config {
         [JsonPropertyName("Lavalink Nodes")]
         [Description(
             "Not including self node\nExample:\n{\n  \"Password\": \"youshallnotpass\",\n  \"RestUri\": \"http://localhost:8080/\",\n  \"WebSocketUri\": \"ws://localhost:8080/\"\n}")]
+        // ReSharper disable once IdentifierTypo
         public List<LavalinkNodeInfo> LavalinkNodes { get; set; } = new List<LavalinkNodeInfo>();
     }
 }

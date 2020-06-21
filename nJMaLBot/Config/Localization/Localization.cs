@@ -3,28 +3,21 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
+using NLog;
 
 namespace Bot.Config.Localization {
     internal static class Localization {
-        private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
+        private static Logger logger = LogManager.GetCurrentClassLogger();
 
         public static readonly Dictionary<string, LocalizationPack> Languages;
         static Localization() {
-            Languages = LoadLanguages();
-        }
-
-        public static void Initialize() {
-            // Dummy method to call static constructor
-        } 
-
-        private static Dictionary<string, LocalizationPack> LoadLanguages() {
             logger.Info("Start loading localizations packs...");
             try {
                 var indexes = Directory.GetFiles(Path.Combine(Directory.GetCurrentDirectory(), "Localization"))
                                        .ToDictionary(Path.GetFileNameWithoutExtension);
                 logger.Info("Loaded languages: {lang}.", string.Join(", ", indexes.Select(pair => pair.Key)));
-                var localizationPacks = indexes.ToDictionary(variable => variable.Key,
-                    variable => JsonConvert.DeserializeObject<LocalizationPack>(Utilities.Utilities.DownloadString(variable.Value)));
+                Dictionary<string, LocalizationPack> localizationPacks = indexes.ToDictionary(variable => variable.Key,
+                    variable => JsonConvert.DeserializeObject<LocalizationPack>(Utilities.Utilities.DownloadString(variable.Value)))!;
 
                 var localizationEntries = localizationPacks["en"].Data.SelectMany(groups => groups.Value.Select(pair => groups.Key + pair.Key)).ToList();
                 foreach (var pack in localizationPacks) {
@@ -34,12 +27,12 @@ namespace Bot.Config.Localization {
                     pack.Value.TranslationCompleteness = (int) (entriesNotLocalizedCount / (double)localizationEntries.Count * 100);
                 }
 
-                return localizationPacks;
+                Languages = localizationPacks;
             }
             catch (Exception e) {
                 logger.Error(e, "Error while downloading libraries");
                 logger.Info("Loading default (en) pack.");
-                return new Dictionary<string, LocalizationPack> {
+                Languages = new Dictionary<string, LocalizationPack> {
                     {
                         "en",
                         JsonConvert.DeserializeObject<LocalizationPack>(File.ReadAllText(Path.Combine(Directory.GetCurrentDirectory(), "Localization/en.json")))
@@ -49,6 +42,10 @@ namespace Bot.Config.Localization {
             finally {
                 logger.Info("End loading localization packs");
             }
+        }
+
+        public static void Initialize() {
+            // Dummy method to call static constructor
         }
 
         public static string Get(string lang, string id) {

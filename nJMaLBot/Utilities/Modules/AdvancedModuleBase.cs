@@ -7,6 +7,11 @@ using Discord.Commands;
 
 namespace Bot.Utilities.Modules {
     public class AdvancedModuleBase : PatchableModuleBase {
+        private Lazy<GuildLocalizationProvider> _loc = null!;
+
+        public GuildLocalizationProvider Loc => _loc.Value;
+        public GuildConfig GuildConfig { get; private set; } = null!;
+
         public async Task<IMessageChannel> GetResponseChannel(bool fileSupport = false) {
             var bot = (await Context.Guild.GetCurrentUserAsync()).GetPermissions((IGuildChannel) Context.Channel);
             var user = (await Context.Guild.GetUserAsync(Context.User.Id)).GetPermissions((IGuildChannel) Context.Channel);
@@ -15,19 +20,14 @@ namespace Bot.Utilities.Modules {
                 : await Context.User.GetOrCreateDMChannelAsync();
         }
 
-        private Lazy<GuildLocalizationProvider> _loc;
-        private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
-
         protected override void BeforeExecute(CommandInfo command) {
             base.BeforeExecute(command);
             GuildConfig = GuildConfig.Get(Context.Guild.Id);
             _loc = new Lazy<GuildLocalizationProvider>(() => new GuildLocalizationProvider(GuildConfig));
         }
 
-        public GuildLocalizationProvider Loc => _loc.Value;
-        public GuildConfig GuildConfig { get; private set; }
-
-        protected override async Task<IUserMessage> ReplyAsync(string message = null, bool isTTS = false, Embed embed = null, RequestOptions options = null) {
+        // ReSharper disable once InconsistentNaming
+        protected override async Task<IUserMessage> ReplyAsync(string? message = null, bool isTTS = false, Embed? embed = null, RequestOptions? options = null) {
             return await (await GetResponseChannel()).SendMessageAsync(message, isTTS, embed, options).ConfigureAwait(false);
         }
 
@@ -36,7 +36,7 @@ namespace Bot.Utilities.Modules {
                             .WithDescription(description).WithColor(Color.Gold).Build();
             return await (await GetResponseChannel()).SendMessageAsync(null, false, embed).ConfigureAwait(false);
         }
-        
+
         protected async Task<IUserMessage> ReplyFormattedAsync(string title, string description, TimeSpan delayedDeleteTime) {
             var replyFormattedAsync = ReplyFormattedAsync(title, description);
             replyFormattedAsync.DelayedDelete(delayedDeleteTime);

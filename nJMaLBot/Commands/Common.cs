@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Bot.Logging;
 using Bot.Utilities;
 using Bot.Utilities.Commands;
 using Bot.Utilities.Modules;
@@ -29,16 +30,18 @@ namespace Bot.Commands {
 
         [Command("stats", RunMode = RunMode.Async)]
         [Summary("stats0s")]
-        public async Task Stats() {
+        public Task Stats() {
             Context.Message.SafeDelete();
-            ReplyAsync(null, false, (await StatsUtils.BuildStats(null, Loc)).Build()).DelayedDelete(TimeSpan.FromMinutes(5));;
+            ReplyAsync(null, false, StatsUtils.BuildStats(null, Loc).Build()).DelayedDelete(TimeSpan.FromMinutes(5));
+            return Task.CompletedTask;
         }
 
         [Command("userstats", RunMode = RunMode.Async)]
         [Summary("userstats0s")]
-        public async Task UserStats([Summary("userstats0_0s")] IUser user) {
+        public Task UserStats([Summary("userstats0_0s")] IUser user) {
             Context.Message.SafeDelete();
-            ReplyAsync(null, false, (await StatsUtils.BuildStats(user, Loc)).Build()).DelayedDelete(TimeSpan.FromMinutes(5));;
+            ReplyAsync(null, false, StatsUtils.BuildStats(user, Loc).Build()).DelayedDelete(TimeSpan.FromMinutes(5));
+            return Task.CompletedTask;
         }
 
         [Command("userstats", RunMode = RunMode.Async)]

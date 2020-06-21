@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Bot.Config;
 using Bot.Music;
+using Bot.Music.Players;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -13,13 +14,14 @@ using Lavalink4NET.Player;
 
 namespace Bot.Utilities.Modules {
     public class MusicModuleBase : AdvancedModuleBase {
-        public IMessageChannel ResponseChannel;
-        public EmbedPlaybackPlayer Player;
-        public Task<bool> IsPreconditionsValid;
+        public IMessageChannel ResponseChannel = null!;
+        // Actually it can be null but only if IsPreconditionsValid is false
+        public EmbedPlaybackPlayer Player = null!;
+        public Task<bool> IsPreconditionsValid = null!;
         public static Dictionary<ulong, NonSpamMessageController> ErrorsMessagesControllers { get; set; } = new Dictionary<ulong, NonSpamMessageController>();
-        public NonSpamMessageController ErrorMessageController;
+        public NonSpamMessageController ErrorMessageController = null!;
 
-        protected override async void BeforeExecute(CommandInfo command) {
+        protected override void BeforeExecute(CommandInfo command) {
             base.BeforeExecute(command);
             GetChannel(out ResponseChannel);
             IsPreconditionsValid = InitialSetup(command);
@@ -37,7 +39,7 @@ namespace Bot.Utilities.Modules {
             try {
                 Player = MusicUtils.Cluster.GetPlayer<EmbedPlaybackPlayer>(Context.Guild.Id);
             }
-            catch (NullReferenceException e) {
+            catch (NullReferenceException) {
                 nonSpamMessageController.AddEntry(Loc.Get("Music.MusicDisabled")).Update();
                 return false;
             }
@@ -57,7 +59,7 @@ namespace Bot.Utilities.Modules {
             if (GetChannel(out var musicChannel)) {
                 var user = Context.User as SocketGuildUser;
                 if (user?.VoiceChannel?.Id == Player?.VoiceChannelId && user?.VoiceChannel?.Id != null &&
-                    Player.State != PlayerState.NotConnected && Player.State != PlayerState.Destroyed) return true;
+                    Player!.State != PlayerState.NotConnected && Player.State != PlayerState.Destroyed) return true;
 
                 var needSummon = command.Attributes.FirstOrDefault(attribute => attribute is SummonToUserAttribute) != null;
 
@@ -67,14 +69,14 @@ namespace Bot.Utilities.Modules {
                 }
 
                 if (!needSummon) return true;
-                if (user.VoiceState.HasValue) {
+                if (user!.VoiceState.HasValue) {
                     var perms = (await Context.Guild.GetCurrentUserAsync()).GetPermissions(user.VoiceChannel);
                     if (!perms.Connect) {
-                        nonSpamMessageController.AddEntry(Loc.Get("Music.CantConnect").Format(user.VoiceChannel.Name)).Update();
+                        nonSpamMessageController.AddEntry(Loc.Get("Music.CantConnect").Format(user.VoiceChannel!.Name)).Update();
                         return false;
                     }
 
-                    Player = await MusicUtils.JoinChannel(Context.Guild.Id, user.VoiceChannel.Id);
+                    Player = await MusicUtils.JoinChannel(Context.Guild.Id, user.VoiceChannel!.Id);
                     return true;
                 }
 
@@ -91,12 +93,13 @@ namespace Bot.Utilities.Modules {
             return true;
         }
 
-        protected override async Task<IUserMessage> ReplyAsync(string message = null, bool isTTS = false, Embed embed = null, RequestOptions options = null) {
+        // ReSharper disable once InconsistentNaming
+        protected override async Task<IUserMessage> ReplyAsync(string? message = null, bool isTTS = false, Embed? embed = null, RequestOptions? options = null) {
             return await ResponseChannel.SendMessageAsync(message, isTTS, embed, options).ConfigureAwait(false);
         }
 
-        protected async Task<IUserMessage> ReplyFormattedAsync(string description, bool isFail = false, IUserMessage previous = null,
-                                                               IMessageChannel channel = null) {
+        protected async Task<IUserMessage> ReplyFormattedAsync(string description, bool isFail = false, IUserMessage? previous = null,
+                                                               IMessageChannel? channel = null) {
             var embed = this.GetAuthorEmbedBuilder().WithTitle(Loc.Get(isFail ? "Music.Fail" : "Music.Playback"))
                             .WithDescription(description).WithColor(isFail ? Color.Orange : Color.Gold).Build();
             if (previous == null) {
@@ -112,7 +115,7 @@ namespace Bot.Utilities.Modules {
 
         public bool GetChannel(out IMessageChannel channel) {
             channel = Context.Channel;
-            if (!GuildConfig.GetChannel(ChannelFunction.Music, out var musicChannel) || musicChannel.Id == channel.Id) return true;
+            if (!GuildConfig.GetChannel(ChannelFunction.Music, out var musicChannel) || musicChannel!.Id == channel.Id) return true;
             channel = (IMessageChannel) musicChannel;
             return false;
         }
