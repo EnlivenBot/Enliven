@@ -58,13 +58,9 @@ namespace Bot.Utilities.Commands {
         }
 
         private async Task HandleCommand(SocketMessage s) {
-            if (!(s is SocketUserMessage msg) || msg.Source != MessageSource.User) {
-                IgnoredMessages.AddMessageToIgnore(s);
-                return;
-            }
-
-            if (!(s.Channel is SocketGuildChannel guildChannel)) {
-                IgnoredMessages.AddMessageToIgnore(s);
+            if (!(s is SocketUserMessage msg)
+             || msg.Source != MessageSource.User
+             || !(s.Channel is SocketGuildChannel guildChannel)) {
                 return;
             }
 
@@ -144,11 +140,8 @@ namespace Bot.Utilities.Commands {
 
                     MessageHistoryManager.LogCreatedMessage(msg, guild);
                 }
-                else {
-                    if (guild.IsCommandLoggingEnabled)
-                        MessageHistoryManager.LogCreatedMessage(msg, guild);
-                    else
-                        IgnoredMessages.AddMessageToIgnore(msg);
+                else if (guild.IsCommandLoggingEnabled) {
+                    MessageHistoryManager.LogCreatedMessage(msg, guild);
                 }
             }
             else

@@ -12,6 +12,7 @@ using Discord;
 using HarmonyLib;
 using LiteDB;
 using NLog;
+using LiteDB.Engine;
 
 // ReSharper disable UnusedMember.Local
 
@@ -130,11 +131,46 @@ namespace Bot.Config {
                     }
                 }
 
-                Database.UserVersion = upgrade.Item1.Version;
-                logger.Info("Database upgraded to version {version}. Making a checkpoint", upgrade.Item1.Version);
-                Database.Checkpoint();
-                Database.Rebuild();
+                logger.Info("Making a checkpoint");
+                try {
+                    Database.Checkpoint();
+                    Database.Rebuild();
+                }
+                catch (Exception e) {
+                    // This is very bad
+                    // We broke the database
+                    logger.Fatal(e, "Database file broken");
+                    logger.Fatal("Doing backup");
+                    File.Copy(GetDatabasePath(), Path.Combine(Path.GetDirectoryName(GetDatabasePath())!, DateTime.Now.ToString("yyyy-dd-M--HH-mm-ss") + ".bak"),
+                        true);
+                    logger.Fatal("Trying to copy intact information");
+                    using (LiteDatabase newDb = new LiteDatabase("newDb.db")) {
+                        foreach (var collectionName in Database.GetCollectionNames()) {
+                            try {
+                                var collection = newDb.GetCollection(collectionName);
+                                foreach (var bsonDocument in Database.GetCollection(collectionName).FindAll()) {
+                                    try {
+                                        collection.Insert(bsonDocument);
+                                    }
+                                    catch (Exception exception) {
+                                        logger.Error(exception, "Database recreation error. Collection - {collectionName}", collectionName);
+                                    }
+                                }
+                            }
+                            catch (Exception exception) {
+                                logger.Error(exception, "Database recreation error. Collection - {collectionName}", collectionName);
+                            }
+                        }
+                    }
+
+                    Database.Dispose();
+                    File.Move("newDb.db", GetDatabasePath(), true);
+                    Database = LoadDatabase();
+                }
+
                 logger.Info("Checkpoint done");
+                logger.Info("Database upgraded to version {version}", upgrade.Item1.Version);
+                Database.UserVersion = upgrade.Item1.Version;
             }
 
             Database.CheckpointSize = liteDatabaseCheckpointSize;
@@ -233,12 +269,17 @@ namespace Bot.Config {
                         }
                     }
                 }
-                
+
                 liteDatabase.Checkpoint();
                 liteDatabase.Rebuild();
             });
         }
         #pragma warning restore 618
+
+        [DbUpgrade(5, false)]
+        private static void UpgradeTo5(LiteDatabase liteDatabase) {
+            liteDatabase.DropCollection("IgnoredMessages");
+        }
 
         [AttributeUsage(AttributeTargets.Method, Inherited = false, AllowMultiple = true)]
         private sealed class DbUpgradeAttribute : Attribute {
