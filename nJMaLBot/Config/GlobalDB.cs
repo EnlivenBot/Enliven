@@ -5,20 +5,23 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Bot.Config.Localization.Providers;
+using Bot.Logging;
 using Bot.Music;
 using Bot.Utilities.Commands;
 using Discord;
 using HarmonyLib;
 using LiteDB;
+using NLog;
+
+// ReSharper disable UnusedMember.Local
 
 #pragma warning disable 8632
 
 namespace Bot.Config {
     // ReSharper disable once InconsistentNaming
     public static class GlobalDB {
-        private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
-        public static LiteDatabase Database;
+        private static Logger logger = LogManager.GetCurrentClassLogger();
+        public static LiteDatabase Database = null!;
 
         static GlobalDB() {
             InitializeDatabase();
@@ -38,8 +41,10 @@ namespace Bot.Config {
         public static readonly ILiteCollection<MessageHistory> Messages;
         public static readonly ILiteCollection<StatisticsPart> CommandStatistics;
         public static readonly ILiteCollection<StoredPlaylist> Playlists;
-        private static Timer _checkpointTimer;
-        private static Timer _rebuildTimer;
+        // ReSharper disable once NotAccessedField.Local
+        private static Timer _checkpointTimer = null!;
+        // ReSharper disable once NotAccessedField.Local
+        private static Timer _rebuildTimer = null!;
 
         private static void InitializeDatabase() {
             logger.Info("Loading database");
@@ -76,7 +81,7 @@ namespace Bot.Config {
                                    .SelectMany(AccessTools.GetDeclaredMethods)
                                    .Where(m => m.GetCustomAttributes(typeof(DbUpgradeAttribute), false).Length > 0)
                                     // ReSharper disable once PossibleNullReferenceException
-                                   .Select(info => ((DbUpgradeAttribute) info.GetCustomAttribute(typeof(DbUpgradeAttribute)), info))
+                                   .Select(info => ((DbUpgradeAttribute) info.GetCustomAttribute(typeof(DbUpgradeAttribute))!, info))
                                    .OrderBy(tuple => tuple.Item1.Version)
                                    .ToList();
             foreach (var upgrade in upgrades.SkipWhile((tuple, i) => tuple.Item1.Version <= Database.UserVersion)) {
@@ -119,7 +124,7 @@ namespace Bot.Config {
                         try {
                             File.Delete(Path.ChangeExtension(GetDatabasePath(), ".bak"));
                         }
-                        catch (Exception e) {
+                        catch (Exception) {
                             // ignored
                         }
                     }

@@ -1,5 +1,4 @@
 using System;
-using Bot.Config.Localization.Providers;
 
 namespace Bot.Utilities.Commands {
     public class GroupingAttribute : Attribute {

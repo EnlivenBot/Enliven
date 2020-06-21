@@ -1,55 +1,60 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Bot.Config;
 using Bot.Config.Localization.Providers;
+using Bot.Logging;
 using Bot.Music;
 using Bot.Music.Players;
-using Bot.Utilities;
 using Bot.Utilities.Collector;
-using Bot.Utilities.Commands;
 using Bot.Utilities.Emoji;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using NLog;
 using Tyrrrz.Extensions;
 
-namespace Bot.Commands {
+namespace Bot.Utilities.Commands {
     public class CommandHandler {
-        private DiscordShardedClient _client;
+        private static Logger logger = LogManager.GetCurrentClassLogger();
+        private IDiscordClient _client;
+
+        private CommandHandler(IDiscordClient client, CommandService commandService) {
+            _client = client;
+            CommandService = commandService;
+        }
+
         public CommandService CommandService { get; private set; }
         public List<CommandInfo> AllCommands { get; } = new List<CommandInfo>();
-        private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
         public static FuzzySearch FuzzySearch { get; set; } = new FuzzySearch();
 
-        public async Task Install(DiscordShardedClient c) {
-            _client = c;
+        public static async Task<CommandHandler> Create(DiscordShardedClient client) {
+            var commandService = new CommandService();
+            var commandHandler = new CommandHandler(client, commandService);
             logger.Info("Creating new command service");
-            CommandService = new CommandService();
-
+            
             logger.Info("Adding modules");
-            await CommandService.AddModulesAsync(Assembly.GetEntryAssembly(), null);
-            CommandService.AddTypeReader(typeof(ChannelFunction), new ChannelFunctionTypeReader());
-            CommandService.AddTypeReader(typeof(LoopingState), new LoopingStateTypeReader());
-            CommandService.AddTypeReader(typeof(BassBoostMode), new BassBoostModeTypeReader());
-            foreach (var cmdsModule in CommandService.Modules) {
-                foreach (var command in cmdsModule.Commands) AllCommands.Add(command);
+            await commandService.AddModulesAsync(Assembly.GetEntryAssembly(), null);
+            commandService.AddTypeReader(typeof(ChannelFunction), new ChannelFunctionTypeReader());
+            commandService.AddTypeReader(typeof(LoopingState), new LoopingStateTypeReader());
+            commandService.AddTypeReader(typeof(BassBoostMode), new BassBoostModeTypeReader());
+            foreach (var cmdsModule in commandService.Modules) {
+                foreach (var command in cmdsModule.Commands) commandHandler.AllCommands.Add(command);
             }
 
             logger.Info("Adding commands to fuzzy search");
-            foreach (var alias in AllCommands.SelectMany(commandInfo => commandInfo.Aliases).GroupBy(s => s).Select(grouping => grouping.First())) {
+            foreach (var alias in commandHandler.AllCommands.SelectMany(commandInfo => commandInfo.Aliases).GroupBy(s => s).Select(grouping => grouping.First())) {
                 FuzzySearch.AddData(alias);
             }
-
-            Patch.ApplyPatch();
-
-            if (!Program.CmdOptions.Observer) 
-                _client.MessageReceived += message => Task.Run(() => HandleCommand(message));
             
+            Patch.ApplyCommandPatch();
+            
+            if (!Program.CmdOptions.Observer)
+                client.MessageReceived += message => Task.Run(() => commandHandler.HandleCommand(message));
+
+            return commandHandler;
         }
 
         private async Task HandleCommand(SocketMessage s) {
@@ -82,7 +87,7 @@ namespace Bot.Commands {
                 if (!result.IsSuccess && result.Error == CommandError.UnknownCommand) {
                     var searchResult = FuzzySearch.Search(command);
                     var bestMatch = searchResult.GetFullMatch();
-                    
+
                     // Check for a another keyboard layout
                     if (bestMatch != null) {
                         command = bestMatch.SimilarTo;
@@ -90,12 +95,12 @@ namespace Bot.Commands {
                         result = await ExecuteCommand(query, context, s.Author.Id.ToString());
                     }
                     else {
-                        CollectorController collector = null;
+                        CollectorController? collector = null;
                         collector = CollectorsUtils.CollectReaction(msg, reaction => reaction.UserId == msg.Author.Id, async eventArgs => {
                             await eventArgs.RemoveReason();
                             // ReSharper disable once AccessToModifiedClosure
                             // ReSharper disable once PossibleNullReferenceException
-                            collector.Dispose();
+                            collector?.Dispose();
                             try {
                                 #pragma warning disable 4014
                                 msg.RemoveReactionAsync(CommonEmoji.Help, Program.Client.CurrentUser);
@@ -153,7 +158,7 @@ namespace Bot.Commands {
         public async Task<IResult> ExecuteCommand(string query, ICommandContext context, string authorId) {
             var result = await CommandService.ExecuteAsync(context, query, null);
             if (result.Error != CommandError.UnknownCommand) {
-                var commandName = query.IndexOf(" ") > -1 ? query.Substring(0, query.IndexOf(" ")) : query;
+                var commandName = query.IndexOf(" ", StringComparison.Ordinal) > -1 ? query.Substring(0, query.IndexOf(" ", StringComparison.Ordinal)) : query;
                 RegisterUsage(commandName, authorId);
                 RegisterUsage(commandName, "Global");
             }
@@ -216,7 +221,7 @@ namespace Bot.Commands {
         }
 
         private static string ParseCommand(string input, out string args) {
-            var command = input.Substring(0, input.IndexOf(" ") > 0 ? input.IndexOf(" ") : input.Length);
+            var command = input.Substring(0, input.IndexOf(" ", StringComparison.Ordinal) > 0 ? input.IndexOf(" ", StringComparison.Ordinal) : input.Length);
             try {
                 args = input.Substring(command.Length + 1);
             }

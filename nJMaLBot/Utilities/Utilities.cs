@@ -18,7 +18,7 @@ namespace Bot.Utilities {
         }
 
         public static IEnumerable<string> SplitToLines(string stringToSplit, int maximumLineLength) {
-            return Regex.Matches(stringToSplit, @"(.{1," + maximumLineLength + @"})(?:\s|$)").Cast<Match>().Select(match => match.Value);
+            return Regex.Matches(stringToSplit, @"(.{1," + maximumLineLength + @"})(?:\s|$)").Select(match => match.Value);
         }
     }
 }

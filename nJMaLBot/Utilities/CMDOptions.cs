@@ -6,6 +6,6 @@ namespace Bot.Utilities {
         public bool Observer { get; set; }
         
         [Option("token", Default = null, Required = false, HelpText = "Overrides token from config file")]
-        public string BotToken { get; set; }
+        public string? BotToken { get; set; }
     }
 }

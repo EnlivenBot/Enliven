@@ -5,18 +5,18 @@ using System.Linq;
 namespace Bot.Utilities {
     public class FuzzySearch {
         class Word {
-            public string Text { get; set; }
+            public string Text { get; set; } = null!;
             public List<int> Codes { get; set; } = new List<int>();
         }
 
         class AnalyzedObject {
-            public string Original { get; set; }
+            public string Original { get; set; } = null!;
             public List<Word> Words { get; set; } = new List<Word>();
         }
 
         public class SearchResult {
             public class SearchMatch {
-                public string SimilarTo { get; set; }
+                public string SimilarTo { get; set; } = null!;
                 public double Difficulty { get; set; }
                 public int LanguageType { get; set; }
             }
@@ -41,7 +41,6 @@ namespace Bot.Utilities {
         private List<AnalyzedObject> Samples { get; set; } = new List<AnalyzedObject>();
 
         public void AddData(IEnumerable<string> datas) {
-            var codeKeys = CodeKeysRus.Concat(CodeKeysEng).ToList();
             foreach (var data in datas) {
                 AddData(data);
             }
@@ -52,7 +51,7 @@ namespace Bot.Utilities {
             var languageSet = new AnalyzedObject();
             languageSet.Original = data;
             if (data.Length > 0) {
-                languageSet.Words = data.Split(' ').Select(w => new Word() {
+                languageSet.Words = data.Split(' ').Select(w => new Word {
                     Text = w.ToLower(),
                     Codes = GetKeyCodes(codeKeys, w)
                 }).ToList();
@@ -65,7 +64,7 @@ namespace Bot.Utilities {
             var codeKeys = CodeKeysRus.Concat(CodeKeysEng).ToList();
             var originalSearchObj = new AnalyzedObject();
             if (targetStr.Length > 0) {
-                originalSearchObj.Words = targetStr.Split(' ').Select(w => new Word() {
+                originalSearchObj.Words = targetStr.Split(' ').Select(w => new Word {
                     Text = w.ToLower(),
                     Codes = GetKeyCodes(codeKeys, w)
                 }).ToList();
@@ -75,7 +74,7 @@ namespace Bot.Utilities {
             if (targetStr.Length > 0) {
                 translationSearchObj.Words = targetStr.Split(' ').Select(w => {
                     var translateStr = Transliterate(w.ToLower(), Translit_Ru_En);
-                    return new Word() {
+                    return new Word {
                         Text = translateStr,
                         Codes = GetKeyCodes(codeKeys, translateStr)
                     };
@@ -187,13 +186,11 @@ namespace Bot.Utilities {
             if (source.Codes[sourcePosition] != 0 && source.Codes[sourcePosition] == search.Codes[searchPosition])
                 return 0;
             var resultWeight = 0;
-            List<int> nearKeys;
-            if (!DistanceCodeKey.TryGetValue(source.Codes[sourcePosition], out nearKeys))
+            if (!DistanceCodeKey.TryGetValue(source.Codes[sourcePosition], out List<int>? nearKeys))
                 resultWeight = 2;
             else
                 resultWeight = nearKeys.Contains(search.Codes[searchPosition]) ? 1 : 2;
-            List<char> phoneticGroups;
-            if (PhoneticGroupsRus.TryGetValue(search.Text[searchPosition], out phoneticGroups))
+            if (PhoneticGroupsRus.TryGetValue(search.Text[searchPosition], out List<char>? phoneticGroups))
                 resultWeight = Math.Min(resultWeight, phoneticGroups.Contains(source.Text[sourcePosition]) ? 1 : 2);
             if (PhoneticGroupsEng.TryGetValue(search.Text[searchPosition], out phoneticGroups))
                 resultWeight = Math.Min(resultWeight, phoneticGroups.Contains(source.Text[sourcePosition]) ? 1 : 2);
@@ -205,12 +202,7 @@ namespace Bot.Utilities {
         }
 
         private string Transliterate(string text, Dictionary<char, string> cultureFrom) {
-            var translateText = text.SelectMany(t => {
-                string translateChar;
-                if (cultureFrom.TryGetValue(t, out translateChar))
-                    return translateChar;
-                return t.ToString();
-            });
+            var translateText = text.SelectMany(t => cultureFrom.TryGetValue(t, out string? translateChar) ? translateChar : t.ToString());
             return string.Concat(translateText);
         }
 
@@ -222,8 +214,8 @@ namespace Bot.Utilities {
         #endregion
 
         static FuzzySearch() {
-            SetPhoneticGroups(PhoneticGroupsRus, new List<string>() {"ыий", "эе", "ая", "оёе", "ую", "шщ", "оа"});
-            SetPhoneticGroups(PhoneticGroupsEng, new List<string>() {"aeiouy", "bp", "ckq", "dt", "lr", "mn", "gj", "fpv", "sxz", "csz"});
+            SetPhoneticGroups(PhoneticGroupsRus, new List<string> {"ыий", "эе", "ая", "оёе", "ую", "шщ", "оа"});
+            SetPhoneticGroups(PhoneticGroupsEng, new List<string> {"aeiouy", "bp", "ckq", "dt", "lr", "mn", "gj", "fpv", "sxz", "csz"});
         }
 
         private static void SetPhoneticGroups(Dictionary<char, List<char>> resultPhoneticGroups, List<string> phoneticGroups) {
@@ -240,52 +232,52 @@ namespace Bot.Utilities {
         /// Близость кнопок клавиатуры
         /// </summary>
         private static Dictionary<int, List<int>> DistanceCodeKey = new Dictionary<int, List<int>> {
-            /* '`' */ {192, new List<int>() {49}},
-            /* '1' */ {49, new List<int>() {50, 87, 81}},
-            /* '2' */ {50, new List<int>() {49, 81, 87, 69, 51}},
-            /* '3' */ {51, new List<int>() {50, 87, 69, 82, 52}},
-            /* '4' */ {52, new List<int>() {51, 69, 82, 84, 53}},
-            /* '5' */ {53, new List<int>() {52, 82, 84, 89, 54}},
-            /* '6' */ {54, new List<int>() {53, 84, 89, 85, 55}},
-            /* '7' */ {55, new List<int>() {54, 89, 85, 73, 56}},
-            /* '8' */ {56, new List<int>() {55, 85, 73, 79, 57}},
-            /* '9' */ {57, new List<int>() {56, 73, 79, 80, 48}},
-            /* '0' */ {48, new List<int>() {57, 79, 80, 219, 189}},
-            /* '-' */ {189, new List<int>() {48, 80, 219, 221, 187}},
-            /* '+' */ {187, new List<int>() {189, 219, 221}},
-            /* 'q' */ {81, new List<int>() {49, 50, 87, 83, 65}},
-            /* 'w' */ {87, new List<int>() {49, 81, 65, 83, 68, 69, 51, 50}},
-            /* 'e' */ {69, new List<int>() {50, 87, 83, 68, 70, 82, 52, 51}},
-            /* 'r' */ {82, new List<int>() {51, 69, 68, 70, 71, 84, 53, 52}},
-            /* 't' */ {84, new List<int>() {52, 82, 70, 71, 72, 89, 54, 53}},
-            /* 'y' */ {89, new List<int>() {53, 84, 71, 72, 74, 85, 55, 54}},
-            /* 'u' */ {85, new List<int>() {54, 89, 72, 74, 75, 73, 56, 55}},
-            /* 'i' */ {73, new List<int>() {55, 85, 74, 75, 76, 79, 57, 56}},
-            /* 'o' */ {79, new List<int>() {56, 73, 75, 76, 186, 80, 48, 57}},
-            /* 'p' */ {80, new List<int>() {57, 79, 76, 186, 222, 219, 189, 48}},
-            /* '[' */ {219, new List<int>() {48, 186, 222, 221, 187, 189}},
-            /* ']' */ {221, new List<int>() {189, 219, 187}},
-            /* 'a' */ {65, new List<int>() {81, 87, 83, 88, 90}},
-            /* 's' */ {83, new List<int>() {81, 65, 90, 88, 67, 68, 69, 87, 81}},
-            /* 'd' */ {68, new List<int>() {87, 83, 88, 67, 86, 70, 82, 69}},
-            /* 'f' */ {70, new List<int>() {69, 68, 67, 86, 66, 71, 84, 82}},
-            /* 'g' */ {71, new List<int>() {82, 70, 86, 66, 78, 72, 89, 84}},
-            /* 'h' */ {72, new List<int>() {84, 71, 66, 78, 77, 74, 85, 89}},
-            /* 'j' */ {74, new List<int>() {89, 72, 78, 77, 188, 75, 73, 85}},
-            /* 'k' */ {75, new List<int>() {85, 74, 77, 188, 190, 76, 79, 73}},
-            /* 'l' */ {76, new List<int>() {73, 75, 188, 190, 191, 186, 80, 79}},
-            /* ';' */ {186, new List<int>() {79, 76, 190, 191, 222, 219, 80}},
-            /* '\''*/ {222, new List<int>() {80, 186, 191, 221, 219}},
-            /* 'z' */ {90, new List<int>() {65, 83, 88}},
-            /* 'x' */ {88, new List<int>() {90, 65, 83, 68, 67}},
-            /* 'c' */ {67, new List<int>() {88, 83, 68, 70, 86}},
-            /* 'v' */ {86, new List<int>() {67, 68, 70, 71, 66}},
-            /* 'b' */ {66, new List<int>() {86, 70, 71, 72, 78}},
-            /* 'n' */ {78, new List<int>() {66, 71, 72, 74, 77}},
-            /* 'm' */ {77, new List<int>() {78, 72, 74, 75, 188}},
-            /* '<' */ {188, new List<int>() {77, 74, 75, 76, 190}},
-            /* '>' */ {190, new List<int>() {188, 75, 76, 186, 191}},
-            /* '?' */ {191, new List<int>() {190, 76, 186, 222}},
+            /* '`' */ {192, new List<int> {49}},
+            /* '1' */ {49, new List<int> {50, 87, 81}},
+            /* '2' */ {50, new List<int> {49, 81, 87, 69, 51}},
+            /* '3' */ {51, new List<int> {50, 87, 69, 82, 52}},
+            /* '4' */ {52, new List<int> {51, 69, 82, 84, 53}},
+            /* '5' */ {53, new List<int> {52, 82, 84, 89, 54}},
+            /* '6' */ {54, new List<int> {53, 84, 89, 85, 55}},
+            /* '7' */ {55, new List<int> {54, 89, 85, 73, 56}},
+            /* '8' */ {56, new List<int> {55, 85, 73, 79, 57}},
+            /* '9' */ {57, new List<int> {56, 73, 79, 80, 48}},
+            /* '0' */ {48, new List<int> {57, 79, 80, 219, 189}},
+            /* '-' */ {189, new List<int> {48, 80, 219, 221, 187}},
+            /* '+' */ {187, new List<int> {189, 219, 221}},
+            /* 'q' */ {81, new List<int> {49, 50, 87, 83, 65}},
+            /* 'w' */ {87, new List<int> {49, 81, 65, 83, 68, 69, 51, 50}},
+            /* 'e' */ {69, new List<int> {50, 87, 83, 68, 70, 82, 52, 51}},
+            /* 'r' */ {82, new List<int> {51, 69, 68, 70, 71, 84, 53, 52}},
+            /* 't' */ {84, new List<int> {52, 82, 70, 71, 72, 89, 54, 53}},
+            /* 'y' */ {89, new List<int> {53, 84, 71, 72, 74, 85, 55, 54}},
+            /* 'u' */ {85, new List<int> {54, 89, 72, 74, 75, 73, 56, 55}},
+            /* 'i' */ {73, new List<int> {55, 85, 74, 75, 76, 79, 57, 56}},
+            /* 'o' */ {79, new List<int> {56, 73, 75, 76, 186, 80, 48, 57}},
+            /* 'p' */ {80, new List<int> {57, 79, 76, 186, 222, 219, 189, 48}},
+            /* '[' */ {219, new List<int> {48, 186, 222, 221, 187, 189}},
+            /* ']' */ {221, new List<int> {189, 219, 187}},
+            /* 'a' */ {65, new List<int> {81, 87, 83, 88, 90}},
+            /* 's' */ {83, new List<int> {81, 65, 90, 88, 67, 68, 69, 87, 81}},
+            /* 'd' */ {68, new List<int> {87, 83, 88, 67, 86, 70, 82, 69}},
+            /* 'f' */ {70, new List<int> {69, 68, 67, 86, 66, 71, 84, 82}},
+            /* 'g' */ {71, new List<int> {82, 70, 86, 66, 78, 72, 89, 84}},
+            /* 'h' */ {72, new List<int> {84, 71, 66, 78, 77, 74, 85, 89}},
+            /* 'j' */ {74, new List<int> {89, 72, 78, 77, 188, 75, 73, 85}},
+            /* 'k' */ {75, new List<int> {85, 74, 77, 188, 190, 76, 79, 73}},
+            /* 'l' */ {76, new List<int> {73, 75, 188, 190, 191, 186, 80, 79}},
+            /* ';' */ {186, new List<int> {79, 76, 190, 191, 222, 219, 80}},
+            /* '\''*/ {222, new List<int> {80, 186, 191, 221, 219}},
+            /* 'z' */ {90, new List<int> {65, 83, 88}},
+            /* 'x' */ {88, new List<int> {90, 65, 83, 68, 67}},
+            /* 'c' */ {67, new List<int> {88, 83, 68, 70, 86}},
+            /* 'v' */ {86, new List<int> {67, 68, 70, 71, 66}},
+            /* 'b' */ {66, new List<int> {86, 70, 71, 72, 78}},
+            /* 'n' */ {78, new List<int> {66, 71, 72, 74, 77}},
+            /* 'm' */ {77, new List<int> {78, 72, 74, 75, 188}},
+            /* '<' */ {188, new List<int> {77, 74, 75, 76, 190}},
+            /* '>' */ {190, new List<int> {188, 75, 76, 186, 191}},
+            /* '?' */ {191, new List<int> {190, 76, 186, 222}},
         };
 
         /// <summary>

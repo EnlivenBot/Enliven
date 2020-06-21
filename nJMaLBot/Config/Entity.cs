@@ -10,10 +10,10 @@ namespace Bot.Config {
             Value = value.ToString();
         }
 
-        public object Id { get; set; }
-        public string Value { get; set; }
+        public object? Id { get; set; }
+        public string? Value { get; set; }
 
-        public static implicit operator string(Entity v) {
+        public static implicit operator string?(Entity v) {
             return v?.Value;
         }
     }

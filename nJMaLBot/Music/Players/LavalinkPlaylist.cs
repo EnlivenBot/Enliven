@@ -8,7 +8,7 @@ namespace Bot.Music.Players {
     public sealed class LavalinkPlaylist : IList<LavalinkTrack> {
         private readonly List<LavalinkTrack> _list;
         private readonly object _syncRoot;
-        public event EventHandler Update;
+        public event EventHandler? Update;
 
         public LavalinkPlaylist() {
             _list = new List<LavalinkTrack>();
@@ -93,7 +93,7 @@ namespace Bot.Music.Players {
             lock (_syncRoot) _list.CopyTo(array, index);
         }
 
-        public bool TryGetValue(int index, out LavalinkTrack track) {
+        public bool TryGetValue(int index, out LavalinkTrack? track) {
             lock (_syncRoot) {
                 track = null;
                 try {
@@ -176,7 +176,7 @@ namespace Bot.Music.Players {
             }
         }
 
-        public bool TryDequeue(out LavalinkTrack track) {
+        public bool TryDequeue(out LavalinkTrack? track) {
             lock (_syncRoot) {
                 if (_list.Count <= 0) {
                     track = null;

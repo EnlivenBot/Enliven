@@ -4,9 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Bot.Commands;
 using Bot.Utilities;
-using Bot.Utilities.Emoji;
+using Bot.Utilities.Commands;
 using Lavalink4NET.Decoding;
 using Lavalink4NET.Events;
 using Lavalink4NET.Player;
@@ -30,7 +29,7 @@ namespace Bot.Music.Players {
 
         public LavalinkPlaylist Playlist { get; }
 
-        public event EventHandler<int> CurrentTrackIndexChange;
+        public event EventHandler<int> CurrentTrackIndexChange = null!;
 
         public int CurrentTrackIndex {
             get => _currentTrackIndex;
@@ -42,10 +41,10 @@ namespace Bot.Music.Players {
             }
         }
 
-        private List<string> QueuePages { get; set; }
-        public event EventHandler QueueDeprecated;
-        public string LoadFailedId = "";
-        public int LoadFailedRemoves = 0;
+        private List<string>? QueuePages { get; set; }
+        public event EventHandler QueueDeprecated = null!;
+        public string? LoadFailedId = "";
+        public int LoadFailedRemoves;
 
         public override async Task OnTrackEndAsync(TrackEndEventArgs eventArgs) {
             var oldTrackIndex = CurrentTrackIndex;
@@ -62,7 +61,7 @@ namespace Bot.Music.Players {
                 }
                 else {
                     LoadFailedId = CurrentTrack?.Identifier;
-                    await PlayAsync(CurrentTrack, false, TrackPosition);
+                    await PlayAsync(CurrentTrack!, false, TrackPosition);
                 }
             }
             else {
@@ -115,7 +114,7 @@ namespace Bot.Music.Players {
             if (force && CurrentTrackIndex < 0) CurrentTrackIndex = Playlist.Count - 1;
 
             if (Playlist.TryGetValue(CurrentTrackIndex, out var track)) {
-                await PlayAsync(track, false, new TimeSpan?(), new TimeSpan?());
+                await PlayAsync(track!, false, new TimeSpan?(), new TimeSpan?());
             }
         }
 
@@ -183,7 +182,7 @@ namespace Bot.Music.Players {
                 if (CurrentTrack.Identifier == Playlist[CurrentTrackIndex].Identifier) return;
                 CurrentTrackIndex = Playlist.IndexOf(CurrentTrack);
             }
-            catch (Exception e) {
+            catch (Exception) {
                 CurrentTrackIndex = Playlist.IndexOf(CurrentTrack);
             }
         }

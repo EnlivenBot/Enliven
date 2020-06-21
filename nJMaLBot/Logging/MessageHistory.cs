@@ -14,13 +14,15 @@ using Discord;
 using Discord.WebSocket;
 using DiscordChatExporter.Domain.Discord.Models;
 using LiteDB;
+using Attachment = DiscordChatExporter.Domain.Discord.Models.Attachment;
+using Embed = DiscordChatExporter.Domain.Discord.Models.Embed;
 using MessageType = DiscordChatExporter.Domain.Discord.Models.MessageType;
 
-namespace Bot {
+namespace Bot.Logging {
     public class MessageHistory {
         public class MessageSnapshot {
             public DateTimeOffset EditTimestamp { get; set; }
-            public string Value { get; set; }
+            public string Value { get; set; } = null!;
         }
 
         [BsonField("U")] public bool IsHistoryUnavailable { get; set; }
@@ -78,7 +80,7 @@ namespace Bot {
             if (Edits.Count > 20)
                 return false;
             var commonCount = 0;
-            MessageSnapshot lastSnapshot = null;
+            MessageSnapshot? lastSnapshot = null;
             foreach (var edit in GetSnapshots(loc)) {
                 if (edit.Value.Length > 1020)
                     return false;
@@ -88,11 +90,11 @@ namespace Bot {
                 lastSnapshot = edit;
             }
 
-            return commonCount - lastSnapshot.EditTimestamp.ToString().Length +
-                loc.Get("MessageHistory.LastContent").Format(lastSnapshot.EditTimestamp).Length <= 5500;
+            return commonCount - (lastSnapshot?.EditTimestamp.ToString()?.Length ?? 0) +
+                loc.Get("MessageHistory.LastContent").Format(lastSnapshot?.EditTimestamp).Length <= 5500;
         }
 
-        public SocketGuildUser GetAuthor() {
+        public SocketGuildUser? GetAuthor() {
             try {
                 return Program.Client.GetUser(AuthorId) as SocketGuildUser;
             }
@@ -102,8 +104,13 @@ namespace Bot {
         }
 
         public string GetLastContent() {
-            return MessageHistoryManager.DiffMatchPatch.patch_apply(
-                Edits.SelectMany(s1 => DiffMatchPatch.DiffMatchPatch.patch_fromText(s1.Value)).ToList(), "")[0].ToString();
+            try {
+                return MessageHistoryManager.DiffMatchPatch.patch_apply(
+                    Edits.SelectMany(s1 => DiffMatchPatch.DiffMatchPatch.patch_fromText(s1.Value)).ToList(), "")[0].ToString() ?? "";
+            }
+            catch (Exception) {
+                return "";
+            }
         }
 
         public IEnumerable<MessageSnapshot> GetSnapshots(ILocalizationProvider loc, bool injectDiffsHighlight = false) {
@@ -114,10 +121,8 @@ namespace Bot {
 
             foreach (var edit in Edits) {
                 var last = snapshots.Count == 0 ? "" : snapshots.Last().Value;
-                var snapshot = MessageHistoryManager.DiffMatchPatch.patch_apply(DiffMatchPatch.DiffMatchPatch.patch_fromText(edit.Value), last)[0].ToString();
-                if (snapshot == "###Unavailable$$$") {
-                    snapshot = loc.Get("MessageHistory.PreviousUnavailable");
-                }
+                var snapshot = MessageHistoryManager.DiffMatchPatch.patch_apply(DiffMatchPatch.DiffMatchPatch.patch_fromText(edit.Value), last)[0].ToString() ??
+                               "";
 
                 snapshots.Add(new MessageSnapshot {EditTimestamp = edit.EditTimestamp, Value = snapshot});
                 if (injectDiffsHighlight && snapshots.Count > 1) {
@@ -160,7 +165,7 @@ namespace Bot {
 
                     await renderer.WriteMessageAsync(new Message(MessageId.ToString(), MessageType.Default, user, messageSnapshot.EditTimestamp,
                         null, false, messageSnapshot.Value,
-                        new List<DiscordChatExporter.Domain.Discord.Models.Attachment>(), new List<DiscordChatExporter.Domain.Discord.Models.Embed>(),
+                        new List<Attachment>(), new List<Embed>(),
                         new List<Reaction>(), members.Select(member1 => member1.User).ToList()));
                 }
 
@@ -180,8 +185,9 @@ namespace Bot {
         }
 
         private static IEnumerable<User> GetUserMentions(string text) {
-            foreach (Match m in Regex.Matches(text, @"(?<=<@|<@!)[0-9]{18}(?=>)", RegexOptions.Multiline))
-                yield return ConstructUser(Convert.ToUInt64(m.Value));
+            foreach (Match? m in Regex.Matches(text, @"(?<=<@|<@!)[0-9]{18}(?=>)", RegexOptions.Multiline))
+                if (m != null)
+                    yield return ConstructUser(Convert.ToUInt64(m.Value));
         }
 
         private static User ConstructUser(ulong userId) {
@@ -220,11 +226,11 @@ namespace Bot {
             return encoded.Replace("࢔", "<span style=\"background:DarkGreen;\">").Replace("࢕", "</span>")
                           .Replace("࢖", "<span class=\"removed\">").Replace("ࢗ", "</span>");
         }
-        
-        public async Task<IUserMessage> GetRealMessage() {
+
+        public async Task<IUserMessage?> GetRealMessage() {
             try {
                 var textChannel = (ITextChannel) Program.Client.GetChannel(ChannelId);
-                var messageAsync = await textChannel?.GetMessageAsync(MessageId);
+                var messageAsync = await textChannel?.GetMessageAsync(MessageId)!;
                 return messageAsync as IUserMessage;
             }
             catch (Exception) {

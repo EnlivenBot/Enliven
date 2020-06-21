@@ -5,7 +5,7 @@ using Bot.Music;
 using Bot.Music.Players;
 using Discord.Commands;
 
-namespace Bot.Commands {
+namespace Bot.Utilities.Commands {
     public class ChannelFunctionTypeReader : TypeReader {
         public override Task<TypeReaderResult> ReadAsync(ICommandContext context, string input, IServiceProvider services) {
             return Task.FromResult(Enum.TryParse(input, out ChannelFunction result)

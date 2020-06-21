@@ -1,14 +1,12 @@
 using System;
 using System.Collections.Concurrent;
 using Bot.Config.Localization.Providers;
-using Bot.Utilities.Commands;
-using Discord;
 using Discord.WebSocket;
 using LiteDB;
 
 namespace Bot.Config {
     public partial class GuildConfig {
-        private ILocalizationProvider _loc;
+        private ILocalizationProvider _loc = null!;
         [BsonId] public ulong GuildId { get; set; }
         public string Prefix { get; set; } = "&";
         public float Volume { get; set; } = 1f;
@@ -40,7 +38,7 @@ namespace Bot.Config {
             GlobalDB.Guilds.Upsert(GuildId, this);
         }
 
-        public static event EventHandler<string> LocalizationChanged;
+        public static event EventHandler<string> LocalizationChanged = null!;
         public GuildConfig SetChannel(string channelId, ChannelFunction func) {
             if (channelId == "null")
                 FunctionalChannels.TryRemove(func, out _);
@@ -55,7 +53,7 @@ namespace Bot.Config {
             return this;
         }
 
-        public bool GetChannel(ChannelFunction function, out SocketChannel channel) {
+        public bool GetChannel(ChannelFunction function, out SocketChannel? channel) {
             if (FunctionalChannels.TryGetValue(function, out var value)) {
                 channel = Program.Client.GetChannel(value);
                 return true;
@@ -88,7 +86,9 @@ namespace Bot.Config {
             guildConfig = new GuildConfig {GuildId = guildId};
             guildConfig.Save();
             if (displayWelcomeMessage) {
+                #pragma warning disable 4014
                 GlobalBehaviors.PrintWelcomeMessage(Program.Client.GetGuild(guildId));
+                #pragma warning restore 4014
             }
 
             return guildConfig;
