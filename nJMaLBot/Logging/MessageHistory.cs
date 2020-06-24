@@ -159,36 +159,23 @@ namespace Bot.Logging {
 
                 await renderer.WritePreambleAsync();
 
-                if (Attachments != null && Attachments.Count != 0) {
-                    await renderer.WriteMessageAsync(new Message("", MessageType.Default, user, DateTimeOffset.MinValue, null, true, "",
-                        (await Task.WhenAll(Attachments.Select(async s => {
-                            var match = AttachmentRegex.Match(s);
-                            long fileSize = 0;
-                            try {
-                                if (!Attachment.ImageFileExtensions.Contains(Path.GetExtension(match.Groups[3].Value), StringComparer.OrdinalIgnoreCase)) {
-                                    var request = WebRequest.CreateHttp(s);
-                                    request.UserAgent = "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.1";
-                                    request.Method = "HEAD";
-                                    using var response = await request.GetResponseAsync();
-                                    fileSize = response.ContentLength;
-                                }
-                            }
-                            catch (Exception) {
-                                // ignored
-                            }
+                var messageSnapshots = GetSnapshots(loc, injectDiffsHighlight).ToList();
+                var hasAttachments = Attachments != null && Attachments.Count != 0;
 
-                            var attachment = new Attachment(match.Groups[2].Value, s, match.Groups[3].Value, null, null, FileSize.FromBytes(fileSize));
-                            return attachment;
-                        }))).ToList(), new List<Embed>(), new List<Reaction>(), new List<User>()));
+                // If we have attachments and message edits
+                // Then render attachments separately
+                if (hasAttachments && messageSnapshots.Count != 1) {
+                    await renderer.WriteMessageAsync(new Message("", MessageType.Default, user, DateTimeOffset.MinValue, null, true, "",
+                        (await GetExportAttachments()).ToList(), new List<Embed>(), new List<Reaction>(), new List<User>()));
                 }
 
-                foreach (var messageSnapshot in GetSnapshots(loc, injectDiffsHighlight)) {
+                foreach (var messageSnapshot in messageSnapshots) {
                     foreach (var userMention in GetUserMentions(messageSnapshot.Value)) members.Add(Member.CreateForUser(userMention));
 
                     await renderer.WriteMessageAsync(new Message(MessageId.ToString(), MessageType.Default, user, messageSnapshot.EditTimestamp,
                         null, false, messageSnapshot.Value,
-                        new List<Attachment>(), new List<Embed>(),
-                        new List<Reaction>(), members.Select(member1 => member1.User).ToList()));
+                        hasAttachments && messageSnapshots.Count == 1 ? (await GetExportAttachments()).ToList() : new List<Attachment>(),
+                        new List<Embed>(), new List<Reaction>(), members.Select(member1 => member1.User).ToList()));
                 }
 
                 await renderer.WritePostambleAsync();
@@ -242,6 +229,28 @@ namespace Bot.Logging {
             }
 
             return html.ToString();
+        }
+
+        private async Task<Attachment[]> GetExportAttachments() {
+            return await Task.WhenAll(Attachments.Select(async s => {
+                var match = AttachmentRegex.Match(s);
+                long fileSize = 0;
+                try {
+                    if (!Attachment.ImageFileExtensions.Contains(Path.GetExtension(match.Groups[3].Value), StringComparer.OrdinalIgnoreCase)) {
+                        var request = WebRequest.CreateHttp(s);
+                        request.UserAgent = "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.1";
+                        request.Method = "HEAD";
+                        using var response = await request.GetResponseAsync();
+                        fileSize = response.ContentLength;
+                    }
+                }
+                catch (Exception) {
+                    // ignored
+                }
+
+                var attachment = new Attachment(match.Groups[2].Value, s, match.Groups[3].Value, null, null, FileSize.FromBytes(fileSize));
+                return attachment;
+            }));
         }
 
         private static string HtmlDiffsUnEncode(string encoded) {
