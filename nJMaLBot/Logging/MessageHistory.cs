@@ -135,9 +135,10 @@ namespace Bot.Logging {
         }
 
         public IEnumerable<EmbedFieldBuilder> GetEditsAsFields(ILocalizationProvider loc) {
-            var embedFields = GetSnapshots(loc)
-                             .Select(messageSnapshot => new EmbedFieldBuilder
-                                  {Name = messageSnapshot.EditTimestamp.ToString(), Value = ">>> " + messageSnapshot.Value}).ToList();
+            var embedFields = GetSnapshots(loc).Select(messageSnapshot => new EmbedFieldBuilder {
+                Name = messageSnapshot.EditTimestamp.ToString(), 
+                Value = string.IsNullOrWhiteSpace(messageSnapshot.Value) ? loc.Get("MessageHistory.EmptyMessage") : $">>> {messageSnapshot.Value}"
+            }).ToList();
 
             var lastContent = embedFields.Last();
             lastContent.Name = loc.Get("MessageHistory.LastContent").Format(lastContent.Name);
@@ -269,7 +270,8 @@ namespace Bot.Logging {
 
         public async Task<string> GetAttachmentsString(bool needFileSize = true) {
             return string.Join("\n",
-                (await GetExportAttachments(needFileSize)).Select(attachment => $"[{attachment.FileName} ({attachment.FileSize.ToString()})]({attachment.Url})"));
+                (await GetExportAttachments(needFileSize)).Select(attachment =>
+                    $"[{attachment.FileName} ({attachment.FileSize.ToString()})]({attachment.Url})"));
         }
 
         private static string HtmlDiffsUnEncode(string encoded) {

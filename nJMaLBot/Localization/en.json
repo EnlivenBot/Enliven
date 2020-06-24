@@ -217,7 +217,8 @@
       "GuildLogCleared": "The bot cleared the message history of the guild {0} ({1}). Cleared {2} posts.",
       "ViewMessageExists": "View change history [of this post]({0})",
       "Attachments" : "Attachments: {0}",
-      "AttachmentsTitle" : "Attachments"
+      "AttachmentsTitle" : "Attachments",
+      "EmptyMessage" : "```Message without text```"
     },
     "Statistics": {
       "Title": "Statistics",

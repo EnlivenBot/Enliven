@@ -217,7 +217,8 @@
       "GuildLogCleared" : "Бот очистил историю сообщений гильдии {0} ({1}). Очищено {2} сообщений",
       "ViewMessageExists" : "Просмотр истории изменений [этого сообщения]({0})",
       "Attachments" : "Вложения: {0}",
-      "AttachmentsTitle" : "Вложения"
+      "AttachmentsTitle" : "Вложения",
+      "EmptyMessage" : "```Сообщение без текста```"
     },
     "Statistics" : {
       "Title" : "Статистика",
