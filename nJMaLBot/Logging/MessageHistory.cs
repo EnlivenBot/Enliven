@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -13,6 +14,7 @@ using DiffMatchPatch;
 using Discord;
 using Discord.WebSocket;
 using DiscordChatExporter.Domain.Discord.Models;
+using DiscordChatExporter.Domain.Discord.Models.Common;
 using LiteDB;
 using Attachment = DiscordChatExporter.Domain.Discord.Models.Attachment;
 using Embed = DiscordChatExporter.Domain.Discord.Models.Embed;
@@ -40,6 +42,8 @@ namespace Bot.Logging {
         [BsonField("E")] public List<MessageSnapshot> Edits { get; set; } = new List<MessageSnapshot>();
 
         [BsonIgnore] public bool HistoryExists => Edits.Count != 0;
+        
+        [BsonIgnore] private static Regex AttachmentRegex = new Regex(@"(\d+)\/(\d+)\/(.+?)$");
 
         public void Save() {
             GlobalDB.Messages.Upsert(this);
@@ -153,6 +157,14 @@ namespace Bot.Logging {
                 members.Add(member);
 
                 await renderer.WritePreambleAsync();
+                if (Attachments != null && Attachments.Count != 0) {
+                    await renderer.WriteMessageAsync(new Message("", MessageType.Default, user, DateTimeOffset.MinValue, null, true, "",
+                        Attachments.Select(s => {
+                            var match = AttachmentRegex.Match(s);
+                            var attachment = new Attachment(match.Groups[2].Value, s, match.Groups[3].Value, null, null, FileSize.FromBytes(0));
+                            return attachment;
+                        }).ToImmutableList(), new List<Embed>(), new List<Reaction>(), new List<User>()));
+                }
                 foreach (var messageSnapshot in GetSnapshots(loc, injectDiffsHighlight)) {
                     foreach (var userMention in GetUserMentions(messageSnapshot.Value)) members.Add(Member.CreateForUser(userMention));
 
