@@ -44,6 +44,8 @@ namespace Bot.Logging {
 
         [BsonIgnore] public bool HistoryExists => Edits.Count != 0;
 
+        [BsonIgnore] public bool HasAttachments => Attachments != null && Attachments.Count != 0;
+
         [BsonIgnore] private static Regex AttachmentRegex = new Regex(@"(\d+)\/(\d+)\/(.+?)$");
 
         public void Save() {
@@ -74,10 +76,8 @@ namespace Bot.Logging {
 
         public bool CanFitToEmbed(ILocalizationProvider loc) {
             if (Edits.Count > 20)
-            return false;
-            var commonCount = Attachments != null && Attachments.Count != 0
-                ? loc.Get("MessageHistory.Attachments").Length + Attachments.Select(s => s.Length + 6).Sum()
-                : 0;
+                return false;
+            var commonCount = HasAttachments ? GetAttachmentsString(false).Result.Length : 0;
             MessageSnapshot? lastSnapshot = null;
             foreach (var edit in GetSnapshots(loc)) {
                 if (edit.Value.Length > 1020)
@@ -231,12 +231,26 @@ namespace Bot.Logging {
             return html.ToString();
         }
 
-        private async Task<Attachment[]> GetExportAttachments() {
-            return await Task.WhenAll(Attachments.Select(async s => {
+        private static bool ParseAttachment(string s, out string id, out string fileName) {
+            try {
                 var match = AttachmentRegex.Match(s);
+                id = match.Groups[2].Value;
+                fileName = match.Groups[3].Value;
+                return true;
+            }
+            catch (Exception) {
+                id = "";
+                fileName = "";
+                return false;
+            }
+        }
+
+        public async Task<Attachment[]> GetExportAttachments(bool needFileSize = true) {
+            return await Task.WhenAll(Attachments.Select(async s => {
+                ParseAttachment(s, out var id, out var fileName);
                 long fileSize = 0;
                 try {
-                    if (!Attachment.ImageFileExtensions.Contains(Path.GetExtension(match.Groups[3].Value), StringComparer.OrdinalIgnoreCase)) {
+                    if (needFileSize && !Attachment.ImageFileExtensions.Contains(Path.GetExtension(fileName), StringComparer.OrdinalIgnoreCase)) {
                         var request = WebRequest.CreateHttp(s);
                         request.UserAgent = "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.1";
                         request.Method = "HEAD";
@@ -248,9 +262,14 @@ namespace Bot.Logging {
                     // ignored
                 }
 
-                var attachment = new Attachment(match.Groups[2].Value, s, match.Groups[3].Value, null, null, FileSize.FromBytes(fileSize));
+                var attachment = new Attachment(id, s, fileName, null, null, FileSize.FromBytes(fileSize));
                 return attachment;
             }));
+        }
+
+        public async Task<string> GetAttachmentsString(bool needFileSize = true) {
+            return string.Join("\n",
+                (await GetExportAttachments(needFileSize)).Select(attachment => $"[{attachment.FileName} ({attachment.FileSize.ToString()})]({attachment.Url})"));
         }
 
         private static string HtmlDiffsUnEncode(string encoded) {

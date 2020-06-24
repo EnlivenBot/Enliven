@@ -89,10 +89,10 @@ namespace Bot.Logging {
                                                          .WithFooter(loc.Get("MessageHistory.MessageId").Format(history.MessageId))
                                                          .AddField(loc.Get("MessageHistory.Channel"), $"<#{history.ChannelId}>", true);
                     if (history.HistoryExists) {
-                        if (history.Attachments != null && history.Attachments.Count != 0) {
-                            embedBuilder.AddField(loc.Get("MessageHistory.AttachmentsTitle"),
-                                loc.Get("MessageHistory.Attachments").Format(string.Join(", ", history.Attachments.Select((s, i) => $"[{i}]({s})"))));
+                        if (history.HasAttachments) {
+                            embedBuilder.AddField(loc.Get("MessageHistory.AttachmentsTitle"), await history.GetAttachmentsString());
                         }
+
                         embedBuilder.AddField(loc.Get("MessageHistory.Requester"), $"{history.GetAuthor()?.Username} <@{history.AuthorId}>", true);
 
                         if (history.CanFitToEmbed(loc)) {
@@ -199,9 +199,8 @@ namespace Bot.Logging {
             }
 
             if (history.HistoryExists) {
-                if (history.Attachments != null && history.Attachments.Count != 0) {
-                    embedBuilder.AddField(loc.Get("MessageHistory.AttachmentsTitle"),
-                        loc.Get("MessageHistory.Attachments").Format(string.Join(", ", history.Attachments.Select((s, i) => $"[{i + 1}]({s})"))));
+                if (history.HasAttachments) {
+                    embedBuilder.AddField(loc.Get("MessageHistory.AttachmentsTitle"), await history.GetAttachmentsString());
                 }
 
                 if (await realMessage != null) {
