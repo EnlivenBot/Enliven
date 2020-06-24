@@ -12,7 +12,6 @@ using Discord;
 using HarmonyLib;
 using LiteDB;
 using NLog;
-using LiteDB.Engine;
 
 // ReSharper disable UnusedMember.Local
 

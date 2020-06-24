@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -13,6 +15,7 @@ using DiffMatchPatch;
 using Discord;
 using Discord.WebSocket;
 using DiscordChatExporter.Domain.Discord.Models;
+using DiscordChatExporter.Domain.Discord.Models.Common;
 using LiteDB;
 using Attachment = DiscordChatExporter.Domain.Discord.Models.Attachment;
 using Embed = DiscordChatExporter.Domain.Discord.Models.Embed;
@@ -24,6 +27,8 @@ namespace Bot.Logging {
             public DateTimeOffset EditTimestamp { get; set; }
             public string Value { get; set; } = null!;
         }
+
+        [BsonField("At")] public List<string>? Attachments { get; set; }
 
         [BsonField("U")] public bool IsHistoryUnavailable { get; set; }
 
@@ -38,6 +43,10 @@ namespace Bot.Logging {
         [BsonField("E")] public List<MessageSnapshot> Edits { get; set; } = new List<MessageSnapshot>();
 
         [BsonIgnore] public bool HistoryExists => Edits.Count != 0;
+
+        [BsonIgnore] public bool HasAttachments => Attachments != null && Attachments.Count != 0;
+
+        [BsonIgnore] private static Regex AttachmentRegex = new Regex(@"(\d+)\/(\d+)\/(.+?)$");
 
         public void Save() {
             GlobalDB.Messages.Upsert(this);
@@ -68,7 +77,7 @@ namespace Bot.Logging {
         public bool CanFitToEmbed(ILocalizationProvider loc) {
             if (Edits.Count > 20)
                 return false;
-            var commonCount = 0;
+            var commonCount = HasAttachments ? GetAttachmentsString(false).Result.Length : 0;
             MessageSnapshot? lastSnapshot = null;
             foreach (var edit in GetSnapshots(loc)) {
                 if (edit.Value.Length > 1020)
@@ -149,13 +158,24 @@ namespace Bot.Logging {
                 members.Add(member);
 
                 await renderer.WritePreambleAsync();
-                foreach (var messageSnapshot in GetSnapshots(loc, injectDiffsHighlight)) {
+
+                var messageSnapshots = GetSnapshots(loc, injectDiffsHighlight).ToList();
+                var hasAttachments = Attachments != null && Attachments.Count != 0;
+
+                // If we have attachments and message edits
+                // Then render attachments separately
+                if (hasAttachments && messageSnapshots.Count != 1) {
+                    await renderer.WriteMessageAsync(new Message("", MessageType.Default, user, DateTimeOffset.MinValue, null, true, "",
+                        (await GetExportAttachments()).ToList(), new List<Embed>(), new List<Reaction>(), new List<User>()));
+                }
+
+                foreach (var messageSnapshot in messageSnapshots) {
                     foreach (var userMention in GetUserMentions(messageSnapshot.Value)) members.Add(Member.CreateForUser(userMention));
 
                     await renderer.WriteMessageAsync(new Message(MessageId.ToString(), MessageType.Default, user, messageSnapshot.EditTimestamp,
                         null, false, messageSnapshot.Value,
-                        new List<Attachment>(), new List<Embed>(),
-                        new List<Reaction>(), members.Select(member1 => member1.User).ToList()));
+                        hasAttachments && messageSnapshots.Count == 1 ? (await GetExportAttachments()).ToList() : new List<Attachment>(),
+                        new List<Embed>(), new List<Reaction>(), members.Select(member1 => member1.User).ToList()));
                 }
 
                 await renderer.WritePostambleAsync();
@@ -209,6 +229,47 @@ namespace Bot.Logging {
             }
 
             return html.ToString();
+        }
+
+        private static bool ParseAttachment(string s, out string id, out string fileName) {
+            try {
+                var match = AttachmentRegex.Match(s);
+                id = match.Groups[2].Value;
+                fileName = match.Groups[3].Value;
+                return true;
+            }
+            catch (Exception) {
+                id = "";
+                fileName = "";
+                return false;
+            }
+        }
+
+        public async Task<Attachment[]> GetExportAttachments(bool needFileSize = true) {
+            return await Task.WhenAll(Attachments.Select(async s => {
+                ParseAttachment(s, out var id, out var fileName);
+                long fileSize = 0;
+                try {
+                    if (needFileSize && !Attachment.ImageFileExtensions.Contains(Path.GetExtension(fileName), StringComparer.OrdinalIgnoreCase)) {
+                        var request = WebRequest.CreateHttp(s);
+                        request.UserAgent = "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.1";
+                        request.Method = "HEAD";
+                        using var response = await request.GetResponseAsync();
+                        fileSize = response.ContentLength;
+                    }
+                }
+                catch (Exception) {
+                    // ignored
+                }
+
+                var attachment = new Attachment(id, s, fileName, null, null, FileSize.FromBytes(fileSize));
+                return attachment;
+            }));
+        }
+
+        public async Task<string> GetAttachmentsString(bool needFileSize = true) {
+            return string.Join("\n",
+                (await GetExportAttachments(needFileSize)).Select(attachment => $"[{attachment.FileName} ({attachment.FileSize.ToString()})]({attachment.Url})"));
         }
 
         private static string HtmlDiffsUnEncode(string encoded) {

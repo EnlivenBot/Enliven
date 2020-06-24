@@ -75,8 +75,7 @@ namespace Bot.Utilities.Commands {
             if (hasStringPrefix || hasMentionPrefix) {
                 var query = msg.Content.Try(s1 => s1.Substring(argPos), "");
                 if (string.IsNullOrEmpty(query)) query = " ";
-                if (string.IsNullOrWhiteSpace(query) && hasMentionPrefix)
-                    query = "help";
+                if (string.IsNullOrWhiteSpace(query) && hasMentionPrefix) query = "help";
                 var command = ParseCommand(query, out var args);
 
                 var result = await ExecuteCommand(query, context, s.Author.Id.ToString());
@@ -126,9 +125,6 @@ namespace Bot.Utilities.Commands {
                             break;
                         case CommandError.UnmetPrecondition:
                             await SendErrorMessage(msg, loc, loc.Get("CommandHandler.UnmetPrecondition"));
-                            break;
-                        case CommandError.Exception:
-                            await SendErrorMessage(msg, loc, string.Format(loc.Get("CommandHandler.Exception"), result));
                             break;
                         case CommandError.ObjectNotFound:
                             await SendErrorMessage(msg, loc, result.ErrorReason);
