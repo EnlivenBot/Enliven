@@ -18,6 +18,7 @@ using NLog;
 
 namespace Bot.Logging {
     public static class MessageHistoryManager {
+
         // ReSharper disable once InconsistentNaming
         private static readonly Logger logger = LogManager.GetCurrentClassLogger();
         public static readonly DiffMatchPatch.DiffMatchPatch DiffMatchPatch = new DiffMatchPatch.DiffMatchPatch();
@@ -27,15 +28,15 @@ namespace Bot.Logging {
             // Message created handled located in CommandHandler
             Program.Client.MessageUpdated += ClientOnMessageUpdated;
             Program.Client.MessageDeleted += ClientOnMessageDeleted;
-            Program.Client.ChannelDestroyed += ClientOnChannelDestroyed;
-            Program.Client.LeftGuild += ClientOnLeftGuild;
-            CollectorsUtils.CollectReaction(CommonEmoji.LegacyBook, reaction => true, async eventArgs => {
+            CollectorsUtils.CollectReaction(CommonEmoji.LegacyBook, reaction => {
+                if (!(reaction.Channel is ITextChannel textChannel)) return false;
+                return GuildConfig.Get(textChannel.GuildId).IsLoggingEnabled;
+            }, async eventArgs => {
                 await eventArgs.RemoveReason();
+                var guildConfig = GuildConfig.Get((eventArgs.Reaction.Channel as ITextChannel)!.GuildId);
                 try {
                     await PrintLog(MessageHistory.Get(eventArgs.Reaction.Channel.Id, eventArgs.Reaction.MessageId),
-                        (SocketTextChannel) eventArgs.Reaction.Channel,
-                        new GuildLocalizationProvider(((SocketTextChannel) eventArgs.Reaction.Channel).Guild.Id),
-                        (IGuildUser) eventArgs.Reaction.User.Value);
+                        (ITextChannel) eventArgs.Reaction.Channel, guildConfig.Loc, (IGuildUser) eventArgs.Reaction.User.Value);
                 }
                 catch (Exception e) {
                     logger.Error(e, "Faled to print log");
@@ -66,7 +67,7 @@ namespace Bot.Logging {
                 else {
                     history.AddSnapshot(arg2);
                 }
-                
+
                 history.Save();
                 CommandHandler.RegisterUsage("MessagesChanged", "Messages");
             });
@@ -189,9 +190,9 @@ namespace Bot.Logging {
             return stream;
         }
 
-        public static async Task PrintLog(MessageHistory history, SocketTextChannel outputChannel, ILocalizationProvider loc, IGuildUser requester) {
+        public static async Task PrintLog(MessageHistory history, ITextChannel outputChannel, ILocalizationProvider loc, IGuildUser requester) {
             var realMessage = history.GetRealMessage();
-            RestUserMessage logMessage = null;
+            IUserMessage logMessage = null;
             var embedBuilder = new EmbedBuilder().WithCurrentTimestamp()
                                                  .WithTitle(loc.Get("MessageHistory.LogTitle"))
                                                  .WithFooter(loc.Get("MessageHistory.MessageId").Format(history.MessageId))
