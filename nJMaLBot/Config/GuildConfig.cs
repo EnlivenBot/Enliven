@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using Bot.Config.Localization.Providers;
 using Discord.WebSocket;
 using LiteDB;
@@ -16,6 +17,7 @@ namespace Bot.Config {
 
         public bool IsLoggingEnabled { get; set; } = false;
         public bool IsCommandLoggingEnabled { get; set; } = false;
+        public List<ulong> LoggedChannels { get; set; } = new List<ulong>();
 
         [BsonIgnore] public ILocalizationProvider Loc => _loc ??= new GuildLocalizationProvider(this);
     }
@@ -45,11 +47,10 @@ namespace Bot.Config {
             else
                 FunctionalChannels[func] = Convert.ToUInt64(channelId);
 
-            return this;
-        }
+            if (func == ChannelFunction.Log) {
+                LoggedChannels.Remove(Convert.ToUInt64(channelId));
+            }
 
-        public GuildConfig SetServerPrefix(string prefix) {
-            Prefix = prefix;
             return this;
         }
 
@@ -70,11 +71,6 @@ namespace Bot.Config {
         public GuildConfig SetLanguage(string language) {
             GuildLanguage = language;
             LocalizationChanged?.Invoke(this, language);
-            return this;
-        }
-        
-        public GuildConfig SetVolume(float volume) {
-            Volume = volume;
             return this;
         }
 

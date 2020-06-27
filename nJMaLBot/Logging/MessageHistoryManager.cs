@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -57,12 +56,17 @@ namespace Bot.Logging {
 
         private static Task ClientOnMessageUpdated(Cacheable<IMessage, ulong> arg1, SocketMessage arg2, ISocketMessageChannel arg3) {
             Task.Run(() => {
+                if (!(arg2.Channel is ITextChannel textChannel)) return;
                 var history = MessageHistory.Get(arg2);
-                if (history.Edits.Count == 0) {
+                if (!history.HistoryExists) {
+                    if (!NeedLogMessage(arg2, GuildConfig.Get(textChannel.GuildId), null)) return;
+                    history = MessageHistory.FromMessage(arg2);
                     history.IsHistoryUnavailable = true;
                 }
-
-                history.AddSnapshot(arg2);
+                else {
+                    history.AddSnapshot(arg2);
+                }
+                
                 history.Save();
                 CommandHandler.RegisterUsage("MessagesChanged", "Messages");
             });
@@ -221,7 +225,7 @@ namespace Bot.Logging {
                 if (await realMessage != null) {
                     embedBuilder.WithDescription(loc.Get("MessageHistory.MessageWithoutHistory").Format((await realMessage).GetJumpUrl()));
                     if (Program.Client.GetChannel(history.ChannelId) is SocketGuildChannel guildChannel)
-                        LogCreatedMessage(await realMessage, GuildConfig.Get(guildChannel.Guild.Id));
+                        TryLogCreatedMessage((await realMessage)!, GuildConfig.Get(guildChannel.Guild.Id), null);
                 }
                 else {
                     embedBuilder.WithDescription(loc.Get("MessageHistory.MessageNull"));
@@ -233,22 +237,20 @@ namespace Bot.Logging {
             logMessage?.DelayedDelete(TimeSpan.FromMinutes(10));
         }
 
-        public static void LogCreatedMessage(IMessage arg, GuildConfig config) {
-            if (!config.IsLoggingEnabled || arg.Author.IsBot || arg.Author.IsWebhook) {
+        public static bool NeedLogMessage(IMessage arg, GuildConfig config, bool? isCommand) {
+            if (!config.IsLoggingEnabled || arg.Author.IsBot || arg.Author.IsWebhook) return false;
+            if (!(arg.Channel is ITextChannel textChannel)) return false;
+            if (isCommand == true && config.IsCommandLoggingEnabled) return false;
+
+            return config.LoggedChannels.Contains(textChannel.Id);
+        }
+
+        public static void TryLogCreatedMessage(IMessage arg, GuildConfig config, bool? isCommand) {
+            if (!NeedLogMessage(arg, config, isCommand))
                 return;
-            }
 
-            if (!(arg.Channel is ITextChannel textChannel)) return;
-
-            new MessageHistory {
-                AuthorId = arg.Author.Id,
-                ChannelId = textChannel.Id, MessageId = arg.Id,
-                Edits = new List<MessageHistory.MessageSnapshot> {
-                    new MessageHistory.MessageSnapshot
-                        {EditTimestamp = arg.CreatedAt, Value = global::DiffMatchPatch.DiffMatchPatch.patch_toText(DiffMatchPatch.patch_make("", arg.Content))}
-                },
-                Attachments = arg.Attachments.Select(attachment => attachment.Url).ToList()
-            }.Save();
+            var history = MessageHistory.FromMessage(arg);
+            history.Save();
             CommandHandler.RegisterUsage("MessagesCreated", "Messages");
         }
     }

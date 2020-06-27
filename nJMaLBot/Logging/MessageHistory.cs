@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -23,6 +22,22 @@ using MessageType = DiscordChatExporter.Domain.Discord.Models.MessageType;
 
 namespace Bot.Logging {
     public class MessageHistory {
+        public static MessageHistory FromMessage(IMessage arg) {
+            var history = new MessageHistory {
+                AuthorId = arg.Author.Id,
+                ChannelId = arg.Channel.Id,
+                MessageId = arg.Id,
+                Edits = new List<MessageSnapshot> {
+                    new MessageSnapshot {
+                        EditTimestamp = arg.CreatedAt,
+                        Value = DiffMatchPatch.DiffMatchPatch.patch_toText(MessageHistoryManager.DiffMatchPatch.patch_make("", arg.Content))
+                    }
+                },
+                Attachments = arg.Attachments.Select(attachment => attachment.Url).ToList()
+            };
+            return history;
+        }
+
         public class MessageSnapshot {
             public DateTimeOffset EditTimestamp { get; set; }
             public string Value { get; set; } = null!;
@@ -136,7 +151,7 @@ namespace Bot.Logging {
 
         public IEnumerable<EmbedFieldBuilder> GetEditsAsFields(ILocalizationProvider loc) {
             var embedFields = GetSnapshots(loc).Select(messageSnapshot => new EmbedFieldBuilder {
-                Name = messageSnapshot.EditTimestamp.ToString(), 
+                Name = messageSnapshot.EditTimestamp.ToString(),
                 Value = string.IsNullOrWhiteSpace(messageSnapshot.Value) ? loc.Get("MessageHistory.EmptyMessage") : $">>> {messageSnapshot.Value}"
             }).ToList();
 

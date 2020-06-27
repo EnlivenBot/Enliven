@@ -34,7 +34,7 @@ namespace Bot.Utilities.Commands {
             var commandService = new CommandService();
             var commandHandler = new CommandHandler(client, commandService);
             logger.Info("Creating new command service");
-            
+
             logger.Info("Adding modules");
             await commandService.AddModulesAsync(Assembly.GetEntryAssembly(), null);
             commandService.AddTypeReader(typeof(ChannelFunction), new ChannelFunctionTypeReader());
@@ -45,12 +45,13 @@ namespace Bot.Utilities.Commands {
             }
 
             logger.Info("Adding commands to fuzzy search");
-            foreach (var alias in commandHandler.AllCommands.SelectMany(commandInfo => commandInfo.Aliases).GroupBy(s => s).Select(grouping => grouping.First())) {
+            foreach (var alias in commandHandler.AllCommands.SelectMany(commandInfo => commandInfo.Aliases).GroupBy(s => s)
+                                                .Select(grouping => grouping.First())) {
                 FuzzySearch.AddData(alias);
             }
-            
+
             Patch.ApplyCommandPatch();
-            
+
             if (!Program.CmdOptions.Observer)
                 client.MessageReceived += message => Task.Run(() => commandHandler.HandleCommand(message));
 
@@ -72,7 +73,9 @@ namespace Bot.Utilities.Commands {
             var hasStringPrefix = msg.HasStringPrefix(guild.Prefix, ref argPos);
             var hasMentionPrefix = HasMentionPrefix(msg, _client.CurrentUser, ref argPos);
 
+            bool isCommand = false;
             if (hasStringPrefix || hasMentionPrefix) {
+                isCommand = true;
                 var query = msg.Content.Try(s1 => s1.Substring(argPos), "");
                 if (string.IsNullOrEmpty(query)) query = " ";
                 if (string.IsNullOrWhiteSpace(query) && hasMentionPrefix) query = "help";
@@ -133,15 +136,10 @@ namespace Bot.Utilities.Commands {
                             await SendErrorMessage(msg, loc, result.ErrorReason);
                             break;
                     }
-
-                    MessageHistoryManager.LogCreatedMessage(msg, guild);
-                }
-                else if (guild.IsCommandLoggingEnabled) {
-                    MessageHistoryManager.LogCreatedMessage(msg, guild);
                 }
             }
-            else
-                MessageHistoryManager.LogCreatedMessage(s, guild);
+
+            MessageHistoryManager.TryLogCreatedMessage(s, guild, isCommand);
         }
 
         public async Task<IResult> ExecuteCommand(string query, ICommandContext context, string authorId) {

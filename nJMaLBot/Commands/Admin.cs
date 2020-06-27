@@ -26,7 +26,9 @@ namespace Bot.Commands {
         [Command("setprefix")]
         [Summary("setprefix0s")]
         public async Task SetPrefix([Summary("setrefix0_0s")] string prefix) {
-            GuildConfig.Get(Context.Guild.Id).SetServerPrefix(prefix).Save();
+            var guildConfig = GuildConfig.Get(Context.Guild.Id);
+            guildConfig.Prefix = prefix;
+            guildConfig.Save();
             await ReplyFormattedAsync(Loc.Get("Commands.Success"), Loc.Get("Commands.SetPrefixResponse").Format(prefix), TimeSpan.FromMinutes(10));
             Context.Message.SafeDelete();
         }
