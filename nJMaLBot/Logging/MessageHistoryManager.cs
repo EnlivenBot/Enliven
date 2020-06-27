@@ -81,14 +81,10 @@ namespace Bot.Logging {
                     if (!(arg2 is ITextChannel textChannel)) return;
 
                     var history = MessageHistory.Get(arg2.Id, arg1.Id);
-                    if (!history.HistoryExists) {
-                        return;
-                    }
-
                     var guildConfig = GuildConfig.Get(textChannel.GuildId);
 
                     if (!guildConfig.GetChannel(ChannelFunction.Log, out var logChannel) || logChannel.Id == arg2.Id) return;
-                    var loc = new GuildLocalizationProvider(arg2.Id);
+                    var loc = guildConfig.Loc;
                     var embedBuilder = new EmbedBuilder().WithCurrentTimestamp()
                                                          .WithTitle(loc.Get("MessageHistory.MessageWasDeleted"))
                                                          .WithFooter(loc.Get("MessageHistory.MessageId").Format(history.MessageId))
@@ -112,14 +108,19 @@ namespace Bot.Logging {
                                 $"History-{history.ChannelId}-{history.MessageId}.jpg",
                                 "===========================================", false, embedBuilder.Build());
                         }
+                        
+                        CommandHandler.RegisterUsage("MessagesDeleted", "Messages");
                     }
-                    else {
+                    else if (guildConfig.HistoryMissingInLog)
+                    {
                         embedBuilder.WithDescription(loc.Get("MessageHistory.OnDeleteWithoutHistory"));
                         var message = await arg1.GetOrDownloadAsync();
                         embedBuilder.AddField(loc.Get("MessageHistory.LastContent"),
                             message == null ? loc.Get("MessageHistory.Unavailable") : message.Content);
                         await ((ISocketMessageChannel) logChannel).SendMessageAsync("===========================================", false,
                             embedBuilder.Build());
+                        
+                        CommandHandler.RegisterUsage("MessagesDeleted", "Messages");
                     }
                 }
                 catch (Exception e) {
@@ -127,39 +128,38 @@ namespace Bot.Logging {
                 }
                 finally {
                     GlobalDB.Messages.Delete($"{arg2.Id}:{arg1.Id}");
-                    CommandHandler.RegisterUsage("MessagesDeleted", "Messages");
                 }
             }, TaskCreationOptions.LongRunning).Start();
 
             return Task.CompletedTask;
         }
-
-        private static Task ClientOnLeftGuild(SocketGuild arg) {
-            ClearGuildLogs(arg);
-
-            return Task.CompletedTask;
-        }
-
-        private static Task ClientOnChannelDestroyed(SocketChannel arg) {
-            if (arg is SocketTextChannel channel) {
-                new Task(() => {
-                    var deletesCount = GlobalDB.Messages.DeleteMany(history => history.ChannelId == arg.Id);
-                    try {
-                        var guild = GuildConfig.Get(channel.Guild.Id);
-                        if (!guild.GetChannel(ChannelFunction.Log, out var logChannel)) return;
-                        var loc = new GuildLocalizationProvider(guild);
-                        ((SocketTextChannel) logChannel).SendMessageAsync(loc.Get("MessageHistory.ChannelDeleted").Format(
-                            channel.Name, channel.Id, channel.Guild.Name, deletesCount));
-                    }
-                    finally {
-                        logger.Info("Channel {channelName} ({channelId}) on {guild} was deleted. Cleared {messagesCount} messages",
-                            channel.Name, channel.Id, channel.Guild.Name, deletesCount);
-                    }
-                }, TaskCreationOptions.LongRunning).Start();
-            }
-
-            return Task.CompletedTask;
-        }
+        //
+        // private static Task ClientOnLeftGuild(SocketGuild arg) {
+        //     ClearGuildLogs(arg);
+        //
+        //     return Task.CompletedTask;
+        // }
+        //
+        // private static Task ClientOnChannelDestroyed(SocketChannel arg) {
+        //     if (arg is SocketTextChannel channel) {
+        //         new Task(() => {
+        //             var deletesCount = GlobalDB.Messages.DeleteMany(history => history.ChannelId == arg.Id);
+        //             try {
+        //                 var guild = GuildConfig.Get(channel.Guild.Id);
+        //                 if (!guild.GetChannel(ChannelFunction.Log, out var logChannel)) return;
+        //                 var loc = new GuildLocalizationProvider(guild);
+        //                 ((SocketTextChannel) logChannel).SendMessageAsync(loc.Get("MessageHistory.ChannelDeleted").Format(
+        //                     channel.Name, channel.Id, channel.Guild.Name, deletesCount));
+        //             }
+        //             finally {
+        //                 logger.Info("Channel {channelName} ({channelId}) on {guild} was deleted. Cleared {messagesCount} messages",
+        //                     channel.Name, channel.Id, channel.Guild.Name, deletesCount);
+        //             }
+        //         }, TaskCreationOptions.LongRunning).Start();
+        //     }
+        //
+        //     return Task.CompletedTask;
+        // }
 
         public static Task ClearGuildLogs(SocketGuild arg) {
             new Task(() => {
