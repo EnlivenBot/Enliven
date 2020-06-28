@@ -182,7 +182,7 @@ namespace Bot.Config {
             var oldStats = oldStatsCollection.FindAll().ToList();
             var newStats = oldStats.Select(part => new StatisticsPart {
                 Id = part.Id, UsagesList = (long.TryParse(part.Id, out _) || part.Id == "Global"
-                        ? part.UsagesList.Where(pair => HelpUtils.CommandAliases.Value.Contains(pair.Key))
+                        ? part.UsagesList.Where(pair => Program.Handler.CommandAliases.Contains(pair.Key))
                         : part.UsagesList)
                    .ToDictionary(pair => pair.Key, pair => (int) pair.Value)
             });

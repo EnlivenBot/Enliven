@@ -21,19 +21,20 @@ namespace Bot.Utilities.Commands {
         private static Logger logger = LogManager.GetCurrentClassLogger();
         private IDiscordClient _client;
 
-        private CommandHandler(IDiscordClient client, CommandService commandService) {
+        private CommandHandler(IDiscordClient client, CustomCommandService commandService) {
             _client = client;
             CommandService = commandService;
         }
 
-        public CommandService CommandService { get; private set; }
-        public List<CommandInfo> AllCommands { get; } = new List<CommandInfo>();
+        public CustomCommandService CommandService { get; private set; }
         public static FuzzySearch FuzzySearch { get; set; } = new FuzzySearch();
+        public List<CommandInfo> AllCommands { get; } = new List<CommandInfo>();
+        public Lookup<string, CommandInfo> CommandAliases { get; set; }
 
         public static async Task<CommandHandler> Create(DiscordShardedClient client) {
-            var commandService = new CommandService();
+            var commandService = new CustomCommandService();
             var commandHandler = new CommandHandler(client, commandService);
-            logger.Info("Creating new command service");
+            logger.Info("Creating new query service");
 
             logger.Info("Adding modules");
             await commandService.AddModulesAsync(Assembly.GetEntryAssembly(), null);
@@ -43,6 +44,13 @@ namespace Bot.Utilities.Commands {
             foreach (var cmdsModule in commandService.Modules) {
                 foreach (var command in cmdsModule.Commands) commandHandler.AllCommands.Add(command);
             }
+            
+            var items = new List<KeyValuePair<string, CommandInfo>>();
+            foreach (var command in commandHandler.AllCommands) {
+                items.AddRange(command.Aliases.Select(alias => new KeyValuePair<string, CommandInfo>(alias, command)));
+            }
+
+            commandHandler.CommandAliases = (Lookup<string, CommandInfo>) items.ToLookup(pair => pair.Key, pair => pair.Value);
 
             logger.Info("Adding commands to fuzzy search");
             foreach (var alias in commandHandler.AllCommands.SelectMany(commandInfo => commandInfo.Aliases).GroupBy(s => s)
@@ -79,44 +87,15 @@ namespace Bot.Utilities.Commands {
                 var query = msg.Content.Try(s1 => s1.Substring(argPos), "");
                 if (string.IsNullOrEmpty(query)) query = " ";
                 if (string.IsNullOrWhiteSpace(query) && hasMentionPrefix) query = "help";
-                var command = ParseCommand(query, out var args);
 
-                var result = await ExecuteCommand(query, context, s.Author.Id.ToString());
-                if (!result.IsSuccess && result.Error == CommandError.UnknownCommand) {
-                    var searchResult = FuzzySearch.Search(command);
-                    var bestMatch = searchResult.GetFullMatch();
+                var command = await GetCommand(query, context);
 
-                    // Check for a another keyboard layout
-                    if (bestMatch != null) {
-                        command = bestMatch.SimilarTo;
-                        query = command + " " + args;
-                        result = await ExecuteCommand(query, context, s.Author.Id.ToString());
-                    }
-                    else {
-                        CollectorController? collector = null;
-                        collector = CollectorsUtils.CollectReaction(msg, reaction => reaction.UserId == msg.Author.Id, async eventArgs => {
-                            await eventArgs.RemoveReason();
-                            // ReSharper disable once AccessToModifiedClosure
-                            // ReSharper disable once PossibleNullReferenceException
-                            collector?.Dispose();
-                            try {
-                                #pragma warning disable 4014
-                                msg.RemoveReactionAsync(CommonEmoji.Help, Program.Client.CurrentUser);
-                                #pragma warning restore 4014
-                            }
-                            catch {
-                                // ignored
-                            }
-
-                            await SendErrorMessage(msg, loc, loc.Get("CommandHandler.UnknownCommand")
-                                                                .Format(command.SafeSubstring(40, "..."),
-                                                                     searchResult.GetBestMatches(3).Select(match => $"`{match.SimilarTo}`").JoinToString(", "),
-                                                                     guild.Prefix));
-                        });
-                        await msg.AddReactionAsync(CommonEmoji.Help);
-                        return;
-                    }
+                if (command == null) {
+                    await OnCommandNotFound(msg, loc, query, guild);
+                    return;
                 }
+
+                var result = await ExecuteCommand(msg, query, context, command.Value, s.Author.Id.ToString());
 
                 if (!result.IsSuccess) {
                     switch (result.Error) {
@@ -140,6 +119,62 @@ namespace Bot.Utilities.Commands {
             }
 
             MessageHistoryManager.TryLogCreatedMessage(s, guild, isCommand);
+        }
+
+        private static async Task OnCommandNotFound(SocketUserMessage msg, GuildLocalizationProvider loc, string query, GuildConfig guild) {
+            CollectorController? collector = null;
+            collector = CollectorsUtils.CollectReaction(msg, reaction => reaction.UserId == msg.Author.Id, async eventArgs => {
+                await eventArgs.RemoveReason();
+                // ReSharper disable once AccessToModifiedClosure
+                // ReSharper disable once PossibleNullReferenceException
+                collector?.Dispose();
+                try {
+                    #pragma warning disable 4014
+                    msg.RemoveReactionAsync(CommonEmoji.Help, Program.Client.CurrentUser);
+                    #pragma warning restore 4014
+                }
+                catch {
+                    // ignored
+                }
+
+                await SendErrorMessage(msg, loc, loc.Get("CommandHandler.UnknownCommand")
+                                                    .Format(query.SafeSubstring(40, "..."),
+                                                         FuzzySearch.Search(query).GetBestMatches(3).Select(match => $"`{match.SimilarTo}`").JoinToString(", "),
+                                                         guild.Prefix));
+            });
+            await msg.AddReactionAsync(CommonEmoji.Help);
+        }
+
+        private async Task<KeyValuePair<CommandMatch, ParseResult>?> GetCommand(string query, ICommandContext context) {
+            var (commandFound, commandMatch, _) = await CommandService.FindAsync(context, query, null);
+            if (commandFound)
+                return commandMatch;
+            var command = ParseCommand(query, out var args);
+            var searchResult = FuzzySearch.Search(command);
+            var bestMatch = searchResult.GetFullMatch();
+
+            // Check for a another keyboard layout
+            if (bestMatch == null) return null;
+
+            command = bestMatch.SimilarTo;
+            query = command + " " + args;
+            var (commandFound2, commandMatch2, _) = await CommandService.FindAsync(context, query, null);
+            return commandFound2 ? commandMatch2 : null;
+        }
+
+        public async Task<IResult> ExecuteCommand(IMessage message, string query, ICommandContext context, KeyValuePair<CommandMatch, ParseResult> pair,
+                                                  string authorId) {
+            IResult result = CollectorsUtils.OnCommandExecute(pair, context, message)
+                ? await pair.Key.ExecuteAsync(context, pair.Value, EmptyServiceProvider.Instance)
+                : ExecuteResult.FromSuccess();
+
+            if (result.Error != CommandError.UnknownCommand) {
+                var commandName = query.IndexOf(" ", StringComparison.Ordinal) > -1 ? query.Substring(0, query.IndexOf(" ", StringComparison.Ordinal)) : query;
+                RegisterUsage(commandName, authorId);
+                RegisterUsage(commandName, "Global");
+            }
+
+            return result;
         }
 
         public async Task<IResult> ExecuteCommand(string query, ICommandContext context, string authorId) {
@@ -217,6 +252,10 @@ namespace Bot.Utilities.Commands {
             }
 
             return command;
+        }
+
+        public CommandInfo GetCommandByName(string commandName) {
+            return CommandAliases[commandName].First();
         }
     }
 }

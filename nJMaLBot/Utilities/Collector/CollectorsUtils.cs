@@ -1,18 +1,22 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Discord;
+using Discord.Commands;
 using Discord.WebSocket;
 using NLog;
+using Org.BouncyCastle.Asn1.Utilities;
 
 #pragma warning disable 1998
 
 namespace Bot.Utilities.Collector {
     public static class CollectorsUtils {
         private static Logger logger = LogManager.GetCurrentClassLogger();
+
         static CollectorsUtils() {
             if (Program.CmdOptions.Observer) return;
             Program.Client.ReactionAdded += ClientOnReactionAdded;
@@ -107,7 +111,7 @@ namespace Bot.Utilities.Collector {
 
         #endregion
 
-        #region Collect reaction by message
+        #region Collect reaction by command
 
         private static ConcurrentDictionary<ulong, ConcurrentDictionary<Guid, (Predicate<SocketReaction>, Action<SocketReaction>)>> ReactionByMessage =
             new ConcurrentDictionary<ulong, ConcurrentDictionary<Guid, (Predicate<SocketReaction>, Action<SocketReaction>)>>();
@@ -136,7 +140,7 @@ namespace Bot.Utilities.Collector {
         private static ConcurrentDictionary<ulong, ConcurrentDictionary<Guid, (Predicate<SocketReaction>, Action<SocketReaction>)>> ReactionByUser =
             new ConcurrentDictionary<ulong, ConcurrentDictionary<Guid, (Predicate<SocketReaction>, Action<SocketReaction>)>>();
 
-        public static CollectorController CollectReaction(IUser user, Predicate<SocketReaction> predicate, 
+        public static CollectorController CollectReaction(IUser user, Predicate<SocketReaction> predicate,
                                                           Action<EmoteCollectorEventArgs> action, CollectorFilter filter = CollectorFilter.Off) {
             var collectorController = new CollectorController();
             var key = Guid.NewGuid();
@@ -160,7 +164,7 @@ namespace Bot.Utilities.Collector {
         private static ConcurrentDictionary<ulong, ConcurrentDictionary<Guid, (Predicate<IMessage>, Action<IMessage>)>> MessageByUser =
             new ConcurrentDictionary<ulong, ConcurrentDictionary<Guid, (Predicate<IMessage>, Action<IMessage>)>>();
 
-        public static CollectorController CollectMessage(IUser user, Predicate<IMessage> predicate, 
+        public static CollectorController CollectMessage(IUser user, Predicate<IMessage> predicate,
                                                          Action<MessageCollectorEventArgs> action, CollectorFilter filter = CollectorFilter.Off) {
             var collectorController = new CollectorController();
             var key = Guid.NewGuid();
@@ -173,7 +177,8 @@ namespace Bot.Utilities.Collector {
             };
             var concurrentDictionary = MessageByUser.GetOrAdd(user.Id,
                 arg => new ConcurrentDictionary<Guid, (Predicate<IMessage>, Action<IMessage>)>());
-            concurrentDictionary.TryAdd(key, (ApplyFilters(predicate, filter), reaction => action(new MessageCollectorEventArgs(collectorController, reaction))));
+            concurrentDictionary.TryAdd(key,
+                (ApplyFilters(predicate, filter), reaction => action(new MessageCollectorEventArgs(collectorController, reaction))));
             return collectorController;
         }
 
@@ -184,7 +189,7 @@ namespace Bot.Utilities.Collector {
         private static ConcurrentDictionary<ulong, ConcurrentDictionary<Guid, (Predicate<IMessage>, Action<IMessage>)>> MessageByChannel =
             new ConcurrentDictionary<ulong, ConcurrentDictionary<Guid, (Predicate<IMessage>, Action<IMessage>)>>();
 
-        public static CollectorController CollectMessage(IChannel channel, Predicate<IMessage> predicate, 
+        public static CollectorController CollectMessage(IChannel channel, Predicate<IMessage> predicate,
                                                          Action<MessageCollectorEventArgs> action, CollectorFilter filter = CollectorFilter.Off) {
             var collectorController = new CollectorController();
             var key = Guid.NewGuid();
@@ -197,8 +202,53 @@ namespace Bot.Utilities.Collector {
             };
             var concurrentDictionary = MessageByChannel.GetOrAdd(channel.Id,
                 arg => new ConcurrentDictionary<Guid, (Predicate<IMessage>, Action<IMessage>)>());
-            concurrentDictionary.TryAdd(key, (ApplyFilters(predicate, filter), reaction => action(new MessageCollectorEventArgs(collectorController, reaction))));
+            concurrentDictionary.TryAdd(key,
+                (ApplyFilters(predicate, filter), reaction => action(new MessageCollectorEventArgs(collectorController, reaction))));
             return collectorController;
+        }
+
+        #endregion
+
+        #region Collect commands
+
+        private static ConcurrentDictionary<CommandInfo, ConcurrentDictionary<Guid, (Func<ICommandContext, CommandMatch, bool>,
+            Action<IMessage, KeyValuePair<CommandMatch, ParseResult>, ICommandContext>)>> ByCommand =
+            new ConcurrentDictionary<CommandInfo, ConcurrentDictionary<Guid, (Func<ICommandContext, CommandMatch, bool>,
+                Action<IMessage, KeyValuePair<CommandMatch, ParseResult>, ICommandContext>)>>();
+
+        public static CollectorController CollectCommand([NotNull] CommandInfo info, Func<ICommandContext, CommandMatch, bool> predicate,
+                                                         Action<CommandCollectorEventArgs> action) {
+            info ??= default;
+            var collectorController = new CollectorController();
+            var key = Guid.NewGuid();
+            collectorController.Stop += (sender, args) => {
+                if (!ByCommand.TryGetValue(info, out var value)) return;
+                value.TryRemove(key, out _);
+                if (value.IsEmpty) {
+                    ByCommand.TryRemove(info, out _);
+                }
+            };
+            var concurrentDictionary = ByCommand.GetOrAdd(info,
+                arg =>
+                    new ConcurrentDictionary<Guid, (Func<ICommandContext, CommandMatch, bool>,
+                        Action<IMessage, KeyValuePair<CommandMatch, ParseResult>, ICommandContext>)>());
+            concurrentDictionary.TryAdd(key,
+                (predicate, (message, pair, arg3) => action(new CommandCollectorEventArgs(collectorController, message, pair, arg3))));
+            return collectorController;
+        }
+
+        /// <summary>
+        /// Method for CommandHandler, do not use!
+        /// </summary>
+        /// <returns>A value indicating whether to execute a command or not</returns>
+        public static bool OnCommandExecute(KeyValuePair<CommandMatch, ParseResult> info, ICommandContext context, IMessage message) {
+            if (!ByCommand.TryGetValue(info.Key.Command, out var commandRequests)) return true;
+            var keyValuePairs = commandRequests.ToList().Where(pair => pair.Value.Item1(context, info.Key)).ToList();
+            foreach (var i in keyValuePairs) {
+                logger.Swallow(() => i.Value.Item2(message, info, context));
+            }
+
+            return keyValuePairs.Count == 0;
         }
 
         #endregion
@@ -211,7 +261,7 @@ namespace Bot.Utilities.Collector {
                 _                          => throw new ArgumentOutOfRangeException(nameof(filter), filter, null)
             };
         }
-        
+
         private static Predicate<SocketReaction> ApplyFilters(Predicate<SocketReaction> initial, CollectorFilter filter) {
             return filter switch {
                 CollectorFilter.Off        => initial,

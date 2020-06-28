@@ -6,6 +6,7 @@ using Bot.Config.Localization;
 using Bot.Logging;
 using Bot.Music;
 using Bot.Utilities;
+using Bot.Utilities.Collector;
 using Bot.Utilities.Commands;
 using CommandLine;
 using Discord;
