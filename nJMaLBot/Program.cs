@@ -94,10 +94,13 @@ namespace Bot {
             await Client.StartAsync();
             await Client.SetGameAsync("mentions of itself to get started", null, ActivityType.Listening);
             _reliabilityService = new ReliabilityService(Client, OnClientLog);
-            Client.ShardReady += client => {
-                waitStartSource.SetResult(true);
-                return Task.CompletedTask;
-            };
+            Client.ShardReady += ClientOnShardReady;
+        }
+
+        private static Task ClientOnShardReady(DiscordSocketClient arg) {
+            Client.ShardReady -= ClientOnShardReady;
+            waitStartSource.SetResult(true);
+            return Task.CompletedTask;
         }
 
         private static Task OnClientLog(LogMessage message) {
