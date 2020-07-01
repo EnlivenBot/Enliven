@@ -6,7 +6,6 @@ using Bot.Config.Localization;
 using Bot.Logging;
 using Bot.Music;
 using Bot.Utilities;
-using Bot.Utilities.Collector;
 using Bot.Utilities.Commands;
 using CommandLine;
 using Discord;
@@ -52,11 +51,6 @@ namespace Bot {
             var config = new DiscordSocketConfig {MessageCacheSize = 100};
             Client = new DiscordShardedClient(config);
 
-            Task OnClientLog(LogMessage message) {
-                logger.Log(message.Severity, message.Exception, "{message} from {source}", message.Message, message.Source);
-                return Task.CompletedTask;
-            }
-
             Client.Log += OnClientLog;
 
             logger.Info("Start logining");
@@ -78,11 +72,7 @@ namespace Bot {
             Localization.Initialize();
             GlobalDB.Initialize();
 
-            logger.Info("Starting client");
-            await Client.StartAsync();
-            await Client.SetGameAsync("mentions of itself to get started", null, ActivityType.Listening);
-            _reliabilityService = new ReliabilityService(Client, OnClientLog);
-            waitStartSource.SetResult(true);
+            await StartClient();
 
             Handler = await CommandHandler.Create(Client);
             
@@ -94,6 +84,25 @@ namespace Bot {
             MessageHistoryManager.Initialize();
             MusicUtils.Initialize();
             await Task.Delay(-1);
+        }
+
+        private static bool ClientStarted;
+        public static async Task StartClient() {
+            if (ClientStarted) return;
+            ClientStarted = true;
+            logger.Info("Starting client");
+            await Client.StartAsync();
+            await Client.SetGameAsync("mentions of itself to get started", null, ActivityType.Listening);
+            _reliabilityService = new ReliabilityService(Client, OnClientLog);
+            Client.ShardReady += client => {
+                waitStartSource.SetResult(true);
+                return Task.CompletedTask;
+            };
+        }
+
+        private static Task OnClientLog(LogMessage message) {
+            logger.Log(message.Severity, message.Exception, "{message} from {source}", message.Message, message.Source);
+            return Task.CompletedTask;
         }
 
         private static void InstallLogger() {
