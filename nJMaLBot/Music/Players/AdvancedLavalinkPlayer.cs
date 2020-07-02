@@ -36,7 +36,9 @@ namespace Bot.Music.Players {
             volume = Math.Min(Math.Max(volume, 0), 1.5f);
             // ReSharper disable once BaseMethodCallWithDefaultParameter
             await base.SetVolumeAsync(volume);
-            GuildConfig.Get(GuildId).SetVolume(volume).Save();
+            var guildConfig = GuildConfig.Get(GuildId);
+            guildConfig.Volume = volume;
+            guildConfig.Save();
         }
 
         public virtual void SetBassBoostMode(BassBoostMode mode) {

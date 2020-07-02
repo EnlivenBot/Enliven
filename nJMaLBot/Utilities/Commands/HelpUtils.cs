@@ -21,24 +21,15 @@ namespace Bot.Utilities.Commands {
                                }).ToDictionary(group => group.GroupId);
         });
 
-        public static readonly Lazy<Lookup<string, CommandInfo>> CommandAliases = new Lazy<Lookup<string, CommandInfo>>(() => {
-            var items = new List<KeyValuePair<string, CommandInfo>>();
-            foreach (var command in Program.Handler.AllCommands) {
-                items.AddRange(command.Aliases.Select(alias => new KeyValuePair<string, CommandInfo>(alias, command)));
-            }
-
-            return (Lookup<string, CommandInfo>) items.ToLookup(pair => pair.Key, pair => pair.Value);
-        });
-
         public static IEnumerable<EmbedFieldBuilder> BuildHelpFields(string command, string prefix, ILocalizationProvider loc) {
-            return CommandAliases.Value[command].Select(info => new EmbedFieldBuilder {
+            return Program.Handler.CommandAliases[command].Select(info => new EmbedFieldBuilder {
                 Name = loc.Get("Help.CommandTitle").Format(command, GetAliasesString(info.Aliases, loc)),
                 Value = $"{loc.Get($"Help.{info.Summary}")}\n" +
                         "```css\n" +
                         $"{prefix}{info.Name} {(info.Parameters.Count == 0 ? "" : $"[{string.Join("] [", info.Parameters.Select(x => x.Name))}]")}```" +
                         (info.Parameters.Count == 0
                             ? ""
-                            : "\n" + string.Join("\n", 
+                            : "\n" + string.Join("\n",
                                 info.Parameters.Select(x => $"`{x.Name}` - {(string.IsNullOrWhiteSpace(x.Summary) ? "" : loc.Get("Help." + x.Summary))}")))
             });
         }

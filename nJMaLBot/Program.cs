@@ -51,11 +51,6 @@ namespace Bot {
             var config = new DiscordSocketConfig {MessageCacheSize = 100};
             Client = new DiscordShardedClient(config);
 
-            Task OnClientLog(LogMessage message) {
-                logger.Log(message.Severity, message.Exception, "{message} from {source}", message.Message, message.Source);
-                return Task.CompletedTask;
-            }
-
             Client.Log += OnClientLog;
 
             logger.Info("Start logining");
@@ -77,11 +72,7 @@ namespace Bot {
             Localization.Initialize();
             GlobalDB.Initialize();
 
-            logger.Info("Starting client");
-            await Client.StartAsync();
-            await Client.SetGameAsync("mentions of itself to get started", null, ActivityType.Listening);
-            _reliabilityService = new ReliabilityService(Client, OnClientLog);
-            waitStartSource.SetResult(true);
+            await StartClient();
 
             Handler = await CommandHandler.Create(Client);
             
@@ -93,6 +84,28 @@ namespace Bot {
             MessageHistoryManager.Initialize();
             MusicUtils.Initialize();
             await Task.Delay(-1);
+        }
+
+        private static bool _clientStarted;
+        public static async Task StartClient() {
+            if (_clientStarted) return;
+            _clientStarted = true;
+            logger.Info("Starting client");
+            Client.ShardReady += ClientOnShardReady;
+            await Client.StartAsync();
+            await Client.SetGameAsync("mentions of itself to get started", null, ActivityType.Listening);
+            _reliabilityService = new ReliabilityService(Client, OnClientLog);
+        }
+
+        private static Task ClientOnShardReady(DiscordSocketClient arg) {
+            waitStartSource.SetResult(true);
+            Client.ShardReady -= ClientOnShardReady;
+            return Task.CompletedTask;
+        }
+
+        private static Task OnClientLog(LogMessage message) {
+            logger.Log(message.Severity, message.Exception, "{message} from {source}", message.Message, message.Source);
+            return Task.CompletedTask;
         }
 
         private static void InstallLogger() {
@@ -146,6 +159,7 @@ namespace Bot {
             LogManager.Configuration = config;
         }
 
+        // ReSharper disable once UnusedMember.Local
         private static void InstallErrorHandlers() {
             AppDomain.CurrentDomain.UnhandledException += (sender, args) => logger.Fatal(args.ExceptionObject as Exception, "Global uncaught exception");
             TaskScheduler.UnobservedTaskException += (sender, args) => logger.Fatal(args.Exception?.Flatten(), "Global uncaught task exception");

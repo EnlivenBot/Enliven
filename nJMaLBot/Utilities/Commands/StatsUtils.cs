@@ -12,7 +12,7 @@ using Tyrrrz.Extensions;
 namespace Bot.Utilities.Commands {
     public class StatsUtils {
         private static Logger logger = LogManager.GetCurrentClassLogger();
-        
+
         private static Temporary<int> _textChannelsCount =
             new Temporary<int>(() => Program.Client.Guilds.Sum(guild => guild.TextChannels.Count), TimeSpan.FromMinutes(5));
 
@@ -45,7 +45,7 @@ namespace Bot.Utilities.Commands {
             List<(CommandInfo Key, double)>? valueTuples = null;
             while (true) {
                 try {
-                    valueTuples = stats.UsagesList.GroupBy(pair => HelpUtils.CommandAliases.Value[pair.Key].First())
+                    valueTuples = stats.UsagesList.GroupBy(pair => Program.Handler.CommandAliases[pair.Key].First())
                                        .Where(pairs => !pairs.Key.IsHiddenCommand())
                                        .Select(pairs => (pairs.Key, pairs.Sum(pair => (double) pair.Value)))
                                        .OrderBy(tuple => tuple.Item1.GetGroup()?.GroupName).ToList();
@@ -56,15 +56,16 @@ namespace Bot.Utilities.Commands {
                         logger.Error(e, "Exception while printing stats");
                         throw;
                     }
+
                     // This exception appears that an element has appeared in ours that is not in the commands
-                    stats.UsagesList = stats.UsagesList.Where(pair => HelpUtils.CommandAliases.Value.Contains(pair.Key))
+                    stats.UsagesList = stats.UsagesList.Where(pair => Program.Handler.CommandAliases.Contains(pair.Key))
                                             .ToDictionary(pair => pair.Key, pair => pair.Value);
                     GlobalDB.CommandStatistics.Upsert(stats);
                     // Assigning non null value to avoid endless cycle
                     valueTuples = new List<(CommandInfo, double)>();
                 }
             }
-            
+
             foreach (var grouping in valueTuples.GroupBy(tuple => tuple.Key.GetGroup()).OrderByDescending(tuples => tuples.Count())) {
                 embedBuilder.AddField(grouping.Key!.GetLocalizedName(loc),
                     string.Join("\n", grouping.ToList().Select((tuple, i) => $"`{tuple.Item1.Name}` - {tuple.Item2}")), true);

@@ -7,7 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bot.Logging;
 using Bot.Music;
-using Bot.Utilities.Commands;
+using Bot.Utilities;
 using Discord;
 using HarmonyLib;
 using LiteDB;
@@ -41,8 +41,10 @@ namespace Bot.Config {
         public static readonly ILiteCollection<MessageHistory> Messages;
         public static readonly ILiteCollection<StatisticsPart> CommandStatistics;
         public static readonly ILiteCollection<StoredPlaylist> Playlists;
+
         // ReSharper disable once NotAccessedField.Local
         private static Timer _checkpointTimer = null!;
+
         // ReSharper disable once NotAccessedField.Local
         private static Timer _rebuildTimer = null!;
 
@@ -100,7 +102,9 @@ namespace Bot.Config {
                 }
 
                 try {
-                    upgrade.info.Invoke(null, new object?[] {Database});
+                    var upgradeResult = upgrade.info.Invoke(null, new object?[] {Database});
+                    if (upgradeResult is Task upgradeTask)
+                        upgradeTask.GetAwaiter().GetResult();
                     if (upgrade.Item1.TransactionsFriendly) {
                         Database.Commit();
                     }
@@ -182,7 +186,7 @@ namespace Bot.Config {
             var oldStats = oldStatsCollection.FindAll().ToList();
             var newStats = oldStats.Select(part => new StatisticsPart {
                 Id = part.Id, UsagesList = (long.TryParse(part.Id, out _) || part.Id == "Global"
-                        ? part.UsagesList.Where(pair => HelpUtils.CommandAliases.Value.Contains(pair.Key))
+                        ? part.UsagesList.Where(pair => Program.Handler.CommandAliases.Contains(pair.Key))
                         : part.UsagesList)
                    .ToDictionary(pair => pair.Key, pair => (int) pair.Value)
             });
@@ -278,6 +282,39 @@ namespace Bot.Config {
         [DbUpgrade(5, false)]
         private static void UpgradeTo5(LiteDatabase liteDatabase) {
             liteDatabase.DropCollection("IgnoredMessages");
+        }
+
+        [DbUpgrade(6)]
+        private static async Task UpgradeTo6(LiteDatabase liteDatabase) {
+            await Program.StartClient();
+            await Program.WaitStartAsync;
+            var guildConfigs = liteDatabase.GetCollection<GuildConfig>(@"Guilds");
+            var temp = Program.Client.Guilds.Select(guild => (guild, guildConfigs.FindById(guild.Id))).ToList();
+            guildConfigs.DeleteAll();
+            foreach (var pair in temp) {
+                pair.Item2.GuildId = pair.guild.Id;
+                guildConfigs.Upsert(pair.Item2);
+            }
+        }
+
+        [DbUpgrade(7)]
+        private static async Task UpgradeTo7(LiteDatabase liteDatabase) {
+            var messagesCollection = liteDatabase.GetCollection<MessageHistory>(@"MessagesHistory");
+            var guildsCollection = liteDatabase.GetCollection<GuildConfig>(@"Guilds");
+            messagesCollection.DeleteAll();
+            await Program.StartClient();
+            await Program.WaitStartAsync;
+            var guilds = Program.Client.Guilds.Select(guild => (guild, guildsCollection.FindById((long)guild.Id)));
+            foreach (var valueTuple in guilds.Where(tuple => tuple.Item2.IsLoggingEnabled)) {
+                try {
+                    await (await Program.Client.GetUser(valueTuple.guild.OwnerId).GetOrCreateDMChannelAsync()).SendMessageAsync(
+                        "Message logging was enabled on your server. We reworked it, and now it works better.\n" +
+                        $"Please **configure it** using the command `{valueTuple.Item2.Prefix}logging`");
+                }
+                catch (Exception) {
+                    // ignored
+                }
+            }
         }
 
         [AttributeUsage(AttributeTargets.Method, Inherited = false, AllowMultiple = true)]

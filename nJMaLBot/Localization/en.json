@@ -175,7 +175,8 @@
       "bassboost0s": "Lets you toggle the bass boost",
       "bassboost0_0s": "Bass boost mode: `Off`, `Low`, `Medium`, `High`, `Extreme`",
       "changenode0s": "Attempts to move playback to another music node. May help if current lags",
-      "invite0s": "Represents a link with which you can invite a bot to a server"
+      "invite0s": "Represents a link with which you can invite a bot to a server",
+      "logging0s" : "Shows a message logging control panel"
     },
     "CommandHandler": {
       "FailedTitle": "Error executing command",
@@ -242,6 +243,29 @@
       "InviteDescription": "Here is [your link]({0}) for inviting the bot to another server. Hope to meet you there! 😀",
       "Vote": "**Support Us**",
       "VoteDescription" : "You can **free** support us by voting for the bot:\n[Here (every 12 hours)](https://top.gg/bot/606760964183949314)\n[Here (every 24 hours)](https://discordbotlist.com/bots/enliven)\n[Here (write a review)](https://bots.ondiscord.xyz/bots/606760964183949314)\n Or you can just look at it [here](https://discord.bots.gg/bots/606760964183949314)\n\nDo not forget about [our GitLab](https://gitlab.com/skprochlab/nJMaLBot), where you can write errors and suggestions"
+    },
+    "ChainsCommon": {
+      "Ended" : "Completed",
+      "Thanks": "The current command chain is complete.\n Thanks for using.\n Support us by using the command `{0} vote`",
+      "ReasonStartedNew" : "The current chain of commands is completed, as the new one is launched.",
+      "ReasonTimeout": "The current command chain has ended because the timeout reached",
+      "CantSend" : "We cannot complete this action in {0} because we do not have the necessary permissions"
+    },
+    "Chains": {
+      "LoggingTitle": "Logging"
+    },
+    "Logging": {
+      "Enabled": "📝 Logging on this server **enabled** ✅",
+      "Disabled": "📝 Logging on this server **disabled** ❌",
+      "CommandEnabled": "🤖 Logging messages containing commands for the bot **enabled** ✅",
+      "CommandDisabled": "🤖 Logging messages containing commands for the bot **disabled** ❌",
+      "HistoryMissingInLogEnabled": "⁉️ Send message about deleting a message whose change history was not found, **enabled** ✅",
+      "HistoryMissingInLogDisabled": "⁉️ Send message about deleting a message whose change history was not found, **disabled** ❌",
+      "LogChannel": "🗒️ Log channel: {0}",
+      "LogChannelMissing": "**not selected**. To select, send a message of the form ```{0}setchannel Log [here is the mention of the desired channel]```",
+      "LoggedChannelsTitle": "📟 Logging enabled channels",
+      "InfoTitle": "Contols",
+      "Info": "📝 To add or remove a channel to the logging, just write a message that contains its mention.\n For example:\n> {0}"
     }
   }
 }
