@@ -1,10 +1,6 @@
 ﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using Discord;
-using GrapeCity.Documents.Common;
 using Hellosam.Net.Collections;
 
 #pragma warning disable 8605

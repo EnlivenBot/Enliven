@@ -23,7 +23,7 @@ namespace Bot.Config.Localization {
         private string _cache = null!;
         public string Get(ILocalizationProvider provider) {
             if (_isCalculated || _provider != provider) {
-                _cache = provider.Get(Group, Id).Format(FormatArgs.Select(func => func()));
+                _cache = provider.Get(Group, Id).Format(FormatArgs.Select(func => func()).ToArray());
                 _provider = provider;
             }
             
