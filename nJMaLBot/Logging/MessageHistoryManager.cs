@@ -32,14 +32,14 @@ namespace Bot.Logging {
                 return GuildConfig.Get(textChannel.GuildId).IsLoggingEnabled;
             }, async eventArgs => {
                 await eventArgs.RemoveReason();
-                var guildConfig = GuildConfig.Get((eventArgs.Reaction.Channel as ITextChannel)!.GuildId);
+                var reactionChannel = eventArgs.Reaction.Channel as ITextChannel;
+                var guildConfig = GuildConfig.Get(reactionChannel!.GuildId);
                 try {
                     await PrintLog(MessageHistory.Get(eventArgs.Reaction.Channel.Id, eventArgs.Reaction.MessageId),
-                        (ITextChannel) eventArgs.Reaction.Channel, guildConfig.Loc, (IGuildUser) eventArgs.Reaction.User.Value);
+                        reactionChannel, guildConfig.Loc, (IGuildUser) eventArgs.Reaction.User.Value);
                 }
                 catch (Exception e) {
                     logger.Error(e, "Faled to print log");
-                    throw;
                 }
             }, CollectorFilter.IgnoreBots);
 
