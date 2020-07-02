@@ -9,7 +9,6 @@ using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using NLog;
-using Org.BouncyCastle.Asn1.Utilities;
 
 #pragma warning disable 1998
 

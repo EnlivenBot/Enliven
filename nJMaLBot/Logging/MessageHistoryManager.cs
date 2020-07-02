@@ -10,7 +10,6 @@ using Bot.Utilities.Collector;
 using Bot.Utilities.Commands;
 using Bot.Utilities.Emoji;
 using Discord;
-using Discord.Rest;
 using Discord.WebSocket;
 using GrapeCity.Documents.Html;
 using HarmonyLib;

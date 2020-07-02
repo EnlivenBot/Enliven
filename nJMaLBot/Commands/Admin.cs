@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Bot.Commands.Chains;
 using Bot.Config;
 using Bot.Config.Localization;
 using Bot.Logging;
@@ -108,6 +109,19 @@ namespace Bot.Commands {
         public async Task ClearHistories() {
             await ReplyAsync("Start clearing message histories");
             await MessageHistoryManager.ClearGuildLogs((SocketGuild) Context.Guild);
+        }
+
+        [Command("logging")]
+        [Summary("logging0s")]
+        public async Task LoggingControlPanel() {
+            var botPermissions = (await Context.Guild.GetUserAsync(Program.Client.CurrentUser.Id)).GetPermissions((IGuildChannel) Context.Channel);
+            if (botPermissions.SendMessages) {
+                var loggingChainBase = LoggingChainBase.CreateInstance((ITextChannel) Context.Channel, Context.User, GuildConfig);
+                await loggingChainBase.Start();
+            }
+            else {
+                await (await Context.User.GetOrCreateDMChannelAsync()).SendMessageAsync(Loc.Get("ChainsCommon.CantSend").Format($"<#{Context.Channel.Id}>"));
+            }
         }
     }
 }

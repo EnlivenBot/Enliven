@@ -98,5 +98,14 @@ namespace Bot.Config {
 
             return guildConfig;
         }
+
+        public void ToggleChannelLogging(ulong channelId) {
+            if (LoggedChannels.Exists(obj => obj == channelId)) {
+                LoggedChannels.Remove(channelId);
+            }
+            else {
+                LoggedChannels.Add(channelId);
+            }
+        }
     }
 }

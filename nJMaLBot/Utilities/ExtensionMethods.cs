@@ -86,10 +86,7 @@ namespace Bot.Utilities {
         }
 
         public static EmbedBuilder GetAuthorEmbedBuilder(this AdvancedModuleBase moduleBase) {
-            var embedBuilder = new EmbedBuilder();
-            embedBuilder.WithFooter(moduleBase.Loc.Get("Commands.RequestedBy").Format(moduleBase.Context.User.Username),
-                moduleBase.Context.User.GetAvatarUrl());
-            return embedBuilder;
+            return DiscordUtils.GetAuthorEmbedBuilder(moduleBase.Context.User, moduleBase.Loc);
         }
 
         public static int Normalize(this int value, int min, int max) {
