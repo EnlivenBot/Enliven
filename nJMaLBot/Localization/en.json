@@ -19,7 +19,6 @@
       "WelcomeGithub" : "If **you find an error**, you want to help with localizations or you **have an idea** - open [issue](https://gitlab.com/skprochlab/nJMaLBot/-/issues) or create [Merge Request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html) on [our GitLab](https://gitlab.com/skprochlab/nJMaLBot)!"
     },
     "Localization": {
-      "LocalizationEmpty": "***You didn't select bot's localization on the server.***\nThe default one is for English. Help to change server's language:",
       "Success": "Successfully changed the bot language to `{0}`",
       "Fail": "There is no language {0}.\nAvailable: {1}",
       "LanguagesList": "Language selection",
@@ -51,11 +50,9 @@
     },
     "Music": {
       "RequestHistory": "Request history",
-      "PlaybackDisposed": "Playback has stopped",
       "QueueEmpty": "The queue is empty. Order tracks via `{0}play [request]`",
       "VolumeOutOfRange": "Volume out of range: 0% - 150%!",
       "RequestedBy": "Requested by: {0}",
-      "Stopped": "Stopped playing",
       "NothingPlaying": "Nothing playing. Order tracks via `{0}play [request]`",
       "Fail": "Error",
       "Playback": "Playback",
@@ -71,7 +68,6 @@
       "PlaybackMoved": "The playback bar has been moved to the music channel - <#{0}>",
       "OtherVoiceChannel": "{0}, You must be in the same voice channel as the bot",
       "NotInVoiceChannel": "{0}, You must be in a voice channel",
-      "TrackError": "Track error",
       "DecodingError": "**Decoding error** - `{0}`",
       "DecodingErrorRemove": "**Decoding error** - `{0}`. Track removed.",
       "ChannelNotAllowed": "{0}, you can’t play music on this channel. Use <#{1}> for this, or ask the administrator to change this through the server setup.",
@@ -111,7 +107,6 @@
     },
     "Help": {
       "HelpPrefix" : "Current bot prefix `{0}` or ping ({1})",
-      "HelpMessage": "Command help: ",
       "HelpTitle": "Available commands",
       "HelpDescription": "Help for all commands and categories",
       "NotFoundTitle": "Command not found",
@@ -183,9 +178,7 @@
       "UnmetPrecondition": "You do not have permission to execute this command!",
       "BadArgCount": "Error - the wrong number of arguments for the command. Verify the correctness through `{0}help {1}`",
       "ParseFailed": "An error occurred while trying to parse the command. Check the arguments through `{0}help {1}`",
-      "Exception": "Error executing command:\n ```{0}```",
       "UnknownCommand": "Command `{0}` not found!\nPerhaps you wanted to use one of them: {1}\n Use the command `{1}help` for a list of commands.",
-      "ByCommand": "Help for the command `{0}`"
     },
     "Commands": {
       "RequestedBy": "Requested by {0} | Help us by voting",
@@ -208,10 +201,8 @@
       "MessageId": "Message ID: {0}",
       "LogTitle": "Message Changes History",
       "MessageNull": "Failed to get change history: message not found. \nProbable reasons: \n- Wrong ID \n- Message deleted \n- The bot no longer has access to it.",
-      "MessageIgnore": "Failed to get change history, [message]({0}) is ignored. \nProbable reasons: \n- Message written by bot\n - Logging disabled",
       "MessageWithoutHistory": "Failed to get change history [message]({0}) - not found. \nProbable reasons: \n- Message was written before the bot appeared on the server \n- The bot was offline while writing the message \n- Message was written in the log channel \n \nMessage is logged in. ",
       "OnDeleteWithoutHistory": "Failed to get message change history - not found. \nProbable reasons: \n- Message was written before the bot appeared on the server \n- The bot was offline while writing the message",
-      "ImageDescription": "The history of the [message]({0}) is reflected in the image above.",
       "Author": "Author",
       "Requester": "Requester",
       "ChannelDeleted": "Channel {0} ({1}) on {2} was deleted. Cleared {3} messages.",

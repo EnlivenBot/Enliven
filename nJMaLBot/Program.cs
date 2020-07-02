@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Bot.Config;
 using Bot.Config.Localization;
@@ -21,10 +22,13 @@ namespace Bot {
     internal class Program {
         public static DiscordShardedClient Client = null!;
         public static CommandHandler Handler = null!;
+
         // ReSharper disable once InconsistentNaming
         private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+
         // ReSharper disable once NotAccessedField.Local
         private static ReliabilityService _reliabilityService = null!;
+
         // ReSharper disable once InconsistentNaming
         private static readonly TaskCompletionSource<bool> waitStartSource = new TaskCompletionSource<bool>();
         public static Task WaitStartAsync = waitStartSource.Task;
@@ -68,25 +72,26 @@ namespace Bot {
                     connectDelay += 10;
                 }
             }
-            
+
             Localization.Initialize();
             GlobalDB.Initialize();
 
             await StartClient();
 
             Handler = await CommandHandler.Create(Client);
-            
+
             AppDomain.CurrentDomain.ProcessExit += async (sender, eventArgs) => {
                 await Client.SetStatusAsync(UserStatus.AFK);
                 await Client.SetGameAsync("Reboot...");
             };
-            
+
             MessageHistoryManager.Initialize();
             MusicUtils.Initialize();
             await Task.Delay(-1);
         }
 
         private static bool _clientStarted;
+
         public static async Task StartClient() {
             if (_clientStarted) return;
             _clientStarted = true;
