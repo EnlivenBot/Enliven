@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bot.Logging;
 using Bot.Music;
+using Bot.Utilities;
 using Discord;
 using HarmonyLib;
 using LiteDB;
@@ -293,6 +294,26 @@ namespace Bot.Config {
             foreach (var pair in temp) {
                 pair.Item2.GuildId = pair.guild.Id;
                 guildConfigs.Upsert(pair.Item2);
+            }
+        }
+
+        [DbUpgrade(7)]
+        private static async Task UpgradeTo7(LiteDatabase liteDatabase) {
+            var messagesCollection = liteDatabase.GetCollection<MessageHistory>(@"MessagesHistory");
+            var guildsCollection = liteDatabase.GetCollection<GuildConfig>(@"Guilds");
+            messagesCollection.DeleteAll();
+            await Program.StartClient();
+            await Program.WaitStartAsync;
+            var guilds = Program.Client.Guilds.Select(guild => (guild, guildsCollection.FindById((long)guild.Id)));
+            foreach (var valueTuple in guilds.Where(tuple => tuple.Item2.IsLoggingEnabled)) {
+                try {
+                    await (await Program.Client.GetUser(valueTuple.guild.OwnerId).GetOrCreateDMChannelAsync()).SendMessageAsync(
+                        "Message logging was enabled on your server. We reworked it, and now it works better.\n" +
+                        $"Please **configure it** using the command `{valueTuple.Item2.Prefix}logging`");
+                }
+                catch (Exception) {
+                    // ignored
+                }
             }
         }
 

@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Bot.Config;
 using Bot.Config.Localization.Providers;
 using Bot.Utilities.Commands;
 using Bot.Utilities.Modules;
@@ -133,6 +134,10 @@ namespace Bot.Utilities {
             catch {
                 return onFail;
             }
+        }
+
+        public static GuildConfig GetConfig(this IGuild guild) {
+            return GuildConfig.Get(guild.Id);
         }
     }
 }
