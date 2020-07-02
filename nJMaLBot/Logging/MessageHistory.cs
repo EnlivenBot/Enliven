@@ -247,6 +247,7 @@ namespace Bot.Logging {
             return html.ToString();
         }
 
+        // ReSharper disable once UnusedMethodReturnValue.Local
         private static bool ParseAttachment(string s, out string id, out string fileName) {
             try {
                 var match = AttachmentRegex.Match(s);

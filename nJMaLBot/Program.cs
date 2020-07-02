@@ -86,10 +86,10 @@ namespace Bot {
             await Task.Delay(-1);
         }
 
-        private static bool ClientStarted;
+        private static bool _clientStarted;
         public static async Task StartClient() {
-            if (ClientStarted) return;
-            ClientStarted = true;
+            if (_clientStarted) return;
+            _clientStarted = true;
             logger.Info("Starting client");
             await Client.StartAsync();
             await Client.SetGameAsync("mentions of itself to get started", null, ActivityType.Listening);
@@ -159,6 +159,7 @@ namespace Bot {
             LogManager.Configuration = config;
         }
 
+        // ReSharper disable once UnusedMember.Local
         private static void InstallErrorHandlers() {
             AppDomain.CurrentDomain.UnhandledException += (sender, args) => logger.Fatal(args.ExceptionObject as Exception, "Global uncaught exception");
             TaskScheduler.UnobservedTaskException += (sender, args) => logger.Fatal(args.Exception?.Flatten(), "Global uncaught task exception");

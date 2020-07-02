@@ -29,7 +29,7 @@ namespace Bot.Utilities.Commands {
         public CustomCommandService CommandService { get; private set; }
         public static FuzzySearch FuzzySearch { get; set; } = new FuzzySearch();
         public List<CommandInfo> AllCommands { get; } = new List<CommandInfo>();
-        public Lookup<string, CommandInfo> CommandAliases { get; set; }
+        public Lookup<string, CommandInfo> CommandAliases { get; set; } = null!;
 
         public static async Task<CommandHandler> Create(DiscordShardedClient client) {
             var commandService = new CustomCommandService();

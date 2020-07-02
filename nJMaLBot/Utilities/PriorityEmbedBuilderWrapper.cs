@@ -287,7 +287,7 @@ namespace Bot.Utilities {
         /// <returns>
         ///     The current builder.
         /// </returns>
-        public PriorityEmbedBuilderWrapper WithAuthor(string name, string iconUrl = null, string url = null) {
+        public PriorityEmbedBuilderWrapper WithAuthor(string name, string? iconUrl = null, string? url = null) {
             var author = new EmbedAuthorBuilder {
                 Name = name,
                 IconUrl = iconUrl,
@@ -331,7 +331,7 @@ namespace Bot.Utilities {
         /// <returns>
         ///     The current builder.
         /// </returns>
-        public PriorityEmbedBuilderWrapper WithFooter(string text, string iconUrl = null) {
+        public PriorityEmbedBuilderWrapper WithFooter(string text, string? iconUrl = null) {
             var footer = new EmbedFooterBuilder {
                 Text = text,
                 IconUrl = iconUrl

@@ -30,6 +30,7 @@ namespace Bot.Commands.Chains {
 
         private protected PriorityEmbedBuilderWrapper MainBuilder { get; set; } = new PriorityEmbedBuilderWrapper();
 
+        // ReSharper disable once NotAccessedField.Local
         private Timer? _timeoutTimer;
 
         public DateTimeOffset? TimeoutDate { get; private set; }
