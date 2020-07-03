@@ -11,20 +11,42 @@ using Discord.WebSocket;
 namespace Bot.Commands {
     [Grouping("utils")]
     public class UtilsCommand : AdvancedModuleBase {
+        [Alias("log")]
         [Command("history", RunMode = RunMode.Async)]
         [Summary("history0s")]
-        public async Task PrintChanges(
-            [Remainder] [Summary("history0_0s")] string id) {
+        public async Task PrintChangesCommand([Remainder] [Summary("history0_0s")] string id) {
+            await PrintChanges(id, false);
+        }
+
+        [Command("renderlog", RunMode = RunMode.Async)]
+        [Summary("renderlog0s")]
+        public async Task PrintImageChangesCommand([Remainder] [Summary("history0_0s")] string id) {
+            await PrintChanges(id, true);
+        }
+
+        private async Task PrintChanges(string id, bool forceImage) {
             id = id.Trim();
             var channelId = Context.Channel.Id;
-            var messageId = id;
-            if (id.Contains('-')) {
-                channelId = Convert.ToUInt64(id.Split('-')[0]);
-                messageId = id.Split('-')[1];
+            ulong messageId = 0;
+            try {
+                if (id.Contains('-')) {
+                    channelId = Convert.ToUInt64(id.Split('-')[0]);
+                    messageId = Convert.ToUInt64(id.Split('-')[1]);
+                }
+                else {
+                    messageId = Convert.ToUInt64(id);
+                }
+            }
+            catch (Exception) {
+                await ReplyFormattedAsync(Loc.Get("CommandHandler.FailedTitle"),
+                    Loc.Get("MessageHistory.IdFailedToParse").Format(id.SafeSubstring(100, "..."), GuildConfig.Prefix), 
+                    TimeSpan.FromMinutes(2));
+                Context.Message.SafeDelete();
+                return;
             }
 
             await MessageHistoryManager.PrintLog(MessageHistory.Get(channelId, Convert.ToUInt64(messageId)),
-                (SocketTextChannel) await GetResponseChannel(), Loc, (IGuildUser) Context.User);
+                (SocketTextChannel) await GetResponseChannel(), Loc, (IGuildUser) Context.User, forceImage);
             Context.Message.SafeDelete();
         }
 
@@ -52,7 +74,7 @@ namespace Bot.Commands {
 
         [Command("invite", RunMode = RunMode.Async)]
         [Summary("invite0s")]
-        public async Task Invite([Summary("invite0_0s")]bool emptyPermissions = false) {
+        public async Task Invite([Summary("invite0_0s")] bool emptyPermissions = false) {
             Context.Message.SafeDelete();
             var inviteUrl = $"https://discordapp.com/api/oauth2/authorize?client_id={Program.Client.CurrentUser.Id}&permissions=1110764608&scope=bot";
             await ReplyFormattedAsync(Loc.Get("Common.Invite"), Loc.Get("Common.InviteDescription").Format(inviteUrl));

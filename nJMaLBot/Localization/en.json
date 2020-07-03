@@ -126,8 +126,9 @@
       "help0_0s": "Command or group name",
       "help1s": "Shows information about all commands",
       "list0s": "Displays the entire queue",
+      "renderlog0s": "Displays the message change history as an image",
       "history0s": "Shows the message change history.\nYou can also put emotion 📖 under the desired message",
-      "history0_0s": "ID of the message whose history needs to be displayed. You can also use a pair of `channel ID` -`ID messages`",
+      "history0_0s": "ID of the message whose history needs to be displayed. You can also use a pair of `channel ID`-`ID messages`",
       "setprefix0s": "Assigns a prefix for bot commands",
       "setprefix0_0s": "New prefix",
       "language0s": "Display list of available languages",
@@ -178,7 +179,7 @@
       "UnmetPrecondition": "You do not have permission to execute this command!",
       "BadArgCount": "Error - the wrong number of arguments for the command. Verify the correctness through `{0}help {1}`",
       "ParseFailed": "An error occurred while trying to parse the command. Check the arguments through `{0}help {1}`",
-      "UnknownCommand": "Command `{0}` not found!\nPerhaps you wanted to use one of them: {1}\n Use the command `{1}help` for a list of commands.",
+      "UnknownCommand": "Command `{0}` not found!\nPerhaps you wanted to use one of them: {1}\n Use the command `{1}help` for a list of commands."
     },
     "Commands": {
       "RequestedBy": "Requested by {0} | Help us by voting",
@@ -210,7 +211,8 @@
       "ViewMessageExists": "View change history [of this post]({0})",
       "Attachments" : "Attachments: {0}",
       "AttachmentsTitle" : "Attachments",
-      "EmptyMessage" : "```Message without text```"
+      "EmptyMessage" : "```Message without text```",
+      "IdFailedToParse": "We cannot recognize the message ID (and channel ID) in `{0}`. \nCorrect Input Example:\n> {1}history 276780134676037642-728591222217637918\n> {1}history 728591222217637918"
     },
     "Statistics": {
       "Title": "Statistics",

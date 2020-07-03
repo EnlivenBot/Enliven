@@ -189,7 +189,7 @@ namespace Bot.Logging {
             return stream;
         }
 
-        public static async Task PrintLog(MessageHistory history, ITextChannel outputChannel, ILocalizationProvider loc, IGuildUser requester) {
+        public static async Task PrintLog(MessageHistory history, ITextChannel outputChannel, ILocalizationProvider loc, IGuildUser requester, bool forceImage = false) {
             var realMessage = history.GetRealMessage();
             IUserMessage logMessage = null;
             var embedBuilder = new EmbedBuilder().WithCurrentTimestamp()
@@ -211,7 +211,7 @@ namespace Bot.Logging {
                     embedBuilder.Description = loc.Get("MessageHistory.ViewMessageExists").Format((await realMessage).GetJumpUrl());
                 }
 
-                if (history.CanFitToEmbed(loc)) {
+                if (!forceImage && history.CanFitToEmbed(loc)) {
                     embedBuilder.Fields.InsertRange(0, history.GetEditsAsFields(loc));
                     logMessage = await outputChannel.SendMessageAsync(null, false, embedBuilder.Build());
                 }
