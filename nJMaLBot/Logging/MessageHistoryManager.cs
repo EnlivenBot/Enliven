@@ -112,10 +112,7 @@ namespace Bot.Logging {
                     }
                     else if (guildConfig.HistoryMissingInLog)
                     {
-                        embedBuilder.WithDescription(loc.Get("MessageHistory.OnDeleteWithoutHistory"));
-                        var message = await arg1.GetOrDownloadAsync();
-                        embedBuilder.AddField(loc.Get("MessageHistory.LastContent"),
-                            message == null ? loc.Get("MessageHistory.Unavailable") : message.Content);
+                        embedBuilder.AddField(loc.Get("MessageHistory.LastContent"),loc.Get("MessageHistory.Unavailable"));
                         await ((ISocketMessageChannel) logChannel).SendMessageAsync("===========================================", false,
                             embedBuilder.Build());
                         
