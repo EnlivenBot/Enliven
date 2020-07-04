@@ -253,6 +253,8 @@
       "CommandDisabled": "🤖 Logging messages containing commands for the bot **disabled** ❌",
       "HistoryMissingInLogEnabled": "⁉️ Send message about deleting a message whose change history was not found, **enabled** ✅",
       "HistoryMissingInLogDisabled": "⁉️ Send message about deleting a message whose change history was not found, **disabled** ❌",
+      "OutputToImage" : "🖨️ Large message histories will be displayed as \n> **Images** (slower, larger size) \n> HTML document (faster, recommended)",
+      "OutputToHtml" : "🖨️ Large message histories will be displayed as \n> Images (slower, larger size) \n> **HTML document** (faster, recommended)",
       "LogChannel": "🗒️ Log channel: {0}",
       "LogChannelMissing": "**not selected**. To select, send a message of the form ```{0}setchannel Log [here is the mention of the desired channel]```",
       "LoggedChannelsTitle": "📟 Logging enabled channels",

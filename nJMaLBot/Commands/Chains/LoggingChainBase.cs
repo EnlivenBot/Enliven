@@ -62,6 +62,9 @@ namespace Bot.Commands.Chains {
                             OnEnd.Invoke(new LocalizedEntry("ChainsCommon.Thanks").Add(() => _guildConfig.Prefix));
                             return;
                         }
+                        else if (args.Reaction.Emote.Equals(CommonEmoji.Printer)) {
+                            _guildConfig.LogExportType = _guildConfig.LogExportType.Next();
+                        }
                         else {
                             return;
                         }
@@ -72,7 +75,7 @@ namespace Bot.Commands.Chains {
                         await args.RemoveReason();
                     }));
 
-            await _message.AddReactionsAsync(new[] {CommonEmoji.Memo, CommonEmoji.Robot, CommonEmoji.ExclamationPoint, CommonEmoji.LegacyStop});
+            await _message.AddReactionsAsync(new[] {CommonEmoji.Memo, CommonEmoji.Robot, CommonEmoji.ExclamationPoint, CommonEmoji.Printer, CommonEmoji.LegacyStop});
             OnEnd = async entry => {
                 await _message.ModifyAsync(properties =>
                     properties.Embed = new EmbedBuilder().WithColor(Color.Orange).WithTitle(Loc.Get("ChainsCommon.Ended")).WithDescription(entry.Get(Loc))
@@ -99,6 +102,9 @@ namespace Bot.Commands.Chains {
             descriptionBuilder.AppendLine(_guildConfig.HistoryMissingInLog
                 ? Loc.Get("Logging.HistoryMissingInLogEnabled")
                 : Loc.Get("Logging.HistoryMissingInLogDisabled"));
+            descriptionBuilder.AppendLine(_guildConfig.LogExportType == LogExportTypes.Image
+                ? Loc.Get("Logging.OutputToImage")
+                : Loc.Get("Logging.OutputToHtml"));
             descriptionBuilder.AppendLine(Loc.Get("Logging.LogChannel").Format(
                 _guildConfig.GetChannel(ChannelFunction.Log, out var logChannel)
                     ? ((ITextChannel) logChannel)!.Mention
