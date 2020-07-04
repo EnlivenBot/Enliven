@@ -106,7 +106,7 @@ namespace Bot.Logging {
                             var historyHtml = await history.ExportToHtml(loc);
                             var uploadStream = guildConfig.LogExportType switch {
                                 LogExportTypes.Html  => new MemoryStream(Encoding.UTF8.GetBytes(historyHtml)),
-                                LogExportTypes.Image => RenderLog(historyHtml, history)
+                                LogExportTypes.Image => RenderLog(historyHtml)
                             };
                             var fileName = guildConfig.LogExportType switch {
                                 LogExportTypes.Html  => $"History-{history.ChannelId}-{history.MessageId}.html",
@@ -184,7 +184,7 @@ namespace Bot.Logging {
             return Task.CompletedTask;
         }
 
-        private static MemoryStream RenderLog(string html, MessageHistory messageHistory) {
+        private static MemoryStream RenderLog(string html) {
             using var re1 = new GcHtmlRenderer(html);
             var pngSettings = new PngSettings {FullPage = true, WindowSize = new Size(512, 1)};
 
@@ -221,7 +221,7 @@ namespace Bot.Logging {
                     logMessage = await outputChannel.SendMessageAsync(null, false, embedBuilder.Build());
                 }
                 else {
-                    var logImage = RenderLog(await history.ExportToHtml(loc), history);
+                    var logImage = RenderLog(await history.ExportToHtml(loc));
                     logMessage = await outputChannel.SendFileAsync(logImage, $"History-{history.ChannelId}-{history.MessageId}.png",
                         null, false, embedBuilder.Build());
                 }

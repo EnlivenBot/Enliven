@@ -258,8 +258,9 @@
       "LogChannel": "🗒️ Log channel: {0}",
       "LogChannelMissing": "**not selected**. To select, send a message of the form ```{0}setchannel Log [here is the mention of the desired channel]```",
       "LoggedChannelsTitle": "📟 Logging enabled channels",
+      "LoggedChannelsEmpty": "*There's nothing here*",
       "InfoTitle": "Contols",
-      "Info": "📝 To add or remove a channel to the logging, just write a message that contains its mention.\n For example:\n> {0}"
+      "Info": "📝 To add or remove a channel to the logging, just write a message that contains its mention.\n For example:\n> {0}\n***Warning:*** enable logging only for really important channels. Each message is a place in the bot storage. The more economical we all will use it, the later I will have to introduce a clear history of old messages. Treat this with understanding"
     }
   }
 }

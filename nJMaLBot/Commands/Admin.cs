@@ -116,7 +116,7 @@ namespace Bot.Commands {
         public async Task LoggingControlPanel() {
             var botPermissions = (await Context.Guild.GetUserAsync(Program.Client.CurrentUser.Id)).GetPermissions((IGuildChannel) Context.Channel);
             if (botPermissions.SendMessages) {
-                var loggingChainBase = LoggingChainBase.CreateInstance((ITextChannel) Context.Channel, Context.User, GuildConfig);
+                var loggingChainBase = LoggingChain.CreateInstance((ITextChannel) Context.Channel, Context.User, GuildConfig);
                 await loggingChainBase.Start();
             }
             else {

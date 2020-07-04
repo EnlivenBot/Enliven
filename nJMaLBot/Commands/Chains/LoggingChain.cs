@@ -12,7 +12,7 @@ using Bot.Utilities.Emoji;
 using Discord;
 
 namespace Bot.Commands.Chains {
-    public class LoggingChainBase : ChainBase {
+    public class LoggingChain : ChainBase {
         private static readonly Regex ChannelRegex = new Regex(@"^<#(\d{18})>$");
         private ILocalizationProvider Loc => _guildConfig.Loc;
         private GuildConfig _guildConfig = null!;
@@ -21,8 +21,8 @@ namespace Bot.Commands.Chains {
         private IUserMessage? _message;
         private CollectorsGroup? _collectorsGroup;
 
-        public static LoggingChainBase CreateInstance(ITextChannel channel, IUser user, GuildConfig guildConfig) {
-            var loggingChainBase = new LoggingChainBase($"{nameof(LoggingChainBase)}_{guildConfig.GuildId}") {
+        public static LoggingChain CreateInstance(ITextChannel channel, IUser user, GuildConfig guildConfig) {
+            var loggingChainBase = new LoggingChain($"{nameof(LoggingChain)}_{guildConfig.GuildId}") {
                 _channel = channel, _user = user, _guildConfig = guildConfig, MainBuilder = DiscordUtils.GetAuthorEmbedBuilderWrapper(user, guildConfig.Loc)
             };
             loggingChainBase.MainBuilder.WithColor(Color.Gold).WithTitle(guildConfig.Loc.Get("Chains.LoggingTitle"));
@@ -116,10 +116,9 @@ namespace Bot.Commands.Chains {
 
             var loggedChannels = string.Join("\n", _guildConfig.LoggedChannels.Select(arg => $"<#{arg}>"));
             MainBuilder.GetOrAddField("channelsList").WithName(Loc.Get("Logging.LoggedChannelsTitle"))
-                       .WithValue(string.IsNullOrWhiteSpace(loggedChannels) ? "Placeholder" : loggedChannels)
-                       .WithEnabled(_guildConfig.LoggedChannels.Count != 0);
+                       .WithValue(string.IsNullOrWhiteSpace(loggedChannels) ? Loc.Get("Logging.LoggedChannelsEmpty") : loggedChannels);
         }
 
-        private LoggingChainBase(string? uid) : base(uid) { }
+        private LoggingChain(string? uid) : base(uid) { }
     }
 }
