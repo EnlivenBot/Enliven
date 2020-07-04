@@ -18,6 +18,7 @@ namespace Bot.Config {
         public bool IsCommandLoggingEnabled { get; set; } = false;
         public bool HistoryMissingInLog { get; set; }
         public List<ulong> LoggedChannels { get; set; } = new List<ulong>();
+        public LogExportTypes LogExportType { get; set; } = LogExportTypes.Html;
         
         public ConcurrentDictionary<ChannelFunction, ulong> FunctionalChannels { get; set; } = new ConcurrentDictionary<ChannelFunction, ulong>();
         [BsonIgnore] public event EventHandler<ChannelFunction>? FunctionalChannelsChanged;
@@ -28,6 +29,11 @@ namespace Bot.Config {
     public enum ChannelFunction {
         Log,
         Music
+    }
+
+    public enum LogExportTypes {
+        Image,
+        Html
     }
 
     public partial class GuildConfig {
