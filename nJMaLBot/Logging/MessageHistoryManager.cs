@@ -93,7 +93,7 @@ namespace Bot.Logging {
                             embedBuilder.AddField(loc.Get("MessageHistory.AttachmentsTitle"), await history.GetAttachmentsString());
                         }
 
-                        embedBuilder.AddField(loc.Get("MessageHistory.Requester"), $"{history.GetAuthor()?.Username} <@{history.AuthorId}>", true);
+                        embedBuilder.AddField(loc.Get("MessageHistory.Author"), $"{history.GetAuthor()?.Username} <@{history.AuthorId}>", true);
 
                         if (history.CanFitToEmbed(loc)) {
                             embedBuilder.Fields.InsertRange(0, history.GetEditsAsFields(loc));

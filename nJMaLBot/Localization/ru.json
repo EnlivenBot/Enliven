@@ -196,7 +196,7 @@
       "PreviousUnavailable": "`Предыдущее содержимое недоступно`",
       "MessageWasDeleted": "Сообщение было удалено",
       "LastContent": "***Последнее содержимое:*** ({0})",
-      "LastContentDescription": "Последнее содержимое:\n>>> ",
+      "LastContentDescription": "Последнее содержимое:\n>>> {0}",
       "Channel": "Канал",
       "Unavailable": "Недоступно",
       "MessageId": "ID сообщения: {0}",

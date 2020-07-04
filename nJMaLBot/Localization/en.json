@@ -196,7 +196,7 @@
       "PreviousUnavailable": "`Previous edits unavailable`",
       "MessageWasDeleted": "Message has been deleted",
       "LastContent": "***Last content:*** ({0})",
-      "LastContentDescription": "Last content:\n>>> ",
+      "LastContentDescription": "Last content:\n>>> {0}",
       "Channel": "Channel",
       "Unavailable": "Unavailable",
       "MessageId": "Message ID: {0}",
