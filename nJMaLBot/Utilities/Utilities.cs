@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
@@ -19,6 +20,24 @@ namespace Bot.Utilities {
 
         public static IEnumerable<string> SplitToLines(string stringToSplit, int maximumLineLength) {
             return Regex.Matches(stringToSplit, @"(.{1," + maximumLineLength + @"})(?:\s|$)").Select(match => match.Value);
+        }
+        
+        public static TResult Try<TResult>(Func<TResult> action, Func<TResult> onFail) {
+            try {
+                return action();
+            }
+            catch {
+                return onFail();
+            }
+        }
+        
+        public static TResult Try<TResult>(Func<TResult> action, TResult onFail) {
+            try {
+                return action();
+            }
+            catch {
+                return onFail;
+            }
         }
     }
 }

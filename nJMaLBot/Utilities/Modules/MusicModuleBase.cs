@@ -31,6 +31,7 @@ namespace Bot.Utilities.Modules {
             if (!ErrorsMessagesControllers.TryGetValue(Context.Channel.Id, out var nonSpamMessageController)) {
                 nonSpamMessageController = new NonSpamMessageController(Context.Channel, Loc.Get("Music.Fail"))
                                           .AddChannel(await Context.User.GetOrCreateDMChannelAsync()).UpdateTimeout(TimeSpan.FromMinutes(2));
+                nonSpamMessageController.ResetTimeoutOnUpdate = true;
                 ErrorsMessagesControllers[Context.Channel.Id] = nonSpamMessageController;
             }
 
