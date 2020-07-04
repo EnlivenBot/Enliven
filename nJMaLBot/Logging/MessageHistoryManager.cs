@@ -2,6 +2,7 @@
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Bot.Config;
 using Bot.Config.Localization.Providers;
@@ -102,9 +103,16 @@ namespace Bot.Logging {
                         else {
                             embedBuilder.WithDescription(loc.Get("MessageHistory.LastContentDescription")
                                                             .Format(history.GetLastContent().SafeSubstring(1900, "...")));
-                            var logImage = await RenderLog(loc, history);
-                            await ((ISocketMessageChannel) logChannel).SendFileAsync(logImage,
-                                $"History-{history.ChannelId}-{history.MessageId}.jpg",
+                            var historyHtml = await history.ExportToHtml(loc);
+                            var uploadStream = guildConfig.LogExportType switch {
+                                LogExportTypes.Html  => new MemoryStream(Encoding.UTF8.GetBytes(historyHtml)),
+                                LogExportTypes.Image => RenderLog(historyHtml, history)
+                            };
+                            var fileName = guildConfig.LogExportType switch {
+                                LogExportTypes.Html  => $"History-{history.ChannelId}-{history.MessageId}.html",
+                                LogExportTypes.Image => $"History-{history.ChannelId}-{history.MessageId}.png"
+                            };
+                            await ((ISocketMessageChannel) logChannel).SendFileAsync(uploadStream, fileName,
                                 "===========================================", false, embedBuilder.Build());
                         }
                         
@@ -176,8 +184,8 @@ namespace Bot.Logging {
             return Task.CompletedTask;
         }
 
-        private static async Task<MemoryStream> RenderLog(ILocalizationProvider provider, MessageHistory messageHistory) {
-            using var re1 = new GcHtmlRenderer(await messageHistory.ExportToHtml(provider));
+        private static MemoryStream RenderLog(string html, MessageHistory messageHistory) {
+            using var re1 = new GcHtmlRenderer(html);
             var pngSettings = new PngSettings {FullPage = true, WindowSize = new Size(512, 1)};
 
             var stream = new MemoryStream();
@@ -213,7 +221,7 @@ namespace Bot.Logging {
                     logMessage = await outputChannel.SendMessageAsync(null, false, embedBuilder.Build());
                 }
                 else {
-                    var logImage = await RenderLog(loc, history);
+                    var logImage = RenderLog(await history.ExportToHtml(loc), history);
                     logMessage = await outputChannel.SendFileAsync(logImage, $"History-{history.ChannelId}-{history.MessageId}.png",
                         null, false, embedBuilder.Build());
                 }
