@@ -237,7 +237,7 @@ namespace Bot.Logging {
         public static bool NeedLogMessage(IMessage arg, GuildConfig config, bool? isCommand) {
             if (!config.IsLoggingEnabled || arg.Author.IsBot || arg.Author.IsWebhook) return false;
             if (!(arg.Channel is ITextChannel textChannel)) return false;
-            if (isCommand == true && config.IsCommandLoggingEnabled) return false;
+            if (isCommand == true && !config.IsCommandLoggingEnabled) return false;
 
             return config.LoggedChannels.Contains(textChannel.Id);
         }
