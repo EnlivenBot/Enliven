@@ -17,6 +17,7 @@ namespace Bot.Config {
         public bool IsLoggingEnabled { get; set; } = false;
         public bool IsCommandLoggingEnabled { get; set; } = false;
         public bool HistoryMissingInLog { get; set; }
+        public bool HistoryMissingPacks { get; set; }
         public List<ulong> LoggedChannels { get; set; } = new List<ulong>();
         public LogExportTypes LogExportType { get; set; } = LogExportTypes.Html;
         

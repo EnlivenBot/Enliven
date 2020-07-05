@@ -211,7 +211,8 @@
       "Attachments" : "Attachments: {0}",
       "AttachmentsTitle" : "Attachments",
       "EmptyMessage" : "```Message without text```",
-      "IdFailedToParse": "We cannot recognize the message ID (and channel ID) in `{0}`. \nCorrect Input Example:\n> {1}history 276780134676037642-728591222217637918\n> {1}history 728591222217637918"
+      "IdFailedToParse": "We cannot recognize the message ID (and channel ID) in `{0}`. \nCorrect Input Example:\n> {1}history 276780134676037642-728591222217637918\n> {1}history 728591222217637918",
+      "DeletedMessagesPackDescription": "**Удаленные сообщения, история изменений которых не найдена:**"
     },
     "Statistics": {
       "Title": "Statistics",
@@ -253,6 +254,8 @@
       "CommandDisabled": "🤖 Logging messages containing commands for the bot **disabled** ❌",
       "HistoryMissingInLogEnabled": "⁉️ Send message about deleting a message whose change history was not found, **enabled** ✅",
       "HistoryMissingInLogDisabled": "⁉️ Send message about deleting a message whose change history was not found, **disabled** ❌",
+      "HistoryMissingPacksEnabled" : "🗃️ Putting information about deleting messages whose change history is not found in one message **enabled** ✅",
+      "HistoryMissingPacksDisabled" : "🗃️ Putting information about deleting messages whose change history is not found in one message **disabled** ❌",
       "OutputToImage" : "🖨️ Large message histories will be displayed as \n> **Images** (slower, larger size) \n> HTML document (faster, recommended)",
       "OutputToHtml" : "🖨️ Large message histories will be displayed as \n> Images (slower, larger size) \n> **HTML document** (faster, recommended)",
       "LogChannel": "🗒️ Log channel: {0}",
