@@ -25,8 +25,7 @@ namespace Bot.Logging {
         public static MessageHistory FromMessage(IMessage arg) {
             var history = new MessageHistory {
                 AuthorId = arg.Author.Id,
-                ChannelId = arg.Channel.Id,
-                MessageId = arg.Id,
+                Id = $"{arg.Channel.Id}:{arg.Id}",
                 Edits = new List<MessageSnapshot> {
                     new MessageSnapshot {
                         EditTimestamp = arg.CreatedAt,
@@ -47,13 +46,13 @@ namespace Bot.Logging {
 
         [BsonField("U")] public bool IsHistoryUnavailable { get; set; }
 
-        [BsonId] public string Id => $"{ChannelId}:{MessageId}";
+        [BsonId] public string Id { get; private set; }
 
         [BsonField("A")] public ulong AuthorId { get; set; }
 
-        [BsonField("C")] public ulong ChannelId { get; set; }
+        [BsonIgnore] public ulong ChannelId => Convert.ToUInt64(Id.Split(":")[0]);
 
-        [BsonField("M")] public ulong MessageId { get; set; }
+        [BsonIgnore] public ulong MessageId => Convert.ToUInt64(Id.Split(":")[1]);
 
         [BsonField("E")] public List<MessageSnapshot> Edits { get; set; } = new List<MessageSnapshot>();
 
@@ -69,7 +68,7 @@ namespace Bot.Logging {
 
         public static MessageHistory Get(ulong channelId, ulong messageId, ulong authorId = default) {
             return GlobalDB.Messages.FindById($"{channelId}:{messageId}") ?? new MessageHistory {
-                AuthorId = authorId, MessageId = messageId, ChannelId = channelId
+                AuthorId = authorId, Id = $"{channelId}:{messageId}"
             };
         }
 
