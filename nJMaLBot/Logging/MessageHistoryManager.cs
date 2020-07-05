@@ -86,6 +86,7 @@ namespace Bot.Logging {
                     var guildConfig = GuildConfig.Get(textChannel.GuildId);
 
                     if (!guildConfig.GetChannel(ChannelFunction.Log, out var logChannel) || logChannel.Id == arg2.Id) return;
+                    if (!guildConfig.LoggedChannels.Contains(textChannel.Id)) return;
                     var loc = guildConfig.Loc;
                     var embedBuilder = new EmbedBuilder().WithCurrentTimestamp()
                                                          .WithTitle(loc.Get("MessageHistory.MessageWasDeleted"))
