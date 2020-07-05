@@ -18,7 +18,6 @@ using NLog;
 
 namespace Bot.Logging {
     public static class MessageHistoryManager {
-
         // ReSharper disable once InconsistentNaming
         private static readonly Logger logger = LogManager.GetCurrentClassLogger();
         public static readonly DiffMatchPatch.DiffMatchPatch DiffMatchPatch = new DiffMatchPatch.DiffMatchPatch();
@@ -115,15 +114,45 @@ namespace Bot.Logging {
                             await ((ISocketMessageChannel) logChannel).SendFileAsync(uploadStream, fileName,
                                 "===========================================", false, embedBuilder.Build());
                         }
-                        
+
                         CommandHandler.RegisterUsage("MessagesDeleted", "Messages");
                     }
-                    else if (guildConfig.HistoryMissingInLog)
-                    {
-                        embedBuilder.AddField(loc.Get("MessageHistory.LastContent"),loc.Get("MessageHistory.Unavailable"));
-                        await ((ISocketMessageChannel) logChannel).SendMessageAsync("===========================================", false,
-                            embedBuilder.Build());
-                        
+                    else if (guildConfig.HistoryMissingInLog) {
+                        if (guildConfig.HistoryMissingPacks) {
+                            IUserMessage? packMessage = await Utilities.Utilities.TryAsync(async () => {
+                                var firstOrDefault = (await (logChannel as ITextChannel).GetMessagesAsync(1).FlattenAsync()).FirstOrDefault();
+                                if (firstOrDefault.Author.Id != Program.Client.CurrentUser.Id) return null;
+                                if (!firstOrDefault.Embeds.First().Title.Contains("Pack")) return null;
+                                return (IUserMessage) firstOrDefault;
+                            }, () => null);
+                            if (packMessage == null) {
+                                SendPackMessage();
+                            }
+                            else {
+                                try {
+                                    var packBuilder = new EmbedBuilder().WithTitle("Deleted messages Pack")
+                                                                        .WithDescription(packMessage.Embeds.First().Description);
+                                    packBuilder.Description += $"\n{DateTimeOffset.UtcNow} in {textChannel.Mention}";
+                                    packMessage.ModifyAsync(properties => properties.Embed = packBuilder.Build());
+                                }
+                                catch (Exception) {
+                                    await SendPackMessage();
+                                }
+                            }
+
+                            async Task SendPackMessage() {
+                                var packBuilder = new EmbedBuilder().WithTitle("Deleted messages Pack")
+                                                                    .WithDescription($"Deleted messages: (TimeStamp|Channel)");
+                                packBuilder.Description += $"\n{DateTimeOffset.UtcNow} in {textChannel.Mention}";
+                                await (logChannel as ITextChannel).SendMessageAsync(null, false, packBuilder.Build());
+                            }
+                        }
+                        else {
+                            embedBuilder.AddField(loc.Get("MessageHistory.LastContent"), loc.Get("MessageHistory.Unavailable"));
+                            await ((ISocketMessageChannel) logChannel).SendMessageAsync("===========================================", false,
+                                embedBuilder.Build());
+                        }
+
                         CommandHandler.RegisterUsage("MessagesDeleted", "Messages");
                     }
                 }
@@ -194,7 +223,8 @@ namespace Bot.Logging {
             return stream;
         }
 
-        public static async Task PrintLog(MessageHistory history, ITextChannel outputChannel, ILocalizationProvider loc, IGuildUser requester, bool forceImage = false) {
+        public static async Task PrintLog(MessageHistory history, ITextChannel outputChannel, ILocalizationProvider loc, IGuildUser requester,
+                                          bool forceImage = false) {
             var realMessage = history.GetRealMessage();
             IUserMessage logMessage = null;
             var embedBuilder = new EmbedBuilder().WithCurrentTimestamp()

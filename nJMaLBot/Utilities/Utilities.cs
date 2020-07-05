@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace Bot.Utilities {
     internal static class Utilities {
@@ -22,11 +23,20 @@ namespace Bot.Utilities {
             return Regex.Matches(stringToSplit, @"(.{1," + maximumLineLength + @"})(?:\s|$)").Select(match => match.Value);
         }
         
+        public static async Task<TResult> TryAsync<TResult>(Func<Task<TResult>> action, Func<TResult> onFail) {
+            try {
+                return await action();
+            }
+            catch (Exception) {
+                return onFail();
+            }
+        }
+        
         public static TResult Try<TResult>(Func<TResult> action, Func<TResult> onFail) {
             try {
                 return action();
             }
-            catch {
+            catch (Exception) {
                 return onFail();
             }
         }
@@ -35,7 +45,7 @@ namespace Bot.Utilities {
             try {
                 return action();
             }
-            catch {
+            catch (Exception) {
                 return onFail;
             }
         }
