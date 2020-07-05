@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Bot.Config;
 using Bot.Config.Localization;
 using Bot.Config.Localization.Providers;
-using Bot.Music.Players;
 using Bot.Utilities;
 using Bot.Utilities.Collector;
 using Bot.Utilities.Emoji;
@@ -16,19 +16,18 @@ using Lavalink4NET.Decoding;
 using Lavalink4NET.Events;
 using Lavalink4NET.Player;
 using LiteDB;
-using Timer = System.Threading.Timer;
 
 #pragma warning disable 1998
 
 #pragma warning disable 4014
 
-namespace Bot.Music {
+namespace Bot.Music.Players {
     public sealed class EmbedPlaybackPlayer : PlaylistLavalinkPlayer {
         public bool UpdatePlayback;
         private EmbedBuilder EmbedBuilder = new EmbedBuilder();
-        public IUserMessage ControlMessage { get; private set; }
+        public IUserMessage? ControlMessage { get; private set; }
         private readonly StringBuilder _queueHistory = new StringBuilder();
-        private readonly TextConstructor warningConstructor = new TextConstructor();
+        private readonly TextConstructor _warningConstructor = new TextConstructor();
 
         // ReSharper disable once UnusedParameter.Local
         public EmbedPlaybackPlayer(ulong guildId) : base(guildId) {
@@ -42,11 +41,11 @@ namespace Bot.Music {
             UpdateProgress();
             UpdateQueue();
             UpdateParameters();
-            warningConstructor.EnabledChanged += WarningConstructorOnEnabledChanged;
+            _warningConstructor.EnabledChanged += WarningConstructorOnEnabledChanged;
         }
 
         private void WarningConstructorOnEnabledChanged(object? sender, bool e) {
-            var c = (TextConstructor) sender;
+            var c = (TextConstructor) sender!;
             var nowEnabled = c.IsEnabled;
             if (e && !nowEnabled) {
                 EmbedBuilder.Fields.RemoveAt(4);
@@ -123,7 +122,7 @@ namespace Bot.Music {
                     oldControlMessage.DelayedDelete(TimeSpan.FromMinutes(10));
                 }
 
-                await _modifyAsync;
+                if (_modifyAsync != null) await _modifyAsync;
                 oldControlMessage?.ModifyAsync(properties => {
                     properties.Embed = embedBuilder.Build();
                     properties.Content = null;
@@ -167,11 +166,13 @@ namespace Bot.Music {
         }
 
         private async Task SetupWarnings() {
-            var guildUser = (await Guild.GetUserAsync(Program.Client.CurrentUser.Id)).GetPermissions((IGuildChannel) ControlMessage.Channel);
-            IsExternalEmojiAllowed = guildUser.UseExternalEmojis;
-            warningConstructor.Add("EmojiRemoval", new LocalizedEntry("Music.WarningEmojiRemoval"), !guildUser.ManageMessages);
-            warningConstructor.Add("EmojiAdding", new LocalizedEntry("Music.WarningEmojiAdding"), !guildUser.AddReactions);
-            warningConstructor.Add("CustomEmoji", new LocalizedEntry("Music.WarningCustomEmoji"), !guildUser.UseExternalEmojis);
+            if (ControlMessage != null) {
+                var guildUser = (await Guild.GetUserAsync(Program.Client.CurrentUser.Id)).GetPermissions((IGuildChannel) ControlMessage.Channel);
+                IsExternalEmojiAllowed = guildUser.UseExternalEmojis;
+                _warningConstructor.Add("EmojiRemoval", new LocalizedEntry("Music.WarningEmojiRemoval"), !guildUser.ManageMessages);
+                _warningConstructor.Add("EmojiAdding", new LocalizedEntry("Music.WarningEmojiAdding"), !guildUser.AddReactions);
+                _warningConstructor.Add("CustomEmoji", new LocalizedEntry("Music.WarningCustomEmoji"), !guildUser.UseExternalEmojis);
+            }
         }
 
         public override async Task Enqueue(List<AuthoredLavalinkTrack> tracks, bool enqueue) {
@@ -415,7 +416,7 @@ namespace Bot.Music {
 
         #region Embed updates
 
-        private Timer _controlMessageSendTimer;
+        private Timer? _controlMessageSendTimer;
 
         public async Task EnqueueControlMessageSend(IMessageChannel channel) {
             if (_controlMessageSendTimer == null) {
@@ -438,18 +439,18 @@ namespace Bot.Music {
             }
         }
 
-        private Task _modifyAsync;
+        private Task? _modifyAsync;
         private bool _modifyQueued;
-        private Task _addReactionsAsync;
-        private CollectorsGroup _queueCollectorsGroup;
-        private IUserMessage _queueMessage;
+        private Task? _addReactionsAsync;
+        private CollectorsGroup? _queueCollectorsGroup;
+        private IUserMessage? _queueMessage;
 
         private async Task UpdateControlMessage(bool background = false) {
             if (ControlMessage == null)
                 return;
 
             //Not thread safe method cuz in this case, thread safety is a waste of time
-            if (this._modifyAsync?.IsCompleted ?? true) {
+            if (_modifyAsync?.IsCompleted ?? true) {
                 UpdateInternal();
             }
             else if (!background) {
@@ -457,7 +458,7 @@ namespace Bot.Music {
                     return;
                 try {
                     _modifyQueued = true;
-                    await this._modifyAsync;
+                    await _modifyAsync;
                     UpdateInternal();
                 }
                 finally {
@@ -466,7 +467,7 @@ namespace Bot.Music {
             }
 
             void UpdateInternal() {
-                this._modifyAsync = ControlMessage?.ModifyAsync(properties => {
+                _modifyAsync = ControlMessage?.ModifyAsync(properties => {
                     properties.Embed = EmbedBuilder.Build();
                     properties.Content = "";
                 });
@@ -525,8 +526,8 @@ namespace Bot.Music {
             }
             else if ((State != PlayerState.NotPlaying || State != PlayerState.NotConnected || State != PlayerState.Destroyed) && CurrentTrack != null) {
                 var iconUrl = CurrentTrack.Provider == StreamProvider.YouTube ? $"https://img.youtube.com/vi/{CurrentTrack?.TrackIdentifier}/0.jpg" : null;
-                EmbedBuilder?.WithAuthor(string.IsNullOrWhiteSpace(CurrentTrack.Author) ? "Unknown" : CurrentTrack.Author.SafeSubstring(0, 250), iconUrl)
-                            ?.WithTitle(CurrentTrack.Title.SafeSubstring(0, 250))?.WithUrl(CurrentTrack.Source);
+                EmbedBuilder?.WithAuthor(string.IsNullOrWhiteSpace(CurrentTrack!.Author) ? "Unknown" : CurrentTrack.Author.SafeSubstring(0, 250), iconUrl)
+                            ?.WithTitle(CurrentTrack!.Title.SafeSubstring(0, 250))?.WithUrl(CurrentTrack!.Source);
             }
             else {
                 EmbedBuilder.Author = null;
@@ -555,7 +556,7 @@ namespace Bot.Music {
 
             StringBuilder GetPlaylistString() {
                 var globalStringBuilder = new StringBuilder();
-                string lastAuthor = null;
+                string? lastAuthor = null;
                 var authorStringBuilder = new StringBuilder();
                 for (var i = Math.Max(CurrentTrackIndex - 1, 0); i < CurrentTrackIndex + 5; i++) {
                     if (!Playlist.TryGetValue(i, out var track)) continue;
@@ -588,7 +589,7 @@ namespace Bot.Music {
         }
 
         public void UpdateNodeName() {
-            var currentNode = MusicUtils.Cluster.GetServingNode(GuildId);
+            var currentNode = MusicUtils.Cluster!.GetServingNode(GuildId);
             EmbedBuilder.WithFooter($"Powered by {Program.Client.CurrentUser.Username} | {currentNode.Label}");
         }
 
@@ -598,8 +599,8 @@ namespace Bot.Music {
     public class TextConstructor {
         public Dictionary<string, (bool, LocalizedEntry)> Entries = new Dictionary<string, (bool, LocalizedEntry)>();
         public bool IsEnabled => Entries.Any(pair => pair.Value.Item1);
-        public event EventHandler<bool> EnabledChanged;
-        private bool _isPreviouslyEnabled = false;
+        public event EventHandler<bool>? EnabledChanged;
+        private bool _isPreviouslyEnabled;
 
         public void Toggle(string id, bool value) {
             try {

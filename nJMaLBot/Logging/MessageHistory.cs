@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -13,41 +14,53 @@ using DiffMatchPatch;
 using Discord;
 using Discord.WebSocket;
 using DiscordChatExporter.Domain.Discord.Models;
+using DiscordChatExporter.Domain.Discord.Models.Common;
 using LiteDB;
+using Attachment = DiscordChatExporter.Domain.Discord.Models.Attachment;
+using Embed = DiscordChatExporter.Domain.Discord.Models.Embed;
 using MessageType = DiscordChatExporter.Domain.Discord.Models.MessageType;
 
-namespace Bot {
+namespace Bot.Logging {
     public class MessageHistory {
+        public static MessageHistory FromMessage(IMessage arg) {
+            var history = new MessageHistory {
+                AuthorId = arg.Author.Id,
+                Id = $"{arg.Channel.Id}:{arg.Id}",
+                Edits = new List<MessageSnapshot> {
+                    new MessageSnapshot {
+                        EditTimestamp = arg.CreatedAt,
+                        Value = DiffMatchPatch.DiffMatchPatch.patch_toText(MessageHistoryManager.DiffMatchPatch.patch_make("", arg.Content))
+                    }
+                },
+                Attachments = arg.Attachments.Select(attachment => attachment.Url).ToList()
+            };
+            return history;
+        }
+
         public class MessageSnapshot {
             public DateTimeOffset EditTimestamp { get; set; }
-            public string Value { get; set; }
+            public string Value { get; set; } = null!;
         }
+
+        [BsonField("At")] public List<string>? Attachments { get; set; }
 
         [BsonField("U")] public bool IsHistoryUnavailable { get; set; }
 
-        [BsonId] public string Id => $"{ChannelId}:{MessageId}";
+        [BsonId] public string Id { get; private set; }
 
         [BsonField("A")] public ulong AuthorId { get; set; }
 
-        [BsonField("C")] public ulong ChannelId { get; set; }
+        [BsonIgnore] public ulong ChannelId => Convert.ToUInt64(Id.Split(":")[0]);
 
-        [BsonField("M")] public ulong MessageId { get; set; }
+        [BsonIgnore] public ulong MessageId => Convert.ToUInt64(Id.Split(":")[1]);
 
         [BsonField("E")] public List<MessageSnapshot> Edits { get; set; } = new List<MessageSnapshot>();
 
         [BsonIgnore] public bool HistoryExists => Edits.Count != 0;
 
-        [BsonIgnore]
-        public bool IsIgnored {
-            get {
-                var author = GetAuthor();
-                if (author?.IsBot == true || author?.IsWebhook == true) {
-                    return true;
-                }
+        [BsonIgnore] public bool HasAttachments => Attachments != null && Attachments.Count != 0;
 
-                return IgnoredMessages.IsIgnored(ChannelId.ToString(), MessageId.ToString());
-            }
-        }
+        [BsonIgnore] private static Regex AttachmentRegex = new Regex(@"(\d+)\/(\d+)\/(.+?)$");
 
         public void Save() {
             GlobalDB.Messages.Upsert(this);
@@ -55,7 +68,7 @@ namespace Bot {
 
         public static MessageHistory Get(ulong channelId, ulong messageId, ulong authorId = default) {
             return GlobalDB.Messages.FindById($"{channelId}:{messageId}") ?? new MessageHistory {
-                AuthorId = authorId, MessageId = messageId, ChannelId = channelId
+                AuthorId = authorId, Id = $"{channelId}:{messageId}"
             };
         }
 
@@ -68,6 +81,7 @@ namespace Bot {
         }
 
         public void AddSnapshot(DateTimeOffset editTime, string newContent) {
+            newContent ??= "";
             Edits.Add(new MessageSnapshot {
                 EditTimestamp = editTime,
                 Value = DiffMatchPatch.DiffMatchPatch.patch_toText(MessageHistoryManager.DiffMatchPatch.patch_make(GetLastContent(), newContent))
@@ -77,8 +91,8 @@ namespace Bot {
         public bool CanFitToEmbed(ILocalizationProvider loc) {
             if (Edits.Count > 20)
                 return false;
-            var commonCount = 0;
-            MessageSnapshot lastSnapshot = null;
+            var commonCount = HasAttachments ? GetAttachmentsString(false).Result.Length : 0;
+            MessageSnapshot? lastSnapshot = null;
             foreach (var edit in GetSnapshots(loc)) {
                 if (edit.Value.Length > 1020)
                     return false;
@@ -88,11 +102,11 @@ namespace Bot {
                 lastSnapshot = edit;
             }
 
-            return commonCount - lastSnapshot.EditTimestamp.ToString().Length +
-                loc.Get("MessageHistory.LastContent").Format(lastSnapshot.EditTimestamp).Length <= 5500;
+            return commonCount - (lastSnapshot?.EditTimestamp.ToString()?.Length ?? 0) +
+                loc.Get("MessageHistory.LastContent").Format(lastSnapshot?.EditTimestamp).Length <= 5500;
         }
 
-        public SocketGuildUser GetAuthor() {
+        public SocketGuildUser? GetAuthor() {
             try {
                 return Program.Client.GetUser(AuthorId) as SocketGuildUser;
             }
@@ -102,8 +116,13 @@ namespace Bot {
         }
 
         public string GetLastContent() {
-            return MessageHistoryManager.DiffMatchPatch.patch_apply(
-                Edits.SelectMany(s1 => DiffMatchPatch.DiffMatchPatch.patch_fromText(s1.Value)).ToList(), "")[0].ToString();
+            try {
+                return MessageHistoryManager.DiffMatchPatch.patch_apply(
+                    Edits.SelectMany(s1 => DiffMatchPatch.DiffMatchPatch.patch_fromText(s1.Value)).ToList(), "")[0].ToString() ?? "";
+            }
+            catch (Exception) {
+                return "";
+            }
         }
 
         public IEnumerable<MessageSnapshot> GetSnapshots(ILocalizationProvider loc, bool injectDiffsHighlight = false) {
@@ -114,10 +133,8 @@ namespace Bot {
 
             foreach (var edit in Edits) {
                 var last = snapshots.Count == 0 ? "" : snapshots.Last().Value;
-                var snapshot = MessageHistoryManager.DiffMatchPatch.patch_apply(DiffMatchPatch.DiffMatchPatch.patch_fromText(edit.Value), last)[0].ToString();
-                if (snapshot == "###Unavailable$$$") {
-                    snapshot = loc.Get("MessageHistory.PreviousUnavailable");
-                }
+                var snapshot = MessageHistoryManager.DiffMatchPatch.patch_apply(DiffMatchPatch.DiffMatchPatch.patch_fromText(edit.Value), last)[0].ToString() ??
+                               "";
 
                 snapshots.Add(new MessageSnapshot {EditTimestamp = edit.EditTimestamp, Value = snapshot});
                 if (injectDiffsHighlight && snapshots.Count > 1) {
@@ -132,9 +149,10 @@ namespace Bot {
         }
 
         public IEnumerable<EmbedFieldBuilder> GetEditsAsFields(ILocalizationProvider loc) {
-            var embedFields = GetSnapshots(loc)
-                             .Select(messageSnapshot => new EmbedFieldBuilder
-                                  {Name = messageSnapshot.EditTimestamp.ToString(), Value = ">>> " + messageSnapshot.Value}).ToList();
+            var embedFields = GetSnapshots(loc).Select(messageSnapshot => new EmbedFieldBuilder {
+                Name = messageSnapshot.EditTimestamp.ToString(),
+                Value = string.IsNullOrWhiteSpace(messageSnapshot.Value) ? loc.Get("MessageHistory.EmptyMessage") : $">>> {messageSnapshot.Value}"
+            }).ToList();
 
             var lastContent = embedFields.Last();
             lastContent.Name = loc.Get("MessageHistory.LastContent").Format(lastContent.Name);
@@ -155,13 +173,24 @@ namespace Bot {
                 members.Add(member);
 
                 await renderer.WritePreambleAsync();
-                foreach (var messageSnapshot in GetSnapshots(loc, injectDiffsHighlight)) {
+
+                var messageSnapshots = GetSnapshots(loc, injectDiffsHighlight).ToList();
+                var hasAttachments = Attachments != null && Attachments.Count != 0;
+
+                // If we have attachments and message edits
+                // Then render attachments separately
+                if (hasAttachments && messageSnapshots.Count != 1) {
+                    await renderer.WriteMessageAsync(new Message("", MessageType.Default, user, DateTimeOffset.MinValue, null, true, "",
+                        (await GetExportAttachments()).ToList(), new List<Embed>(), new List<Reaction>(), new List<User>()));
+                }
+
+                foreach (var messageSnapshot in messageSnapshots) {
                     foreach (var userMention in GetUserMentions(messageSnapshot.Value)) members.Add(Member.CreateForUser(userMention));
 
                     await renderer.WriteMessageAsync(new Message(MessageId.ToString(), MessageType.Default, user, messageSnapshot.EditTimestamp,
                         null, false, messageSnapshot.Value,
-                        new List<DiscordChatExporter.Domain.Discord.Models.Attachment>(), new List<DiscordChatExporter.Domain.Discord.Models.Embed>(),
-                        new List<Reaction>(), members.Select(member1 => member1.User).ToList()));
+                        hasAttachments && messageSnapshots.Count == 1 ? (await GetExportAttachments()).ToList() : new List<Attachment>(),
+                        new List<Embed>(), new List<Reaction>(), members.Select(member1 => member1.User).ToList()));
                 }
 
                 await renderer.WritePostambleAsync();
@@ -180,8 +209,9 @@ namespace Bot {
         }
 
         private static IEnumerable<User> GetUserMentions(string text) {
-            foreach (Match m in Regex.Matches(text, @"(?<=<@|<@!)[0-9]{18}(?=>)", RegexOptions.Multiline))
-                yield return ConstructUser(Convert.ToUInt64(m.Value));
+            foreach (Match? m in Regex.Matches(text, @"(?<=<@|<@!)[0-9]{18}(?=>)", RegexOptions.Multiline))
+                if (m != null)
+                    yield return ConstructUser(Convert.ToUInt64(m.Value));
         }
 
         private static User ConstructUser(ulong userId) {
@@ -216,15 +246,58 @@ namespace Bot {
             return html.ToString();
         }
 
+        // ReSharper disable once UnusedMethodReturnValue.Local
+        private static bool ParseAttachment(string s, out string id, out string fileName) {
+            try {
+                var match = AttachmentRegex.Match(s);
+                id = match.Groups[2].Value;
+                fileName = match.Groups[3].Value;
+                return true;
+            }
+            catch (Exception) {
+                id = "";
+                fileName = "";
+                return false;
+            }
+        }
+
+        public async Task<Attachment[]> GetExportAttachments(bool needFileSize = true) {
+            return await Task.WhenAll(Attachments.Select(async s => {
+                ParseAttachment(s, out var id, out var fileName);
+                long fileSize = 0;
+                try {
+                    if (needFileSize && !Attachment.ImageFileExtensions.Contains(Path.GetExtension(fileName), StringComparer.OrdinalIgnoreCase)) {
+                        var request = WebRequest.CreateHttp(s);
+                        request.UserAgent = "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.1";
+                        request.Method = "HEAD";
+                        using var response = await request.GetResponseAsync();
+                        fileSize = response.ContentLength;
+                    }
+                }
+                catch (Exception) {
+                    // ignored
+                }
+
+                var attachment = new Attachment(id, s, fileName, null, null, FileSize.FromBytes(fileSize));
+                return attachment;
+            }));
+        }
+
+        public async Task<string> GetAttachmentsString(bool needFileSize = true) {
+            return string.Join("\n",
+                (await GetExportAttachments(needFileSize)).Select(attachment =>
+                    $"[{attachment.FileName} ({attachment.FileSize.ToString()})]({attachment.Url})"));
+        }
+
         private static string HtmlDiffsUnEncode(string encoded) {
             return encoded.Replace("࢔", "<span style=\"background:DarkGreen;\">").Replace("࢕", "</span>")
                           .Replace("࢖", "<span class=\"removed\">").Replace("ࢗ", "</span>");
         }
-        
-        public async Task<IUserMessage> GetRealMessage() {
+
+        public async Task<IUserMessage?> GetRealMessage() {
             try {
                 var textChannel = (ITextChannel) Program.Client.GetChannel(ChannelId);
-                var messageAsync = await textChannel?.GetMessageAsync(MessageId);
+                var messageAsync = await textChannel?.GetMessageAsync(MessageId)!;
                 return messageAsync as IUserMessage;
             }
             catch (Exception) {

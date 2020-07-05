@@ -6,32 +6,32 @@ namespace Bot.Utilities {
         private readonly TimeSpan _lifetime;
         private readonly object _valueLock = new object();
 
-        private T _value;
+        private T _value = default!;
         private bool _hasValue;
         private DateTime _creationTime;
 
         public Temporary(Func<T> factory, TimeSpan lifetime) {
-            this._factory = factory;
-            this._lifetime = lifetime;
+            _factory = factory;
+            _lifetime = lifetime;
         }
 
         public T Value {
             get {
                 var now = DateTime.Now;
-                lock (this._valueLock) {
-                    if (this._hasValue) {
-                        if (this._creationTime.Add(this._lifetime) < now) {
-                            this._hasValue = false;
+                lock (_valueLock) {
+                    if (_hasValue) {
+                        if (_creationTime.Add(_lifetime) < now) {
+                            _hasValue = false;
                         }
                     }
 
-                    if (this._hasValue) return this._value;
-                    this._value = this._factory();
-                    this._hasValue = true;
+                    if (_hasValue) return _value;
+                    _value = _factory();
+                    _hasValue = true;
                         
-                    this._creationTime = DateTime.Now;
+                    _creationTime = DateTime.Now;
 
-                    return this._value;
+                    return _value;
                 }
             }
         }

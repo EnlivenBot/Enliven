@@ -18,7 +18,7 @@ namespace Bot.Utilities {
     public class ReliabilityService {
         // --- Begin Configuration Section ---
         // How long should we wait on the client to reconnect before resetting?
-        private static readonly TimeSpan _timeout = TimeSpan.FromSeconds(30);
+        private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(30);
 
         // Should we attempt to reset the client? Set this to false if your client is still locking up.
         private static readonly bool _attemptReset = true;
@@ -30,12 +30,10 @@ namespace Bot.Utilities {
         private static readonly LogSeverity _critical = LogSeverity.Critical;
         // --- End Configuration Section ---
 
-        private readonly IDiscordClient _mainDiscord;
         private readonly Func<LogMessage, Task> _logger;
         private static Dictionary<IDiscordClient, CancellationTokenSource> _disconnectedClients = new Dictionary<IDiscordClient, CancellationTokenSource>();
 
-        public ReliabilityService(DiscordSocketClient mainDiscord, Func<LogMessage, Task> logger = null) {
-            _mainDiscord = mainDiscord;
+        public ReliabilityService(DiscordSocketClient mainDiscord, Func<LogMessage, Task>? logger = null) {
             _logger = logger ?? (_ => Task.CompletedTask);
 
             mainDiscord.Connected += () => ConnectedAsync(mainDiscord);
@@ -43,7 +41,6 @@ namespace Bot.Utilities {
         }
 
         public ReliabilityService(DiscordShardedClient mainDiscord, Func<LogMessage, Task> logger) {
-            _mainDiscord = mainDiscord;
             _logger = logger ?? (_ => Task.CompletedTask);
 
             mainDiscord.ShardConnected += ConnectedAsync;
@@ -54,7 +51,7 @@ namespace Bot.Utilities {
             // Check the state after <timeout> to see if we reconnected
             _ = InfoAsync("Client disconnected, starting timeout task...");
             _disconnectedClients[arg2] = new CancellationTokenSource();
-            _ = Task.Delay(_timeout, _disconnectedClients[arg2].Token).ContinueWith(async _ => {
+            _ = Task.Delay(Timeout, _disconnectedClients[arg2].Token).ContinueWith(async _ => {
                 await DebugAsync("Timeout expired, continuing to check client state...");
                 await CheckStateAsync(arg2);
                 await DebugAsync("State came back okay");
@@ -81,7 +78,7 @@ namespace Bot.Utilities {
             if (_attemptReset) {
                 await InfoAsync("Attempting to reset the client");
 
-                var timeout = Task.Delay(_timeout);
+                var timeout = Task.Delay(Timeout);
                 var connect = client.StartAsync();
                 var task = await Task.WhenAny(timeout, connect);
 
@@ -115,7 +112,7 @@ namespace Bot.Utilities {
         private Task InfoAsync(string message)
             => _logger.Invoke(new LogMessage(_info, LogSource, message));
 
-        private Task CriticalAsync(string message, Exception error = null)
+        private Task CriticalAsync(string message, Exception? error = null)
             => _logger.Invoke(new LogMessage(_critical, LogSource, message, error));
     }
 }

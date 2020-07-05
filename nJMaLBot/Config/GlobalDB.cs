@@ -5,20 +5,23 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Bot.Config.Localization.Providers;
+using Bot.Logging;
 using Bot.Music;
-using Bot.Utilities.Commands;
+using Bot.Utilities;
 using Discord;
 using HarmonyLib;
 using LiteDB;
+using NLog;
+
+// ReSharper disable UnusedMember.Local
 
 #pragma warning disable 8632
 
 namespace Bot.Config {
     // ReSharper disable once InconsistentNaming
     public static class GlobalDB {
-        private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
-        public static LiteDatabase Database;
+        private static Logger logger = LogManager.GetCurrentClassLogger();
+        public static LiteDatabase Database = null!;
 
         static GlobalDB() {
             InitializeDatabase();
@@ -38,8 +41,12 @@ namespace Bot.Config {
         public static readonly ILiteCollection<MessageHistory> Messages;
         public static readonly ILiteCollection<StatisticsPart> CommandStatistics;
         public static readonly ILiteCollection<StoredPlaylist> Playlists;
-        private static Timer _checkpointTimer;
-        private static Timer _rebuildTimer;
+
+        // ReSharper disable once NotAccessedField.Local
+        private static Timer _checkpointTimer = null!;
+
+        // ReSharper disable once NotAccessedField.Local
+        private static Timer _rebuildTimer = null!;
 
         private static void InitializeDatabase() {
             logger.Info("Loading database");
@@ -76,7 +83,7 @@ namespace Bot.Config {
                                    .SelectMany(AccessTools.GetDeclaredMethods)
                                    .Where(m => m.GetCustomAttributes(typeof(DbUpgradeAttribute), false).Length > 0)
                                     // ReSharper disable once PossibleNullReferenceException
-                                   .Select(info => ((DbUpgradeAttribute) info.GetCustomAttribute(typeof(DbUpgradeAttribute)), info))
+                                   .Select(info => ((DbUpgradeAttribute) info.GetCustomAttribute(typeof(DbUpgradeAttribute))!, info))
                                    .OrderBy(tuple => tuple.Item1.Version)
                                    .ToList();
             foreach (var upgrade in upgrades.SkipWhile((tuple, i) => tuple.Item1.Version <= Database.UserVersion)) {
@@ -95,7 +102,9 @@ namespace Bot.Config {
                 }
 
                 try {
-                    upgrade.info.Invoke(null, new object?[] {Database});
+                    var upgradeResult = upgrade.info.Invoke(null, new object?[] {Database});
+                    if (upgradeResult is Task upgradeTask)
+                        upgradeTask.GetAwaiter().GetResult();
                     if (upgrade.Item1.TransactionsFriendly) {
                         Database.Commit();
                     }
@@ -119,17 +128,52 @@ namespace Bot.Config {
                         try {
                             File.Delete(Path.ChangeExtension(GetDatabasePath(), ".bak"));
                         }
-                        catch (Exception e) {
+                        catch (Exception) {
                             // ignored
                         }
                     }
                 }
 
-                Database.UserVersion = upgrade.Item1.Version;
-                logger.Info("Database upgraded to version {version}. Making a checkpoint", upgrade.Item1.Version);
-                Database.Checkpoint();
-                Database.Rebuild();
+                logger.Info("Making a checkpoint");
+                try {
+                    Database.Checkpoint();
+                    Database.Rebuild();
+                }
+                catch (Exception e) {
+                    // This is very bad
+                    // We broke the database
+                    logger.Fatal(e, "Database file broken");
+                    logger.Fatal("Doing backup");
+                    File.Copy(GetDatabasePath(), Path.Combine(Path.GetDirectoryName(GetDatabasePath())!, DateTime.Now.ToString("yyyy-dd-M--HH-mm-ss") + ".bak"),
+                        true);
+                    logger.Fatal("Trying to copy intact information");
+                    using (LiteDatabase newDb = new LiteDatabase("newDb.db")) {
+                        foreach (var collectionName in Database.GetCollectionNames()) {
+                            try {
+                                var collection = newDb.GetCollection(collectionName);
+                                foreach (var bsonDocument in Database.GetCollection(collectionName).FindAll()) {
+                                    try {
+                                        collection.Insert(bsonDocument);
+                                    }
+                                    catch (Exception exception) {
+                                        logger.Error(exception, "Database recreation error. Collection - {collectionName}", collectionName);
+                                    }
+                                }
+                            }
+                            catch (Exception exception) {
+                                logger.Error(exception, "Database recreation error. Collection - {collectionName}", collectionName);
+                            }
+                        }
+                    }
+
+                    Database.Dispose();
+                    File.Move("newDb.db", GetDatabasePath(), true);
+                    Database = LoadDatabase();
+                }
+
                 logger.Info("Checkpoint done");
+                logger.Info("Database upgraded to version {version}", upgrade.Item1.Version);
+                Database.UserVersion = upgrade.Item1.Version;
             }
 
             Database.CheckpointSize = liteDatabaseCheckpointSize;
@@ -142,7 +186,7 @@ namespace Bot.Config {
             var oldStats = oldStatsCollection.FindAll().ToList();
             var newStats = oldStats.Select(part => new StatisticsPart {
                 Id = part.Id, UsagesList = (long.TryParse(part.Id, out _) || part.Id == "Global"
-                        ? part.UsagesList.Where(pair => HelpUtils.CommandAliases.Value.Contains(pair.Key))
+                        ? part.UsagesList.Where(pair => Program.Handler.CommandAliases.Contains(pair.Key))
                         : part.UsagesList)
                    .ToDictionary(pair => pair.Key, pair => (int) pair.Value)
             });
@@ -228,12 +272,50 @@ namespace Bot.Config {
                         }
                     }
                 }
-                
+
                 liteDatabase.Checkpoint();
                 liteDatabase.Rebuild();
             });
         }
         #pragma warning restore 618
+
+        [DbUpgrade(5, false)]
+        private static void UpgradeTo5(LiteDatabase liteDatabase) {
+            liteDatabase.DropCollection("IgnoredMessages");
+        }
+
+        [DbUpgrade(6)]
+        private static async Task UpgradeTo6(LiteDatabase liteDatabase) {
+            await Program.StartClient();
+            await Program.WaitStartAsync;
+            var guildConfigs = liteDatabase.GetCollection<GuildConfig>(@"Guilds");
+            var temp = Program.Client.Guilds.Select(guild => (guild, guildConfigs.FindById(guild.Id))).ToList();
+            guildConfigs.DeleteAll();
+            foreach (var pair in temp) {
+                pair.Item2.GuildId = pair.guild.Id;
+                guildConfigs.Upsert(pair.Item2);
+            }
+        }
+
+        [DbUpgrade(7)]
+        private static async Task UpgradeTo7(LiteDatabase liteDatabase) {
+            var messagesCollection = liteDatabase.GetCollection<MessageHistory>(@"MessagesHistory");
+            var guildsCollection = liteDatabase.GetCollection<GuildConfig>(@"Guilds");
+            messagesCollection.DeleteAll();
+            await Program.StartClient();
+            await Program.WaitStartAsync;
+            var guilds = Program.Client.Guilds.Select(guild => (guild, guildsCollection.FindById((long)guild.Id)));
+            foreach (var valueTuple in guilds.Where(tuple => tuple.Item2.IsLoggingEnabled)) {
+                try {
+                    await (await Program.Client.GetUser(valueTuple.guild.OwnerId).GetOrCreateDMChannelAsync()).SendMessageAsync(
+                        "Message logging was enabled on your server. We reworked it, and now it works better.\n" +
+                        $"Please **configure it** using the command `{valueTuple.Item2.Prefix}logging`");
+                }
+                catch (Exception) {
+                    // ignored
+                }
+            }
+        }
 
         [AttributeUsage(AttributeTargets.Method, Inherited = false, AllowMultiple = true)]
         private sealed class DbUpgradeAttribute : Attribute {

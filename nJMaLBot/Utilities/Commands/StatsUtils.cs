@@ -2,18 +2,17 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Threading.Tasks;
-using Bot.Commands;
 using Bot.Config;
 using Bot.Config.Localization.Providers;
 using Discord;
 using Discord.Commands;
+using NLog;
 using Tyrrrz.Extensions;
 
 namespace Bot.Utilities.Commands {
     public class StatsUtils {
-        private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
-        
+        private static Logger logger = LogManager.GetCurrentClassLogger();
+
         private static Temporary<int> _textChannelsCount =
             new Temporary<int>(() => Program.Client.Guilds.Sum(guild => guild.TextChannels.Count), TimeSpan.FromMinutes(5));
 
@@ -24,13 +23,13 @@ namespace Bot.Utilities.Commands {
             new Temporary<int>(() => Program.Client.Guilds.Sum(guild => guild.MemberCount), TimeSpan.FromMinutes(5));
 
         private static Temporary<int> _commandUsagesCount =
-            new Temporary<int>(() => GlobalDB.CommandStatistics.FindById("Global").UsagesList.Sum(pair => (int) pair.Value), TimeSpan.FromMinutes(5));
+            new Temporary<int>(() => GlobalDB.CommandStatistics.FindById("Global").UsagesList.Sum(pair => pair.Value), TimeSpan.FromMinutes(5));
 
         private static Temporary<int> _commandUsersCount =
             new Temporary<int>(() => GlobalDB.CommandStatistics.Count(), TimeSpan.FromMinutes(5));
 
         [SuppressMessage("ReSharper", "ConditionIsAlwaysTrueOrFalse")]
-        public static async Task<EmbedBuilder> BuildStats(IUser user, ILocalizationProvider loc) {
+        public static EmbedBuilder BuildStats(IUser? user, ILocalizationProvider loc) {
             var stats = GlobalDB.CommandStatistics.FindById(user?.Id.ToString() ?? "Global");
             var embedBuilder = new EmbedBuilder().WithColor(Color.Gold)
                                                  .WithTitle(loc.Get("Statistics.Title"))
@@ -43,10 +42,10 @@ namespace Bot.Utilities.Commands {
                 return embedBuilder;
             }
 
-            List<(CommandInfo Key, double)> valueTuples = null;
+            List<(CommandInfo Key, double)>? valueTuples = null;
             while (true) {
                 try {
-                    valueTuples = stats.UsagesList.GroupBy(pair => HelpUtils.CommandAliases.Value[pair.Key].First())
+                    valueTuples = stats.UsagesList.GroupBy(pair => Program.Handler.CommandAliases[pair.Key].First())
                                        .Where(pairs => !pairs.Key.IsHiddenCommand())
                                        .Select(pairs => (pairs.Key, pairs.Sum(pair => (double) pair.Value)))
                                        .OrderBy(tuple => tuple.Item1.GetGroup()?.GroupName).ToList();
@@ -57,17 +56,18 @@ namespace Bot.Utilities.Commands {
                         logger.Error(e, "Exception while printing stats");
                         throw;
                     }
+
                     // This exception appears that an element has appeared in ours that is not in the commands
-                    stats.UsagesList = stats.UsagesList.Where(pair => HelpUtils.CommandAliases.Value.Contains(pair.Key))
+                    stats.UsagesList = stats.UsagesList.Where(pair => Program.Handler.CommandAliases.Contains(pair.Key))
                                             .ToDictionary(pair => pair.Key, pair => pair.Value);
                     GlobalDB.CommandStatistics.Upsert(stats);
                     // Assigning non null value to avoid endless cycle
                     valueTuples = new List<(CommandInfo, double)>();
                 }
             }
-            
+
             foreach (var grouping in valueTuples.GroupBy(tuple => tuple.Key.GetGroup()).OrderByDescending(tuples => tuples.Count())) {
-                embedBuilder.AddField(grouping.Key.GetLocalizedName(loc),
+                embedBuilder.AddField(grouping.Key!.GetLocalizedName(loc),
                     string.Join("\n", grouping.ToList().Select((tuple, i) => $"`{tuple.Item1.Name}` - {tuple.Item2}")), true);
             }
 

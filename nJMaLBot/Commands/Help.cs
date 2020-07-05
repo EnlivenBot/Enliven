@@ -37,7 +37,7 @@ namespace Bot.Commands {
                        Value = Loc.Get($"Help.{info.Summary}")
                    }));
             }
-            else if (HelpUtils.CommandAliases.Value.Contains(message)) {
+            else if (Program.Handler.CommandAliases.Contains(message)) {
                 eb.WithTitle(Loc.Get("Help.ByCommand").Format(message))
                   .WithFields(HelpUtils.BuildHelpFields(message, GuildConfig.Prefix, Loc));
             }

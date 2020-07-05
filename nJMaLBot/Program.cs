@@ -1,28 +1,46 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
-using Bot.Commands;
 using Bot.Config;
 using Bot.Config.Localization;
+using Bot.Logging;
 using Bot.Music;
 using Bot.Utilities;
+using Bot.Utilities.Commands;
+using CommandLine;
 using Discord;
 using Discord.WebSocket;
 using ICSharpCode.SharpZipLib.Core;
 using ICSharpCode.SharpZipLib.Zip;
 using NLog;
+using NLog.Config;
 using NLog.Layouts;
+using NLog.Targets;
 
 namespace Bot {
     internal class Program {
-        public static DiscordShardedClient Client;
-        public static CommandHandler Handler;
-        private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
-        private static ReliabilityService _reliabilityService;
+        public static DiscordShardedClient Client = null!;
+        public static CommandHandler Handler = null!;
+
+        // ReSharper disable once InconsistentNaming
+        private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+
+        // ReSharper disable once NotAccessedField.Local
+        private static ReliabilityService _reliabilityService = null!;
+
+        // ReSharper disable once InconsistentNaming
         private static readonly TaskCompletionSource<bool> waitStartSource = new TaskCompletionSource<bool>();
         public static Task WaitStartAsync = waitStartSource.Task;
+        public static CmdOptions CmdOptions = null!;
 
         private static void Main(string[] args) {
+            Parser.Default.ParseArguments<CmdOptions>(args).WithParsed(options => {
+                CmdOptions = options;
+                if (CmdOptions.BotToken != null) {
+                    GlobalConfig.Instance.BotToken = CmdOptions.BotToken;
+                }
+            });
             InstallLogger();
             #if !DEBUG
             InstallErrorHandlers();
@@ -30,17 +48,12 @@ namespace Bot {
             logger.Info("Start Initialising");
 
             MainAsync(args).ConfigureAwait(false).GetAwaiter().GetResult();
-            ConsoleCommandsHandler();
         }
 
+        // ReSharper disable once UnusedParameter.Local
         private static async Task MainAsync(string[] args) {
             var config = new DiscordSocketConfig {MessageCacheSize = 100};
             Client = new DiscordShardedClient(config);
-
-            Task OnClientLog(LogMessage message) {
-                logger.Log(message.Severity, message.Exception, "{message} from {source}", message.Message, message.Source);
-                return Task.CompletedTask;
-            }
 
             Client.Log += OnClientLog;
 
@@ -59,31 +72,45 @@ namespace Bot {
                     connectDelay += 10;
                 }
             }
-            
+
             Localization.Initialize();
             GlobalDB.Initialize();
 
-            logger.Info("Starting client");
-            await Client.StartAsync();
-            await Client.SetGameAsync("mentions of itself to get started", null, ActivityType.Listening);
-            _reliabilityService = new ReliabilityService(Client, OnClientLog);
-            waitStartSource.SetResult(true);
+            await StartClient();
 
-            Handler = new CommandHandler();
-            await Handler.Install(Client);
+            Handler = await CommandHandler.Create(Client);
+
             AppDomain.CurrentDomain.ProcessExit += async (sender, eventArgs) => {
                 await Client.SetStatusAsync(UserStatus.AFK);
                 await Client.SetGameAsync("Reboot...");
             };
-            
+
             MessageHistoryManager.Initialize();
             MusicUtils.Initialize();
+            await Task.Delay(-1);
         }
 
-        public static void ConsoleCommandsHandler() {
-            while (true) {
-                var input = Console.ReadLine();
-            }
+        private static bool _clientStarted;
+
+        public static async Task StartClient() {
+            if (_clientStarted) return;
+            _clientStarted = true;
+            logger.Info("Starting client");
+            Client.ShardReady += ClientOnShardReady;
+            await Client.StartAsync();
+            await Client.SetGameAsync("mentions of itself to get started", null, ActivityType.Listening);
+            _reliabilityService = new ReliabilityService(Client, OnClientLog);
+        }
+
+        private static Task ClientOnShardReady(DiscordSocketClient arg) {
+            waitStartSource.SetResult(true);
+            Client.ShardReady -= ClientOnShardReady;
+            return Task.CompletedTask;
+        }
+
+        private static Task OnClientLog(LogMessage message) {
+            logger.Log(message.Severity, message.Exception, "{message} from {source}", message.Message, message.Source);
+            return Task.CompletedTask;
         }
 
         private static void InstallLogger() {
@@ -108,20 +135,20 @@ namespace Bot {
                     zip.CloseEntry();
                     File.Delete(file);
                 }
-                catch (Exception e) {
+                catch (Exception) {
                     // ignored
                 }
             }
 
-            var config = new NLog.Config.LoggingConfiguration();
+            var config = new LoggingConfiguration();
 
             var layout = Layout.FromString("${longdate}|${level:uppercase=true}|${logger}|${message}${onexception:${newline}${exception:format=tostring}}");
             // Targets where to log to: File and Console
-            var logfile = new NLog.Targets.FileTarget("logfile") {
+            var logfile = new FileTarget("logfile") {
                 FileName = Path.Combine(Directory.GetCurrentDirectory(), "Logs", DateTime.Now.ToString("yyyyMMddTHHmmss") + ".log"),
                 Layout = layout
             };
-            var logconsole = new NLog.Targets.ColoredConsoleTarget("logconsole") {Layout = layout};
+            var logconsole = new ColoredConsoleTarget("logconsole") {Layout = layout};
 
             // Rules for mapping loggers to targets
             #if DEBUG
@@ -134,12 +161,13 @@ namespace Bot {
             #endif
 
             // Apply config           
-            NLog.LogManager.Configuration = config;
+            LogManager.Configuration = config;
         }
 
+        // ReSharper disable once UnusedMember.Local
         private static void InstallErrorHandlers() {
             AppDomain.CurrentDomain.UnhandledException += (sender, args) => logger.Fatal(args.ExceptionObject as Exception, "Global uncaught exception");
-            TaskScheduler.UnobservedTaskException += (sender, args) => logger.Fatal(args.Exception.Flatten(), "Global uncaught task exception");
+            TaskScheduler.UnobservedTaskException += (sender, args) => logger.Fatal(args.Exception?.Flatten(), "Global uncaught task exception");
         }
     }
 }

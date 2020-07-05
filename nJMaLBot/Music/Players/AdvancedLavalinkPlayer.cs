@@ -1,24 +1,25 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Bot.Config;
 using Bot.Config.Localization;
 using Bot.Config.Localization.Providers;
-using Bot.Utilities.Emoji;
 using Discord;
-using HarmonyLib;
 using Lavalink4NET;
 using Lavalink4NET.Player;
+using NLog;
 
 namespace Bot.Music.Players {
     public class AdvancedLavalinkPlayer : LavalinkPlayer {
-        protected static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
-        public GuildConfig GuildConfig;
-        public IGuild Guild;
+        // ReSharper disable once InconsistentNaming
+        private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+        protected GuildConfig GuildConfig;
+        protected IGuild Guild;
         public readonly ILocalizationProvider Loc;
-        public BassBoostMode BassBoostMode { get; private set; } = BassBoostMode.Off;
+        protected BassBoostMode BassBoostMode { get; private set; } = BassBoostMode.Off;
         private int _updateFailCount;
-        internal int UpdateFailThreshold = 2;
-        public bool IsExternalEmojiAllowed { get; set; } = true;
+        private int UpdateFailThreshold = 2;
+        protected bool IsExternalEmojiAllowed { get; set; } = true;
 
         public AdvancedLavalinkPlayer(ulong guildId) {
             Guild = Program.Client.GetGuild(guildId);
@@ -33,8 +34,11 @@ namespace Bot.Music.Players {
 
         public override async Task SetVolumeAsync(float volume = 1, bool normalize = false) {
             volume = Math.Min(Math.Max(volume, 0), 1.5f);
-            await base.SetVolumeAsync(volume, false);
-            GuildConfig.Get(GuildId).SetVolume(volume).Save();
+            // ReSharper disable once BaseMethodCallWithDefaultParameter
+            await base.SetVolumeAsync(volume);
+            var guildConfig = GuildConfig.Get(GuildId);
+            guildConfig.Volume = volume;
+            guildConfig.Save();
         }
 
         public virtual void SetBassBoostMode(BassBoostMode mode) {
@@ -63,7 +67,7 @@ namespace Bot.Music.Players {
         /// </summary>
         [Obsolete]
         public override void Dispose() {
-            if (!IsShutdowned) logger.Error("Player disposed. Stacktrace: \n{stacktrace}", new System.Diagnostics.StackTrace().ToString());
+            if (!IsShutdowned) logger.Error("Player disposed. Stacktrace: \n{stacktrace}", new StackTrace().ToString());
             Shutdown();
         }
 

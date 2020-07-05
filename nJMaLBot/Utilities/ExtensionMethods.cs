@@ -1,9 +1,9 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Bot.Config;
 using Bot.Config.Localization.Providers;
 using Bot.Utilities.Commands;
 using Bot.Utilities.Modules;
@@ -23,20 +23,20 @@ namespace Bot.Utilities {
         public static void DelayedDelete(this Task<IUserMessage> message, TimeSpan span) {
             Task.Run(async () => {
                 await Task.Delay(span);
-                (await message).SafeDelete();
+                (await message.ConfigureAwait(false)).SafeDelete();
             });
         }
 
-        public static void SafeDelete(this IMessage message) {
+        public static void SafeDelete(this IMessage? message) {
             try {
-                message.DeleteAsync();
+                message?.DeleteAsync();
             }
             catch (Exception) {
                 // ignored
             }
         }
 
-        public static GroupingAttribute GetGroup(this CommandInfo info) {
+        public static GroupingAttribute? GetGroup(this CommandInfo info) {
             return (info.Attributes.FirstOrDefault(attribute => attribute is GroupingAttribute) ??
                     info.Module.Attributes.FirstOrDefault(attribute => attribute is GroupingAttribute)) as GroupingAttribute;
         }
@@ -54,7 +54,7 @@ namespace Bot.Utilities {
             return string.Format(format, args);
         }
 
-        public static string SafeSubstring(this string text, int start, int length) {
+        public static string? SafeSubstring(this string? text, int start, int length) {
             if (text == null) return null;
 
             return text.Length <= start         ? ""
@@ -62,7 +62,7 @@ namespace Bot.Utilities {
                                                   : text.Substring(start, length);
         }
 
-        public static string SafeSubstring(this string text, int length, string postContent = "") {
+        public static string? SafeSubstring(this string text, int length, string postContent = "") {
             if (text == null) return null;
 
             return text.Length <= length ? text : text.Substring(0, length - postContent.Length) + postContent;
@@ -87,18 +87,16 @@ namespace Bot.Utilities {
         }
 
         public static EmbedBuilder GetAuthorEmbedBuilder(this AdvancedModuleBase moduleBase) {
-            var embedBuilder = new EmbedBuilder();
-            embedBuilder.WithFooter(moduleBase.Loc.Get("Commands.RequestedBy").Format(moduleBase.Context.User.Username),
-                moduleBase.Context.User.GetAvatarUrl());
-            return embedBuilder;
+            return DiscordUtils.GetAuthorEmbedBuilder(moduleBase.Context.User, moduleBase.Loc);
         }
 
         public static int Normalize(this int value, int min, int max) {
             return Math.Max(min, Math.Min(max, value));
         }
 
-        public static async Task<IMessage> SendTextAsFile(this IMessageChannel channel, string content, string filename, string text = null, bool isTTS = false,
-                                                          Embed embed = null, RequestOptions options = null, bool isSpoiler = false) {
+        // ReSharper disable once InconsistentNaming
+        public static async Task<IMessage> SendTextAsFile(this IMessageChannel channel, string content, string filename, string? text = null, bool isTTS = false,
+                                                          Embed? embed = null, RequestOptions? options = null, bool isSpoiler = false) {
             await using var ms = new MemoryStream();
             TextWriter tw = new StreamWriter(ms);
             await tw.WriteAsync(content);
@@ -136,6 +134,10 @@ namespace Bot.Utilities {
             catch {
                 return onFail;
             }
+        }
+
+        public static GuildConfig GetConfig(this IGuild guild) {
+            return GuildConfig.Get(guild.Id);
         }
     }
 }

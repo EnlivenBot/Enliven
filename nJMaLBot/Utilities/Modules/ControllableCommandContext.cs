@@ -5,10 +5,10 @@ using Discord.WebSocket;
 namespace Bot.Utilities.Modules {
     public class ControllableCommandContext : ICommandContext {
         public IDiscordClient Client { get; set; }
-        public IGuild Guild { get; set; }
-        public IMessageChannel Channel { get; set; }
-        public IUser User { get; set; }
-        public IUserMessage Message { get; } = null;
+        public IGuild? Guild { get; set; }
+        public IMessageChannel? Channel { get; set; }
+        public IUser? User { get; set; }
+        public IUserMessage? Message { get; }
 
         public ControllableCommandContext(IDiscordClient client, IUserMessage message) {
             Client = client;
@@ -32,9 +32,6 @@ namespace Bot.Utilities.Modules {
             if (reaction.Channel is SocketTextChannel channel)
                 Guild = channel.Guild;
         }
-
-        public ReactionCommandContext(IDiscordClient client, IUserMessage message) : base(client, message) { }
-        public ReactionCommandContext(IDiscordClient client) : base(client) { }
 
         public SocketReaction Reaction { get; set; }
     }

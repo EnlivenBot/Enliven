@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Bot.Commands.Chains;
 using Bot.Config;
 using Bot.Config.Localization;
+using Bot.Logging;
 using Bot.Utilities;
 using Bot.Utilities.Collector;
 using Bot.Utilities.Commands;
@@ -25,7 +27,9 @@ namespace Bot.Commands {
         [Command("setprefix")]
         [Summary("setprefix0s")]
         public async Task SetPrefix([Summary("setrefix0_0s")] string prefix) {
-            GuildConfig.Get(Context.Guild.Id).SetServerPrefix(prefix).Save();
+            var guildConfig = GuildConfig.Get(Context.Guild.Id);
+            guildConfig.Prefix = prefix;
+            guildConfig.Save();
             await ReplyFormattedAsync(Loc.Get("Commands.Success"), Loc.Get("Commands.SetPrefixResponse").Format(prefix), TimeSpan.FromMinutes(10));
             Context.Message.SafeDelete();
         }
@@ -41,7 +45,7 @@ namespace Bot.Commands {
             }
 
             var message = await ReplyAsync(null, false, embedBuilder.Build());
-            CollectorsGroup collectors = null;
+            CollectorsGroup collectors = null!;
             var packsWithEmoji = Localization.Languages.Where(pair => pair.Value.LocalizationFlagEmoji != null).ToList();
             collectors = new CollectorsGroup(packsWithEmoji.Select(
                 pair => {
@@ -52,6 +56,7 @@ namespace Bot.Commands {
                             args.Reaction.UserId.ToString());
                         if (t.IsSuccess) {
                             message.SafeDelete();
+                            // ReSharper disable once AccessToModifiedClosure
                             collectors?.DisposeAll();
                         }
                     }, CollectorFilter.IgnoreBots);
@@ -59,7 +64,7 @@ namespace Bot.Commands {
             try {
                 await message.AddReactionsAsync(packsWithEmoji.Select(pair => pair.Value.LocalizationFlagEmoji).ToArray());
             }
-            catch (Exception e) {
+            catch (Exception) {
                 // ignored
             }
             message.DelayedDelete(TimeSpan.FromMinutes(5));
@@ -67,7 +72,7 @@ namespace Bot.Commands {
 
         [Command("setlanguage")]
         [Summary("setlanguage0s")]
-        public async Task SetLanguage([Summary("setlanguage0_0s")] string language = null) {
+        public async Task SetLanguage([Summary("setlanguage0_0s")] string? language = null) {
             if (language == null) {
                 await ListLanguages();
                 return;
@@ -104,6 +109,19 @@ namespace Bot.Commands {
         public async Task ClearHistories() {
             await ReplyAsync("Start clearing message histories");
             await MessageHistoryManager.ClearGuildLogs((SocketGuild) Context.Guild);
+        }
+
+        [Command("logging")]
+        [Summary("logging0s")]
+        public async Task LoggingControlPanel() {
+            var botPermissions = (await Context.Guild.GetUserAsync(Program.Client.CurrentUser.Id)).GetPermissions((IGuildChannel) Context.Channel);
+            if (botPermissions.SendMessages) {
+                var loggingChainBase = LoggingChain.CreateInstance((ITextChannel) Context.Channel, Context.User, GuildConfig);
+                await loggingChainBase.Start();
+            }
+            else {
+                await (await Context.User.GetOrCreateDMChannelAsync()).SendMessageAsync(Loc.Get("ChainsCommon.CantSend").Format($"<#{Context.Channel.Id}>"));
+            }
         }
     }
 }

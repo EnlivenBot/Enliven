@@ -7,7 +7,8 @@ using Discord.WebSocket;
 namespace Bot {
     public static class GlobalBehaviors {
         static GlobalBehaviors() {
-            Program.Client.JoinedGuild += ClientOnJoinedGuild;
+            if (!Program.CmdOptions.Observer) 
+                Program.Client.JoinedGuild += ClientOnJoinedGuild;
         }
 
         private static async Task ClientOnJoinedGuild(SocketGuild arg) {
@@ -15,7 +16,7 @@ namespace Bot {
             await PrintWelcomeMessage(arg);
         }
 
-        public static async Task<IUserMessage> PrintWelcomeMessage(SocketGuild guild, IMessageChannel channel = null) {
+        public static async Task<IUserMessage> PrintWelcomeMessage(SocketGuild guild, IMessageChannel? channel = null) {
             var guildConfig = GuildConfig.Get(guild.Id);
             var loc = guildConfig.Loc;
             

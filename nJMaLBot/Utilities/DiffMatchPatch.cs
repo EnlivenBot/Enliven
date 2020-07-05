@@ -102,7 +102,7 @@ namespace DiffMatchPatch {
          * @param d Another Diff to compare against.
          * @return true or false.
          */
-        public override bool Equals(Object obj) {
+        public override bool Equals(object? obj) {
             // If parameter is null return false.
 
             // If parameter cannot be cast to Diff return false.
@@ -818,7 +818,7 @@ namespace DiffMatchPatch {
          *     suffix of text1, the prefix of text2, the suffix of text2 and the
          *     common middle.  Or null if there was no match.
          */
-        protected string[] diff_halfMatch(string text1, string text2) {
+        protected string[]? diff_halfMatch(string text1, string text2) {
             if (DiffTimeout <= 0) {
                 // Don't risk returning a non-optimal diff if we have unlimited time.
                 return null;
@@ -836,7 +836,7 @@ namespace DiffMatchPatch {
             // Check again based on the third quarter.
             var hm2 = diff_halfMatchI(longText, shortText,
                 (longText.Length + 1) / 2);
-            string[] hm;
+            string[]? hm;
             if (hm1 == null && hm2 == null) {
                 return null;
             }
@@ -853,12 +853,7 @@ namespace DiffMatchPatch {
             }
 
             // A half-match was found, sort out the return data.
-            if (text1.Length > text2.Length) {
-                return hm;
-                //return new string[]{hm[0], hm[1], hm[2], hm[3], hm[4]};
-            }
-
-            return new[] {hm![2], hm[3], hm[0], hm[1], hm[4]};
+            return text1.Length > text2.Length ? hm : new[] {hm![2], hm[3], hm[0], hm[1], hm[4]};
         }
 
         /**
@@ -871,7 +866,7 @@ namespace DiffMatchPatch {
          *     suffix of longtext, the prefix of shortText, the suffix of shortText
          *     and the common middle.  Or null if there was no match.
          */
-        private string[] diff_halfMatchI(string longtext, string shortText, int i) {
+        private string[]? diff_halfMatchI(string longtext, string shortText, int i) {
             // Start with a 1/4 length Substring at position i as a seed.
             var seed = longtext.Substring(i, longtext.Length / 4);
             var j = -1;
@@ -913,7 +908,7 @@ namespace DiffMatchPatch {
             // Stack of indices where equalities are found.
             var equalities = new Stack<int>();
             // Always equal to equalities[equalitiesLength-1][1]
-            string lastEquality = null;
+            string? lastEquality = null;
             var pointer = 0; // Index of current position.
             // Number of characters that changed prior to the equality.
             var lengthInsertions1 = 0;
@@ -1418,7 +1413,7 @@ namespace DiffMatchPatch {
             var chars2 = 0;
             var lastChars1 = 0;
             var lastChars2 = 0;
-            Diff lastDiff = null;
+            Diff? lastDiff = null;
             foreach (var aDiff in diffs) {
                 if (aDiff.Operation != Operation.Insert) {
                     // Equality or deletion.

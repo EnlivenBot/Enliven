@@ -5,8 +5,8 @@ using Lavalink4NET.Util;
 
 namespace Bot.Music.Players {
     public class AuthoredLavalinkTrack : LavalinkTrack {
-        public string RequesterName { get; set; }
-        public IUser Requester { get; set; }
+        public string? RequesterName { get; set; }
+        public IUser? Requester { get; set; }
 
 
         public string GetRequester() {

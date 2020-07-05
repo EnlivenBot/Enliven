@@ -5,17 +5,17 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Discord;
-using NLog.Fluent;
 using Tyrrrz.Extensions;
 
 namespace Bot.Utilities {
     public class NonSpamMessageController {
         public static readonly Regex UserMentionRegex = new Regex(@"(?<!<@)!?(\d+)(?=>)");
-        
-        private Task _modifyAsync;
-        private bool _modifyQueued;
+
         public EmbedBuilder EmbedBuilder { get; set; }
-        public IUserMessage Message { get; private set; }
+        public IUserMessage? Message { get; private set; }
+
+        public bool ResetTimeoutOnUpdate { get; set; }
+        public TimeSpan? Timeout { get; private set; }
 
         public string Title { get; set; }
         private Dictionary<string, int> Entries { get; set; } = new Dictionary<string, int>();
@@ -48,6 +48,7 @@ namespace Bot.Utilities {
         }
 
         public NonSpamMessageController UpdateTimeout(TimeSpan? timeout = null) {
+            Timeout = timeout;
             _deletionTimer?.Dispose();
             if (timeout != null) {
                 _deletionTimer = new Timer(state => {
@@ -69,48 +70,53 @@ namespace Bot.Utilities {
             return EmbedBuilder;
         }
 
-        public DateTime LastCheck;
+        public DateTime LastSendTime;
+        private readonly object _updateLock = new object();
+        private TaskCompletionSource<bool>? _updateTaskSource;
 
-        public async Task Update() {
+        public Task Update() {
+            if (ResetTimeoutOnUpdate && Timeout != null) UpdateTimeout(Timeout);
+            lock (_updateLock) {
+                if (_updateTaskSource != null) return _updateTaskSource.Task;
+                _updateTaskSource = new TaskCompletionSource<bool>();
+                _ = Task.Run(async () => {
+                    await UpdateInternal();
+                    _updateTaskSource!.SetResult(true);
+                    _updateTaskSource = null;
+                });
+
+                return _updateTaskSource.Task;
+            }
+        }
+
+        private async Task UpdateInternal() {
             try {
-                if (Message == null)
-                    await ForceResend();
-
-                //Not thread safe method cuz in this case, thread safety is a waste of time
-                if (_modifyAsync?.IsCompleted ?? true) {
-                    UpdateInternal();
-                    await _modifyAsync;
+                if (Message == null) {
+                    await Resend();
                 }
                 else {
-                    if (_modifyQueued)
-                        return;
                     try {
-                        _modifyQueued = true;
-                        await _modifyAsync;
-                        UpdateInternal();
-                    }
-                    finally {
-                        _modifyQueued = false;
-                    }
-                }
+                        var needResend = await Utilities.Try(async () => {
+                            if (DateTime.Now - LastSendTime > TimeSpan.FromSeconds(20)) {
+                                return (await _currentChannel!.GetMessagesAsync(3).FlattenAsync()).FirstOrDefault(message => message.Id == Message!.Id) == null;
+                            }
 
-                void UpdateInternal() {
-                    _modifyAsync = Task.Run(async () => {
-                        try {
-                            if (await NeedResend()) {
-                                await ForceResend();
-                            }
-                            else {
-                                await Message.ModifyAsync(properties => {
-                                    properties.Embed = AssemblyEmbed().Build();
-                                    properties.Content = string.Join(", ", Mentions);
-                                });
-                            }
+                            return false;
+                        }, () => Task.FromResult(true));
+
+                        if (needResend) {
+                            await Resend();
                         }
-                        catch (Exception e) {
-                            // ignored
+                        else {
+                            await Message!.ModifyAsync(properties => {
+                                properties.Embed = AssemblyEmbed().Build();
+                                properties.Content = string.Join(", ", Mentions);
+                            });
                         }
-                    });
+                    }
+                    catch (Exception) {
+                        // ignored
+                    }
                 }
             }
             catch {
@@ -118,56 +124,48 @@ namespace Bot.Utilities {
             }
         }
 
-        private async Task<bool> NeedResend() {
-            try {
-                if (DateTime.Now - LastCheck > TimeSpan.FromSeconds(20)) {
-                    return (await currentChannel.GetMessagesAsync(3).FlattenAsync()).FirstOrDefault(message => message.Id == Message.Id) == null;
-                }
+        private Timer? _deletionTimer;
+        private IMessageChannel? _currentChannel;
 
-                return false;
-            }
-            catch (Exception e) {
-                return true;
+        private readonly object _sendLock = new object();
+        private TaskCompletionSource<IUserMessage?>? _sendTaskSource;
+
+        public Task<IUserMessage?> Resend() {
+            lock (_sendLock) {
+                if (_sendTaskSource != null) return _sendTaskSource.Task;
+                _sendTaskSource = new TaskCompletionSource<IUserMessage?>();
+                _ = Task.Run(async () => {
+                    _sendTaskSource.SetResult(await ResendInternal());
+                    _sendTaskSource = null;
+                });
+
+                return _sendTaskSource.Task;
             }
         }
 
-        private SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1);
-        private Timer _deletionTimer;
-        private IMessageChannel currentChannel;
-
-        public async Task ForceResend() {
-            if (_semaphoreSlim.CurrentCount == 0) {
-                // If message now sending - wait for sending end
-                // And release back
-                await _semaphoreSlim.WaitAsync(1);
-                if (Message != null) {
-                    _semaphoreSlim.Release();
-                    return;
-                }
-            }
-            else {
-                await _semaphoreSlim.WaitAsync();
-            }
-
+        private async Task<IUserMessage?> ResendInternal() {
             try {
                 Message?.SafeDelete();
+                Message = null;
                 foreach (var channel in TargetChannels) {
                     try {
                         var sendMessage = channel.SendMessageAsync(null, false, AssemblyEmbed().Build());
-                        _modifyAsync = sendMessage;
+                        _currentChannel = channel;
+                        LastSendTime = DateTime.Now;
+                        UpdateTimeout(Timeout);
                         Message = await sendMessage;
-                        currentChannel = channel;
-                        LastCheck = DateTime.Now;
-                        break;
+                        return await sendMessage;
                     }
-                    catch (Exception e) {
+                    catch {
                         // ignored
                     }
                 }
             }
-            finally {
-                _semaphoreSlim.Release();
+            catch {
+                // ignored
             }
+
+            return null;
         }
     }
 }
