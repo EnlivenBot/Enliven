@@ -100,22 +100,30 @@ namespace Bot.Commands.Chains {
             descriptionBuilder.AppendLine(_guildConfig.IsLoggingEnabled
                 ? Loc.Get("Logging.Enabled")
                 : Loc.Get("Logging.Disabled"));
-            descriptionBuilder.AppendLine(_guildConfig.IsCommandLoggingEnabled
-                ? Loc.Get("Logging.CommandEnabled")
-                : Loc.Get("Logging.CommandDisabled"));
-            descriptionBuilder.AppendLine(_guildConfig.HistoryMissingInLog
-                ? Loc.Get("Logging.HistoryMissingInLogEnabled")
-                : Loc.Get("Logging.HistoryMissingInLogDisabled"));
-            descriptionBuilder.AppendLine(_guildConfig.HistoryMissingPacks
-                ? Loc.Get("Logging.HistoryMissingPacksEnabled")
-                : Loc.Get("Logging.HistoryMissingPacksDisabled"));
-            descriptionBuilder.AppendLine(_guildConfig.LogExportType == LogExportTypes.Image
-                ? Loc.Get("Logging.OutputToImage")
-                : Loc.Get("Logging.OutputToHtml"));
-            descriptionBuilder.AppendLine(Loc.Get("Logging.LogChannel").Format(
-                _guildConfig.GetChannel(ChannelFunction.Log, out var logChannel)
-                    ? ((ITextChannel) logChannel)!.Mention
-                    : Loc.Get("Logging.LogChannelMissing").Format(_guildConfig.Prefix)));
+            if (_guildConfig.IsLoggingEnabled) {
+                descriptionBuilder.AppendLine(_guildConfig.IsCommandLoggingEnabled
+                    ? Loc.Get("Logging.CommandEnabled")
+                    : Loc.Get("Logging.CommandDisabled"));
+                descriptionBuilder.AppendLine(_guildConfig.HistoryMissingInLog
+                    ? Loc.Get("Logging.HistoryMissingInLogEnabled")
+                    : Loc.Get("Logging.HistoryMissingInLogDisabled"));
+                if (_guildConfig.HistoryMissingInLog) {
+                    descriptionBuilder.AppendLine(_guildConfig.HistoryMissingPacks
+                        ? Loc.Get("Logging.HistoryMissingPacksEnabled")
+                        : Loc.Get("Logging.HistoryMissingPacksDisabled"));
+                }
+            }
+
+            var historyChannelExists = _guildConfig.GetChannel(ChannelFunction.Log, out var logChannel);
+            if (historyChannelExists && _guildConfig.IsLoggingEnabled) {
+                descriptionBuilder.AppendLine(_guildConfig.LogExportType == LogExportTypes.Image
+                    ? Loc.Get("Logging.OutputToImage")
+                    : Loc.Get("Logging.OutputToHtml"));
+            }
+
+            descriptionBuilder.AppendLine(Loc.Get("Logging.LogChannel").Format(historyChannelExists
+                ? ((ITextChannel) logChannel)!.Mention
+                : Loc.Get("Logging.LogChannelMissing").Format(_guildConfig.Prefix)));
             MainBuilder.Description = descriptionBuilder.ToString();
 
             MainBuilder.GetOrAddField("info", s => new PriorityEmbedFieldBuilder().WithPriority(100))
