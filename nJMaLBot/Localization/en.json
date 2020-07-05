@@ -253,6 +253,8 @@
       "CommandDisabled": "🤖 Logging messages containing commands for the bot **disabled** ❌",
       "HistoryMissingInLogEnabled": "⁉️ Send message about deleting a message whose change history was not found, **enabled** ✅",
       "HistoryMissingInLogDisabled": "⁉️ Send message about deleting a message whose change history was not found, **disabled** ❌",
+      "HistoryMissingPacksEnabled" : "🗃️ Putting information about deleting messages whose change history is not found in one message **enabled** ✅",
+      "HistoryMissingPacksDisabled" : "🗃️ Putting information about deleting messages whose change history is not found in one message **disabled** ❌",
       "OutputToImage" : "🖨️ Large message histories will be displayed as \n> **Images** (slower, larger size) \n> HTML document (faster, recommended)",
       "OutputToHtml" : "🖨️ Large message histories will be displayed as \n> Images (slower, larger size) \n> **HTML document** (faster, recommended)",
       "LogChannel": "🗒️ Log channel: {0}",
