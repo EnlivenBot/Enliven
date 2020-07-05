@@ -211,7 +211,8 @@
       "Attachments": "Вложения: {0}",
       "AttachmentsTitle": "Вложения",
       "EmptyMessage": "```Сообщение без текста```",
-      "IdFailedToParse": "Мы не можем распознать ID сообщения (и канала) в `{0}`. \nПример правильного ввода:\n>>> `{1}history 276780134676037642-728591222217637918`\n `{1}history 728591222217637918`" 
+      "IdFailedToParse": "Мы не можем распознать ID сообщения (и канала) в `{0}`. \nПример правильного ввода:\n>>> `{1}history 276780134676037642-728591222217637918`\n `{1}history 728591222217637918`",
+      "DeletedMessagesPackDescription": "**Deleted messages whose change history is not found:**"
     },
     "Statistics": {
       "Title": "Статистика",

@@ -147,7 +147,7 @@ namespace Bot.Logging {
                                 
                                 async Task SendPackMessage() {
                                     var packBuilder = new EmbedBuilder().WithTitle("Deleted messages Pack")
-                                                                        .WithDescription($"Deleted messages: (TimeStamp|Channel)");
+                                                                        .WithDescription(loc.Get("MessageHistory.DeletedMessagesPackDescription"));
                                     packBuilder.Description += $"\n{DateTimeOffset.UtcNow} in {textChannel.Mention}";
                                     await (logChannel as ITextChannel).SendMessageAsync(null, false, packBuilder.Build());
                                 }
