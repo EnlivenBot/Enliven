@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Bot.Config.Localization.Providers;
 using Discord.WebSocket;
 using LiteDB;
@@ -107,8 +108,9 @@ namespace Bot.Config {
         }
 
         public void ToggleChannelLogging(ulong channelId) {
-            if (LoggedChannels.Exists(obj => obj == channelId)) {
+            if (LoggedChannels.Contains(channelId)) {
                 LoggedChannels.Remove(channelId);
+                Task.Run(() => { GlobalDB.Messages.DeleteMany(history => history.ChannelId == channelId); });
             }
             else {
                 LoggedChannels.Add(channelId);
