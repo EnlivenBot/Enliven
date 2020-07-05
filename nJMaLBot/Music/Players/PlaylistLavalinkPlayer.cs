@@ -192,7 +192,7 @@ namespace Bot.Music.Players {
                 QueuePages = new List<string>();
                 var stringBuilder = new StringBuilder();
                 for (var i = 0; i < Playlist.Count; i++) {
-                    var text = (CurrentTrackIndex == i ? "@" : " ") + $"{i}: {Playlist[i].Title}\n";
+                    var text = (CurrentTrackIndex == i ? "@" : " ") + $"{i + 1}: {MusicUtils.EscapeTrack(Playlist[i].Title)}\n";
                     if (stringBuilder.Length + text.Length > 2000) {
                         QueuePages.Add(stringBuilder.ToString());
                         stringBuilder.Clear();

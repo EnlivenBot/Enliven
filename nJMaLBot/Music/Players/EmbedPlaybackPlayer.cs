@@ -563,7 +563,7 @@ namespace Bot.Music.Players {
                     var author = (track is AuthoredLavalinkTrack authoredLavalinkTrack) ? authoredLavalinkTrack.GetRequester() : "Unknown";
                     if (author != lastAuthor && lastAuthor != null) FinalizeBlock();
                     authorStringBuilder.Replace("└", "├").Replace("▬", "│");
-                    authorStringBuilder.Append(GetTrackString(track.Title.Replace("'", "").Replace("#", ""),
+                    authorStringBuilder.Append(GetTrackString(MusicUtils.EscapeTrack(track.Title),
                         i + 1, CurrentTrackIndex == i));
                     lastAuthor = author;
                 }
