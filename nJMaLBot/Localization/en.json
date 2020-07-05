@@ -38,7 +38,7 @@
       "Seek": "**{0}** moved playback of `{1}` track in `{2}`",
       "Remove": "**{0}** deletes the `{1}` track - `{2}`",
       "RemoveRange": "**{0}** deletes the `{1}` tracks. From `{2}` to `{3}`",
-      "TrackMoved": "**{0}** moves the `{0}` track to `{1}` position",
+      "TrackMoved": "**{0}** moves the `{1}` track to `{1=2}` position",
       "BassBoostUpdated": "**{0}** set the bass boost mode: `{1}`",
       "NodeChanged": "**{0}** moves playback to a new node: `{1}`",
       "LimitExceed": "**{0}** cannot add `{1}` tracks. Queue already contains 2000 tracks",
