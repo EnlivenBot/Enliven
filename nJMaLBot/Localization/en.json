@@ -202,7 +202,7 @@
       "MessageId": "Message ID: {0}",
       "LogTitle": "Message Changes History",
       "MessageNull": "Failed to get change history: message not found. \nProbable reasons: \n- Wrong ID \n- Message deleted \n- The bot no longer has access to it.",
-      "MessageWithoutHistory": "Failed to get change history [message]({0}) - not found. \nProbable reasons: \n- Message was written before the bot appeared on the server \n- The bot was offline while writing the message \n- Message was written in the log channel \n \nMessage is logged in. ",
+      "MessageWithoutHistory": "[Message]({0}) change history not found.\nProbable reasons:\n- The message was written before the bot appeared on the server\n- The bot was offline while writing the message\n- The message was written in the log channel\n- Logging is turned off (use `logging` command)",
       "Author": "Author",
       "Requester": "Requester",
       "ChannelDeleted": "Channel {0} ({1}) on {2} was deleted. Cleared {3} messages.",
