@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Bot.Config;
 using Bot.Config.Localization.Providers;
@@ -74,6 +76,7 @@ namespace Bot.Logging {
             return Task.CompletedTask;
         }
 
+        private static ConcurrentDictionary<ulong, SemaphoreSlim> _packSemaphores = new ConcurrentDictionary<ulong, SemaphoreSlim>();
         private static Task ClientOnMessageDeleted(Cacheable<IMessage, ulong> arg1, ISocketMessageChannel arg2) {
             new Task(async o => {
                 try {
@@ -119,32 +122,38 @@ namespace Bot.Logging {
                     }
                     else if (guildConfig.HistoryMissingInLog) {
                         if (guildConfig.HistoryMissingPacks) {
-                            IUserMessage? packMessage = await Utilities.Utilities.TryAsync(async () => {
-                                var firstOrDefault = (await (logChannel as ITextChannel).GetMessagesAsync(1).FlattenAsync()).FirstOrDefault();
-                                if (firstOrDefault.Author.Id != Program.Client.CurrentUser.Id) return null;
-                                if (!firstOrDefault.Embeds.First().Title.Contains("Pack")) return null;
-                                return (IUserMessage) firstOrDefault;
-                            }, () => null);
-                            if (packMessage == null) {
-                                SendPackMessage();
-                            }
-                            else {
-                                try {
+                            await _packSemaphores.GetOrAdd(guildConfig.GuildId, new SemaphoreSlim(1)).WaitAsync();
+                            try {
+                                IUserMessage? packMessage = await Utilities.Utilities.TryAsync(async () => {
+                                    var firstOrDefault = (await (logChannel as ITextChannel).GetMessagesAsync(1).FlattenAsync()).FirstOrDefault();
+                                    if (firstOrDefault.Author.Id != Program.Client.CurrentUser.Id) return null;
+                                    if (!firstOrDefault.Embeds.First().Title.Contains("Pack")) return null;
+                                    return (IUserMessage) firstOrDefault;
+                                }, () => null);
+                                if (packMessage == null) {
+                                    SendPackMessage();
+                                }
+                                else {
+                                    try {
+                                        var packBuilder = new EmbedBuilder().WithTitle("Deleted messages Pack")
+                                                                            .WithDescription(packMessage.Embeds.First().Description);
+                                        packBuilder.Description += $"\n{DateTimeOffset.UtcNow} in {textChannel.Mention}";
+                                        packMessage.ModifyAsync(properties => properties.Embed = packBuilder.Build());
+                                    }
+                                    catch (Exception) {
+                                        await SendPackMessage();
+                                    }
+                                }
+                                
+                                async Task SendPackMessage() {
                                     var packBuilder = new EmbedBuilder().WithTitle("Deleted messages Pack")
-                                                                        .WithDescription(packMessage.Embeds.First().Description);
+                                                                        .WithDescription($"Deleted messages: (TimeStamp|Channel)");
                                     packBuilder.Description += $"\n{DateTimeOffset.UtcNow} in {textChannel.Mention}";
-                                    packMessage.ModifyAsync(properties => properties.Embed = packBuilder.Build());
-                                }
-                                catch (Exception) {
-                                    await SendPackMessage();
+                                    await (logChannel as ITextChannel).SendMessageAsync(null, false, packBuilder.Build());
                                 }
                             }
-
-                            async Task SendPackMessage() {
-                                var packBuilder = new EmbedBuilder().WithTitle("Deleted messages Pack")
-                                                                    .WithDescription($"Deleted messages: (TimeStamp|Channel)");
-                                packBuilder.Description += $"\n{DateTimeOffset.UtcNow} in {textChannel.Mention}";
-                                await (logChannel as ITextChannel).SendMessageAsync(null, false, packBuilder.Build());
+                            finally {
+                                _packSemaphores[guildConfig.GuildId].Release();
                             }
                         }
                         else {
