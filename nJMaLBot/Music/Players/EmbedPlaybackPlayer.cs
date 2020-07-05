@@ -175,8 +175,8 @@ namespace Bot.Music.Players {
             }
         }
 
-        public override async Task Enqueue(List<AuthoredLavalinkTrack> tracks, bool enqueue) {
-            await base.Enqueue(tracks, enqueue);
+        public override async Task Enqueue(List<AuthoredLavalinkTrack> tracks, int position) {
+            await base.Enqueue(tracks, position);
             if (tracks.Count == 1) {
                 var track = tracks.First();
                 WriteToQueueHistory(Loc.Get("MusicQueues.Enqueued").Format(track.GetRequester(), MusicUtils.EscapeTrack(track.Title)), true);

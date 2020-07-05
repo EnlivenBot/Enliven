@@ -135,6 +135,16 @@ namespace Bot.Music.Players {
                 OnUpdate();
             }
         }
+        
+        public void InsertRange(int index, IEnumerable<LavalinkTrack> tracks) {
+            lock (_syncRoot) {
+                for (var i = 0; i < tracks.ToList().Count; i++) {
+                    var track = tracks.ToList()[i];
+                    _list.Insert(index + i, track);
+                }
+                OnUpdate();
+            }
+        }
 
         public bool Remove(LavalinkTrack track) {
             lock (_syncRoot) {

@@ -134,7 +134,7 @@ namespace Bot.Music {
             return new List<LavalinkTrack> {lavalinkTrack};
         }
 
-        public static async Task QueueLoadMusic(IUserMessage message, string? query, EmbedPlaybackPlayer player) {
+        public static async Task<List<LavalinkTrack>> QueueLoadMusic(IUserMessage message, string? query, EmbedPlaybackPlayer player) {
             var lavalinkTracks = new List<LavalinkTrack>();
             if (message != null && message.Attachments.Count != 0) {
                 foreach (var messageAttachment in message.Attachments) {
@@ -164,8 +164,8 @@ namespace Bot.Music {
             if (lavalinkTracks.Count == 0) {
                 throw new NothingFoundException();
             }
-
-            player.TryEnqueue(lavalinkTracks, message?.Author?.Username ?? "Unknown");
+            
+            return lavalinkTracks;
         }
 
         public static string EscapeTrack(string track) {

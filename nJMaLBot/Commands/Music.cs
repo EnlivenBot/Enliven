@@ -30,11 +30,25 @@ namespace Bot.Commands {
         public async Task Play([Remainder] [Summary("play0_0s")] string? query = null) {
             if (!await IsPreconditionsValid)
                 return;
+            await PlayInternal(query, -1);
+        }
+        
+        [SummonToUser]
+        [Command("playnext", RunMode = RunMode.Async)]
+        [Alias("pn")]
+        [Summary("playnext0s")]
+        public async Task PlayNext([Remainder] [Summary("play0_0s")] string? query = null) {
+            if (!await IsPreconditionsValid)
+                return;
+            await PlayInternal(query, Player.Playlist.Count == 0 ? -1 : Player.CurrentTrackIndex + 1);
+        }
 
+        private async Task PlayInternal(string? query, int position) {
             Player.EnqueueControlMessageSend(ResponseChannel);
-            
+
             try {
-                await MusicUtils.QueueLoadMusic(Context.Message, query, Player);
+                var lavalinkTracks = await MusicUtils.QueueLoadMusic(Context.Message, query, Player);
+                Player.TryEnqueue(lavalinkTracks, Context.Message?.Author?.Username ?? "Unknown", position);
             }
             catch (EmptyQueryException) {
                 Context.Message?.SafeDelete();

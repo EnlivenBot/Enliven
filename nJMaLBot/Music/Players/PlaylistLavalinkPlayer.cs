@@ -209,14 +209,14 @@ namespace Bot.Music.Players {
 
         private readonly SemaphoreSlim _enqueueLock = new SemaphoreSlim(1);
 
-        public virtual async Task TryEnqueue(IEnumerable<LavalinkTrack> tracks, string author, bool enqueue = true) {
+        public virtual async Task TryEnqueue(IEnumerable<LavalinkTrack> tracks, string author, int index) {
             await _enqueueLock.WaitAsync();
             try {
                 var lavalinkTracks = tracks.ToList();
                 var authoredTracks = lavalinkTracks.Take(2000 - Playlist.Tracks.Count)
                                                    .Select(track => AuthoredLavalinkTrack.FromLavalinkTrack(track, author)).ToList();
 
-                await Enqueue(authoredTracks, enqueue);
+                await Enqueue(authoredTracks, index);
 
                 var ignoredTracksCount = lavalinkTracks.Count - authoredTracks.Count;
                 if (ignoredTracksCount != 0) {
@@ -228,12 +228,20 @@ namespace Bot.Music.Players {
             }
         }
 
-        public virtual async Task Enqueue(List<AuthoredLavalinkTrack> tracks, bool enqueue) {
+        public virtual async Task Enqueue(List<AuthoredLavalinkTrack> tracks, int position = -1) {
             if (tracks.Any()) {
-                await PlayAsync(tracks.First(), enqueue);
+                if (position == -1) {
+                    await PlayAsync(tracks.First(), true);
 
-                if (tracks.Count > 1) {
-                    Playlist.AddRange(tracks.Skip(1));
+                    if (tracks.Count > 1) {
+                        Playlist.AddRange(tracks.Skip(1));
+                    }
+                }
+                else {
+                    Playlist.InsertRange(position, tracks);
+                    if (State == PlayerState.NotPlaying) {
+                        await PlayAsync(tracks.First(), false, null, null, true);
+                    }
                 }
             }
         }
@@ -242,9 +250,7 @@ namespace Bot.Music.Players {
             return Task.CompletedTask;
         }
 
-        public virtual void WriteToQueueHistory(string entry, bool background = false) {
-            
-        }
+        public virtual void WriteToQueueHistory(string entry, bool background = false) { }
     }
 
     public enum LoopingState {
