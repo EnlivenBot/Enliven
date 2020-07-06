@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Bot.Utilities.Collector {
     public class CollectorController {
@@ -13,12 +14,23 @@ namespace Bot.Utilities.Collector {
         public event EventHandler? Stop;
 
         public void Dispose() {
+            TaskCompletionSource?.SetResult(null);
             Stop?.Invoke(null, EventArgs.Empty);
             _timer?.Dispose();
         }
 
         public virtual void OnRemoveArgsFailed(CollectorEventArgsBase e) {
             RemoveArgsFailed?.Invoke(this, e);
+        }
+
+        public TaskCompletionSource<CollectorEventArgsBase?>? TaskCompletionSource;
+
+        public async Task<CollectorEventArgsBase?> WaitForEventOrDispose() {
+            if (TaskCompletionSource != null) return await TaskCompletionSource.Task;
+            TaskCompletionSource = new TaskCompletionSource<CollectorEventArgsBase?>();
+            var result = await TaskCompletionSource.Task;
+            TaskCompletionSource = null;
+            return result;
         }
     }
 
