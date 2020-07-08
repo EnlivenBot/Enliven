@@ -11,6 +11,79 @@ namespace Bot.Utilities {
     public class NonSpamMessageController {
         public static readonly Regex UserMentionRegex = new Regex(@"(?<!<@)!?(\d+)(?=>)");
 
+        private readonly SingleTask<IUserMessage?> _resendTask;
+        private readonly SingleTask _updateTask;
+        private IMessageChannel? _currentChannel;
+
+        private Timer? _deletionTimer;
+
+        private DateTime _lastSendTime;
+
+        public NonSpamMessageController(IMessageChannel channel, string title, Color embedColor = default) {
+            TargetChannels.Add(channel);
+            Title = title;
+            EmbedBuilder = new EmbedBuilder().WithColor(embedColor).WithTitle(title);
+            _updateTask = new SingleTask(async () => {
+                try {
+                    if (Message == null) {
+                        await Resend();
+                    }
+                    else {
+                        try {
+                            var needResend = await Utilities.Try(async () => {
+                                if (DateTime.Now - _lastSendTime > TimeSpan.FromSeconds(20)) {
+                                    return (await _currentChannel!.GetMessagesAsync(3).FlattenAsync()).FirstOrDefault(message => message.Id == Message!.Id) ==
+                                           null;
+                                }
+
+                                return false;
+                            }, () => Task.FromResult(true));
+
+                            if (needResend) {
+                                await Resend();
+                            }
+                            else {
+                                await Message!.ModifyAsync(properties => {
+                                    properties.Embed = AssemblyEmbed().Build();
+                                    properties.Content = string.Join(", ", Mentions);
+                                });
+                            }
+                        }
+                        catch (Exception) {
+                            // ignored
+                        }
+                    }
+                }
+                catch {
+                    // ignored
+                }
+            });
+            _resendTask = new SingleTask<IUserMessage?>(async () => {
+                try {
+                    Message?.SafeDelete();
+                    Message = null;
+                    foreach (var channel in TargetChannels) {
+                        try {
+                            var sendMessage = channel.SendMessageAsync(null, false, AssemblyEmbed().Build());
+                            _currentChannel = channel;
+                            _lastSendTime = DateTime.Now;
+                            UpdateTimeout(Timeout);
+                            Message = await sendMessage;
+                            return await sendMessage;
+                        }
+                        catch {
+                            // ignored
+                        }
+                    }
+                }
+                catch {
+                    // ignored
+                }
+
+                return null;
+            });
+        }
+
         public EmbedBuilder EmbedBuilder { get; set; }
         public IUserMessage? Message { get; private set; }
 
@@ -22,12 +95,6 @@ namespace Bot.Utilities {
 
         private List<IMessageChannel> TargetChannels { get; set; } = new List<IMessageChannel>();
         private HashSet<string> Mentions { get; set; } = new HashSet<string>();
-
-        public NonSpamMessageController(IMessageChannel channel, string title, Color embedColor = default) {
-            TargetChannels.Add(channel);
-            Title = title;
-            EmbedBuilder = new EmbedBuilder().WithColor(embedColor).WithTitle(title);
-        }
 
         public NonSpamMessageController AddChannel(IMessageChannel channel) {
             TargetChannels.Add(channel);
@@ -70,102 +137,12 @@ namespace Bot.Utilities {
             return EmbedBuilder;
         }
 
-        public DateTime LastSendTime;
-        private readonly object _updateLock = new object();
-        private TaskCompletionSource<bool>? _updateTaskSource;
-
         public Task Update() {
-            if (ResetTimeoutOnUpdate && Timeout != null) UpdateTimeout(Timeout);
-            lock (_updateLock) {
-                if (_updateTaskSource != null) return _updateTaskSource.Task;
-                _updateTaskSource = new TaskCompletionSource<bool>();
-                _ = Task.Run(async () => {
-                    await UpdateInternal();
-                    _updateTaskSource!.SetResult(true);
-                    _updateTaskSource = null;
-                });
-
-                return _updateTaskSource.Task;
-            }
+            return _updateTask.Execute();
         }
-
-        private async Task UpdateInternal() {
-            try {
-                if (Message == null) {
-                    await Resend();
-                }
-                else {
-                    try {
-                        var needResend = await Utilities.Try(async () => {
-                            if (DateTime.Now - LastSendTime > TimeSpan.FromSeconds(20)) {
-                                return (await _currentChannel!.GetMessagesAsync(3).FlattenAsync()).FirstOrDefault(message => message.Id == Message!.Id) == null;
-                            }
-
-                            return false;
-                        }, () => Task.FromResult(true));
-
-                        if (needResend) {
-                            await Resend();
-                        }
-                        else {
-                            await Message!.ModifyAsync(properties => {
-                                properties.Embed = AssemblyEmbed().Build();
-                                properties.Content = string.Join(", ", Mentions);
-                            });
-                        }
-                    }
-                    catch (Exception) {
-                        // ignored
-                    }
-                }
-            }
-            catch {
-                // ignored
-            }
-        }
-
-        private Timer? _deletionTimer;
-        private IMessageChannel? _currentChannel;
-
-        private readonly object _sendLock = new object();
-        private TaskCompletionSource<IUserMessage?>? _sendTaskSource;
 
         public Task<IUserMessage?> Resend() {
-            lock (_sendLock) {
-                if (_sendTaskSource != null) return _sendTaskSource.Task;
-                _sendTaskSource = new TaskCompletionSource<IUserMessage?>();
-                _ = Task.Run(async () => {
-                    _sendTaskSource.SetResult(await ResendInternal());
-                    _sendTaskSource = null;
-                });
-
-                return _sendTaskSource.Task;
-            }
-        }
-
-        private async Task<IUserMessage?> ResendInternal() {
-            try {
-                Message?.SafeDelete();
-                Message = null;
-                foreach (var channel in TargetChannels) {
-                    try {
-                        var sendMessage = channel.SendMessageAsync(null, false, AssemblyEmbed().Build());
-                        _currentChannel = channel;
-                        LastSendTime = DateTime.Now;
-                        UpdateTimeout(Timeout);
-                        Message = await sendMessage;
-                        return await sendMessage;
-                    }
-                    catch {
-                        // ignored
-                    }
-                }
-            }
-            catch {
-                // ignored
-            }
-
-            return null;
+            return _resendTask.Execute();
         }
     }
 }
