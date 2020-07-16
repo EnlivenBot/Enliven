@@ -62,10 +62,10 @@ namespace Bot.Utilities {
                 try {
                     Message?.SafeDelete();
                     Message = null;
-                    foreach (var channel in TargetChannels) {
+                    foreach (var messageChannel in TargetChannels) {
                         try {
-                            var sendMessage = channel.SendMessageAsync(null, false, AssemblyEmbed().Build());
-                            _currentChannel = channel;
+                            var sendMessage = messageChannel.SendMessageAsync(null, false, AssemblyEmbed().Build());
+                            _currentChannel = messageChannel;
                             _lastSendTime = DateTime.Now;
                             UpdateTimeout(Timeout);
                             Message = await sendMessage;

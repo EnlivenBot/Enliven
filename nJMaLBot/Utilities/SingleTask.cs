@@ -13,10 +13,13 @@ namespace Bot.Utilities {
     public class SingleTask<T> {
         [Obsolete("Use Execute method instead this")]
         public readonly Func<Task<T>> Action;
+        // ReSharper disable once StaticMemberInGenericType
         private static readonly object LockObject = new object();
         private TaskCompletionSource<T>? _taskCompletionSource;
         
         public bool IsExecuting { get; private set; }
+
+        public bool CanBeDirty { get; set; } = false;
 
         public SingleTask(Func<T> action) {
             Action = () => Task.FromResult(action());
@@ -26,9 +29,14 @@ namespace Bot.Utilities {
             Action = action;
         }
 
-        public Task<T> Execute() {
+        public Task<T> Execute(bool makesDirty = true) {
             lock (LockObject) {
-                if (_taskCompletionSource != null) return _taskCompletionSource.Task;
+                if (_taskCompletionSource != null) {
+                    if (!makesDirty || !CanBeDirty) 
+                        return _taskCompletionSource.Task;
+
+                    return InternalExecute(_taskCompletionSource.Task);
+                }
                 _taskCompletionSource = new TaskCompletionSource<T>();
                 _ = Task.Run(async () => {
                     IsExecuting = true;
@@ -42,6 +50,11 @@ namespace Bot.Utilities {
                 });
                 return _taskCompletionSource.Task;
             }
+        }
+
+        public async Task<T> InternalExecute(Task first) {
+            await first;
+            return await Execute(false);
         }
     }
 }

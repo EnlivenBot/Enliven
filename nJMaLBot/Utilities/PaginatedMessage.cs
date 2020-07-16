@@ -72,7 +72,7 @@ namespace Bot.Utilities {
                 finally {
                     UpdateTimeout();
                 }
-            });
+            }) {CanBeDirty = true};
 
             _resendTask = new SingleTask<IUserMessage?>(async () => {
                 UpdateTimeout(true);
@@ -100,13 +100,13 @@ namespace Bot.Utilities {
         [Obsolete("Internal method, do not use")]
         private void UpdateEmbed() {
             try {
-                UpdateInternal(PageNumber, Pages[PageNumber], true);
+                UpdateInternal(Pages[PageNumber], true);
             }
             catch (Exception) {
-                UpdateInternal(PageNumber, ErrorPage, false);
+                UpdateInternal(ErrorPage, false);
             }
 
-            void UpdateInternal(int pageNumber, MessagePage messagePage, bool withFooter) {
+            void UpdateInternal(MessagePage messagePage, bool withFooter) {
                 _embedBuilder.Fields.Clear();
                 _embedBuilder.Fields = messagePage.Fields;
                 _embedBuilder.Description = messagePage.Description;
@@ -126,7 +126,7 @@ namespace Bot.Utilities {
             catch (Exception) {
                 // Ignored
             }
-            
+
             _collectorController = CollectorsUtils.CollectReaction(Message, reaction => true, args => {
                 if (args.Reaction.Emote.Equals(Options.Back)) {
                     PageNumber--;
@@ -327,6 +327,7 @@ namespace Bot.Utilities {
             if (!resendIfNeeded && Message == null && !_updateTask.IsExecuting) {
                 return Task.CompletedTask;
             }
+
             return _updateTask.Execute();
         }
 
@@ -361,7 +362,7 @@ namespace Bot.Utilities {
     public class PaginatedAppearanceOptions {
         public static PaginatedAppearanceOptions Default = new PaginatedAppearanceOptions();
         public IEmote Back = CommonEmoji.LegacyReverse;
-        public bool DisplayInformationIcon = false;
+        public bool DisplayInformationIcon;
         public IEmote First = CommonEmoji.LegacyTrackPrevious;
 
 

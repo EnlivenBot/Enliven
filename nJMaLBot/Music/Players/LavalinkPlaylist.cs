@@ -138,8 +138,9 @@ namespace Bot.Music.Players {
         
         public void InsertRange(int index, IEnumerable<LavalinkTrack> tracks) {
             lock (_syncRoot) {
-                for (var i = 0; i < tracks.ToList().Count; i++) {
-                    var track = tracks.ToList()[i];
+                var lavalinkTracks = tracks.ToList();
+                for (var i = 0; i < lavalinkTracks.Count; i++) {
+                    var track = lavalinkTracks[i];
                     _list.Insert(index + i, track);
                 }
                 OnUpdate();

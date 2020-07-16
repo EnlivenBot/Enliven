@@ -19,7 +19,7 @@ namespace Bot.Utilities {
         public PriorityEmbedBuilderWrapper() {
             _priorityFields.CollectionChanged += (sender, args) => {
                 if (args.NewItems != null) {
-                    foreach (PriorityEmbedFieldBuilder builder in args.NewItems) {
+                    foreach (PriorityEmbedFieldBuilder? builder in args.NewItems) {
                         try {
                             builder!.AddTime = DateTime.Now;
                             builder!.EnabledChanged += BuilderOnEnabledChanged;
@@ -32,7 +32,7 @@ namespace Bot.Utilities {
                 }
 
                 if (args.OldItems != null) {
-                    foreach (PriorityEmbedFieldBuilder builder in args.OldItems) {
+                    foreach (PriorityEmbedFieldBuilder? builder in args.OldItems) {
                         try {
                             builder!.EnabledChanged -= BuilderOnEnabledChanged;
                             builder!.PriorityChanged -= BuilderOnPriorityChanged;

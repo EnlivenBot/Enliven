@@ -175,7 +175,7 @@ namespace Bot.Music.Players {
             }
         }
 
-        public override async Task Enqueue(List<AuthoredLavalinkTrack> tracks, int position) {
+        public override async Task Enqueue(List<AuthoredLavalinkTrack> tracks, int position = -1) {
             await base.Enqueue(tracks, position);
             if (tracks.Count == 1) {
                 var track = tracks.First();

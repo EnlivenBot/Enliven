@@ -46,7 +46,7 @@ namespace Bot.Logging {
 
         [BsonField("U")] public bool IsHistoryUnavailable { get; set; }
 
-        [BsonId] public string Id { get; private set; }
+        [BsonId] public string Id { get; private set; } = null!;
 
         [BsonField("A")] public ulong AuthorId { get; set; }
 
