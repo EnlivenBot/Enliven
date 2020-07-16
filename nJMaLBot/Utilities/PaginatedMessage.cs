@@ -72,7 +72,7 @@ namespace Bot.Utilities {
                 finally {
                     UpdateTimeout();
                 }
-            }) {CanBeDirty = true};
+            }) {CanBeDirty = true, BetweenExecutionsDelay = TimeSpan.FromSeconds(2)};
 
             _resendTask = new SingleTask<IUserMessage?>(async () => {
                 UpdateTimeout(true);

@@ -13,10 +13,14 @@ namespace Bot.Utilities {
     public class SingleTask<T> {
         [Obsolete("Use Execute method instead this")]
         public readonly Func<Task<T>> Action;
+
         // ReSharper disable once StaticMemberInGenericType
         private static readonly object LockObject = new object();
         private TaskCompletionSource<T>? _taskCompletionSource;
-        
+        private Task _betweenExecutionsDelayTask = Task.CompletedTask;
+
+        public TimeSpan? BetweenExecutionsDelay { get; set; } = null;  
+
         public bool IsExecuting { get; private set; }
 
         public bool CanBeDirty { get; set; } = false;
@@ -40,11 +44,13 @@ namespace Bot.Utilities {
                 _taskCompletionSource = new TaskCompletionSource<T>();
                 _ = Task.Run(async () => {
                     IsExecuting = true;
+                    await _betweenExecutionsDelayTask;
                     var result = await Action();
                     lock (LockObject) {
                         IsExecuting = false;
                         var localTaskCompletionSource = _taskCompletionSource;
                         _taskCompletionSource = null;
+                        _betweenExecutionsDelayTask = Task.Delay(BetweenExecutionsDelay ?? TimeSpan.Zero);
                         localTaskCompletionSource.SetResult(result);
                     }
                 });
