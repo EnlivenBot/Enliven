@@ -7,7 +7,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bot.Logging;
 using Bot.Music;
-using Bot.Utilities;
 using Discord;
 using HarmonyLib;
 using LiteDB;

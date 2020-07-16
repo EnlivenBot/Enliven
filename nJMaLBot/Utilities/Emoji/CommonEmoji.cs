@@ -30,6 +30,7 @@ namespace Bot.Utilities.Emoji {
         public static Discord.Emoji Robot { get; set; } = new Discord.Emoji(CommonEmojiStrings.Instance.Robot);
         public static Discord.Emoji ExclamationPoint { get; set; }  = new Discord.Emoji(CommonEmojiStrings.Instance.ExclamationPoint);
         public static Discord.Emoji Printer { get; set; }  = new Discord.Emoji(CommonEmojiStrings.Instance.Printer);
+        public static Discord.Emoji InputNumbers { get; set; }  = new Discord.Emoji(CommonEmojiStrings.Instance.InputNumbers);
     }
 
     public class CommonEmojiStrings {
@@ -71,5 +72,6 @@ namespace Bot.Utilities.Emoji {
         public string Robot { get; set; } = "🤖";
         public string ExclamationPoint { get; set; } = "⁉️";
         public string Printer { get; set; } = "🖨️";
+        public string InputNumbers { get; set; } = "🔢";
     }
 }

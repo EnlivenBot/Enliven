@@ -42,6 +42,7 @@ namespace Bot.Music.Players {
             UpdateQueue();
             UpdateParameters();
             _warningConstructor.EnabledChanged += WarningConstructorOnEnabledChanged;
+            Playlist.Update += (sender, args) => UpdateQueueMessageContent();
         }
 
         private void WarningConstructorOnEnabledChanged(object? sender, bool e) {
@@ -131,8 +132,7 @@ namespace Bot.Music.Players {
                 oldControlMessage?.RemoveAllReactionsAsync();
             }
 
-            _queueCollectorsGroup?.DisposeAll();
-            _queueMessage?.SafeDelete();
+            _queueMessage?.StopAndClear();
 
             UpdatePlayback = false;
 
@@ -193,85 +193,56 @@ namespace Bot.Music.Players {
         }
 
         public async Task PrintQueue(IUserMessage loadingMessage) {
-            _queueMessage?.SafeDelete();
-            _queueMessage = loadingMessage;
-            var pageNumber = 0;
-            var queuePages = GetQueuePages();
-            var embedBuilder = new EmbedBuilder().WithColor(Color.Gold).WithTitle(Loc.Get("MusicQueues.QueueTitle"));
-            UpdateEmbed();
-            await ModifyMessage();
+            _queueMessage?.StopAndClear();
+            _queueMessage = new PaginatedMessage(PaginatedAppearanceOptions.Default, loadingMessage) {
+                Title = Loc.Get("MusicQueues.QueueTitle"), Color = Color.Gold
+            };
 
-            _queueCollectorsGroup?.DisposeAll();
-            _queueCollectorsGroup = new CollectorsGroup(
-                CollectorsUtils.CollectReaction(loadingMessage, reaction => reaction.Emote.Equals(CommonEmoji.LegacyTrackPrevious), async args => {
-                    args.RemoveReason();
-                    pageNumber = 0;
-                    UpdateEmbed();
-                    await ModifyMessage();
-                }, CollectorFilter.IgnoreBots),
-                CollectorsUtils.CollectReaction(loadingMessage, reaction => reaction.Emote.Equals(CommonEmoji.LegacyTrackNext), async args => {
-                    args.RemoveReason();
-                    pageNumber = queuePages.Count - 1;
-                    UpdateEmbed();
-                    await ModifyMessage();
-                }, CollectorFilter.IgnoreBots),
-                CollectorsUtils.CollectReaction(loadingMessage, reaction => reaction.Emote.Equals(CommonEmoji.LegacyPlay), async args => {
-                    args.RemoveReason();
-                    pageNumber = (pageNumber + 1).Normalize(0, queuePages.Count - 1);
-                    UpdateEmbed();
-                    await ModifyMessage();
-                }, CollectorFilter.IgnoreBots),
-                CollectorsUtils.CollectReaction(loadingMessage, reaction => reaction.Emote.Equals(CommonEmoji.LegacyReverse), async args => {
-                    args.RemoveReason();
-                    pageNumber = (pageNumber - 1).Normalize(0, queuePages.Count - 1);
-                    UpdateEmbed();
-                    await ModifyMessage();
-                }, CollectorFilter.IgnoreBots),
-                CollectorsUtils.CollectReaction(loadingMessage, reaction => reaction.Emote.Equals(CommonEmoji.LegacyFileBox), async args => {
-                    args.RemoveReason();
-                    await args.Reaction.Channel.SendTextAsFile(string.Join("", queuePages),
-                        $"Playlist {DateTime.Now}, {(loadingMessage.Channel as IGuildChannel)?.Guild?.Name}.txt");
-                    _queueCollectorsGroup?.DisposeAll();
-                    _queueMessage.SafeDelete();
-                }, CollectorFilter.IgnoreBots)
-            );
+            UpdateQueueMessageContent();
 
-            loadingMessage.AddReactionsAsync(new IEmote[]
-                {CommonEmoji.LegacyTrackPrevious, CommonEmoji.LegacyReverse, CommonEmoji.LegacyFileBox, CommonEmoji.LegacyPlay, CommonEmoji.LegacyTrackNext});
+            _queueMessage.Update();
 
-            this.QueueDeprecated += QueueDeprecated;
+            // _queueCollectorsGroup?.DisposeAll();
+            // _queueCollectorsGroup = new CollectorsGroup(
+            //     CollectorsUtils.CollectReaction(loadingMessage, reaction => reaction.Emote.Equals(CommonEmoji.LegacyTrackPrevious), async args => {
+            //         args.RemoveReason();
+            //         pageNumber = 0;
+            //         UpdateEmbed();
+            //         await ModifyMessage();
+            //     }, CollectorFilter.IgnoreBots),
+            //     CollectorsUtils.CollectReaction(loadingMessage, reaction => reaction.Emote.Equals(CommonEmoji.LegacyTrackNext), async args => {
+            //         args.RemoveReason();
+            //         pageNumber = queuePages.Count - 1;
+            //         UpdateEmbed();
+            //         await ModifyMessage();
+            //     }, CollectorFilter.IgnoreBots),
+            //     CollectorsUtils.CollectReaction(loadingMessage, reaction => reaction.Emote.Equals(CommonEmoji.LegacyPlay), async args => {
+            //         args.RemoveReason();
+            //         pageNumber = (pageNumber + 1).Normalize(0, queuePages.Count - 1);
+            //         UpdateEmbed();
+            //         await ModifyMessage();
+            //     }, CollectorFilter.IgnoreBots),
+            //     CollectorsUtils.CollectReaction(loadingMessage, reaction => reaction.Emote.Equals(CommonEmoji.LegacyReverse), async args => {
+            //         args.RemoveReason();
+            //         pageNumber = (pageNumber - 1).Normalize(0, queuePages.Count - 1);
+            //         UpdateEmbed();
+            //         await ModifyMessage();
+            //     }, CollectorFilter.IgnoreBots),
+            //     CollectorsUtils.CollectReaction(loadingMessage, reaction => reaction.Emote.Equals(CommonEmoji.LegacyFileBox), async args => {
+            //         args.RemoveReason();
+            //         await args.Reaction.Channel.SendTextAsFile(string.Join("", queuePages),
+            //             $"Playlist {DateTime.Now}, {(loadingMessage.Channel as IGuildChannel)?.Guild?.Name}.txt");
+            //         _queueCollectorsGroup?.DisposeAll();
+            //         _queueMessage.SafeDelete();
+            //     }, CollectorFilter.IgnoreBots)
+            // );
+        }
 
-            async void QueueDeprecated(object? sender, EventArgs args) {
-                try {
-                    this.QueueDeprecated -= QueueDeprecated;
-                    _queueCollectorsGroup.DisposeAll();
-                    embedBuilder.WithDescription(Loc.Get("MusicQueues.QueueDeprecated").Format(GuildConfig.Prefix));
-                    embedBuilder.Fields.Clear();
-                    await ModifyMessage();
-                }
-                finally {
-                    loadingMessage.DelayedDelete(TimeSpan.FromMinutes(2));
-                }
-            }
-
-            void UpdateEmbed() {
-                embedBuilder.WithDescription($"```py\n{queuePages[pageNumber]}```");
-                if (embedBuilder.Fields.Count == 0) {
-                    embedBuilder.AddField("Placeholder", "Placeholder");
-                }
-
-                embedBuilder.Fields[0] = new EmbedFieldBuilder {
-                    Name = Loc.Get("MusicQueues.QueuePage").Format(pageNumber + 1, queuePages.Count),
-                    Value = Loc.Get("MusicQueues.QueuePageDescription")
-                };
-            }
-
-            async Task ModifyMessage() {
-                await loadingMessage.ModifyAsync(properties => {
-                    properties.Content = null;
-                    properties.Embed = embedBuilder.Build();
-                });
-            }
+        private void UpdateQueueMessageContent() {
+            _queueMessage?.SetPages(
+                string.Join("\n",
+                    Playlist.Select((track, i) => (CurrentTrackIndex == i ? "@" : " ") + $"{i + 1}: {MusicUtils.EscapeTrack(Playlist[i].Title)}")),
+                "```py\n{0}```", 50);
         }
 
         #region Playlists
@@ -442,8 +413,7 @@ namespace Bot.Music.Players {
         private Task? _modifyAsync;
         private bool _modifyQueued;
         private Task? _addReactionsAsync;
-        private CollectorsGroup? _queueCollectorsGroup;
-        private IUserMessage? _queueMessage;
+        private PaginatedMessage? _queueMessage;
 
         private async Task UpdateControlMessage(bool background = false) {
             if (ControlMessage == null)
@@ -479,13 +449,13 @@ namespace Bot.Music.Players {
                 var progress = Convert.ToInt32(TrackPosition.TotalSeconds / CurrentTrack.Duration.TotalSeconds * 100);
                 var requester = CurrentTrack is AuthoredLavalinkTrack authoredLavalinkTrack ? authoredLavalinkTrack.GetRequester() : "Unknown";
                 EmbedBuilder.Fields[0].Name = Loc.Get("Music.RequestedBy").Format(requester);
-                
+
                 var stateString = State switch {
                     PlayerState.Playing => IsExternalEmojiAllowed ? CommonEmojiStrings.Instance.Play : "▶",
                     PlayerState.Paused  => IsExternalEmojiAllowed ? CommonEmojiStrings.Instance.Pause : "⏸",
                     _                   => IsExternalEmojiAllowed ? CommonEmojiStrings.Instance.Stop : "⏹"
                 };
-                
+
                 var loopingStateString = LoopingState switch {
                     LoopingState.One => IsExternalEmojiAllowed ? CommonEmojiStrings.Instance.RepeatOnce : "🔂",
                     LoopingState.All => IsExternalEmojiAllowed ? CommonEmojiStrings.Instance.Repeat : "🔁",

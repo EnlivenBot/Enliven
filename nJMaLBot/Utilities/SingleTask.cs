@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+#pragma warning disable 618
 
 namespace Bot.Utilities {
     public class SingleTask : SingleTask<Task> {
@@ -10,8 +11,9 @@ namespace Bot.Utilities {
     }
 
     public class SingleTask<T> {
+        [Obsolete("Use Execute method instead this")]
         public readonly Func<Task<T>> Action;
-        private readonly object _lockObject = new object();
+        private static readonly object LockObject = new object();
         private TaskCompletionSource<T>? _taskCompletionSource;
         
         public bool IsExecuting { get; private set; }
@@ -25,13 +27,13 @@ namespace Bot.Utilities {
         }
 
         public Task<T> Execute() {
-            lock (_lockObject) {
+            lock (LockObject) {
                 if (_taskCompletionSource != null) return _taskCompletionSource.Task;
                 _taskCompletionSource = new TaskCompletionSource<T>();
                 _ = Task.Run(async () => {
                     IsExecuting = true;
                     var result = await Action();
-                    lock (_lockObject) {
+                    lock (LockObject) {
                         IsExecuting = false;
                         var localTaskCompletionSource = _taskCompletionSource;
                         _taskCompletionSource = null;

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Bot.Utilities;
@@ -20,8 +19,6 @@ namespace Bot.Music.Players {
             Playlist = new LavalinkPlaylist();
             Playlist.Update += (sender, args) => {
                 UpdateCurrentTrackIndex();
-                QueuePages = null;
-                QueueDeprecated?.Invoke(this, EventArgs.Empty);
             };
         }
 
@@ -40,9 +37,7 @@ namespace Bot.Music.Players {
                     CurrentTrackIndexChange?.Invoke(null, value);
             }
         }
-
-        private List<string>? QueuePages { get; set; }
-        public event EventHandler QueueDeprecated = null!;
+        
         public string? LoadFailedId = "";
         public int LoadFailedRemoves;
 
@@ -185,26 +180,6 @@ namespace Bot.Music.Players {
             catch (Exception) {
                 CurrentTrackIndex = Playlist.IndexOf(CurrentTrack);
             }
-        }
-
-        public List<string> GetQueuePages() {
-            if (QueuePages == null) {
-                QueuePages = new List<string>();
-                var stringBuilder = new StringBuilder();
-                for (var i = 0; i < Playlist.Count; i++) {
-                    var text = (CurrentTrackIndex == i ? "@" : " ") + $"{i + 1}: {MusicUtils.EscapeTrack(Playlist[i].Title)}\n";
-                    if (stringBuilder.Length + text.Length > 2000) {
-                        QueuePages.Add(stringBuilder.ToString());
-                        stringBuilder.Clear();
-                    }
-
-                    stringBuilder.Append(text);
-                }
-
-                QueuePages.Add(stringBuilder.ToString());
-            }
-
-            return QueuePages.ToList();
         }
 
         private readonly SemaphoreSlim _enqueueLock = new SemaphoreSlim(1);
