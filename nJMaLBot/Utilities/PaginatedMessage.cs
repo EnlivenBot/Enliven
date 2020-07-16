@@ -94,7 +94,7 @@ namespace Bot.Utilities {
                 }
 
                 return null;
-            });
+            }) {BetweenExecutionsDelay = TimeSpan.FromSeconds(10)};
         }
 
         [Obsolete("Internal method, do not use")]

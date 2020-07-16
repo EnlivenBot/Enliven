@@ -192,15 +192,14 @@ namespace Bot.Music.Players {
             return base.OnTrackLimitExceed(author, count);
         }
 
-        public async Task PrintQueue(IUserMessage loadingMessage) {
-            _queueMessage?.StopAndClear();
-            _queueMessage = new PaginatedMessage(PaginatedAppearanceOptions.Default, loadingMessage) {
+        public async Task PrintQueue(IMessageChannel targetChannel) {
+            _queueMessage ??= new PaginatedMessage(PaginatedAppearanceOptions.Default, targetChannel) {
                 Title = Loc.Get("MusicQueues.QueueTitle"), Color = Color.Gold
             };
 
-            UpdateQueueMessageContent();
+            _queueMessage.Resend();
 
-            _queueMessage.Update();
+            UpdateQueueMessageContent();
 
             // _queueCollectorsGroup?.DisposeAll();
             // _queueCollectorsGroup = new CollectorsGroup(

@@ -201,13 +201,12 @@ namespace Bot.Commands {
         [Summary("list0s")]
         public async Task List() {
             if (!await IsPreconditionsValid) return;
-            var logMessage = await GetLogMessage();
             if (Player == null || Player.Playlist.IsEmpty) {
-                ReplyFormattedAsync(Loc.Get("Music.QueueEmpty").Format(GuildConfig.Prefix), true, logMessage);
+                ReplyFormattedAsync(Loc.Get("Music.QueueEmpty").Format(GuildConfig.Prefix), true);
                 return;
             }
 
-            Player.PrintQueue(logMessage);
+            Player.PrintQueue(Context.Channel);
         }
 
         [Hidden]
