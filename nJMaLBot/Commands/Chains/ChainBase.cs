@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Bot.Config.Localization;
-using Bot.Utilities;
+using Bot.DiscordRelated;
 
 namespace Bot.Commands.Chains {
     public abstract class ChainBase {

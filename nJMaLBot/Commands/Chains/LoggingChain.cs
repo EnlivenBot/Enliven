@@ -4,11 +4,12 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Bot.Config;
+using Bot.Config.Emoji;
 using Bot.Config.Localization;
 using Bot.Config.Localization.Providers;
+using Bot.DiscordRelated;
 using Bot.Utilities;
 using Bot.Utilities.Collector;
-using Bot.Utilities.Emoji;
 using Discord;
 
 namespace Bot.Commands.Chains {

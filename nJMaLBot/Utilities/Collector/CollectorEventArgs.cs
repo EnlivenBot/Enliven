@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Bot.Utilities.Commands;
+using Bot.DiscordRelated.Commands;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;

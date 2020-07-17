@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Bot.DiscordRelated.Commands;
+using Bot.DiscordRelated.Commands.Modules;
 using Bot.Utilities;
-using Bot.Utilities.Commands;
-using Bot.Utilities.Modules;
 using Discord;
 using Discord.Commands;
 

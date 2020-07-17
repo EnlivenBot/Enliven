@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Bot.Config;
 using Bot.Config.Localization;
-using Bot.Music.Players;
+using Bot.DiscordRelated.Music;
 using Discord;
 using Lavalink4NET;
 using Lavalink4NET.Cluster;

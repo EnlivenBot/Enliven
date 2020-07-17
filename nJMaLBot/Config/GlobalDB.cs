@@ -5,7 +5,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Bot.Logging;
+using Bot.DiscordRelated.Logging;
 using Bot.Music;
 using Discord;
 using HarmonyLib;
