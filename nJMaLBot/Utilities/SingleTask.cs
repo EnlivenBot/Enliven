@@ -4,10 +4,7 @@ using System.Threading.Tasks;
 
 namespace Bot.Utilities {
     public class SingleTask : SingleTask<Task> {
-        public SingleTask(Action action) : base(() => {
-            action();
-            return Task.CompletedTask;
-        }) { }
+        public SingleTask(Func<Task> action) : base(action) { }
     }
 
     public class SingleTask<T> {
@@ -50,6 +47,9 @@ namespace Bot.Utilities {
                     IsExecuting = true;
                     await _betweenExecutionsDelayTask;
                     var result = await Action();
+                    if (result is Task task) {
+                        await task;
+                    }
                     lock (LockObject) {
                         IsExecuting = false;
                         var localTaskCompletionSource = _taskCompletionSource;
