@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Bot.Config;
 using Bot.Config.Localization;
@@ -31,6 +30,22 @@ namespace Bot.Music.Players {
 
         // ReSharper disable once UnusedParameter.Local
         public EmbedPlaybackPlayer(ulong guildId) : base(guildId) {
+            _updateControlMessageTask = new SingleTask(async () => {
+                if (ControlMessage != null) {
+                    await ControlMessage.ModifyAsync(properties => {
+                        properties.Embed = EmbedBuilder.Build();
+                        properties.Content = "";
+                    });
+                }
+            });
+            _controlMessageSendTask = new SingleTask(async () => {
+                try {
+                    await SetControlMessage(await _controlMessageChannel.SendMessageAsync(Loc.Get("Music.Loading")));
+                }
+                catch (Exception) {
+                    // ignored
+                }
+            }) {BetweenExecutionsDelay = TimeSpan.FromSeconds(2), CanBeDirty = true, IsDelayResetByExecute = true};
             EmbedBuilder.AddField(Loc.Get("Music.Empty"), Loc.Get("Music.Empty"), true);
             EmbedBuilder.AddField(Loc.Get("Music.Parameters"), Loc.Get("Music.Empty"), true);
             EmbedBuilder.AddField(Loc.Get("Music.Queue").Format(0, 0), Loc.Get("Music.Empty"));
@@ -123,7 +138,7 @@ namespace Bot.Music.Players {
                     oldControlMessage.DelayedDelete(TimeSpan.FromMinutes(10));
                 }
 
-                if (_modifyAsync != null) await _modifyAsync;
+                if (_updateControlMessageTask.IsExecuting) await _updateControlMessageTask.Execute(false);
                 oldControlMessage?.ModifyAsync(properties => {
                     properties.Embed = embedBuilder.Build();
                     properties.Content = null;
@@ -159,10 +174,7 @@ namespace Bot.Music.Players {
         public Task SetControlMessage(IUserMessage message) {
             ControlMessage?.SafeDelete();
             ControlMessage = message;
-            SetupControlReactions();
-            UpdateControlMessage();
-            SetupWarnings();
-            return Task.CompletedTask;
+            return Task.WhenAll(SetupControlReactions(), UpdateControlMessage(), SetupWarnings());
         }
 
         private async Task SetupWarnings() {
@@ -294,7 +306,7 @@ namespace Bot.Music.Players {
 
         private CollectorsGroup _collectorsGroup = new CollectorsGroup();
 
-        private void SetupControlReactions() {
+        private Task SetupControlReactions() {
             _collectorsGroup?.DisposeAll();
             _collectorsGroup?.Add(
                 CollectorsUtils.CollectReaction(ControlMessage,
@@ -380,26 +392,20 @@ namespace Bot.Music.Players {
                             new ReactionCommandContext(Program.Client, args.Reaction), args.Reaction.UserId.ToString());
                     }, CollectorFilter.IgnoreSelf));
             }));
+
+            return _addReactionsAsync;
         }
 
         #endregion
 
         #region Embed updates
 
-        private Timer? _controlMessageSendTimer;
+        private readonly SingleTask _controlMessageSendTask;
+        private IMessageChannel _controlMessageChannel = null!;
 
         public async Task EnqueueControlMessageSend(IMessageChannel channel) {
-            if (_controlMessageSendTimer == null) {
-                await SetControlMessage(await channel.SendMessageAsync(Loc.Get("Music.Loading")));
-
-                _controlMessageSendTimer = new Timer(state => { _controlMessageSendTimer = null; }, null, 5000, -1);
-            }
-            else {
-                _controlMessageSendTimer = new Timer(async state => {
-                    _controlMessageSendTimer = null;
-                    await SetControlMessage(await channel.SendMessageAsync(Loc.Get("Music.Loading")));
-                }, null, 5000, -1);
-            }
+            _controlMessageChannel = channel; 
+            _controlMessageSendTask.Execute();
         }
 
         public override void UpdatePlayer() {
@@ -409,38 +415,12 @@ namespace Bot.Music.Players {
             }
         }
 
-        private Task? _modifyAsync;
-        private bool _modifyQueued;
+        private readonly SingleTask _updateControlMessageTask;
         private Task? _addReactionsAsync;
         private PaginatedMessage? _queueMessage;
 
         private async Task UpdateControlMessage(bool background = false) {
-            if (ControlMessage == null)
-                return;
-
-            //Not thread safe method cuz in this case, thread safety is a waste of time
-            if (_modifyAsync?.IsCompleted ?? true) {
-                UpdateInternal();
-            }
-            else if (!background) {
-                if (_modifyQueued)
-                    return;
-                try {
-                    _modifyQueued = true;
-                    await _modifyAsync;
-                    UpdateInternal();
-                }
-                finally {
-                    _modifyQueued = false;
-                }
-            }
-
-            void UpdateInternal() {
-                _modifyAsync = ControlMessage?.ModifyAsync(properties => {
-                    properties.Embed = EmbedBuilder.Build();
-                    properties.Content = "";
-                });
-            }
+            _updateControlMessageTask.Execute(!background);
         }
 
         public void UpdateProgress(bool background = false) {

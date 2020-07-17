@@ -50,7 +50,7 @@ namespace Bot.Utilities.Collector {
 
         public void DisposeAll() {
             while (Controllers.Count != 0) {
-                Controllers[0].Dispose();
+                Controllers[0]?.Dispose();
                 Controllers.RemoveAt(0);
             }
         }

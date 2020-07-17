@@ -19,7 +19,9 @@ namespace Bot.Utilities {
         private TaskCompletionSource<T>? _taskCompletionSource;
         private Task _betweenExecutionsDelayTask = Task.CompletedTask;
 
-        public TimeSpan? BetweenExecutionsDelay { get; set; } = null;  
+        public TimeSpan? BetweenExecutionsDelay { get; set; }
+
+        public bool IsDelayResetByExecute { get; set; } = false;
 
         public bool IsExecuting { get; private set; }
 
@@ -36,6 +38,8 @@ namespace Bot.Utilities {
         public Task<T> Execute(bool makesDirty = true) {
             lock (LockObject) {
                 if (_taskCompletionSource != null) {
+                    if (IsDelayResetByExecute)
+                        _betweenExecutionsDelayTask = Task.Delay(BetweenExecutionsDelay ?? TimeSpan.Zero);
                     if (!makesDirty || !CanBeDirty) 
                         return _taskCompletionSource.Task;
 
@@ -58,7 +62,7 @@ namespace Bot.Utilities {
             }
         }
 
-        public async Task<T> InternalExecute(Task first) {
+        private async Task<T> InternalExecute(Task first) {
             await first;
             return await Execute(false);
         }
