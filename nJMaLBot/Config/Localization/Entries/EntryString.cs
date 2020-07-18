@@ -54,5 +54,9 @@ namespace Bot.Config.Localization.Entries {
 
             return _cache;
         }
+
+        public static implicit operator EntryString(string s) {
+            return new EntryString(s);
+        }
     }
 }
