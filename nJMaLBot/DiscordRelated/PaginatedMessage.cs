@@ -21,7 +21,7 @@ namespace Bot.DiscordRelated {
         private CollectorController _collectorController;
         private bool _jumpEnabled;
         private TaskCompletionSource<bool> _stopTask = new TaskCompletionSource<bool>();
-        private bool _isCollectionUpdating;
+        private bool _isCollectionUpdating = true;
 
         private Timer _timeoutTimer;
 
@@ -101,6 +101,8 @@ namespace Bot.DiscordRelated {
 
                 return null;
             }) {BetweenExecutionsDelay = TimeSpan.FromSeconds(10)};
+
+            _isCollectionUpdating = false;
         }
 
         [Obsolete("Internal method, do not use")]

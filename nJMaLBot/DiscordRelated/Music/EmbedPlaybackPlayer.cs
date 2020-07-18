@@ -8,6 +8,7 @@ using Bot.Config.Emoji;
 using Bot.Config.Localization.Entries;
 using Bot.Config.Localization.Providers;
 using Bot.DiscordRelated.Commands;
+using Bot.DiscordRelated.Criteria;
 using Bot.Music;
 using Bot.Utilities;
 using Bot.Utilities.Collector;
@@ -45,7 +46,10 @@ namespace Bot.DiscordRelated.Music {
                 catch (Exception) {
                     // ignored
                 }
-            }) {BetweenExecutionsDelay = TimeSpan.FromSeconds(2), CanBeDirty = true, IsDelayResetByExecute = true};
+            }) {
+                BetweenExecutionsDelay = TimeSpan.FromSeconds(2), CanBeDirty = true, IsDelayResetByExecute = true,
+                NeedDirtyExecuteCriterion = new EnsureLastMessage(_controlMessageChannel, ControlMessage?.Id ?? 0)
+            };
             EmbedBuilder.AddField(Loc.Get("Music.Empty"), Loc.Get("Music.Empty"), true);
             EmbedBuilder.AddField(Loc.Get("Music.Parameters"), Loc.Get("Music.Empty"), true);
             EmbedBuilder.AddField(Loc.Get("Music.Queue").Format(0, 0), Loc.Get("Music.Empty"));
@@ -212,9 +216,9 @@ namespace Bot.DiscordRelated.Music {
                 Title = Loc.Get("MusicQueues.QueueTitle"), Color = Color.Gold
             };
 
-            _queueMessage.Resend();
-
             UpdateQueueMessageContent();
+
+            _queueMessage.Resend();
 
             // _queueCollectorsGroup?.DisposeAll();
             // _queueCollectorsGroup = new CollectorsGroup(
