@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Bot.Config;
-using Bot.Config.Localization;
+using Bot.Config.Localization.Entries;
 using Bot.Config.Localization.Providers;
 using Bot.Music;
 using Discord;
@@ -48,7 +48,7 @@ namespace Bot.DiscordRelated.Music {
 
         public bool IsShutdowned { get; private set; }
 
-        public virtual void Shutdown(LocalizedEntry reason, bool needSave = true) {
+        public virtual void Shutdown(EntryLocalized reason, bool needSave = true) {
             Shutdown(reason.Get(Loc), needSave);
         }
 

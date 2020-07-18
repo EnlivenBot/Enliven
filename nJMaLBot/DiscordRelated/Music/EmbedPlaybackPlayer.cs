@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Bot.Config;
 using Bot.Config.Emoji;
-using Bot.Config.Localization;
+using Bot.Config.Localization.Entries;
 using Bot.Config.Localization.Providers;
 using Bot.DiscordRelated.Commands;
 using Bot.Music;
@@ -183,9 +183,9 @@ namespace Bot.DiscordRelated.Music {
             if (ControlMessage != null) {
                 var guildUser = (await Guild.GetUserAsync(Program.Client.CurrentUser.Id)).GetPermissions((IGuildChannel) ControlMessage.Channel);
                 IsExternalEmojiAllowed = guildUser.UseExternalEmojis;
-                _warningConstructor.Add("EmojiRemoval", new LocalizedEntry("Music.WarningEmojiRemoval"), !guildUser.ManageMessages);
-                _warningConstructor.Add("EmojiAdding", new LocalizedEntry("Music.WarningEmojiAdding"), !guildUser.AddReactions);
-                _warningConstructor.Add("CustomEmoji", new LocalizedEntry("Music.WarningCustomEmoji"), !guildUser.UseExternalEmojis);
+                _warningConstructor.Add("EmojiRemoval", new EntryLocalized("Music.WarningEmojiRemoval"), !guildUser.ManageMessages);
+                _warningConstructor.Add("EmojiAdding", new EntryLocalized("Music.WarningEmojiAdding"), !guildUser.AddReactions);
+                _warningConstructor.Add("CustomEmoji", new EntryLocalized("Music.WarningCustomEmoji"), !guildUser.UseExternalEmojis);
             }
         }
 
@@ -208,7 +208,7 @@ namespace Bot.DiscordRelated.Music {
 
         public async Task PrintQueue(IMessageChannel targetChannel) {
             var paginatedAppearanceOptions = new PaginatedAppearanceOptions {Timeout = TimeSpan.FromMinutes(1)};
-            _queueMessage ??= new PaginatedMessage(paginatedAppearanceOptions, targetChannel) {
+            _queueMessage ??= new PaginatedMessage(paginatedAppearanceOptions, targetChannel, Loc) {
                 Title = Loc.Get("MusicQueues.QueueTitle"), Color = Color.Gold
             };
 
@@ -550,7 +550,7 @@ namespace Bot.DiscordRelated.Music {
 
     public class TextConstructor {
         private bool _isPreviouslyEnabled;
-        public Dictionary<string, (bool, LocalizedEntry)> Entries = new Dictionary<string, (bool, LocalizedEntry)>();
+        public Dictionary<string, (bool, EntryLocalized)> Entries = new Dictionary<string, (bool, EntryLocalized)>();
         public bool IsEnabled => Entries.Any(pair => pair.Value.Item1);
         public event EventHandler<bool>? EnabledChanged;
 
@@ -566,7 +566,7 @@ namespace Bot.DiscordRelated.Music {
             }
         }
 
-        public void Add(string id, LocalizedEntry value, bool isEnabled = false) {
+        public void Add(string id, EntryLocalized value, bool isEnabled = false) {
             Entries[id] = (isEnabled, value);
             OnEnabledChanged();
         }

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Bot.Config;
-using Bot.Config.Localization;
+using Bot.Config.Localization.Entries;
 using Bot.DiscordRelated.Music;
 using Discord;
 using Lavalink4NET;
@@ -51,7 +51,7 @@ namespace Bot.Music {
                             }, _lavalinkLogger);
                         inactivityTrackingService.InactivePlayer += (sender, args) => {
                             if (args.Player is EmbedPlaybackPlayer embedPlaybackPlayer) {
-                                embedPlaybackPlayer.Shutdown(new LocalizedEntry("Music.NoListenersLeft"), false);
+                                embedPlaybackPlayer.Shutdown(new EntryLocalized("Music.NoListenersLeft"), false);
                             }
 
                             return Task.CompletedTask;
@@ -100,7 +100,7 @@ namespace Bot.Music {
                 player?.UpdateNodeName();
             }
             else {
-                player?.Shutdown(new LocalizedEntry("Music.PlayerDropped"));
+                player?.Shutdown(new EntryLocalized("Music.PlayerDropped"));
             }
 
             return Task.CompletedTask;

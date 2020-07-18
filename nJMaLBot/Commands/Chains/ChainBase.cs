@@ -3,7 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using Bot.Config.Localization;
+using Bot.Config.Localization.Entries;
 using Bot.DiscordRelated;
 
 namespace Bot.Commands.Chains {
@@ -17,7 +17,7 @@ namespace Bot.Commands.Chains {
             Uid = uid;
             if (uid != null) {
                 if (_runningChains.TryGetValue(uid, out var previousChain)) {
-                    previousChain.OnEnd.Invoke(new LocalizedEntry("ChainsCommon.ReasonStartedNew"));
+                    previousChain.OnEnd.Invoke(new EntryLocalized("ChainsCommon.ReasonStartedNew"));
                 }
 
                 _runningChains[uid] = this;
@@ -26,7 +26,7 @@ namespace Bot.Commands.Chains {
 
         public readonly string? Uid;
         
-        private Action<LocalizedEntry> _onEnd = entry => { };
+        private Action<EntryLocalized> _onEnd = entry => { };
 
         private protected PriorityEmbedBuilderWrapper MainBuilder { get; set; } = new PriorityEmbedBuilderWrapper();
 
@@ -37,7 +37,7 @@ namespace Bot.Commands.Chains {
 
         public TimeSpan? TimeoutRemain => TimeoutDate.HasValue ? TimeoutDate.Value - DateTimeOffset.Now : (TimeSpan?) null;
 
-        private protected Action<LocalizedEntry> OnEnd {
+        private protected Action<EntryLocalized> OnEnd {
             get => _onEnd;
             set {
                 _onEnd = entry => {
@@ -59,7 +59,7 @@ namespace Bot.Commands.Chains {
 
         public virtual void SetTimeout(TimeSpan? timeout) {
             if (timeout != null) {
-                _timeoutTimer = new Timer(state => { OnEnd.Invoke(new LocalizedEntry("ChainsCommon.ReasonTimeout")); }, null, timeout.Value, TimeSpan.Zero);
+                _timeoutTimer = new Timer(state => { OnEnd.Invoke(new EntryLocalized("ChainsCommon.ReasonTimeout")); }, null, timeout.Value, TimeSpan.Zero);
                 TimeoutDate = DateTimeOffset.Now + timeout;
             }
             else {
@@ -70,7 +70,7 @@ namespace Bot.Commands.Chains {
         
         public bool IsEnded { get; private set; }
 
-        private protected readonly Dictionary<string, Action<LocalizedEntry>> PersistentOnEndActions = new Dictionary<string, Action<LocalizedEntry>>();
+        private protected readonly Dictionary<string, Action<EntryLocalized>> PersistentOnEndActions = new Dictionary<string, Action<EntryLocalized>>();
         private readonly object _lockObject = new object();
     }
 }

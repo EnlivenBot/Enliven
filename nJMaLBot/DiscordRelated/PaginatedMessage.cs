@@ -5,6 +5,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Bot.Config.Emoji;
+using Bot.Config.Localization.Entries;
+using Bot.Config.Localization.Providers;
 using Bot.Utilities;
 using Bot.Utilities.Collector;
 using Discord;
@@ -24,16 +26,18 @@ namespace Bot.DiscordRelated {
         private Timer _timeoutTimer;
 
         public IUserMessage? Message;
+        public ILocalizationProvider Loc;
 
-        public PaginatedMessage(PaginatedAppearanceOptions options, IUserMessage message, MessagePage? errorPage = null) : this(options, message.Channel,
-            errorPage) {
+        public PaginatedMessage(PaginatedAppearanceOptions options, IUserMessage message, ILocalizationProvider loc, MessagePage? errorPage = null)
+            : this(options, message.Channel, loc, errorPage) {
             Channel = message.Channel;
             Message = message;
             SetupReactions();
             if (Message.Author.Id != Program.Client.CurrentUser.Id) throw new ArgumentException($"{nameof(message)} must be from the current user");
         }
 
-        public PaginatedMessage(PaginatedAppearanceOptions options, IMessageChannel channel, MessagePage? errorPage = null) {
+        public PaginatedMessage(PaginatedAppearanceOptions options, IMessageChannel channel, ILocalizationProvider loc, MessagePage? errorPage = null) {
+            Loc = loc;
             Channel = channel;
             Options = options;
 
@@ -115,7 +119,7 @@ namespace Bot.DiscordRelated {
                 _embedBuilder.Footer = Footer ?? new EmbedFooterBuilder();
                 if (withFooter) {
                     _embedBuilder.Footer =
-                        _embedBuilder.Footer.WithText(Options.FooterFormat.Format(PageNumber + 1, Pages.Count) +
+                        _embedBuilder.Footer.WithText(Options.FooterFormat.Get(Loc, PageNumber + 1, Pages.Count) +
                                                       (string.IsNullOrWhiteSpace(Footer?.Text) ? "" : $" | {Footer.Text}"));
                 }
             }
@@ -379,7 +383,7 @@ namespace Bot.DiscordRelated {
         public IEmote First = CommonEmoji.LegacyTrackPrevious;
 
 
-        public string FooterFormat = "{0}/{1}";
+        public IEntryLocalized FooterFormat = new EntryString("{0}/{1}");
         public IEmote Info = CommonEmoji.Help;
         public string InformationText = "This is a paginator. React with the respective icons to change page.";
         public TimeSpan InfoTimeout = TimeSpan.FromSeconds(30);

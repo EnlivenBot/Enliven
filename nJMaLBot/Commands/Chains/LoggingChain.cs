@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Bot.Config;
 using Bot.Config.Emoji;
-using Bot.Config.Localization;
+using Bot.Config.Localization.Entries;
 using Bot.Config.Localization.Providers;
 using Bot.DiscordRelated;
 using Bot.Utilities;
@@ -60,7 +60,7 @@ namespace Bot.Commands.Chains {
                             _guildConfig.HistoryMissingInLog = !_guildConfig.HistoryMissingInLog;
                         }
                         else if (args.Reaction.Emote.Equals(CommonEmoji.LegacyStop)) {
-                            OnEnd.Invoke(new LocalizedEntry("ChainsCommon.Thanks").Add(() => _guildConfig.Prefix));
+                            OnEnd.Invoke(new EntryLocalized("ChainsCommon.Thanks").Add(() => _guildConfig.Prefix));
                             return;
                         }
                         else if (args.Reaction.Emote.Equals(CommonEmoji.LegacyFileBox)) {
