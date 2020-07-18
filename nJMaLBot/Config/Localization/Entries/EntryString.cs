@@ -42,7 +42,7 @@ namespace Bot.Config.Localization.Entries {
         private string _cache = null!;
 
         public string Get(ILocalizationProvider provider, params object[] additionalArgs) {
-            if (_isCalculated || _lastProvider != provider) {
+            if (_isCalculated || _lastProvider != provider || additionalArgs.Length != 0) {
                 _cache = string.Format(GetFormatString(provider),
                     FormatArgs.ToList().Concat(additionalArgs.Select(o => new Func<object>(() => o)))
                               .Select(func => {
