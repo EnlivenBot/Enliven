@@ -4,7 +4,7 @@ using System.Linq;
 using Bot.Config.Localization.Providers;
 
 namespace Bot.Config.Localization.Entries {
-    public class EntryString : IEntryLocalized {
+    public class EntryString : IEntry {
         public string Content { get; set; }
 
         public EntryString(string content) {
@@ -44,7 +44,11 @@ namespace Bot.Config.Localization.Entries {
         public string Get(ILocalizationProvider provider, params object[] additionalArgs) {
             if (_isCalculated || _lastProvider != provider) {
                 _cache = string.Format(GetFormatString(provider),
-                    FormatArgs.ToList().Concat(additionalArgs.Select(o => new Func<object>(() => o))).Select(func => func()).ToArray());
+                    FormatArgs.ToList().Concat(additionalArgs.Select(o => new Func<object>(() => o)))
+                              .Select(func => {
+                                   var result = func();
+                                   return result is IEntry loc ? loc.Get(provider) : result;
+                               }).ToArray());
                 _lastProvider = provider;
             }
 

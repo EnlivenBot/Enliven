@@ -383,7 +383,7 @@ namespace Bot.DiscordRelated {
         public IEmote First = CommonEmoji.LegacyTrackPrevious;
 
 
-        public IEntryLocalized FooterFormat = new EntryString("{0}/{1}");
+        public IEntry FooterFormat = new EntryString("{0}/{1}");
         public IEmote Info = CommonEmoji.Help;
         public string InformationText = "This is a paginator. React with the respective icons to change page.";
         public TimeSpan InfoTimeout = TimeSpan.FromSeconds(30);
