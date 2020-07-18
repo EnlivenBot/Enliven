@@ -131,7 +131,7 @@ namespace Bot.DiscordRelated.Commands.Modules {
             // That is, it is a command for ordering music
             var needSummon = command.Attributes.FirstOrDefault(attribute => attribute is SummonToUserAttribute) != null;
             if (!needSummon) {
-                //Context.Message.SafeDelete();
+                Context.Message.SafeDelete();
             }
 
             base.AfterExecute(command);
