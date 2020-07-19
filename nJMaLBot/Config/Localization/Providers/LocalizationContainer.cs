@@ -17,12 +17,8 @@ namespace Bot.Config.Localization.Providers {
             }
         }
 
-        public string Get(string id) {
-            return Provider.Get(id);
-        }
-
-        public string Get(string @group, string id) {
-            return Provider.Get(group, id);
+        public string Get(string id, params object[] formatArgs) {
+            return Provider.Get(id, formatArgs);
         }
 
         public event EventHandler? LanguageChanged;

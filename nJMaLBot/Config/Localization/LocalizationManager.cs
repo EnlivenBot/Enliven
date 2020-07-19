@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Bot.Utilities;
 using Newtonsoft.Json;
 using NLog;
 
@@ -10,12 +11,12 @@ namespace Bot.Config.Localization {
         private static Logger logger = LogManager.GetCurrentClassLogger();
 
         public static readonly Dictionary<string, LocalizationPack> Languages;
+
         static LocalizationManager() {
             logger.Info("Start loading localizations packs...");
             try {
                 var indexes = Directory.GetFiles(Path.Combine(Directory.GetCurrentDirectory(), "Localization"))
                                        .ToDictionary(Path.GetFileNameWithoutExtension);
-                logger.Info("Loaded languages: {lang}.", string.Join(", ", indexes.Select(pair => pair.Key)));
                 Dictionary<string, LocalizationPack> localizationPacks = indexes.ToDictionary(variable => variable.Key,
                     variable => JsonConvert.DeserializeObject<LocalizationPack>(Utilities.Utilities.DownloadString(variable.Value)))!;
 
@@ -24,10 +25,11 @@ namespace Bot.Config.Localization {
                     var entriesNotLocalizedCount = pack.Value.Data.SelectMany(groups => groups.Value.Select(pair => groups.Key + pair.Key))
                                                        .Count(s => localizationEntries.Contains(s));
 
-                    pack.Value.TranslationCompleteness = (int) (entriesNotLocalizedCount / (double)localizationEntries.Count * 100);
+                    pack.Value.TranslationCompleteness = (int) (entriesNotLocalizedCount / (double) localizationEntries.Count * 100);
                 }
 
                 Languages = localizationPacks;
+                logger.Info("Loaded languages: {lang}.", string.Join(", ", Languages.Select(pair => $"{pair.Key} - {pair.Value.TranslationCompleteness}%")));
             }
             catch (Exception e) {
                 logger.Error(e, "Error while downloading libraries");
@@ -48,10 +50,17 @@ namespace Bot.Config.Localization {
             // Dummy method to call static constructor
         }
 
-        public static string Get(string lang, string id) {
+        public static string Get(string lang, string id, params object[] args) {
             var split = id.Split(".");
 
-            return Get(lang, split[0], split[1]);
+            var s = Get(lang, split[0], split[1]);
+            try {
+                return args.Length == 0 ? s : s.Format(args);
+            }
+            catch (Exception e) {
+                logger.Error(e, "Failed to format localization");
+                return s;
+            }
         }
 
         public static string Get(string lang, string group, string id) {
@@ -63,7 +72,7 @@ namespace Bot.Config.Localization {
             }
 
             if (pack?.FallbackLanguage == null) {
-                logger.Error(new Exception($"Failed to load {group}.{id} in en localization"), 
+                logger.Error(new Exception($"Failed to load {group}.{id} in en localization"),
                     "Failed to load {group}.{id} in {lang} localization", group, id, "en");
                 return $"{group}.{id}";
             }
@@ -71,14 +80,6 @@ namespace Bot.Config.Localization {
             logger.Warn("Failed to load {group}.{id} in {lang} localization", group, id, lang);
             // ReSharper disable once TailRecursiveCall
             return Get(pack.FallbackLanguage, group, id);
-        }
-
-        public static string Get(ulong guildId, string id) {
-            return Get(GuildConfig.Get(guildId).GetLanguage(), id);
-        }
-
-        public static string Get(GuildConfig guildConfig, string id) {
-            return Get(guildConfig.GetLanguage(), id);
         }
     }
 }

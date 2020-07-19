@@ -7,12 +7,8 @@ namespace Bot.Config.Localization.Providers {
             _lang = lang;
         }
 
-        public string Get(string id) {
-            return LocalizationManager.Get(_lang, id);
-        }
-
-        public string Get(string group, string id) {
-            return LocalizationManager.Get(_lang, group, id);
+        public string Get(string id, params object[] formatArgs) {
+            return LocalizationManager.Get(_lang, id, formatArgs);
         }
 
         public event EventHandler? LanguageChanged;

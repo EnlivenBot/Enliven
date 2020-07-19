@@ -16,12 +16,8 @@ namespace Bot.Config.Localization.Providers {
             };
         }
 
-        public string Get(string id) {
-            return LocalizationManager.Get(_guildConfig.GetLanguage(), id);
-        }
-
-        public string Get(string group, string id) {
-            return LocalizationManager.Get(_guildConfig.GetLanguage(), group, id);
+        public string Get(string id, params object[] formatArgs) {
+            return LocalizationManager.Get(_guildConfig.GetLanguage(), id, formatArgs);
         }
 
         public event EventHandler? LanguageChanged;
