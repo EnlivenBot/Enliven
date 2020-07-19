@@ -4,17 +4,28 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Bot.Config.Localization.Entries;
+using Bot.Config.Localization.Providers;
 using Bot.DiscordRelated;
+using Bot.Utilities;
 
 namespace Bot.Commands.Chains {
     public abstract class ChainBase {
-        public static IReadOnlyDictionary<string, ChainBase> RunningChains => _runningChains;
+        private readonly object _lockObject = new object();
 
-        // ReSharper disable once InconsistentNaming
-        private static ConcurrentDictionary<string, ChainBase> _runningChains { get; set; } = new ConcurrentDictionary<string, ChainBase>();
 
-        protected ChainBase(string? uid) {
+        private protected readonly Dictionary<string, Action<EntryLocalized>> PersistentOnEndActions = new Dictionary<string, Action<EntryLocalized>>();
+
+        public readonly string? Uid;
+
+        private Action<EntryLocalized> _onEnd = entry => { };
+
+        // ReSharper disable once NotAccessedField.Local
+        private Timer? _timeoutTimer;
+
+        protected ChainBase(string? uid, ILocalizationProvider loc) {
+            Loc = loc.ToContainer();
             Uid = uid;
+            Loc.LanguageChanged += (sender, args) => Update();
             if (uid != null) {
                 if (_runningChains.TryGetValue(uid, out var previousChain)) {
                     previousChain.OnEnd.Invoke(new EntryLocalized("ChainsCommon.ReasonStartedNew"));
@@ -24,14 +35,13 @@ namespace Bot.Commands.Chains {
             }
         }
 
-        public readonly string? Uid;
-        
-        private Action<EntryLocalized> _onEnd = entry => { };
+        public LocalizationContainer Loc { get; set; }
+        public static IReadOnlyDictionary<string, ChainBase> RunningChains => _runningChains;
+
+        // ReSharper disable once InconsistentNaming
+        private static ConcurrentDictionary<string, ChainBase> _runningChains { get; set; } = new ConcurrentDictionary<string, ChainBase>();
 
         private protected PriorityEmbedBuilderWrapper MainBuilder { get; set; } = new PriorityEmbedBuilderWrapper();
-
-        // ReSharper disable once NotAccessedField.Local
-        private Timer? _timeoutTimer;
 
         public DateTimeOffset? TimeoutDate { get; private set; }
 
@@ -57,6 +67,8 @@ namespace Bot.Commands.Chains {
             }
         }
 
+        public bool IsEnded { get; private set; }
+
         public virtual void SetTimeout(TimeSpan? timeout) {
             if (timeout != null) {
                 _timeoutTimer = new Timer(state => { OnEnd.Invoke(new EntryLocalized("ChainsCommon.ReasonTimeout")); }, null, timeout.Value, TimeSpan.Zero);
@@ -67,10 +79,7 @@ namespace Bot.Commands.Chains {
                 TimeoutDate = null;
             }
         }
-        
-        public bool IsEnded { get; private set; }
 
-        private protected readonly Dictionary<string, Action<EntryLocalized>> PersistentOnEndActions = new Dictionary<string, Action<EntryLocalized>>();
-        private readonly object _lockObject = new object();
+        public virtual void Update() { }
     }
 }

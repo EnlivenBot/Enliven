@@ -15,7 +15,6 @@ using Discord;
 namespace Bot.Commands.Chains {
     public class LoggingChain : ChainBase {
         private static readonly Regex ChannelRegex = new Regex(@"^<#(\d{18})>$");
-        private ILocalizationProvider Loc => _guildConfig.Loc;
         private GuildConfig _guildConfig = null!;
         private IUser _user = null!;
         private ITextChannel _channel = null!;
@@ -23,7 +22,7 @@ namespace Bot.Commands.Chains {
         private CollectorsGroup? _collectorsGroup;
 
         public static LoggingChain CreateInstance(ITextChannel channel, IUser user, GuildConfig guildConfig) {
-            var loggingChainBase = new LoggingChain($"{nameof(LoggingChain)}_{guildConfig.GuildId}") {
+            var loggingChainBase = new LoggingChain($"{nameof(LoggingChain)}_{guildConfig.GuildId}", guildConfig.Loc) {
                 _channel = channel, _user = user, _guildConfig = guildConfig, MainBuilder = DiscordUtils.GetAuthorEmbedBuilderWrapper(user, guildConfig.Loc)
             };
             loggingChainBase.MainBuilder.WithColor(Color.Gold).WithTitle(guildConfig.Loc.Get("Chains.LoggingTitle"));
@@ -32,7 +31,7 @@ namespace Bot.Commands.Chains {
 
         public async Task Start() {
             _guildConfig.FunctionalChannelsChanged += GuildConfigOnFunctionalChannelsChanged;
-            UpdateEmbedBuilder();
+            Update();
             _message = await _channel.SendMessageAsync(null, false, MainBuilder.Build());
             _collectorsGroup = new CollectorsGroup(CollectorsUtils.CollectMessage(_user, message => message.Channel.Id == _message.Channel.Id, async args => {
                     var match = ChannelRegex.Match(args.Message.Content.Trim());
@@ -43,8 +42,7 @@ namespace Bot.Commands.Chains {
                     _guildConfig.ToggleChannelLogging(targetChannel.Id);
                     _guildConfig.Save();
 
-                    UpdateEmbedBuilder();
-                    _message.ModifyAsync(properties => properties.Embed = MainBuilder.Build());
+                    Update();
 
                     await args.RemoveReason();
                 }),
@@ -74,12 +72,11 @@ namespace Bot.Commands.Chains {
                         }
 
                         _guildConfig.Save();
-                        UpdateEmbedBuilder();
-                        await _message.ModifyAsync(properties => properties.Embed = MainBuilder.Build());
+                        Update();
                         await args.RemoveReason();
                     }));
 
-            await _message.AddReactionsAsync(new[]
+            await _message.AddReactionsAsync(new IEmote[]
                 {CommonEmoji.Memo, CommonEmoji.Robot, CommonEmoji.ExclamationPoint, CommonEmoji.LegacyFileBox, CommonEmoji.Printer, CommonEmoji.LegacyStop});
             OnEnd = async entry => {
                 await _message.ModifyAsync(properties =>
@@ -93,10 +90,10 @@ namespace Bot.Commands.Chains {
         }
 
         private void GuildConfigOnFunctionalChannelsChanged(object? sender, ChannelFunction e) {
-            UpdateEmbedBuilder();
+            Update();
         }
 
-        private void UpdateEmbedBuilder() {
+        public override void Update() {
             var descriptionBuilder = new StringBuilder();
             descriptionBuilder.AppendLine(_guildConfig.IsLoggingEnabled
                 ? Loc.Get("Logging.Enabled")
@@ -133,8 +130,14 @@ namespace Bot.Commands.Chains {
             var loggedChannels = string.Join("\n", _guildConfig.LoggedChannels.Select(arg => $"<#{arg}>"));
             MainBuilder.GetOrAddField("channelsList").WithName(Loc.Get("Logging.LoggedChannelsTitle"))
                        .WithValue(string.IsNullOrWhiteSpace(loggedChannels) ? Loc.Get("Logging.LoggedChannelsEmpty") : loggedChannels);
+            try {
+                _message?.ModifyAsync(properties => properties.Embed = MainBuilder.Build());
+            }
+            catch (Exception) {
+                // ignored
+            }
         }
 
-        private LoggingChain(string? uid) : base(uid) { }
+        private LoggingChain(string? uid, ILocalizationProvider loc) : base(uid, loc) { }
     }
 }
