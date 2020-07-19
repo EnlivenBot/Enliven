@@ -73,7 +73,7 @@ namespace Bot {
                 }
             }
 
-            Localization.Initialize();
+            LocalizationManager.Initialize();
             GlobalDB.Initialize();
 
             await StartClient();

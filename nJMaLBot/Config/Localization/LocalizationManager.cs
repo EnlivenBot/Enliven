@@ -6,11 +6,11 @@ using Newtonsoft.Json;
 using NLog;
 
 namespace Bot.Config.Localization {
-    internal static class Localization {
+    internal static class LocalizationManager {
         private static Logger logger = LogManager.GetCurrentClassLogger();
 
         public static readonly Dictionary<string, LocalizationPack> Languages;
-        static Localization() {
+        static LocalizationManager() {
             logger.Info("Start loading localizations packs...");
             try {
                 var indexes = Directory.GetFiles(Path.Combine(Directory.GetCurrentDirectory(), "Localization"))

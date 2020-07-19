@@ -39,14 +39,14 @@ namespace Bot.Commands {
         [Summary("language0s")]
         public async Task ListLanguages() {
             var embedBuilder = this.GetAuthorEmbedBuilder().WithColor(Color.Gold).WithTitle(Loc.Get("Localization.LanguagesList"));
-            foreach (var (key, pack) in Localization.Languages) {
+            foreach (var (key, pack) in LocalizationManager.Languages) {
                 embedBuilder.AddField($"{pack.LocalizationFlagEmojiText} **{pack.LocalizedName}** ({pack.LanguageName})",
                     Loc.Get("Localization.LanguageDescription").Format(GuildConfig.Prefix, key, pack.Authors, pack.TranslationCompleteness), true);
             }
 
             var message = await ReplyAsync(null, false, embedBuilder.Build());
             CollectorsGroup collectors = null!;
-            var packsWithEmoji = Localization.Languages.Where(pair => pair.Value.LocalizationFlagEmoji != null).ToList();
+            var packsWithEmoji = LocalizationManager.Languages.Where(pair => pair.Value.LocalizationFlagEmoji != null).ToList();
             collectors = new CollectorsGroup(packsWithEmoji.Select(
                 pair => {
                     var packName = pair.Key;
@@ -78,13 +78,13 @@ namespace Bot.Commands {
                 return;
             }
 
-            if (Localization.Languages.ContainsKey(language)) {
+            if (LocalizationManager.Languages.ContainsKey(language)) {
                 GuildConfig.Get(Context.Guild.Id).SetLanguage(language).Save();
                 Context.Message.SafeDelete();
                 await ReplyFormattedAsync(Loc.Get("Commands.Success"), Loc.Get("Localization.Success").Format(language), TimeSpan.FromMinutes(1));
             }
             else {
-                var languagesList = string.Join(' ', Localization.Languages.Select(pair => $"`{pair.Key}`"));
+                var languagesList = string.Join(' ', LocalizationManager.Languages.Select(pair => $"`{pair.Key}`"));
                 await ReplyFormattedAsync(Loc.Get("Commands.Fail"), Loc.Get("Localization.Fail").Format(language, languagesList), TimeSpan.FromMinutes(1));
             }
         }
