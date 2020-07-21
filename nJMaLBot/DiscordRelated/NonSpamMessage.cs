@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Bot.DiscordRelated.Criteria;
 using Bot.Utilities;
 using Discord;
 using Tyrrrz.Extensions;
@@ -31,13 +32,7 @@ namespace Bot.DiscordRelated {
                     }
                     else {
                         try {
-                            var needResend = await Utilities.Utilities.Try(async () => {
-                                return _lastSendTimeChecker.IsTimeoutPassed &&
-                                       (await _currentChannel!.GetMessagesAsync(3).FlattenAsync()).FirstOrDefault(message => message.Id == Message!.Id) ==
-                                       null;
-                            }, () => Task.FromResult(true));
-
-                            if (needResend) {
+                            if (await _lastSendTimeChecker.ToCriteria().AddCriterion(new EnsureLastMessage(_currentChannel, Message).Invert()).JudgeAsync()) {
                                 await Resend();
                             }
                             else {
@@ -55,7 +50,7 @@ namespace Bot.DiscordRelated {
                 catch {
                     // ignored
                 }
-            });
+            }) {CanBeDirty = true, BetweenExecutionsDelay = TimeSpan.FromSeconds(1)};
             _resendTask = new SingleTask<IUserMessage?>(async () => {
                 try {
                     Message?.SafeDelete();

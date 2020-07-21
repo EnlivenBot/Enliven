@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using Bot.DiscordRelated.Criteria;
 
@@ -25,6 +25,10 @@ namespace Bot.Utilities {
         public ICriterion ToCriterion() {
             _customCriterion ??= new CustomCriterion(() => Task.FromResult(IsTimeoutPassed));
             return _customCriterion;
+        }
+        
+        public Criteria ToCriteria() {
+            return ToCriterion().ToCriteria();
         }
     }
 }
