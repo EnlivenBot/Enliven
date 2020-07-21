@@ -18,7 +18,7 @@ namespace Bot.DiscordRelated {
 
         private Timer? _deletionTimer;
 
-        private DateTime _lastSendTime;
+        private TimeChecker _lastSendTimeChecker = new TimeChecker(TimeSpan.FromSeconds(20));
 
         public NonSpamMessageController(IMessageChannel channel, string title, Color embedColor = default) {
             TargetChannels.Add(channel);
@@ -32,12 +32,9 @@ namespace Bot.DiscordRelated {
                     else {
                         try {
                             var needResend = await Utilities.Utilities.Try(async () => {
-                                if (DateTime.Now - _lastSendTime > TimeSpan.FromSeconds(20)) {
-                                    return (await _currentChannel!.GetMessagesAsync(3).FlattenAsync()).FirstOrDefault(message => message.Id == Message!.Id) ==
-                                           null;
-                                }
-
-                                return false;
+                                return _lastSendTimeChecker.IsTimeoutPassed &&
+                                       (await _currentChannel!.GetMessagesAsync(3).FlattenAsync()).FirstOrDefault(message => message.Id == Message!.Id) ==
+                                       null;
                             }, () => Task.FromResult(true));
 
                             if (needResend) {
@@ -67,7 +64,7 @@ namespace Bot.DiscordRelated {
                         try {
                             var sendMessage = messageChannel.SendMessageAsync(null, false, AssemblyEmbed().Build());
                             _currentChannel = messageChannel;
-                            _lastSendTime = DateTime.Now;
+                            _lastSendTimeChecker.Update();
                             UpdateTimeout(Timeout);
                             Message = await sendMessage;
                             return await sendMessage;
