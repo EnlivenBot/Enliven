@@ -18,7 +18,7 @@ namespace Bot.DiscordRelated {
         private readonly SingleTask<IUserMessage?> _resendTask;
         private readonly SingleTask _updateTask;
         public readonly PaginatedAppearanceOptions Options;
-        private CollectorController _collectorController;
+        private CollectorController? _collectorController;
         private bool _jumpEnabled;
         private TaskCompletionSource<bool> _stopTask = new TaskCompletionSource<bool>();
         private bool _isCollectionUpdating = true;
@@ -185,12 +185,11 @@ namespace Bot.DiscordRelated {
                 await Message.AddReactionAsync(Options.Next);
                 await Message.AddReactionAsync(Options.Last);
 
-                var manageMessages = (Channel is IGuildChannel guildChannel)
-                    ? (await guildChannel.GetUserAsync(Program.Client.CurrentUser.Id)).GetPermissions(guildChannel).ManageMessages
-                    : false;
+                var manageMessages = Channel is IGuildChannel guildChannel &&
+                                     (await guildChannel.GetUserAsync(Program.Client.CurrentUser.Id)).GetPermissions(guildChannel).ManageMessages;
 
                 _jumpEnabled = Options.JumpDisplayOptions == JumpDisplayOptions.Always
-                            || (Options.JumpDisplayOptions == JumpDisplayOptions.WithManageMessages && manageMessages);
+                            || Options.JumpDisplayOptions == JumpDisplayOptions.WithManageMessages && manageMessages;
                 if (_jumpEnabled) await Message.AddReactionAsync(Options.Jump);
 
                 await Message.AddReactionAsync(Options.Stop);
@@ -276,14 +275,19 @@ namespace Bot.DiscordRelated {
         /// <param name="content">Source string</param>
         /// <param name="format">Format string, every page will be formatted with this string. {0} - For content {1} - For page number </param>
         /// <param name="lineLimit">Max lines at one page</param>
-        public void SetPages(string content, string format = "", int lineLimit = int.MaxValue) {
+        /// <param name="fields">Persistent fields rendered for any page</param>
+        public void SetPages(string content, string format = "{0}", int lineLimit = int.MaxValue, IEnumerable<EmbedFieldBuilder>? fields = null) {
             PagesRecreating(() => {
-                var pageContentLenght = 2048 - format.Length;
+                var pageContentLength = 2048 - format.Length;
+                var fieldsList = fields?.ToList();
+                if (fieldsList != null) {
+                    pageContentLength -= fieldsList.Sum(builder => builder.Name.Length + builder.Value.ToString()!.Length);
+                }
                 var lines = content.Split("\n");
-                var page = new MessagePage();
+                var page = new MessagePage {Fields = fieldsList?.ToList() ?? new List<EmbedFieldBuilder>()};
                 var currentLinesCount = 0;
                 foreach (var line in lines) {
-                    if (page.Description.Length + line.Length > pageContentLenght || currentLinesCount > lineLimit) {
+                    if (page.Description.Length + line.Length > pageContentLength || currentLinesCount > lineLimit) {
                         FinishCurrentPage();
                         currentLinesCount = 0;
                     }
