@@ -16,7 +16,7 @@ namespace Bot.Config.Localization.Providers {
             };
         }
 
-        public string Get(string id, params object[] formatArgs) {
+        public string Get(string id, params object[]? formatArgs) {
             return LocalizationManager.Get(_guildConfig.GetLanguage(), id, formatArgs);
         }
 

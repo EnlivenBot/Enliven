@@ -278,7 +278,7 @@ namespace Bot.DiscordRelated {
         /// <param name="fields">Persistent fields rendered for any page</param>
         public void SetPages(string content, string format = "{0}", int lineLimit = int.MaxValue, IEnumerable<EmbedFieldBuilder>? fields = null) {
             PagesRecreating(() => {
-                var pageContentLength = 2048 - format.Length;
+                var pageContentLength = Constants.MaxFieldLength - format.Length;
                 var fieldsList = fields?.ToList();
                 if (fieldsList != null) {
                     pageContentLength -= fieldsList.Sum(builder => builder.Name.Length + builder.Value.ToString()!.Length);

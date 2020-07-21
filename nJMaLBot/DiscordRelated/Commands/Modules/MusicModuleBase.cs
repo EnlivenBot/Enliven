@@ -31,7 +31,7 @@ namespace Bot.DiscordRelated.Commands.Modules {
         private async Task<bool> InitialSetup(CommandInfo command) {
             if (!ErrorsMessagesControllers.TryGetValue(Context.Channel.Id, out var nonSpamMessageController)) {
                 nonSpamMessageController = new NonSpamMessageController(Context.Channel, Loc.Get("Music.Fail"))
-                                          .AddChannel(await Context.User.GetOrCreateDMChannelAsync()).UpdateTimeout(TimeSpan.FromMinutes(2));
+                                          .AddChannel(await Context.User.GetOrCreateDMChannelAsync()).UpdateTimeout(Constants.VeryShortTimeSpan);
                 nonSpamMessageController.ResetTimeoutOnUpdate = true;
                 ErrorsMessagesControllers[Context.Channel.Id] = nonSpamMessageController;
             }

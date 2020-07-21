@@ -97,8 +97,8 @@ namespace Bot.DiscordRelated.Music {
 
         public override async Task OnTrackEndAsync(TrackEndEventArgs eventArgs) {
             if (eventArgs.Reason == TrackEndReason.LoadFailed) {
-                WriteToQueueHistory(Loc.Get(CurrentTrack.Identifier == LoadFailedId ? "Music.DecodingErrorRemove" : "Music.DecodingError")
-                                       .Format(CurrentTrack.Title.SafeSubstring(40, "...")));
+                WriteToQueueHistory(Loc.Get(CurrentTrack.Identifier == LoadFailedId ? "Music.DecodingErrorRemove" : "Music.DecodingError",
+                    MusicUtils.EscapeTrack(CurrentTrack.Title).SafeSubstring(40, "...") ?? ""));
             }
 
             await base.OnTrackEndAsync(eventArgs);
@@ -141,7 +141,7 @@ namespace Bot.DiscordRelated.Music {
                     embedBuilder.Description += Loc.Get("Music.ResumeViaPlaylists").Format(GuildConfig.Get(GuildId).Prefix, storedPlaylist.Id);
                 }
                 else {
-                    oldControlMessage.DelayedDelete(TimeSpan.FromMinutes(10));
+                    oldControlMessage.DelayedDelete(Constants.LongTimeSpan);
                 }
 
                 if (_updateControlMessageTask.IsExecuting) await _updateControlMessageTask.Execute(false);
@@ -168,7 +168,7 @@ namespace Bot.DiscordRelated.Music {
 
         public override void WriteToQueueHistory(string entry, bool background = false) {
             _queueHistory.AppendLine("- " + entry);
-            while (_queueHistory.Length > 512) {
+            while (_queueHistory.Length > Constants.MaxQueueHistoryChars) {
                 var indexOf = _queueHistory.ToString().IndexOf(Environment.NewLine, StringComparison.Ordinal);
                 if (indexOf >= 0) _queueHistory.Remove(0, indexOf + Environment.NewLine.Length);
             }
@@ -206,7 +206,7 @@ namespace Bot.DiscordRelated.Music {
         }
 
         public override Task OnTrackLimitExceed(string author, int count) {
-            WriteToQueueHistory(Loc.Get("MusicQueues.LimitExceed").Format(author, count));
+            WriteToQueueHistory(Loc.Get("MusicQueues.LimitExceed", author, count, Constants.MaxTracksCount));
             return base.OnTrackLimitExceed(author, count);
         }
 
@@ -266,8 +266,8 @@ namespace Bot.DiscordRelated.Music {
         #region Playlists
 
         public override async Task ImportPlaylist(ExportPlaylist playlist, ImportPlaylistOptions options, string requester) {
-            if (Playlist.Count + playlist.Tracks.Count > 2000) {
-                WriteToQueueHistory(Loc.Get("MusicQueues.PlaylistLoadingLimit").Format(requester, playlist.Tracks.Count));
+            if (Playlist.Count + playlist.Tracks.Count > Constants.MaxTracksCount) {
+                WriteToQueueHistory(Loc.Get("MusicQueues.PlaylistLoadingLimit", requester, playlist.Tracks.Count, Constants.MaxTracksCount));
                 return;
             }
 
@@ -300,7 +300,7 @@ namespace Bot.DiscordRelated.Music {
 
                 await PlayAsync(track, false, position);
                 WriteToQueueHistory(Loc.Get("MusicQueues.Jumped")
-                                       .Format(requester, CurrentTrackIndex + 1, CurrentTrack.Title.SafeSubstring(0, 40) + "..."));
+                                       .Format(requester, CurrentTrackIndex + 1, MusicUtils.EscapeTrack(CurrentTrack.Title).SafeSubstring(100, "...")));
             }
             else if (State == PlayerState.NotPlaying) {
                 await PlayAsync(Playlist[0], false);
@@ -432,7 +432,7 @@ namespace Bot.DiscordRelated.Music {
 
         public void UpdateProgress(bool background = false) {
             if (CurrentTrack != null) {
-                var progress = Convert.ToInt32(TrackPosition.TotalSeconds / CurrentTrack.Duration.TotalSeconds * 100);
+                var progressPercentage = Convert.ToInt32(TrackPosition.TotalSeconds / CurrentTrack.Duration.TotalSeconds * 100);
                 var requester = CurrentTrack is AuthoredLavalinkTrack authoredLavalinkTrack ? authoredLavalinkTrack.GetRequester() : "Unknown";
                 EmbedBuilder.Fields[0].Name = Loc.Get("Music.RequestedBy").Format(requester);
 
@@ -447,7 +447,7 @@ namespace Bot.DiscordRelated.Music {
                     LoopingState.All => IsExternalEmojiAllowed ? CommonEmojiStrings.Instance.Repeat : "🔁",
                     LoopingState.Off => IsExternalEmojiAllowed ? CommonEmojiStrings.Instance.RepeatOff : "❌",
                 };
-                EmbedBuilder.Fields[0].Value = (IsExternalEmojiAllowed ? ProgressEmoji.CustomEmojiPack : ProgressEmoji.TextEmojiPack).GetProgress(progress)
+                EmbedBuilder.Fields[0].Value = (IsExternalEmojiAllowed ? ProgressEmoji.CustomEmojiPack : ProgressEmoji.TextEmojiPack).GetProgress(progressPercentage)
                                              + "\n" + GetProgressInfo(stateString, loopingStateString, CurrentTrack.IsSeekable);
             }
             else {
@@ -482,8 +482,8 @@ namespace Bot.DiscordRelated.Music {
             }
             else if ((State != PlayerState.NotPlaying || State != PlayerState.NotConnected || State != PlayerState.Destroyed) && CurrentTrack != null) {
                 var iconUrl = CurrentTrack.Provider == StreamProvider.YouTube ? $"https://img.youtube.com/vi/{CurrentTrack?.TrackIdentifier}/0.jpg" : null;
-                EmbedBuilder?.WithAuthor(string.IsNullOrWhiteSpace(CurrentTrack!.Author) ? "Unknown" : CurrentTrack.Author.SafeSubstring(0, 250), iconUrl)
-                            ?.WithTitle(CurrentTrack!.Title.SafeSubstring(0, 250))?.WithUrl(CurrentTrack!.Source);
+                EmbedBuilder?.WithAuthor(string.IsNullOrWhiteSpace(CurrentTrack!.Author) ? "Unknown" : CurrentTrack.Author.SafeSubstring(Constants.MaxEmbedAuthorLength, "..."), iconUrl)
+                            ?.WithTitle(MusicUtils.EscapeTrack(CurrentTrack!.Title).SafeSubstring(EmbedBuilder.MaxTitleLength, "..."))?.WithUrl(CurrentTrack!.Source);
             }
             else {
                 EmbedBuilder.Author = null;

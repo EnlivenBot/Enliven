@@ -21,7 +21,7 @@ namespace Bot.Commands {
         [Command("printwelcome")]
         public async Task PrintWelcome() {
             Context.Message.SafeDelete();
-            (await GlobalBehaviors.PrintWelcomeMessage((SocketGuild) Context.Guild, Context.Channel)).DelayedDelete(TimeSpan.FromMinutes(10));
+            (await GlobalBehaviors.PrintWelcomeMessage((SocketGuild) Context.Guild, Context.Channel)).DelayedDelete(Constants.LongTimeSpan);
         }
         
         [Command("setprefix")]
@@ -30,7 +30,7 @@ namespace Bot.Commands {
             var guildConfig = GuildConfig.Get(Context.Guild.Id);
             guildConfig.Prefix = prefix;
             guildConfig.Save();
-            await ReplyFormattedAsync(Loc.Get("Commands.Success"), Loc.Get("Commands.SetPrefixResponse").Format(prefix), TimeSpan.FromMinutes(10));
+            await ReplyFormattedAsync(Loc.Get("Commands.Success"), Loc.Get("Commands.SetPrefixResponse").Format(prefix), Constants.LongTimeSpan);
             Context.Message.SafeDelete();
         }
 
@@ -67,7 +67,7 @@ namespace Bot.Commands {
             catch (Exception) {
                 // ignored
             }
-            message.DelayedDelete(TimeSpan.FromMinutes(5));
+            message.DelayedDelete(Constants.StandardTimeSpan);
         }
 
         [Command("setlanguage")]

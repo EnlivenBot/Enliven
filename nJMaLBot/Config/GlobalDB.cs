@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bot.DiscordRelated.Logging;
 using Bot.Music;
+using Bot.Utilities;
 using Discord;
 using HarmonyLib;
 using LiteDB;
@@ -61,8 +62,8 @@ namespace Bot.Config {
             PerformUpgrades();
             Database.Checkpoint();
 
-            _checkpointTimer = new Timer(state => Database.Checkpoint(), null, TimeSpan.FromMinutes(3), TimeSpan.FromMinutes(30));
-            _rebuildTimer = new Timer(state => Database.Rebuild(), null, TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(180));
+            _checkpointTimer = new Timer(state => Database.Checkpoint(), null, Constants.ShortTimeSpan, TimeSpan.FromMinutes(30));
+            _rebuildTimer = new Timer(state => Database.Rebuild(), null, Constants.LongTimeSpan, TimeSpan.FromMinutes(180));
             logger.Info("Database loaded");
         }
 

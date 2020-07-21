@@ -15,19 +15,19 @@ namespace Bot.DiscordRelated.Commands {
         private static Logger logger = LogManager.GetCurrentClassLogger();
 
         private static Temporary<int> _textChannelsCount =
-            new Temporary<int>(() => Program.Client.Guilds.Sum(guild => guild.TextChannels.Count), TimeSpan.FromMinutes(5));
+            new Temporary<int>(() => Program.Client.Guilds.Sum(guild => guild.TextChannels.Count), Constants.StandardTimeSpan);
 
         private static Temporary<int> _voiceChannelsCount =
-            new Temporary<int>(() => Program.Client.Guilds.Sum(guild => guild.VoiceChannels.Count), TimeSpan.FromMinutes(5));
+            new Temporary<int>(() => Program.Client.Guilds.Sum(guild => guild.VoiceChannels.Count), Constants.StandardTimeSpan);
 
         private static Temporary<int> _usersCount =
-            new Temporary<int>(() => Program.Client.Guilds.Sum(guild => guild.MemberCount), TimeSpan.FromMinutes(5));
+            new Temporary<int>(() => Program.Client.Guilds.Sum(guild => guild.MemberCount), Constants.StandardTimeSpan);
 
         private static Temporary<int> _commandUsagesCount =
-            new Temporary<int>(() => GlobalDB.CommandStatistics.FindById("Global").UsagesList.Sum(pair => pair.Value), TimeSpan.FromMinutes(5));
+            new Temporary<int>(() => GlobalDB.CommandStatistics.FindById("Global").UsagesList.Sum(pair => pair.Value), Constants.StandardTimeSpan);
 
         private static Temporary<int> _commandUsersCount =
-            new Temporary<int>(() => GlobalDB.CommandStatistics.Count(), TimeSpan.FromMinutes(5));
+            new Temporary<int>(() => GlobalDB.CommandStatistics.Count(), Constants.StandardTimeSpan);
 
         [SuppressMessage("ReSharper", "ConditionIsAlwaysTrueOrFalse")]
         public static EmbedBuilder BuildStats(IUser? user, ILocalizationProvider loc) {

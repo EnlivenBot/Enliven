@@ -17,7 +17,7 @@ namespace Bot.Config.Localization.Providers {
             }
         }
 
-        public string Get(string id, params object[] formatArgs) {
+        public string Get(string id, params object[]? formatArgs) {
             return Provider.Get(id, formatArgs);
         }
 

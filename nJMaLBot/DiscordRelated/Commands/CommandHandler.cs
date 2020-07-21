@@ -190,7 +190,7 @@ namespace Bot.DiscordRelated.Commands {
         }
 
         private static async Task SendErrorMessage(SocketUserMessage message, ILocalizationProvider loc, string description) {
-            (await message.Channel.SendMessageAsync(null, false, BuildErrorEmbed(message, loc, description))).DelayedDelete(TimeSpan.FromMinutes(10));
+            (await message.Channel.SendMessageAsync(null, false, BuildErrorEmbed(message, loc, description))).DelayedDelete(Constants.LongTimeSpan);
         }
 
         private static Embed BuildErrorEmbed(SocketUserMessage message, ILocalizationProvider loc, string description) {

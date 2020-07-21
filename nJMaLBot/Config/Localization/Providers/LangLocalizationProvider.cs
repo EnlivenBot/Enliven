@@ -7,7 +7,7 @@ namespace Bot.Config.Localization.Providers {
             _lang = lang;
         }
 
-        public string Get(string id, params object[] formatArgs) {
+        public string Get(string id, params object[]? formatArgs) {
             return LocalizationManager.Get(_lang, id, formatArgs);
         }
 

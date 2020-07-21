@@ -23,7 +23,7 @@ namespace Bot.Commands {
                                   Value = pair.Value.GroupTextTemplate.Format(GuildConfig.Prefix)
                               }));
             eb.AddField(Loc.Get("Common.Vote"), Loc.Get("Common.VoteDescription"));
-            (await (await GetResponseChannel()).SendMessageAsync(null, false, eb.Build())).DelayedDelete(TimeSpan.FromMinutes(10));
+            (await (await GetResponseChannel()).SendMessageAsync(null, false, eb.Build())).DelayedDelete(Constants.LongTimeSpan);
         }
 
         [Command("help")]
@@ -43,10 +43,10 @@ namespace Bot.Commands {
             }
             else {
                 eb.WithTitle(Loc.Get("Help.NotFoundTitle"))
-                  .WithDescription(Loc.Get("Help.NotFoundDescription").Format(message.SafeSubstring(0, 1900), GuildConfig.Prefix));
+                  .WithDescription(Loc.Get("Help.NotFoundDescription").Format(message.SafeSubstring(100, "..."), GuildConfig.Prefix));
             }
 
-            (await (await GetResponseChannel()).SendMessageAsync(null, false, eb.Build())).DelayedDelete(TimeSpan.FromMinutes(10));
+            (await (await GetResponseChannel()).SendMessageAsync(null, false, eb.Build())).DelayedDelete(Constants.LongTimeSpan);
         }
     }
 }

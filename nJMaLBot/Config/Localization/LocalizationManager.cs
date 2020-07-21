@@ -50,12 +50,12 @@ namespace Bot.Config.Localization {
             // Dummy method to call static constructor
         }
 
-        public static string Get(string lang, string id, params object[] args) {
+        public static string Get(string lang, string id, params object[]? args) {
             var split = id.Split(".");
 
             var s = Get(lang, split[0], split[1]);
             try {
-                return args.Length == 0 ? s : s.Format(args);
+                return args == null || args.Length == 0 ? s : s.Format(args);
             }
             catch (Exception e) {
                 logger.Error(e, "Failed to format localization");

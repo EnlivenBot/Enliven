@@ -40,7 +40,7 @@ namespace Bot.Commands {
             catch (Exception) {
                 await ReplyFormattedAsync(Loc.Get("CommandHandler.FailedTitle"),
                     Loc.Get("MessageHistory.IdFailedToParse").Format(id.SafeSubstring(100, "..."), GuildConfig.Prefix), 
-                    TimeSpan.FromMinutes(2));
+                    Constants.VeryShortTimeSpan);
                 Context.Message.SafeDelete();
                 return;
             }
@@ -54,7 +54,7 @@ namespace Bot.Commands {
         [Summary("stats0s")]
         public Task Stats() {
             Context.Message.SafeDelete();
-            ReplyAsync(null, false, StatsUtils.BuildStats(null, Loc).Build()).DelayedDelete(TimeSpan.FromMinutes(5));
+            ReplyAsync(null, false, StatsUtils.BuildStats(null, Loc).Build()).DelayedDelete(Constants.StandardTimeSpan);
             return Task.CompletedTask;
         }
 
@@ -62,7 +62,7 @@ namespace Bot.Commands {
         [Summary("userstats0s")]
         public Task UserStats([Summary("userstats0_0s")] IUser user) {
             Context.Message.SafeDelete();
-            ReplyAsync(null, false, StatsUtils.BuildStats(user, Loc).Build()).DelayedDelete(TimeSpan.FromMinutes(5));
+            ReplyAsync(null, false, StatsUtils.BuildStats(user, Loc).Build()).DelayedDelete(Constants.StandardTimeSpan);
             return Task.CompletedTask;
         }
 

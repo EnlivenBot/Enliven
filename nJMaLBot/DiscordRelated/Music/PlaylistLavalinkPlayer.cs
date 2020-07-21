@@ -189,7 +189,7 @@ namespace Bot.DiscordRelated.Music {
             await _enqueueLock.WaitAsync();
             try {
                 var lavalinkTracks = tracks.ToList();
-                var authoredTracks = lavalinkTracks.Take(2000 - Playlist.Tracks.Count)
+                var authoredTracks = lavalinkTracks.Take(Constants.MaxTracksCount - Playlist.Tracks.Count)
                                                    .Select(track => AuthoredLavalinkTrack.FromLavalinkTrack(track, author)).ToList();
 
                 await Enqueue(authoredTracks, index);
