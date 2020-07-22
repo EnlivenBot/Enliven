@@ -42,7 +42,6 @@ namespace Bot.Utilities {
         public bool CanBeDirty { get; set; } = false;
 
         public Task<T> Execute(bool makesDirty = true, TimeSpan? delayOverride = null) {
-            _isDirtyNow = true;
             return InternalExecute(makesDirty, delayOverride);
         }
 
@@ -62,7 +61,7 @@ namespace Bot.Utilities {
                     await _betweenExecutionsDelayTask;
 
                     T result;
-                    if (_isDirtyNow && NeedDirtyExecuteCriterion != null && await NeedDirtyExecuteCriterion.JudgeAsync()) {
+                    if (!_isDirtyNow && NeedDirtyExecuteCriterion != null && await NeedDirtyExecuteCriterion.JudgeAsync()) {
                         result = _lastResult;
                     }
                     else {
@@ -101,6 +100,7 @@ namespace Bot.Utilities {
 
         private async Task<T> QueueExecuteDirty(Task first) {
             await first;
+            _isDirtyNow = true;
             return await Execute(false);
         }
     }
