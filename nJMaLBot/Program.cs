@@ -8,6 +8,7 @@ using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Logging;
 using Bot.Music;
 using Bot.Utilities;
+using Bot.Utilities.Music;
 using CommandLine;
 using Discord;
 using Discord.WebSocket;
@@ -87,6 +88,7 @@ namespace Bot {
 
             MessageHistoryManager.Initialize();
             MusicUtils.Initialize();
+            SpotifyMusicProvider.Initialize();
             await Task.Delay(-1);
         }
 

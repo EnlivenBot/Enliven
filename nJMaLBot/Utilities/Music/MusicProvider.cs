@@ -6,12 +6,15 @@ using Lavalink4NET.Player;
 
 namespace Bot.Utilities.Music {
     public class MusicProvider {
-        public static Task<IMusicProvider?> GetProvider(string query, LavalinkCluster cluster) {
+        public static async Task<IMusicProvider?> GetProvider(string query, LavalinkCluster cluster) {
             // Other providers goes here
-            
-            
+            var spotifyMusicProvider = new SpotifyMusicProvider(cluster, query);
+            if (await spotifyMusicProvider.CanProvide()) {
+                return spotifyMusicProvider;
+            }
+
             // Return null if none of them can provide result
-            return Task.FromResult<IMusicProvider?>(null);
+            return null;
         }
         
         public static async Task<List<LavalinkTrack>> GetTracks(string query, LavalinkCluster cluster) {
