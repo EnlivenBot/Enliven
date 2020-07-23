@@ -11,6 +11,7 @@ using Hellosam.Net.Collections;
 
 namespace Bot.DiscordRelated {
     public class PriorityEmbedBuilderWrapper {
+        private readonly object _lockObject = new object();
         private readonly EmbedBuilder _embedBuilder = new EmbedBuilder();
 
         private readonly ObservableDictionary<string, PriorityEmbedFieldBuilder> _priorityFields =
@@ -155,7 +156,13 @@ namespace Bot.DiscordRelated {
         ///     The combined length of <see cref="Title"/>, <see cref="EmbedAuthor.Name"/>, <see cref="Description"/>, 
         ///     <see cref="EmbedFooter.Text"/>, <see cref="EmbedField.Name"/>, and <see cref="EmbedField.Value"/>.
         /// </returns>
-        public int Length => _embedBuilder.Length;
+        public int Length {
+            get {
+                lock (_lockObject) {
+                    return _embedBuilder.Length;
+                }
+            }
+        }
 
         /// <summary>
         ///     Sets the title of an <see cref="Embed"/>.
@@ -408,13 +415,17 @@ namespace Bot.DiscordRelated {
         /// </returns>
         /// <exception cref="InvalidOperationException">Total embed length exceeds <see cref="MaxEmbedLength"/>.</exception>
         public Embed Build() {
-            return _embedBuilder.Build();
+            lock (_lockObject) {
+                return _embedBuilder.Build();
+            }
         }
 
         private void UpdateEmbedFieldsInternal() {
-            _embedBuilder.Fields.Clear();
-            _embedBuilder.Fields.AddRange(_priorityFields.Values.Where(builder => builder.IsEnabled)
-                                                         .OrderBy(builder => builder.Priority ?? 0).ThenBy(builder => builder.AddTime));
+            lock (_lockObject) {
+                _embedBuilder.Fields.Clear();
+                _embedBuilder.Fields.AddRange(_priorityFields.Values.Where(builder => builder.IsEnabled)
+                                                             .OrderBy(builder => builder.Priority ?? 0).ThenBy(builder => builder.AddTime));
+            }
         }
     }
 
