@@ -42,6 +42,7 @@ namespace Bot.Utilities {
         public bool CanBeDirty { get; set; } = false;
 
         public Task<T> Execute(bool makesDirty = true, TimeSpan? delayOverride = null) {
+            _isDirtyNow = false;
             return InternalExecute(makesDirty, delayOverride);
         }
 

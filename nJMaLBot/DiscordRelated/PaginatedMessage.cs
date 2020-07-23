@@ -177,7 +177,7 @@ namespace Bot.DiscordRelated {
 
                 args.RemoveReason();
                 CoercePageNumber();
-                Update();
+                _updateTask.Execute(true, TimeSpan.FromSeconds(1));
             }, CollectorFilter.IgnoreBots);
             _ = Task.Run(async () => {
                 await Message.AddReactionAsync(Options.First);
