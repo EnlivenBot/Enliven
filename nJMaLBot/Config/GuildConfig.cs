@@ -11,7 +11,7 @@ namespace Bot.Config {
         private ILocalizationProvider _loc = null!;
         [BsonId] public ulong GuildId { get; set; }
         public string Prefix { get; set; } = "&";
-        public float Volume { get; set; } = 1f;
+        public int Volume { get; set; } = 100;
         public string GuildLanguage { get; set; } = "en";
         public bool IsMusicLimited { get; set; }
 

@@ -4,11 +4,11 @@ using System.Threading.Tasks;
 using Bot.Commands.Chains;
 using Bot.Config;
 using Bot.Config.Localization;
-using Bot.Logging;
+using Bot.DiscordRelated.Commands;
+using Bot.DiscordRelated.Commands.Modules;
+using Bot.DiscordRelated.Logging;
 using Bot.Utilities;
 using Bot.Utilities.Collector;
-using Bot.Utilities.Commands;
-using Bot.Utilities.Modules;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -21,7 +21,7 @@ namespace Bot.Commands {
         [Command("printwelcome")]
         public async Task PrintWelcome() {
             Context.Message.SafeDelete();
-            (await GlobalBehaviors.PrintWelcomeMessage((SocketGuild) Context.Guild, Context.Channel)).DelayedDelete(TimeSpan.FromMinutes(10));
+            (await GlobalBehaviors.PrintWelcomeMessage((SocketGuild) Context.Guild, Context.Channel)).DelayedDelete(Constants.LongTimeSpan);
         }
         
         [Command("setprefix")]
@@ -30,7 +30,7 @@ namespace Bot.Commands {
             var guildConfig = GuildConfig.Get(Context.Guild.Id);
             guildConfig.Prefix = prefix;
             guildConfig.Save();
-            await ReplyFormattedAsync(Loc.Get("Commands.Success"), Loc.Get("Commands.SetPrefixResponse").Format(prefix), TimeSpan.FromMinutes(10));
+            await ReplyFormattedAsync(Loc.Get("Commands.Success"), Loc.Get("Commands.SetPrefixResponse").Format(prefix), Constants.LongTimeSpan);
             Context.Message.SafeDelete();
         }
 
@@ -39,14 +39,14 @@ namespace Bot.Commands {
         [Summary("language0s")]
         public async Task ListLanguages() {
             var embedBuilder = this.GetAuthorEmbedBuilder().WithColor(Color.Gold).WithTitle(Loc.Get("Localization.LanguagesList"));
-            foreach (var (key, pack) in Localization.Languages) {
+            foreach (var (key, pack) in LocalizationManager.Languages) {
                 embedBuilder.AddField($"{pack.LocalizationFlagEmojiText} **{pack.LocalizedName}** ({pack.LanguageName})",
                     Loc.Get("Localization.LanguageDescription").Format(GuildConfig.Prefix, key, pack.Authors, pack.TranslationCompleteness), true);
             }
 
             var message = await ReplyAsync(null, false, embedBuilder.Build());
             CollectorsGroup collectors = null!;
-            var packsWithEmoji = Localization.Languages.Where(pair => pair.Value.LocalizationFlagEmoji != null).ToList();
+            var packsWithEmoji = LocalizationManager.Languages.Where(pair => pair.Value.LocalizationFlagEmoji != null).ToList();
             collectors = new CollectorsGroup(packsWithEmoji.Select(
                 pair => {
                     var packName = pair.Key;
@@ -67,7 +67,7 @@ namespace Bot.Commands {
             catch (Exception) {
                 // ignored
             }
-            message.DelayedDelete(TimeSpan.FromMinutes(5));
+            message.DelayedDelete(Constants.StandardTimeSpan);
         }
 
         [Command("setlanguage")]
@@ -78,13 +78,13 @@ namespace Bot.Commands {
                 return;
             }
 
-            if (Localization.Languages.ContainsKey(language)) {
+            if (LocalizationManager.Languages.ContainsKey(language)) {
                 GuildConfig.Get(Context.Guild.Id).SetLanguage(language).Save();
                 Context.Message.SafeDelete();
                 await ReplyFormattedAsync(Loc.Get("Commands.Success"), Loc.Get("Localization.Success").Format(language), TimeSpan.FromMinutes(1));
             }
             else {
-                var languagesList = string.Join(' ', Localization.Languages.Select(pair => $"`{pair.Key}`"));
+                var languagesList = string.Join(' ', LocalizationManager.Languages.Select(pair => $"`{pair.Key}`"));
                 await ReplyFormattedAsync(Loc.Get("Commands.Fail"), Loc.Get("Localization.Fail").Format(language, languagesList), TimeSpan.FromMinutes(1));
             }
         }

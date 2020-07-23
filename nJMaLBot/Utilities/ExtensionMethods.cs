@@ -5,8 +5,9 @@ using System.Text;
 using System.Threading.Tasks;
 using Bot.Config;
 using Bot.Config.Localization.Providers;
-using Bot.Utilities.Commands;
-using Bot.Utilities.Modules;
+using Bot.DiscordRelated;
+using Bot.DiscordRelated.Commands;
+using Bot.DiscordRelated.Commands.Modules;
 using Discord;
 using Discord.Commands;
 using NLog;
@@ -138,6 +139,11 @@ namespace Bot.Utilities {
 
         public static GuildConfig GetConfig(this IGuild guild) {
             return GuildConfig.Get(guild.Id);
+        }
+
+        public static LocalizationContainer ToContainer(this ILocalizationProvider provider) {
+            if (provider is LocalizationContainer localizationContainer) return localizationContainer;
+            return new LocalizationContainer(provider);
         }
     }
 }

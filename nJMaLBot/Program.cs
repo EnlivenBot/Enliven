@@ -1,13 +1,14 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using Bot.Config;
 using Bot.Config.Localization;
-using Bot.Logging;
+using Bot.DiscordRelated;
+using Bot.DiscordRelated.Commands;
+using Bot.DiscordRelated.Logging;
 using Bot.Music;
 using Bot.Utilities;
-using Bot.Utilities.Commands;
+using Bot.Utilities.Music;
 using CommandLine;
 using Discord;
 using Discord.WebSocket;
@@ -34,7 +35,11 @@ namespace Bot {
         public static Task WaitStartAsync = waitStartSource.Task;
         public static CmdOptions CmdOptions = null!;
 
-        private static void Main(string[] args) {
+        // ReSharper disable once UnusedParameter.Local
+
+        private static bool _clientStarted;
+
+        private static async Task Main(string[] args) {
             Parser.Default.ParseArguments<CmdOptions>(args).WithParsed(options => {
                 CmdOptions = options;
                 if (CmdOptions.BotToken != null) {
@@ -45,16 +50,11 @@ namespace Bot {
             #if !DEBUG
             InstallErrorHandlers();
             #endif
+            
             logger.Info("Start Initialising");
 
-            MainAsync(args).ConfigureAwait(false).GetAwaiter().GetResult();
-        }
-
-        // ReSharper disable once UnusedParameter.Local
-        private static async Task MainAsync(string[] args) {
             var config = new DiscordSocketConfig {MessageCacheSize = 100};
             Client = new DiscordShardedClient(config);
-
             Client.Log += OnClientLog;
 
             logger.Info("Start logining");
@@ -73,7 +73,7 @@ namespace Bot {
                 }
             }
 
-            Localization.Initialize();
+            LocalizationManager.Initialize();
             GlobalDB.Initialize();
 
             await StartClient();
@@ -87,10 +87,9 @@ namespace Bot {
 
             MessageHistoryManager.Initialize();
             MusicUtils.Initialize();
+            SpotifyMusicProvider.Initialize();
             await Task.Delay(-1);
         }
-
-        private static bool _clientStarted;
 
         public static async Task StartClient() {
             if (_clientStarted) return;
