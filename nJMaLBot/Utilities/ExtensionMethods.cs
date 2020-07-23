@@ -145,5 +145,22 @@ namespace Bot.Utilities {
             if (provider is LocalizationContainer localizationContainer) return localizationContainer;
             return new LocalizationContainer(provider);
         }
+
+        /// <summary>
+        /// Extension method for fast string validation. WARN: Actually the IsNullOrWhiteSpace method is implied
+        /// </summary>
+        public static bool IsEmpty(this string? source) {
+            return string.IsNullOrWhiteSpace(source);
+        }
+        
+        /// <summary>
+        /// Extension method for fast string getting. WARN: Actually the IsNullOrWhiteSpace method is implied
+        /// </summary>
+        /// <param name="source">Source string</param>
+        /// <param name="replacement">Replacement</param>
+        /// <returns>If target string is null or whitespace - return <paramref name="replacement"/>. Otherwise - return <paramref name="source"/></returns>
+        public static string IsEmpty(this string? source, string replacement) {
+            return string.IsNullOrWhiteSpace(source) ? replacement : source;
+        }
     }
 }
