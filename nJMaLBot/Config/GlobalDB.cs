@@ -318,6 +318,19 @@ namespace Bot.Config {
             }
         }
 
+        [DbUpgrade(8)]
+        private static async Task UpgradeTo8(LiteDatabase liteDatabase) {
+            var guildsCollection = liteDatabase.GetCollection(@"Guilds");
+            var guildConfigs = guildsCollection.FindAll().ToList();
+            guildsCollection.DeleteAll();
+            foreach (var bsonDocument in guildConfigs) {
+                var asDouble = bsonDocument["Volume"].AsDouble;
+                bsonDocument["Volume"] = (int) (asDouble * 100);
+            }
+
+            guildsCollection.InsertBulk(guildConfigs);
+        }
+
         [AttributeUsage(AttributeTargets.Method, Inherited = false, AllowMultiple = true)]
         private sealed class DbUpgradeAttribute : Attribute {
             public int Version { get; }

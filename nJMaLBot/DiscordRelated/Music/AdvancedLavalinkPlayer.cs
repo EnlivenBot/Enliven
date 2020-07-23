@@ -5,6 +5,7 @@ using Bot.Config;
 using Bot.Config.Localization.Entries;
 using Bot.Config.Localization.Providers;
 using Bot.Music;
+using Bot.Utilities;
 using Discord;
 using Lavalink4NET;
 using Lavalink4NET.Player;
@@ -33,13 +34,17 @@ namespace Bot.DiscordRelated.Music {
             await base.OnConnectedAsync(voiceServer, voiceState);
         }
 
-        public override async Task SetVolumeAsync(float volume = 1, bool normalize = false) {
-            volume = Math.Min(Math.Max(volume, 0), 1.5f);
-            // ReSharper disable once BaseMethodCallWithDefaultParameter
-            await base.SetVolumeAsync(volume);
+        public virtual async Task SetVolumeAsync(int volume = 100) {
+            volume = volume.Normalize(0, 150);
+            await base.SetVolumeAsync((float)volume / 100);
             var guildConfig = GuildConfig.Get(GuildId);
             guildConfig.Volume = volume;
             guildConfig.Save();
+        }
+
+        [Obsolete]
+        public override async Task SetVolumeAsync(float volume = 1, bool normalize = false) {
+            await SetVolumeAsync((int)(volume * 100), normalize);
         }
 
         public virtual void SetBassBoostMode(BassBoostMode mode) {

@@ -80,8 +80,8 @@ namespace Bot.DiscordRelated.Music {
             }
         }
 
-        public override async Task SetVolumeAsync(float volume = 1, bool normalize = false) {
-            await base.SetVolumeAsync(volume, normalize);
+        public override async Task SetVolumeAsync(int volume = 100) {
+            await base.SetVolumeAsync(volume);
             UpdateParameters();
         }
 
@@ -219,41 +219,6 @@ namespace Bot.DiscordRelated.Music {
             UpdateQueueMessageContent();
 
             _queueMessage.Resend();
-
-            // _queueCollectorsGroup?.DisposeAll();
-            // _queueCollectorsGroup = new CollectorsGroup(
-            //     CollectorsUtils.CollectReaction(loadingMessage, reaction => reaction.Emote.Equals(CommonEmoji.LegacyTrackPrevious), async args => {
-            //         args.RemoveReason();
-            //         pageNumber = 0;
-            //         UpdateEmbed();
-            //         await ModifyMessage();
-            //     }, CollectorFilter.IgnoreBots),
-            //     CollectorsUtils.CollectReaction(loadingMessage, reaction => reaction.Emote.Equals(CommonEmoji.LegacyTrackNext), async args => {
-            //         args.RemoveReason();
-            //         pageNumber = queuePages.Count - 1;
-            //         UpdateEmbed();
-            //         await ModifyMessage();
-            //     }, CollectorFilter.IgnoreBots),
-            //     CollectorsUtils.CollectReaction(loadingMessage, reaction => reaction.Emote.Equals(CommonEmoji.LegacyPlay), async args => {
-            //         args.RemoveReason();
-            //         pageNumber = (pageNumber + 1).Normalize(0, queuePages.Count - 1);
-            //         UpdateEmbed();
-            //         await ModifyMessage();
-            //     }, CollectorFilter.IgnoreBots),
-            //     CollectorsUtils.CollectReaction(loadingMessage, reaction => reaction.Emote.Equals(CommonEmoji.LegacyReverse), async args => {
-            //         args.RemoveReason();
-            //         pageNumber = (pageNumber - 1).Normalize(0, queuePages.Count - 1);
-            //         UpdateEmbed();
-            //         await ModifyMessage();
-            //     }, CollectorFilter.IgnoreBots),
-            //     CollectorsUtils.CollectReaction(loadingMessage, reaction => reaction.Emote.Equals(CommonEmoji.LegacyFileBox), async args => {
-            //         args.RemoveReason();
-            //         await args.Reaction.Channel.SendTextAsFile(string.Join("", queuePages),
-            //             $"Playlist {DateTime.Now}, {(loadingMessage.Channel as IGuildChannel)?.Guild?.Name}.txt");
-            //         _queueCollectorsGroup?.DisposeAll();
-            //         _queueMessage.SafeDelete();
-            //     }, CollectorFilter.IgnoreBots)
-            // );
         }
 
         private void UpdateQueueMessageContent() {
@@ -361,13 +326,13 @@ namespace Bot.DiscordRelated.Music {
                 CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacySound), async args => {
                         args.RemoveReason();
-                        await Program.Handler.ExecuteCommand($"volume {(int) ((Volume - 0.1f) * 100)}",
+                        await Program.Handler.ExecuteCommand($"volume {GuildConfig.Volume - 10}",
                             new ReactionCommandContext(Program.Client, args.Reaction), args.Reaction.UserId.ToString());
                     }, CollectorFilter.IgnoreSelf),
                 CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyLoudSound), async args => {
                         args.RemoveReason();
-                        await Program.Handler.ExecuteCommand($"volume {(int) ((Volume + 0.1f) * 100)}",
+                        await Program.Handler.ExecuteCommand($"volume {GuildConfig.Volume + 10}",
                             new ReactionCommandContext(Program.Client, args.Reaction), args.Reaction.UserId.ToString());
                     }, CollectorFilter.IgnoreSelf)
             );

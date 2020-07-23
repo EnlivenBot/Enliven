@@ -128,7 +128,7 @@ namespace Bot.Commands {
                 return;
             }
 
-            await Player.SetVolumeAsync(volume / 100f);
+            await Player.SetVolumeAsync(volume);
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.NewVolume").Format(Context.User.Username, volume));
         }
 
