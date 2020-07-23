@@ -41,7 +41,7 @@ namespace Bot.Utilities {
             return (info.Attributes.FirstOrDefault(attribute => attribute is GroupingAttribute) ??
                     info.Module.Attributes.FirstOrDefault(attribute => attribute is GroupingAttribute)) as GroupingAttribute;
         }
-        
+
         public static string GetLocalizedName(this GroupingAttribute groupingAttribute, ILocalizationProvider loc) {
             return loc.Get($"Groups.{groupingAttribute?.GroupName ?? ""}");
         }
@@ -96,7 +96,8 @@ namespace Bot.Utilities {
         }
 
         // ReSharper disable once InconsistentNaming
-        public static async Task<IMessage> SendTextAsFile(this IMessageChannel channel, string content, string filename, string? text = null, bool isTTS = false,
+        public static async Task<IMessage> SendTextAsFile(this IMessageChannel channel, string content, string filename, string? text = null,
+                                                          bool isTTS = false,
                                                           Embed? embed = null, RequestOptions? options = null, bool isSpoiler = false) {
             await using var ms = new MemoryStream();
             TextWriter tw = new StreamWriter(ms);
@@ -116,7 +117,7 @@ namespace Bot.Utilities {
                 LogSeverity.Debug    => LogLevel.Trace,
                 _                    => throw new ArgumentOutOfRangeException()
             };
-            logger.Log(logLevel,exception, message, args);
+            logger.Log(logLevel, exception, message, args);
         }
 
         public static TResult Try<TSource, TResult>(this TSource o, Func<TSource, TResult> action, Func<TSource, TResult> onFail) {
@@ -127,7 +128,7 @@ namespace Bot.Utilities {
                 return onFail(o);
             }
         }
-        
+
         public static TResult Try<TSource, TResult>(this TSource o, Func<TSource, TResult> action, TResult onFail) {
             try {
                 return action(o);
@@ -152,7 +153,7 @@ namespace Bot.Utilities {
         public static bool IsEmpty(this string? source) {
             return string.IsNullOrWhiteSpace(source);
         }
-        
+
         /// <summary>
         /// Extension method for fast string getting. WARN: Actually the IsNullOrWhiteSpace method is implied
         /// </summary>
@@ -161,6 +162,13 @@ namespace Bot.Utilities {
         /// <returns>If target string is null or whitespace - return <paramref name="replacement"/>. Otherwise - return <paramref name="source"/></returns>
         public static string IsEmpty(this string? source, string replacement) {
             return string.IsNullOrWhiteSpace(source) ? replacement : source;
+        }
+
+        public static string FormattedToString(this TimeSpan span) {
+            string s = $"{span:mm':'ss}";
+            if ((int) span.TotalHours != 0)
+                s = s.Insert(0, $"{(int) span.TotalHours}:");
+            return s;
         }
     }
 }

@@ -421,7 +421,7 @@ namespace Bot.Commands {
             }
 
             Player.SeekPositionAsync(position);
-            Player.WriteToQueueHistory(Loc.Get("MusicQueues.Seek").Format(Context.User.Username, Player.CurrentTrackIndex, position));
+            Player.WriteToQueueHistory(Loc.Get("MusicQueues.Seek").Format(Context.User.Username, position.FormattedToString()));
         }
 
         [Command("removerange", RunMode = RunMode.Async)]

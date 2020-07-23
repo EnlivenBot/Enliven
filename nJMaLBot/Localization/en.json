@@ -35,7 +35,7 @@
       "Shuffle": "**{0}** shuffles tracks in queue",
       "FF": "**{0}** fast-forward the `{1}` track for `{2}` seconds",
       "Rewind": "**{0}** rewind the `{1}` track for `{2}` seconds",
-      "Seek": "**{0}** moved playback of `{1}` track in `{2}`",
+      "Seek": "**{0}** moved playback position to `{2}`",
       "Remove": "**{0}** deletes the `{1}` track - `{2}`",
       "RemoveRange": "**{0}** deletes the `{1}` tracks. From `{2}` to `{3}`",
       "TrackMoved": "**{0}** moves the `{1}` track to `{1=2}` position",
