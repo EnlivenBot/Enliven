@@ -275,8 +275,11 @@ namespace Bot.DiscordRelated.Music {
                 CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyTrackPrevious), async args => {
                         args.RemoveReason();
-                        await Program.Handler.ExecuteCommand("skip -1", new ReactionCommandContext(Program.Client, args.Reaction),
-                            args.Reaction.UserId.ToString());
+                        var query = TrackPosition.TotalSeconds > 15 
+                            ? "seek 0s" // Go to the beginning of the track
+                            : "skip -1"; // Go to previous track
+                        await Program.Handler.ExecuteCommand(query, new ReactionCommandContext(Program.Client, args.Reaction),
+                                          args.Reaction.UserId.ToString());
                     }, CollectorFilter.IgnoreSelf),
                 CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyPlay), async args => {
