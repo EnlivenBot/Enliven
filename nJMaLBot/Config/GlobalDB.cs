@@ -59,7 +59,7 @@ namespace Bot.Config {
             Database = LoadDatabase();
             Database.CheckpointSize = 10000;
 
-            PerformUpgrades();
+            PerformUpgrades().Wait();
             Database.Checkpoint();
 
             _checkpointTimer = new Timer(state => Database.Checkpoint(), null, Constants.ShortTimeSpan, TimeSpan.FromMinutes(30));
@@ -75,7 +75,7 @@ namespace Bot.Config {
             return Path.Combine(Directory.GetCurrentDirectory(), "Config", @"DataBase.db");
         }
 
-        private static void PerformUpgrades() {
+        private static async Task PerformUpgrades() {
             logger.Info("Looking for database upgrades");
             var liteDatabaseCheckpointSize = Database.CheckpointSize;
             Database.CheckpointSize = 0;
@@ -104,7 +104,7 @@ namespace Bot.Config {
                 try {
                     var upgradeResult = upgrade.info.Invoke(null, new object?[] {Database});
                     if (upgradeResult is Task upgradeTask)
-                        upgradeTask.GetAwaiter().GetResult();
+                        await upgradeTask;
                     if (upgrade.Item1.TransactionsFriendly) {
                         Database.Commit();
                     }
@@ -144,7 +144,8 @@ namespace Bot.Config {
                     // We broke the database
                     logger.Fatal(e, "Database file broken");
                     logger.Fatal("Doing backup");
-                    File.Copy(GetDatabasePath(), Path.Combine(Path.GetDirectoryName(GetDatabasePath())!, DateTime.Now.ToString("yyyy-dd-M--HH-mm-ss") + ".bak"),
+                    File.Copy(GetDatabasePath(),
+                        Path.Combine(Path.GetDirectoryName(GetDatabasePath())!, DateTime.Now.ToString("yyyy-dd-M--HH-mm-ss") + ".bak"),
                         true);
                     logger.Fatal("Trying to copy intact information");
                     using (LiteDatabase newDb = new LiteDatabase("newDb.db")) {
@@ -304,7 +305,7 @@ namespace Bot.Config {
             messagesCollection.DeleteAll();
             await Program.StartClient();
             await Program.WaitStartAsync;
-            var guilds = Program.Client.Guilds.Select(guild => (guild, guildsCollection.FindById((long)guild.Id)));
+            var guilds = Program.Client.Guilds.Select(guild => (guild, guildsCollection.FindById((long) guild.Id)));
             foreach (var valueTuple in guilds.Where(tuple => tuple.Item2.IsLoggingEnabled)) {
                 try {
                     await (await Program.Client.GetUser(valueTuple.guild.OwnerId).GetOrCreateDMChannelAsync()).SendMessageAsync(

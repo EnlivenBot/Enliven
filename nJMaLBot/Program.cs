@@ -35,7 +35,11 @@ namespace Bot {
         public static Task WaitStartAsync = waitStartSource.Task;
         public static CmdOptions CmdOptions = null!;
 
-        private static void Main(string[] args) {
+        // ReSharper disable once UnusedParameter.Local
+
+        private static bool _clientStarted;
+
+        private static async Task Main(string[] args) {
             Parser.Default.ParseArguments<CmdOptions>(args).WithParsed(options => {
                 CmdOptions = options;
                 if (CmdOptions.BotToken != null) {
@@ -46,16 +50,11 @@ namespace Bot {
             #if !DEBUG
             InstallErrorHandlers();
             #endif
+            
             logger.Info("Start Initialising");
 
-            MainAsync(args).ConfigureAwait(false).GetAwaiter().GetResult();
-        }
-
-        // ReSharper disable once UnusedParameter.Local
-        private static async Task MainAsync(string[] args) {
             var config = new DiscordSocketConfig {MessageCacheSize = 100};
             Client = new DiscordShardedClient(config);
-
             Client.Log += OnClientLog;
 
             logger.Info("Start logining");
@@ -91,8 +90,6 @@ namespace Bot {
             SpotifyMusicProvider.Initialize();
             await Task.Delay(-1);
         }
-
-        private static bool _clientStarted;
 
         public static async Task StartClient() {
             if (_clientStarted) return;
