@@ -17,8 +17,13 @@ namespace Bot.Config {
                 File.Move("config.json", Path.Combine("Config", "config.json"));
             }
 
-            if (File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "Config", "config.json")))
-                return JsonConvert.DeserializeObject<GlobalConfig>(File.ReadAllText(Path.Combine(Directory.GetCurrentDirectory(), "Config", "config.json")));
+            if (File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "Config", "config.json"))) {
+                var config = JsonConvert.DeserializeObject<GlobalConfig>(File.ReadAllText(Path.Combine(Directory.GetCurrentDirectory(), "Config", "config.json")));
+                File.WriteAllText(Path.Combine(Directory.GetCurrentDirectory(), "Config", "config.json"),
+                    JsonConvert.SerializeObject(config, Formatting.Indented));
+                return config;
+            }
+                
             Directory.CreateDirectory("Config");
             File.WriteAllText(Path.Combine(Directory.GetCurrentDirectory(), "Config", "config.json"),
                 JsonConvert.SerializeObject(new GlobalConfig(), Formatting.Indented));
@@ -34,5 +39,11 @@ namespace Bot.Config {
             "Not including self node\nExample:\n{\n  \"Password\": \"youshallnotpass\",\n  \"RestUri\": \"http://localhost:8080/\",\n  \"WebSocketUri\": \"ws://localhost:8080/\"\n}")]
         // ReSharper disable once IdentifierTypo
         public List<LavalinkNodeInfo> LavalinkNodes { get; set; } = new List<LavalinkNodeInfo>();
+
+        [JsonPropertyName("Spotify Client ID")]
+        public string SpotifyClientID { get; set; } = "Place SpotifyClientID here";
+
+        [JsonPropertyName("Spotify Client Secret")]
+        public string SpotifyClientSecret { get; set; } = "Place SpotifyClientSecret here";
     }
 }

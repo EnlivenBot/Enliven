@@ -130,7 +130,7 @@ namespace Bot.DiscordRelated.Logging {
                                     if (firstOrDefault.Author.Id != Program.Client.CurrentUser.Id) return null;
                                     if (!firstOrDefault.Embeds.First().Title.Contains("Pack")) return null;
                                     return (IUserMessage) firstOrDefault;
-                                }, () => null);
+                                }, e => null);
                                 if (packMessage == null) {
                                     SendPackMessage();
                                 }
