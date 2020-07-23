@@ -134,6 +134,8 @@ namespace Bot.Music {
                 }
             }
 
+            lavalinkTracks = lavalinkTracks.Where(track => track != null).ToList();
+
             if (lavalinkTracks.Count == 0) {
                 throw new NothingFoundException();
             }
