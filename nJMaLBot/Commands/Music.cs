@@ -70,7 +70,7 @@ namespace Bot.Commands {
             if (!await IsPreconditionsValid) return;
 
             Player.Shutdown(Loc.Get("Music.UserStopPlayback").Format(Context.User.Username), false);
-            EmbedPlaybackControl.ForceRemove(Context.Guild.Id, Loc.Get("Music.UserStopPlayback").Format(Context.User.Username), false);
+            PlayersController.ForceRemove(Context.Guild.Id, Loc.Get("Music.UserStopPlayback").Format(Context.User.Username), false);
         }
 
         [Command("jump", RunMode = RunMode.Async)]

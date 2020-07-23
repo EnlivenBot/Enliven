@@ -1,27 +1,29 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Bot.Music;
+using Bot.Utilities;
 using NLog;
 
 namespace Bot.DiscordRelated.Music {
-    public static class EmbedPlaybackControl {
+    public static class PlayersController {
         private static Logger logger = LogManager.GetCurrentClassLogger();
         // ReSharper disable once NotAccessedField.Local
-        private static Timer _timer = null!;
         private static readonly Thread UpdateThread = new Thread(UpdateCycle);
-        public static readonly ObservableCollection<EmbedPlaybackPlayer> PlaybackPlayers = new ObservableCollection<EmbedPlaybackPlayer>();
+        public static readonly List<EmbedPlaybackPlayer> PlaybackPlayers = new List<EmbedPlaybackPlayer>();
 
-        static EmbedPlaybackControl() {
+        static PlayersController() {
             UpdateThread.Priority = ThreadPriority.BelowNormal;
             UpdateThread.Start();
         }
 
         private static void UpdateCycle() {
             while (true) {
-                var waitCycle = WaitCycle();
+                var waitCycle = Task.Delay(Constants.PlayerEmbedUpdateDelay);
                 var embedPlaybackPlayers = PlaybackPlayers.ToList();
                 for (var i = 0; i < embedPlaybackPlayers.Count; i++) {
                     var embedPlaybackPlayer = embedPlaybackPlayers[i];
@@ -45,28 +47,10 @@ namespace Bot.DiscordRelated.Music {
             // ReSharper disable once FunctionNeverReturns
         }
 
-        private static Task<bool> WaitCycle() {
-            var tcs = new TaskCompletionSource<bool>();
-            _timer = new Timer(state => {
-                if (PlaybackPlayers.Count == 0) {
-                    void PlaybackPlayersOnCollectionChanged(object sender, NotifyCollectionChangedEventArgs args) {
-                        PlaybackPlayers.CollectionChanged -= PlaybackPlayersOnCollectionChanged;
-                        tcs.SetResult(true);
-                    }
-
-                    PlaybackPlayers.CollectionChanged += PlaybackPlayersOnCollectionChanged;
-                }
-                else {
-                    tcs.SetResult(true);
-                }
-            }, null, 4000, 0);
-            return tcs.Task;
-        }
-
         public static async Task ForceRemove(ulong guildId, string reason, bool needSave) {
             foreach (var embedPlaybackPlayer in PlaybackPlayers.ToList().Where(player => player.GuildId == guildId)) {
                 try {
-                    if (string.IsNullOrWhiteSpace(reason)) {
+                    if (String.IsNullOrWhiteSpace(reason)) {
                         await embedPlaybackPlayer.Shutdown(needSave);
                     }
                     else {
@@ -77,6 +61,20 @@ namespace Bot.DiscordRelated.Music {
                     PlaybackPlayers.Remove(embedPlaybackPlayer);
                 }
             }
+        }
+
+        public static async Task<EmbedPlaybackPlayer> JoinChannel(ulong guildId, ulong voiceChannelId) {
+            // Clearing previous player, if we have one
+            var oldPlayer = PlaybackPlayers.FirstOrDefault(playbackPlayer => playbackPlayer.GuildId == guildId);
+            if (oldPlayer != null) {
+                await oldPlayer.Shutdown();
+                PlaybackPlayers.Remove(oldPlayer);
+            }
+
+            var player = await MusicUtils.Cluster!.JoinAsync(() => new EmbedPlaybackPlayer(guildId), guildId, voiceChannelId);
+            player.UpdateNodeName();
+            PlaybackPlayers.Add(player);
+            return player;
         }
     }
 }

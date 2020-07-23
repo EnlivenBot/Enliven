@@ -107,16 +107,6 @@ namespace Bot.Music {
             return Task.CompletedTask;
         }
 
-        public static async Task<EmbedPlaybackPlayer> JoinChannel(ulong guildId, ulong voiceChannelId) {
-            // Clearing previous player, if we have one
-            EmbedPlaybackControl.PlaybackPlayers.FirstOrDefault(playbackPlayer => playbackPlayer.GuildId == guildId)?.Shutdown();
-
-            var player = await Cluster!.JoinAsync(() => new EmbedPlaybackPlayer(guildId), guildId, voiceChannelId);
-            player.UpdateNodeName();
-            EmbedPlaybackControl.PlaybackPlayers.Add(player);
-            return player;
-        }
-
         public static async Task<List<LavalinkTrack>> QueueLoadMusic(IUserMessage message, string? query, EmbedPlaybackPlayer player) {
             var lavalinkTracks = new List<LavalinkTrack>();
             if (message != null && message.Attachments.Count != 0) {

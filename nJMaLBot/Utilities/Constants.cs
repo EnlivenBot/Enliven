@@ -12,5 +12,7 @@ namespace Bot.Utilities {
 
         public static int MaxEmbedAuthorLength = 256;
         public static int MaxFieldLength = 2048;
+        
+        public static TimeSpan PlayerEmbedUpdateDelay = TimeSpan.FromSeconds(4);
     }
 }

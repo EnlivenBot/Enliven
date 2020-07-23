@@ -158,7 +158,7 @@ namespace Bot.DiscordRelated.Music {
             UpdatePlayback = false;
 
             try {
-                EmbedPlaybackControl.PlaybackPlayers.Remove(this);
+                PlayersController.PlaybackPlayers.Remove(this);
                 base.Shutdown(reason, needSave);
             }
             catch (Exception) {

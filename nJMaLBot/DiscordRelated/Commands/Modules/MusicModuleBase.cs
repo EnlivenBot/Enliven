@@ -78,7 +78,7 @@ namespace Bot.DiscordRelated.Commands.Modules {
                         return false;
                     }
 
-                    Player = await MusicUtils.JoinChannel(Context.Guild.Id, user.VoiceChannel!.Id);
+                    Player = await PlayersController.JoinChannel(Context.Guild.Id, user.VoiceChannel!.Id);
                     return true;
                 }
 
