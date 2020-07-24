@@ -163,6 +163,8 @@ namespace Bot.Commands {
                 return;
             }
 
+            if (Player.State != PlayerState.Playing) return;
+
             Player.PauseAsync();
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.Pause").Format(Context.User.Username));
         }
@@ -176,6 +178,8 @@ namespace Bot.Commands {
                 ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix)).UpdateTimeout(Constants.VeryShortTimeSpan).Update();
                 return;
             }
+
+            if (Player.State != PlayerState.Paused) return;
 
             Player.ResumeAsync();
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.Resume").Format(Context.User.Username));
