@@ -79,12 +79,12 @@ namespace Bot.Commands.Chains {
             await _message.AddReactionsAsync(new IEmote[]
                 {CommonEmoji.Memo, CommonEmoji.Robot, CommonEmoji.ExclamationPoint, CommonEmoji.LegacyFileBox, CommonEmoji.Printer, CommonEmoji.LegacyStop});
             OnEnd = async entry => {
+                _collectorsGroup.DisposeAll();
                 await _message.ModifyAsync(properties =>
                     properties.Embed = new EmbedBuilder().WithColor(Color.Orange).WithTitle(Loc.Get("ChainsCommon.Ended")).WithDescription(entry.Get(Loc))
                                                          .Build());
                 await _message.RemoveAllReactionsAsync();
                 _message.DelayedDelete(Constants.StandardTimeSpan);
-                _collectorsGroup.DisposeAll();
             };
             SetTimeout(Constants.ShortTimeSpan);
         }

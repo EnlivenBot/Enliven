@@ -53,15 +53,24 @@ namespace Bot.Commands.Chains {
                 _onEnd = entry => {
                     if (IsEnded) return;
                     lock (_lockObject) {
-
                         IsEnded = true;
                         _onEnd = localizedEntry => {};
                         if (Uid != null) _runningChains.Remove(Uid, out _);
                         foreach (var persistentOnEndAction in PersistentOnEndActions.ToList()) {
-                            persistentOnEndAction.Value.Invoke(entry);
+                            try {
+                                persistentOnEndAction.Value.Invoke(entry);
+                            }
+                            catch (Exception) {
+                                // ignored
+                            }
                         }
                         PersistentOnEndActions.Clear();
-                        value.Invoke(entry);
+                        try {
+                            value.Invoke(entry);
+                        }
+                        catch (Exception) {
+                            // ignored
+                        }
                     }
                 };
             }

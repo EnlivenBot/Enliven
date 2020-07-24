@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Bot.Commands.Chains;
 using Bot.Config;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
@@ -277,7 +278,8 @@ namespace Bot.Commands {
         [Alias("y", "yt")]
         [Summary("youtube0s")]
         public async Task SearchYoutube([Summary("play0_0s")] [Remainder] string query) {
-            await AdvancedSearch(SearchMode.YouTube, query);
+            if (!await IsPreconditionsValid) return;
+            AdvancedMusicSearchChain.CreateInstance(GuildConfig, Player, Context.Channel, Context.User, SearchMode.YouTube, query).Start();
         }
 
         [SummonToUser]
@@ -285,88 +287,8 @@ namespace Bot.Commands {
         [Alias("sc")]
         [Summary("soundcloud0s")]
         public async Task SearchSoundCloud([Summary("play0_0s")] [Remainder] string query) {
-            await AdvancedSearch(SearchMode.SoundCloud, query);
-        }
-
-        private async Task AdvancedSearch(SearchMode mode, string query) {
             if (!await IsPreconditionsValid) return;
-            var tracks = (await MusicUtils.Cluster.GetTracksAsync(query, mode)).ToList();
-            var eb = new EmbedBuilder().WithColor(Color.Gold).WithTitle(Loc.Get("Music.SearchResultsTitle"))
-                                       .WithDescription(Loc.Get("Music.SearchResultsDescription", mode, query.SafeSubstring(100, "...") ?? ""));
-            if (!tracks.Any()) {
-                eb.Description += Loc.Get("Music.NothingFound");
-            }
-            else {
-                var builder = new StringBuilder();
-                // 1500 - the maximum number of characters to be within the embed description limit. Taken with a margin
-                // 10 - max number of tracks
-                for (var i = 0; i < tracks.Count && builder.Length < 1500 && i < 10; i++) {
-                    var track = tracks[i];
-                    builder.AppendLine($"{i + 1}. [{track.Title}]({track.Source})\n");
-                }
-
-                eb.Description += builder.ToString();
-            }
-
-            var msg = await ReplyAsync(null, false, eb.Build());
-            if (!tracks.Any())
-                return;
-
-            var controller = CollectorsUtils.CollectReaction(msg, reaction => true, async args => {
-                args.RemoveReason();
-                var i = args.Reaction.Emote.Name switch {
-                    "1️⃣" => 0,
-                    "2️⃣" => 1,
-                    "3️⃣" => 2,
-                    "4️⃣" => 3,
-                    "5️⃣" => 4,
-                    "6️⃣" => 5,
-                    "7️⃣" => 6,
-                    "8️⃣" => 7,
-                    "9️⃣" => 8,
-                    "🔟"  => 9,
-                    "⬅️"  => -2, // All displayed tracks
-                    _     => -1 // Other emoji, ignore it
-                };
-
-                var authoredLavalinkTracks = new List<AuthoredLavalinkTrack>();
-                if (i == -2)
-                    authoredLavalinkTracks.AddRange(tracks.Take(10).Select(track => AuthoredLavalinkTrack.FromLavalinkTrack(track, Context.User.Username)));
-                if (i >= 0 && i <= tracks.Count - 1) authoredLavalinkTracks.Add(AuthoredLavalinkTrack.FromLavalinkTrack(tracks[i], Context.User.Username));
-                switch (authoredLavalinkTracks.Count) {
-                    case 0:
-                        return;
-                    case 1:
-                        Player.WriteToQueueHistory(Loc.Get("MusicQueues.Enqueued")
-                                                      .Format(Context.Message.Author.Username, MusicUtils.EscapeTrack(authoredLavalinkTracks[0].Title)));
-                        break;
-                    default:
-                        Player.WriteToQueueHistory(Loc.Get("Music.AddTracks").Format(Context.Message.Author.Username, authoredLavalinkTracks.Count));
-                        break;
-                }
-
-                var logMessage = await GetLogMessage();
-                await Player.SetControlMessage(logMessage);
-                await Player.PlayAsync(authoredLavalinkTracks.First(), true);
-                Player.Playlist.AddRange(authoredLavalinkTracks.Skip(1));
-
-                args.Controller.Dispose();
-            }, CollectorFilter.IgnoreBots);
-            controller.SetTimeout(TimeSpan.FromSeconds(30));
-            controller.Stop += (sender, args) => msg.SafeDelete();
-            msg.AddReactionsAsync(new IEmote[] {
-                new Emoji("1️⃣"),
-                new Emoji("2️⃣"),
-                new Emoji("3️⃣"),
-                new Emoji("4️⃣"),
-                new Emoji("5️⃣"),
-                new Emoji("6️⃣"),
-                new Emoji("7️⃣"),
-                new Emoji("8️⃣"),
-                new Emoji("9️⃣"),
-                new Emoji("🔟"),
-                new Emoji("⬅️")
-            });
+            AdvancedMusicSearchChain.CreateInstance(GuildConfig, Player, Context.Channel, Context.User, SearchMode.SoundCloud, query).Start();
         }
 
         [Command("fastforward", RunMode = RunMode.Async)]
