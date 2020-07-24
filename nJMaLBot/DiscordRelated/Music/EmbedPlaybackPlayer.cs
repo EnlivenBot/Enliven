@@ -175,7 +175,7 @@ namespace Bot.DiscordRelated.Music {
                 if (!guildUser.ManageMessages) text += Loc.Get("Music.WarningEmojiRemoval") + "\n";
                 if (!guildUser.AddReactions) text += Loc.Get("Music.WarningEmojiAdding") + "\n";
                 if (!guildUser.UseExternalEmojis) text += Loc.Get("Music.WarningCustomEmoji") + "\n";
-                
+
                 // ReSharper disable once AssignmentInConditionalExpression
                 if (EmbedBuilder.Fields["Warnings"].IsEnabled = !string.IsNullOrWhiteSpace(text)) {
                     EmbedBuilder.Fields["Warnings"].Value = text;
@@ -275,11 +275,11 @@ namespace Bot.DiscordRelated.Music {
                 CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyTrackPrevious), async args => {
                         args.RemoveReason();
-                        var query = TrackPosition.TotalSeconds > 15 
-                            ? "seek 0s" // Go to the beginning of the track
+                        var query = TrackPosition.TotalSeconds > 15
+                            ? "seek 0s"  // Go to the beginning of the track
                             : "skip -1"; // Go to previous track
                         await Program.Handler.ExecuteCommand(query, new ReactionCommandContext(Program.Client, args.Reaction),
-                                          args.Reaction.UserId.ToString());
+                            args.Reaction.UserId.ToString());
                     }, CollectorFilter.IgnoreSelf),
                 CollectorsUtils.CollectReaction(ControlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyPlay), async args => {
@@ -355,7 +355,8 @@ namespace Bot.DiscordRelated.Music {
                         }
 
                         await Program.Handler.ExecuteCommand($"play",
-                            new ReactionCommandContext(Program.Client, emoteCollectorEventArgs.Reaction), emoteCollectorEventArgs.Reaction.UserId.ToString());
+                            new ReactionCommandContext(Program.Client, emoteCollectorEventArgs.Reaction),
+                            emoteCollectorEventArgs.Reaction.UserId.ToString());
                     }, CollectorFilter.IgnoreSelf));
             }));
 
@@ -405,7 +406,7 @@ namespace Bot.DiscordRelated.Music {
                     LoopingState.One => IsExternalEmojiAllowed ? CommonEmojiStrings.Instance.RepeatOnce : "🔂",
                     LoopingState.All => IsExternalEmojiAllowed ? CommonEmojiStrings.Instance.Repeat : "🔁",
                     LoopingState.Off => IsExternalEmojiAllowed ? CommonEmojiStrings.Instance.RepeatOff : "❌",
-                    _ => throw new InvalidEnumArgumentException()
+                    _                => throw new InvalidEnumArgumentException()
                 };
                 EmbedBuilder.Fields["State"].Value =
                     (IsExternalEmojiAllowed ? ProgressEmoji.CustomEmojiPack : ProgressEmoji.TextEmojiPack).GetProgress(progressPercentage)
@@ -441,7 +442,8 @@ namespace Bot.DiscordRelated.Music {
                 var iconUrl = CurrentTrack.Provider == StreamProvider.YouTube ? $"https://img.youtube.com/vi/{CurrentTrack?.TrackIdentifier}/0.jpg" : null;
                 EmbedBuilder
                   ?.WithAuthor(CurrentTrack!.Author.SafeSubstring(Constants.MaxEmbedAuthorLength, "...").IsEmpty("Unknown"), iconUrl)
-                  ?.WithTitle(MusicUtils.EscapeTrack(CurrentTrack!.Title).SafeSubstring(Discord.EmbedBuilder.MaxTitleLength, "...")!)?.WithUrl(CurrentTrack!.Source);
+                  ?.WithTitle(MusicUtils.EscapeTrack(CurrentTrack!.Title).SafeSubstring(Discord.EmbedBuilder.MaxTitleLength, "...")!)
+                  ?.WithUrl(CurrentTrack!.Source);
             }
             else {
                 EmbedBuilder.Author = new EmbedAuthorBuilder();
@@ -451,8 +453,8 @@ namespace Bot.DiscordRelated.Music {
         }
 
         public void UpdateParameters() {
-            EmbedBuilder.Fields["Parameters"].Value = $"🔉 {Convert.ToInt32(Volume * 100f)}%\n" +
-                                                      $"🅱️ {BassBoostMode}";
+            var volumeText = GuildConfig.Volume < 50 || GuildConfig.Volume > 120 ? $"🔉 ***{GuildConfig.Volume}%***\n" : $"🔉 {GuildConfig.Volume}%\n";
+            EmbedBuilder.Fields["Parameters"].Value = volumeText + $"🅱️ {BassBoostMode}";
             UpdateControlMessage();
         }
 
