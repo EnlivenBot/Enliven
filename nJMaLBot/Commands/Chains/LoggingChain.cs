@@ -36,7 +36,7 @@ namespace Bot.Commands.Chains {
             _collectorsGroup = new CollectorsGroup(CollectorsUtils.CollectMessage(_user, message => message.Channel.Id == _message.Channel.Id, async args => {
                     var match = ChannelRegex.Match(args.Message.Content.Trim());
                     if (!match.Success) return;
-                    SetTimeout(Constants.ShortTimeSpan);
+                    SetTimeout(Constants.StandardTimeSpan);
                     var targetChannel = Program.Client.GetChannel(Convert.ToUInt64(match.Groups[1].Value));
                     if (!(targetChannel is ITextChannel targetTextChannel) || targetTextChannel.Guild.Id != _guildConfig.GuildId) return;
                     _guildConfig.ToggleChannelLogging(targetChannel.Id);
@@ -86,7 +86,7 @@ namespace Bot.Commands.Chains {
                 await _message.RemoveAllReactionsAsync();
                 _message.DelayedDelete(Constants.StandardTimeSpan);
             };
-            SetTimeout(Constants.ShortTimeSpan);
+            SetTimeout(Constants.StandardTimeSpan);
         }
 
         private void GuildConfigOnFunctionalChannelsChanged(object? sender, ChannelFunction e) {

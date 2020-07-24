@@ -62,8 +62,8 @@ namespace Bot.Config {
             PerformUpgrades().Wait();
             Database.Checkpoint();
 
-            _checkpointTimer = new Timer(state => Database.Checkpoint(), null, Constants.ShortTimeSpan, TimeSpan.FromMinutes(30));
-            _rebuildTimer = new Timer(state => Database.Rebuild(), null, Constants.LongTimeSpan, TimeSpan.FromMinutes(180));
+            _checkpointTimer = new Timer(state => Database.Checkpoint(), null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(30));
+            _rebuildTimer = new Timer(state => Database.Rebuild(), null, TimeSpan.FromMinutes(30), TimeSpan.FromMinutes(180));
             logger.Info("Database loaded");
         }
 
