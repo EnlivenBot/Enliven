@@ -37,11 +37,15 @@ namespace Bot.Music {
                 if (nodes.Count != 0) {
                     logger.Info("Start building music cluster");
                     try {
-                        Cluster = new LavalinkCluster(new LavalinkClusterOptions {Nodes = nodes.ToArray()}, new DiscordClientWrapper(Program.Client),
-                            _lavalinkLogger) {StayOnline = true};
+                        var lavalinkClusterOptions = new LavalinkClusterOptions {
+                            Nodes = nodes.ToArray(), StayOnline = true, LoadBalacingStrategy = LoadBalancingStrategy
+                        };
+                        Cluster = new LavalinkCluster(lavalinkClusterOptions, new DiscordClientWrapper(Program.Client), _lavalinkLogger);
                         Cluster.PlayerMoved += ClusterOnPlayerMoved;
-                        logger.Info("Trying to connect to nodes!");
+
+                        logger.Info("Trying to connect to nodes");
                         await Cluster.InitializeAsync();
+                        logger.Info("Cluster  initialized");
 
                         logger.Info("Initializing InactivityTrackingService instance with default options");
                         var inactivityTrackingService = new InactivityTrackingService(Cluster, new DiscordClientWrapper(Program.Client),
@@ -61,7 +65,7 @@ namespace Bot.Music {
                         AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
                     }
                     catch (Exception e) {
-                        logger.Fatal(e, "Exception with music cluster");
+                        logger.Fatal(e, "Exception while initializing music cluster");
                         Cluster = null!;
                     }
                 }
@@ -69,6 +73,21 @@ namespace Bot.Music {
                     logger.Warn("Nodes not found, music disabled!");
                 }
             });
+        }
+
+        private static LavalinkClusterNode LoadBalancingStrategy
+            (LavalinkCluster cluster, IReadOnlyCollection<LavalinkClusterNode> nodes, NodeRequestType type) {
+            switch (type) {
+                case NodeRequestType.Backup:
+                    return LoadBalancingStrategies.LoadStrategy(cluster, nodes, type);
+                case NodeRequestType.LoadTrack:
+                    var targetNode = nodes.Where(node => node.IsConnected).FirstOrDefault(node => node.Label.Contains("[RU]"));
+                    if (targetNode != null)
+                        return targetNode;
+                    goto default;
+                default:
+                    return LoadBalancingStrategies.RoundRobinStrategy(cluster, nodes, type);
+            }
         }
 
         private static void LavalinkLoggerOnLogMessage(object? sender, LogMessageEventArgs e) {
@@ -139,7 +158,7 @@ namespace Bot.Music {
             if (lavalinkTracks.Count == 0) {
                 throw new NothingFoundException();
             }
-            
+
             return lavalinkTracks;
         }
 
