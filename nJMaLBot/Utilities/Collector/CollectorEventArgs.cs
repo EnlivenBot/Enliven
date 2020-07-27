@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Bot.Utilities.Commands;
+using Bot.DiscordRelated.Commands;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -10,6 +10,7 @@ namespace Bot.Utilities.Collector {
     public abstract class CollectorEventArgsBase : EventArgs {
         protected CollectorEventArgsBase(CollectorController controller) {
             Controller = controller;
+            Controller.TaskCompletionSource?.SetResult(this);
         }
 
         public CollectorController Controller { get; set; }

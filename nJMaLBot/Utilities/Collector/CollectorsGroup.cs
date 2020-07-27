@@ -15,12 +15,12 @@ namespace Bot.Utilities.Collector {
             Controllers.CollectionChanged += (sender, args) => {
                 try {
                     if (args.NewItems != null)
-                        foreach (CollectorController newItem in args.NewItems) {
+                        foreach (CollectorController? newItem in args.NewItems) {
                             if (newItem != null) newItem.RemoveArgsFailed += RemoveArgsFailed;
                         }
 
                     if (args.OldItems != null)
-                        foreach (CollectorController oldItem in args.OldItems) {
+                        foreach (CollectorController? oldItem in args.OldItems) {
                             if (oldItem != null) oldItem.RemoveArgsFailed -= RemoveArgsFailed;
                         }
                 }
@@ -50,7 +50,7 @@ namespace Bot.Utilities.Collector {
 
         public void DisposeAll() {
             while (Controllers.Count != 0) {
-                Controllers[0].Dispose();
+                Controllers[0]?.Dispose();
                 Controllers.RemoveAt(0);
             }
         }

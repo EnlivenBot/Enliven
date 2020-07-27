@@ -23,21 +23,21 @@ namespace Bot.Utilities {
             return Regex.Matches(stringToSplit, @"(.{1," + maximumLineLength + @"})(?:\s|$)").Select(match => match.Value);
         }
         
-        public static async Task<TResult> TryAsync<TResult>(Func<Task<TResult>> action, Func<TResult> onFail) {
+        public static async Task<TResult> TryAsync<TResult>(Func<Task<TResult>> action, Func<Exception, TResult> onFail) {
             try {
                 return await action();
             }
-            catch (Exception) {
-                return onFail();
+            catch (Exception e) {
+                return onFail(e);
             }
         }
         
-        public static TResult Try<TResult>(Func<TResult> action, Func<TResult> onFail) {
+        public static TResult Try<TResult>(Func<TResult> action, Func<Exception, TResult> onFail) {
             try {
                 return action();
             }
-            catch (Exception) {
-                return onFail();
+            catch (Exception e) {
+                return onFail(e);
             }
         }
         
@@ -48,6 +48,13 @@ namespace Bot.Utilities {
             catch (Exception) {
                 return onFail;
             }
+        }
+
+        public static bool IsValidUrl(string query) {
+            return Uri.TryCreate(query, UriKind.Absolute, out var uriResult) &&
+                   (uriResult.Scheme == Uri.UriSchemeFile || uriResult.Scheme == Uri.UriSchemeFtp ||
+                    uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps ||
+                    uriResult.Scheme == Uri.UriSchemeNetTcp);
         }
     }
 }

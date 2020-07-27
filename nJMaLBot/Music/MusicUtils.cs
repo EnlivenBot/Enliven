@@ -4,8 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Bot.Config;
-using Bot.Config.Localization;
-using Bot.Music.Players;
+using Bot.Config.Localization.Entries;
+using Bot.DiscordRelated.Music;
+using Bot.Utilities.Music;
 using Discord;
 using Lavalink4NET;
 using Lavalink4NET.Cluster;
@@ -36,11 +37,15 @@ namespace Bot.Music {
                 if (nodes.Count != 0) {
                     logger.Info("Start building music cluster");
                     try {
-                        Cluster = new LavalinkCluster(new LavalinkClusterOptions {Nodes = nodes.ToArray()}, new DiscordClientWrapper(Program.Client),
-                            _lavalinkLogger) {StayOnline = true};
+                        var lavalinkClusterOptions = new LavalinkClusterOptions {
+                            Nodes = nodes.ToArray(), StayOnline = true, LoadBalacingStrategy = LoadBalancingStrategy
+                        };
+                        Cluster = new LavalinkCluster(lavalinkClusterOptions, new DiscordClientWrapper(Program.Client), _lavalinkLogger);
                         Cluster.PlayerMoved += ClusterOnPlayerMoved;
-                        logger.Info("Trying to connect to nodes!");
+
+                        logger.Info("Trying to connect to nodes");
                         await Cluster.InitializeAsync();
+                        logger.Info("Cluster  initialized");
 
                         logger.Info("Initializing InactivityTrackingService instance with default options");
                         var inactivityTrackingService = new InactivityTrackingService(Cluster, new DiscordClientWrapper(Program.Client),
@@ -51,7 +56,7 @@ namespace Bot.Music {
                             }, _lavalinkLogger);
                         inactivityTrackingService.InactivePlayer += (sender, args) => {
                             if (args.Player is EmbedPlaybackPlayer embedPlaybackPlayer) {
-                                embedPlaybackPlayer.Shutdown(new LocalizedEntry("Music.NoListenersLeft"), false);
+                                embedPlaybackPlayer.Shutdown(new EntryLocalized("Music.NoListenersLeft"), false);
                             }
 
                             return Task.CompletedTask;
@@ -60,7 +65,7 @@ namespace Bot.Music {
                         AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
                     }
                     catch (Exception e) {
-                        logger.Fatal(e, "Exception with music cluster");
+                        logger.Fatal(e, "Exception while initializing music cluster");
                         Cluster = null!;
                     }
                 }
@@ -68,6 +73,21 @@ namespace Bot.Music {
                     logger.Warn("Nodes not found, music disabled!");
                 }
             });
+        }
+
+        private static LavalinkClusterNode LoadBalancingStrategy
+            (LavalinkCluster cluster, IReadOnlyCollection<LavalinkClusterNode> nodes, NodeRequestType type) {
+            switch (type) {
+                case NodeRequestType.Backup:
+                    return LoadBalancingStrategies.LoadStrategy(cluster, nodes, type);
+                case NodeRequestType.LoadTrack:
+                    var targetNode = nodes.Where(node => node.IsConnected).FirstOrDefault(node => node.Label.Contains("[RU]"));
+                    if (targetNode != null)
+                        return targetNode;
+                    goto default;
+                default:
+                    return LoadBalancingStrategies.RoundRobinStrategy(cluster, nodes, type);
+            }
         }
 
         private static void LavalinkLoggerOnLogMessage(object? sender, LogMessageEventArgs e) {
@@ -100,45 +120,17 @@ namespace Bot.Music {
                 player?.UpdateNodeName();
             }
             else {
-                player?.Shutdown(new LocalizedEntry("Music.PlayerDropped"));
+                player?.Shutdown(new EntryLocalized("Music.PlayerDropped"));
             }
 
             return Task.CompletedTask;
         }
 
-        public static async Task<EmbedPlaybackPlayer> JoinChannel(ulong guildId, ulong voiceChannelId) {
-            // Clearing previous player, if we have one
-            EmbedPlaybackControl.PlaybackPlayers.FirstOrDefault(playbackPlayer => playbackPlayer.GuildId == guildId)?.Shutdown();
-
-            var player = await Cluster!.JoinAsync(() => new EmbedPlaybackPlayer(guildId), guildId, voiceChannelId);
-            player.UpdateNodeName();
-            EmbedPlaybackControl.PlaybackPlayers.Add(player);
-            return player;
-        }
-
-        public static bool IsValidUrl(string query) {
-            return Uri.TryCreate(query, UriKind.Absolute, out var uriResult) &&
-                   (uriResult.Scheme == Uri.UriSchemeFile || uriResult.Scheme == Uri.UriSchemeFtp ||
-                    uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps ||
-                    uriResult.Scheme == Uri.UriSchemeNetTcp);
-        }
-
-        public static async Task<IEnumerable<LavalinkTrack>> SearchMusic(string query) {
-            if (IsValidUrl(query)) {
-                var lavalinkTracks = await Cluster!.GetTracksAsync(query);
-                return lavalinkTracks;
-            }
-
-            // Search two times
-            var lavalinkTrack = await Cluster!.GetTrackAsync(query, SearchMode.YouTube) ?? await Cluster.GetTrackAsync(query, SearchMode.YouTube);
-            return new List<LavalinkTrack> {lavalinkTrack};
-        }
-
-        public static async Task QueueLoadMusic(IUserMessage message, string? query, EmbedPlaybackPlayer player) {
+        public static async Task<List<LavalinkTrack>> QueueLoadMusic(IUserMessage message, string? query, EmbedPlaybackPlayer player) {
             var lavalinkTracks = new List<LavalinkTrack>();
             if (message != null && message.Attachments.Count != 0) {
                 foreach (var messageAttachment in message.Attachments) {
-                    var lavalinkTrack = await SearchMusic(messageAttachment.Url);
+                    var lavalinkTrack = await MusicProvider.GetTracks(messageAttachment.Url, Cluster);
                     if (lavalinkTrack != null)
                         lavalinkTracks.AddRange(lavalinkTrack);
                 }
@@ -152,7 +144,7 @@ namespace Bot.Music {
             }
             else {
                 var counter = 0;
-                var tasks = query.Split('\n').Select(s => (counter++, s, SearchMusic(s))).ToList();
+                var tasks = query.Split('\n').Select(s => (counter++, s, MusicProvider.GetTracks(s, Cluster))).ToList();
                 await Task.WhenAll(tasks.Select((tuple, i) => tuple.Item3));
                 foreach (var (_, _, tracks) in tasks.OrderBy(tuple => tuple.Item1)) {
                     if (tracks?.Result != null) {
@@ -161,11 +153,13 @@ namespace Bot.Music {
                 }
             }
 
+            lavalinkTracks = lavalinkTracks.Where(track => track != null).ToList();
+
             if (lavalinkTracks.Count == 0) {
                 throw new NothingFoundException();
             }
 
-            player.TryEnqueue(lavalinkTracks, message?.Author?.Username ?? "Unknown");
+            return lavalinkTracks;
         }
 
         public static string EscapeTrack(string track) {

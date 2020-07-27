@@ -15,7 +15,7 @@ namespace Bot.Config.Localization {
             set {
                 _localizationFlagEmojiText = value;
                 try {
-                     LocalizationFlagEmoji = new Emoji(value);
+                     LocalizationFlagEmoji = new Discord.Emoji(value);
                 }
                 catch (Exception) {
                     // ignored

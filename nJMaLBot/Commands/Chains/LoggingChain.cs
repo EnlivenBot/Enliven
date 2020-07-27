@@ -4,17 +4,17 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Bot.Config;
-using Bot.Config.Localization;
+using Bot.Config.Emoji;
+using Bot.Config.Localization.Entries;
 using Bot.Config.Localization.Providers;
+using Bot.DiscordRelated;
 using Bot.Utilities;
 using Bot.Utilities.Collector;
-using Bot.Utilities.Emoji;
 using Discord;
 
 namespace Bot.Commands.Chains {
     public class LoggingChain : ChainBase {
         private static readonly Regex ChannelRegex = new Regex(@"^<#(\d{18})>$");
-        private ILocalizationProvider Loc => _guildConfig.Loc;
         private GuildConfig _guildConfig = null!;
         private IUser _user = null!;
         private ITextChannel _channel = null!;
@@ -22,7 +22,7 @@ namespace Bot.Commands.Chains {
         private CollectorsGroup? _collectorsGroup;
 
         public static LoggingChain CreateInstance(ITextChannel channel, IUser user, GuildConfig guildConfig) {
-            var loggingChainBase = new LoggingChain($"{nameof(LoggingChain)}_{guildConfig.GuildId}") {
+            var loggingChainBase = new LoggingChain($"{nameof(LoggingChain)}_{guildConfig.GuildId}", guildConfig.Loc) {
                 _channel = channel, _user = user, _guildConfig = guildConfig, MainBuilder = DiscordUtils.GetAuthorEmbedBuilderWrapper(user, guildConfig.Loc)
             };
             loggingChainBase.MainBuilder.WithColor(Color.Gold).WithTitle(guildConfig.Loc.Get("Chains.LoggingTitle"));
@@ -31,19 +31,18 @@ namespace Bot.Commands.Chains {
 
         public async Task Start() {
             _guildConfig.FunctionalChannelsChanged += GuildConfigOnFunctionalChannelsChanged;
-            UpdateEmbedBuilder();
+            Update();
             _message = await _channel.SendMessageAsync(null, false, MainBuilder.Build());
             _collectorsGroup = new CollectorsGroup(CollectorsUtils.CollectMessage(_user, message => message.Channel.Id == _message.Channel.Id, async args => {
                     var match = ChannelRegex.Match(args.Message.Content.Trim());
                     if (!match.Success) return;
-                    SetTimeout(TimeSpan.FromMinutes(3));
+                    SetTimeout(Constants.StandardTimeSpan);
                     var targetChannel = Program.Client.GetChannel(Convert.ToUInt64(match.Groups[1].Value));
                     if (!(targetChannel is ITextChannel targetTextChannel) || targetTextChannel.Guild.Id != _guildConfig.GuildId) return;
                     _guildConfig.ToggleChannelLogging(targetChannel.Id);
                     _guildConfig.Save();
 
-                    UpdateEmbedBuilder();
-                    _message.ModifyAsync(properties => properties.Embed = MainBuilder.Build());
+                    Update();
 
                     await args.RemoveReason();
                 }),
@@ -59,7 +58,7 @@ namespace Bot.Commands.Chains {
                             _guildConfig.HistoryMissingInLog = !_guildConfig.HistoryMissingInLog;
                         }
                         else if (args.Reaction.Emote.Equals(CommonEmoji.LegacyStop)) {
-                            OnEnd.Invoke(new LocalizedEntry("ChainsCommon.Thanks").Add(() => _guildConfig.Prefix));
+                            OnEnd.Invoke(new EntryLocalized("ChainsCommon.Thanks").Add(() => _guildConfig.Prefix));
                             return;
                         }
                         else if (args.Reaction.Emote.Equals(CommonEmoji.LegacyFileBox)) {
@@ -73,29 +72,28 @@ namespace Bot.Commands.Chains {
                         }
 
                         _guildConfig.Save();
-                        UpdateEmbedBuilder();
-                        await _message.ModifyAsync(properties => properties.Embed = MainBuilder.Build());
+                        Update();
                         await args.RemoveReason();
                     }));
 
-            await _message.AddReactionsAsync(new[]
+            await _message.AddReactionsAsync(new IEmote[]
                 {CommonEmoji.Memo, CommonEmoji.Robot, CommonEmoji.ExclamationPoint, CommonEmoji.LegacyFileBox, CommonEmoji.Printer, CommonEmoji.LegacyStop});
             OnEnd = async entry => {
+                _collectorsGroup.DisposeAll();
                 await _message.ModifyAsync(properties =>
                     properties.Embed = new EmbedBuilder().WithColor(Color.Orange).WithTitle(Loc.Get("ChainsCommon.Ended")).WithDescription(entry.Get(Loc))
                                                          .Build());
                 await _message.RemoveAllReactionsAsync();
-                _message.DelayedDelete(TimeSpan.FromMinutes(5));
-                _collectorsGroup.DisposeAll();
+                _message.DelayedDelete(Constants.StandardTimeSpan);
             };
-            SetTimeout(TimeSpan.FromMinutes(3));
+            SetTimeout(Constants.StandardTimeSpan);
         }
 
         private void GuildConfigOnFunctionalChannelsChanged(object? sender, ChannelFunction e) {
-            UpdateEmbedBuilder();
+            Update();
         }
 
-        private void UpdateEmbedBuilder() {
+        public override void Update() {
             var descriptionBuilder = new StringBuilder();
             descriptionBuilder.AppendLine(_guildConfig.IsLoggingEnabled
                 ? Loc.Get("Logging.Enabled")
@@ -132,8 +130,14 @@ namespace Bot.Commands.Chains {
             var loggedChannels = string.Join("\n", _guildConfig.LoggedChannels.Select(arg => $"<#{arg}>"));
             MainBuilder.GetOrAddField("channelsList").WithName(Loc.Get("Logging.LoggedChannelsTitle"))
                        .WithValue(string.IsNullOrWhiteSpace(loggedChannels) ? Loc.Get("Logging.LoggedChannelsEmpty") : loggedChannels);
+            try {
+                _message?.ModifyAsync(properties => properties.Embed = MainBuilder.Build());
+            }
+            catch (Exception) {
+                // ignored
+            }
         }
 
-        private LoggingChain(string? uid) : base(uid) { }
+        private LoggingChain(string? uid, ILocalizationProvider loc) : base(uid, loc) { }
     }
 }
