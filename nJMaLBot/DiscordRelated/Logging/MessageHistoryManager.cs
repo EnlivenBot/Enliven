@@ -83,10 +83,16 @@ namespace Bot.DiscordRelated.Logging {
                     if (!(arg2 is ITextChannel textChannel)) return;
 
                     var history = MessageHistory.Get(arg2.Id, arg1.Id);
+                    var guild = Program.Client.GetGuild(textChannel.GuildId);
                     var guildConfig = GuildConfig.Get(textChannel.GuildId);
+                    if (!guildConfig.IsLoggingEnabled) return;
 
-                    if (!guildConfig.GetChannel(ChannelFunction.Log, out var logChannel) || logChannel.Id == arg2.Id) return;
+                    if (!guildConfig.GetChannel(ChannelFunction.Log, out var logChannel) || logChannel!.Id == arg2.Id) return;
                     if (!guildConfig.LoggedChannels.Contains(textChannel.Id)) return;
+                    
+                    var logPermissions = guild.GetUser(Program.Client.CurrentUser.Id).GetPermissions((IGuildChannel) logChannel);
+                    if (!logPermissions.SendMessages) return;
+                    
                     var loc = guildConfig.Loc;
                     var embedBuilder = new EmbedBuilder().WithCurrentTimestamp()
                                                          .WithTitle(loc.Get("MessageHistory.MessageWasDeleted"))
@@ -104,6 +110,7 @@ namespace Bot.DiscordRelated.Logging {
                             await ((ISocketMessageChannel) logChannel).SendMessageAsync(null, false, embedBuilder.Build());
                         }
                         else {
+                            if (!logPermissions.AttachFiles) return;
                             embedBuilder.WithDescription(loc.Get("MessageHistory.LastContentDescription")
                                                             .Format(history.GetLastContent().SafeSubstring(1900, "...")));
                             var historyHtml = await history.ExportToHtml(loc);
