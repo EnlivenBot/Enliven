@@ -93,11 +93,10 @@ namespace Bot.DiscordRelated.Commands {
                 var command = await GetCommand(query, context);
 
                 if (command == null) {
-                    await AddEmojiErrorHint(msg, loc,
+                    await AddEmojiErrorHint(msg, loc, CommonEmoji.Help,
                         new EntryLocalized("CommandHandler.UnknownCommand").Add(query.SafeSubstring(40, "...")!,
                             FuzzySearch.Search(query).GetBestMatches(3).Select(match => $"`{match.SimilarTo}`").JoinToString(", "),
-                            guild.Prefix),
-                        CommonEmoji.Help);
+                            guild.Prefix));
                     return;
                 }
 
@@ -108,10 +107,12 @@ namespace Bot.DiscordRelated.Commands {
                 if (!result.IsSuccess) {
                     switch (result.Error) {
                         case CommandError.ParseFailed:
-                            await SendErrorMessage(msg, loc, loc.Get("CommandHandler.ParseFailed", guild.Prefix, command.Value.Key.Alias));
+                            await AddEmojiErrorHint(msg, loc, CommonEmoji.Help, new EntryLocalized("CommandHandler.ParseFailed"),
+                                HelpUtils.BuildHelpFields(command.Value.Key.Alias, guild.Prefix, loc));
                             break;
                         case CommandError.BadArgCount:
-                            await SendErrorMessage(msg, loc, loc.Get("CommandHandler.BadArgCount", guild.Prefix, command.Value.Key.Alias));
+                            await AddEmojiErrorHint(msg, loc, CommonEmoji.Help, new EntryLocalized("CommandHandler.BadArgCount"),
+                                HelpUtils.BuildHelpFields(command.Value.Key.Alias, guild.Prefix, loc));
                             break;
                         case CommandError.UnmetPrecondition:
                             await SendErrorMessage(msg, loc, loc.Get("CommandHandler.UnmetPrecondition"));
@@ -129,7 +130,8 @@ namespace Bot.DiscordRelated.Commands {
             MessageHistoryManager.TryLogCreatedMessage(s, guild, isCommand);
         }
 
-        private static async Task AddEmojiErrorHint(SocketUserMessage targetMessage, ILocalizationProvider loc, IEntry description, IEmote emote) {
+        private static async Task AddEmojiErrorHint(SocketUserMessage targetMessage, ILocalizationProvider loc, IEmote emote, IEntry description,
+                                                    IEnumerable<EmbedFieldBuilder>? builders = null) {
             CollectorController? collector = null;
             collector = CollectorsUtils.CollectReaction(targetMessage, reaction => reaction.UserId == targetMessage.Author.Id, async eventArgs => {
                 await eventArgs.RemoveReason();
@@ -145,7 +147,7 @@ namespace Bot.DiscordRelated.Commands {
                     // ignored
                 }
 
-                await SendErrorMessage(targetMessage, loc, description.Get(loc));
+                await SendErrorMessage(targetMessage, loc, description.Get(loc), builders);
             });
             await targetMessage.AddReactionAsync(emote);
         }
@@ -202,17 +204,28 @@ namespace Bot.DiscordRelated.Commands {
             return result;
         }
 
-        private static async Task SendErrorMessage(SocketUserMessage message, ILocalizationProvider loc, string description) {
-            (await message.Channel.SendMessageAsync(null, false, BuildErrorEmbed(message, loc, description))).DelayedDelete(Constants.LongTimeSpan);
+        private static async Task SendErrorMessage(SocketUserMessage message, ILocalizationProvider loc, string description,
+                                                   IEnumerable<EmbedFieldBuilder>? fieldBuilders) {
+            if (fieldBuilders == null) {
+                await SendErrorMessage(message, loc, description);
+                return;
+            }
+                
+            (await message.Channel.SendMessageAsync(null, false, GetErrorEmbed(message, loc, description).WithFields(fieldBuilders).Build())).DelayedDelete(
+                Constants.LongTimeSpan);
         }
 
-        private static Embed BuildErrorEmbed(SocketUserMessage message, ILocalizationProvider loc, string description) {
+        private static async Task SendErrorMessage(SocketUserMessage message, ILocalizationProvider loc, string description) {
+            (await message.Channel.SendMessageAsync(null, false, GetErrorEmbed(message, loc, description).Build())).DelayedDelete(Constants.LongTimeSpan);
+        }
+
+        private static EmbedBuilder GetErrorEmbed(SocketUserMessage message, ILocalizationProvider loc, string description) {
             var builder = new EmbedBuilder();
             builder.WithFooter(loc.Get("Commands.RequestedBy").Format(message.Author.Username), message.Author.GetAvatarUrl())
                    .WithColor(Color.Orange);
             builder.WithTitle(loc.Get("CommandHandler.FailedTitle"))
                    .WithDescription(description);
-            return builder.Build();
+            return builder;
         }
 
         private static bool HasMentionPrefix(IUserMessage msg, IUser user, ref int argPos) {
