@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Bot.Config;
 using Bot.Config.Emoji;
+using Bot.Config.Localization.Entries;
 using Bot.Config.Localization.Providers;
 using Bot.DiscordRelated.Logging;
 using Bot.DiscordRelated.Music;
@@ -45,7 +46,7 @@ namespace Bot.DiscordRelated.Commands {
             foreach (var cmdsModule in commandService.Modules) {
                 foreach (var command in cmdsModule.Commands) commandHandler.AllCommands.Add(command);
             }
-            
+
             var items = new List<KeyValuePair<string, CommandInfo>>();
             foreach (var command in commandHandler.AllCommands) {
                 items.AddRange(command.Aliases.Select(alias => new KeyValuePair<string, CommandInfo>(alias, command)));
@@ -92,19 +93,26 @@ namespace Bot.DiscordRelated.Commands {
                 var command = await GetCommand(query, context);
 
                 if (command == null) {
-                    await OnCommandNotFound(msg, loc, query, guild);
+                    await AddEmojiErrorHint(msg, loc, CommonEmoji.Help,
+                        new EntryLocalized("CommandHandler.UnknownCommand").Add(query.SafeSubstring(40, "...")!,
+                            FuzzySearch.Search(query).GetBestMatches(3).Select(match => $"`{match.SimilarTo}`").JoinToString(", "),
+                            guild.Prefix));
                     return;
                 }
 
-                var result = await ExecuteCommand(msg, query, context, command.Value, s.Author.Id.ToString());
+                var result = command.Value.Value.IsSuccess
+                    ? await ExecuteCommand(msg, query, context, command.Value, s.Author.Id.ToString())
+                    : command.Value.Value;
 
                 if (!result.IsSuccess) {
                     switch (result.Error) {
                         case CommandError.ParseFailed:
-                            await SendErrorMessage(msg, loc, string.Format(loc.Get("CommandHandler.ParseFailed"), guild.Prefix, command));
+                            await AddEmojiErrorHint(msg, loc, CommonEmoji.Help, new EntryLocalized("CommandHandler.ParseFailed"),
+                                HelpUtils.BuildHelpFields(command.Value.Key.Alias, guild.Prefix, loc));
                             break;
                         case CommandError.BadArgCount:
-                            await SendErrorMessage(msg, loc, string.Format(loc.Get("CommandHandler.BadArgCount"), guild.Prefix, command));
+                            await AddEmojiErrorHint(msg, loc, CommonEmoji.Help, new EntryLocalized("CommandHandler.BadArgCount"),
+                                HelpUtils.BuildHelpFields(command.Value.Key.Alias, guild.Prefix, loc));
                             break;
                         case CommandError.UnmetPrecondition:
                             await SendErrorMessage(msg, loc, loc.Get("CommandHandler.UnmetPrecondition"));
@@ -122,45 +130,52 @@ namespace Bot.DiscordRelated.Commands {
             MessageHistoryManager.TryLogCreatedMessage(s, guild, isCommand);
         }
 
-        private static async Task OnCommandNotFound(SocketUserMessage msg, GuildLocalizationProvider loc, string query, GuildConfig guild) {
+        private static async Task AddEmojiErrorHint(SocketUserMessage targetMessage, ILocalizationProvider loc, IEmote emote, IEntry description,
+                                                    IEnumerable<EmbedFieldBuilder>? builders = null) {
             CollectorController? collector = null;
-            collector = CollectorsUtils.CollectReaction(msg, reaction => reaction.UserId == msg.Author.Id, async eventArgs => {
+            collector = CollectorsUtils.CollectReaction(targetMessage, reaction => reaction.UserId == targetMessage.Author.Id, async eventArgs => {
                 await eventArgs.RemoveReason();
                 // ReSharper disable once AccessToModifiedClosure
                 // ReSharper disable once PossibleNullReferenceException
                 collector?.Dispose();
                 try {
                     #pragma warning disable 4014
-                    msg.RemoveReactionAsync(CommonEmoji.Help, Program.Client.CurrentUser);
+                    targetMessage.RemoveReactionAsync(CommonEmoji.Help, Program.Client.CurrentUser);
                     #pragma warning restore 4014
                 }
                 catch {
                     // ignored
                 }
 
-                await SendErrorMessage(msg, loc, loc.Get("CommandHandler.UnknownCommand")
-                                                    .Format(query.SafeSubstring(40, "..."),
-                                                         FuzzySearch.Search(query).GetBestMatches(3).Select(match => $"`{match.SimilarTo}`").JoinToString(", "),
-                                                         guild.Prefix));
+                await SendErrorMessage(targetMessage, loc, description.Get(loc), builders);
             });
-            await msg.AddReactionAsync(CommonEmoji.Help);
+            await targetMessage.AddReactionAsync(emote);
         }
 
         private async Task<KeyValuePair<CommandMatch, ParseResult>?> GetCommand(string query, ICommandContext context) {
-            var (commandFound, commandMatch, _) = await CommandService.FindAsync(context, query, null);
-            if (commandFound)
+            var (commandMatch, result) = await CommandService.FindAsync(context, query, null);
+            if (result.IsSuccess)
                 return commandMatch;
-            var command = ParseCommand(query, out var args);
+
+            string args;
+            var command = query.Substring(0, query.IndexOf(" ", StringComparison.Ordinal) > 0 ? query.IndexOf(" ", StringComparison.Ordinal) : query.Length);
+            try {
+                args = query.Substring(command.Length + 1);
+            }
+            catch {
+                args = "";
+            }
+
             var searchResult = FuzzySearch.Search(command);
             var bestMatch = searchResult.GetFullMatch();
 
             // Check for a another keyboard layout
-            if (bestMatch == null) return null;
+            if (bestMatch == null) return commandMatch;
 
             command = bestMatch.SimilarTo;
             query = command + " " + args;
-            var (commandFound2, commandMatch2, _) = await CommandService.FindAsync(context, query, null);
-            return commandFound2 ? commandMatch2 : null;
+            var (commandMatch2, result2) = await CommandService.FindAsync(context, query, null);
+            return result2.IsSuccess ? commandMatch : commandMatch2;
         }
 
         public async Task<IResult> ExecuteCommand(IMessage message, string query, ICommandContext context, KeyValuePair<CommandMatch, ParseResult> pair,
@@ -189,17 +204,28 @@ namespace Bot.DiscordRelated.Commands {
             return result;
         }
 
-        private static async Task SendErrorMessage(SocketUserMessage message, ILocalizationProvider loc, string description) {
-            (await message.Channel.SendMessageAsync(null, false, BuildErrorEmbed(message, loc, description))).DelayedDelete(Constants.LongTimeSpan);
+        private static async Task SendErrorMessage(SocketUserMessage message, ILocalizationProvider loc, string description,
+                                                   IEnumerable<EmbedFieldBuilder>? fieldBuilders) {
+            if (fieldBuilders == null) {
+                await SendErrorMessage(message, loc, description);
+                return;
+            }
+                
+            (await message.Channel.SendMessageAsync(null, false, GetErrorEmbed(message, loc, description).WithFields(fieldBuilders).Build())).DelayedDelete(
+                Constants.LongTimeSpan);
         }
 
-        private static Embed BuildErrorEmbed(SocketUserMessage message, ILocalizationProvider loc, string description) {
+        private static async Task SendErrorMessage(SocketUserMessage message, ILocalizationProvider loc, string description) {
+            (await message.Channel.SendMessageAsync(null, false, GetErrorEmbed(message, loc, description).Build())).DelayedDelete(Constants.LongTimeSpan);
+        }
+
+        private static EmbedBuilder GetErrorEmbed(SocketUserMessage message, ILocalizationProvider loc, string description) {
             var builder = new EmbedBuilder();
             builder.WithFooter(loc.Get("Commands.RequestedBy").Format(message.Author.Username), message.Author.GetAvatarUrl())
                    .WithColor(Color.Orange);
             builder.WithTitle(loc.Get("CommandHandler.FailedTitle"))
                    .WithDescription(description);
-            return builder.Build();
+            return builder;
         }
 
         private static bool HasMentionPrefix(IUserMessage msg, IUser user, ref int argPos) {
@@ -241,18 +267,6 @@ namespace Bot.DiscordRelated.Commands {
             }
 
             return TimeSpan.FromSeconds(userUsageCount);
-        }
-
-        private static string ParseCommand(string input, out string args) {
-            var command = input.Substring(0, input.IndexOf(" ", StringComparison.Ordinal) > 0 ? input.IndexOf(" ", StringComparison.Ordinal) : input.Length);
-            try {
-                args = input.Substring(command.Length + 1);
-            }
-            catch {
-                args = "";
-            }
-
-            return command;
         }
 
         public CommandInfo GetCommandByName(string commandName) {

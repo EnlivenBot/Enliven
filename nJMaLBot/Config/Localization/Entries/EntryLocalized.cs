@@ -3,10 +3,10 @@ using Bot.Config.Localization.Providers;
 
 namespace Bot.Config.Localization.Entries {
     public class EntryLocalized : EntryString {
-        public EntryLocalized(string content) : base(content) { }
+        public EntryLocalized(string id) : base(id) { }
 
-        public EntryLocalized(string content, params object[] args) : base(content, args) { }
-        public EntryLocalized(string content, params Func<object>[] args) : base(content, args) { }
+        public EntryLocalized(string id, params object[] args) : base(id, args) { }
+        public EntryLocalized(string id, params Func<object>[] args) : base(id, args) { }
 
         private protected override string GetFormatString(ILocalizationProvider provider) {
             return provider.Get(Content);

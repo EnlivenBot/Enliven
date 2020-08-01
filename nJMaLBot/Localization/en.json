@@ -177,8 +177,8 @@
     "CommandHandler": {
       "FailedTitle": "Error executing command",
       "UnmetPrecondition": "You do not have permission to execute this command!",
-      "BadArgCount": "Error - the wrong number of arguments for the command. Verify the correctness through `{0}help {1}`",
-      "ParseFailed": "An error occurred while trying to parse the command. Check the arguments through `{0}help {1}`",
+      "BadArgCount": "Error - the wrong number of arguments for the command. Here's a hint for using the command:",
+      "ParseFailed": "An error occurred while trying to parse the command. Here's a hint for using the command:",
       "UnknownCommand": "Command `{0}` not found!\nPerhaps you wanted to use one of them: {1}\n Use the command `{2}help` for a list of commands."
     },
     "Commands": {
