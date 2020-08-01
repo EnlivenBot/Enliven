@@ -43,12 +43,12 @@ namespace Bot.Config.Localization.Entries {
 
         public string Get(ILocalizationProvider provider, params object[] additionalArgs) {
             if (_isCalculated || _lastProvider != provider || additionalArgs.Length != 0) {
-                _cache = string.Format(GetFormatString(provider),
-                    FormatArgs.ToList().Concat(additionalArgs.Select(o => new Func<object>(() => o)))
-                              .Select(func => {
-                                   var result = func();
-                                   return result is IEntry loc ? loc.Get(provider) : result;
-                               }).ToArray());
+                var formatArgs = FormatArgs.ToList().Concat(additionalArgs.Select(o => new Func<object>(() => o)))
+                                        .Select(func => {
+                                             var result = func();
+                                             return result is IEntry loc ? loc.Get(provider) : result;
+                                         }).ToArray();
+                _cache = formatArgs.Length == 0 ? GetFormatString(provider) : string.Format(GetFormatString(provider), formatArgs);
                 _lastProvider = provider;
             }
 
