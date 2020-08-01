@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Bot.Config;
 using Bot.Config.Emoji;
+using Bot.Config.Localization.Entries;
 using Bot.Config.Localization.Providers;
 using Bot.DiscordRelated.Logging;
 using Bot.DiscordRelated.Music;
@@ -92,7 +93,11 @@ namespace Bot.DiscordRelated.Commands {
                 var command = await GetCommand(query, context);
 
                 if (command == null) {
-                    await OnCommandNotFound(msg, loc, query, guild);
+                    await AddEmojiErrorHint(msg, loc,
+                        new EntryLocalized("CommandHandler.UnknownCommand").Add(query.SafeSubstring(40, "...")!,
+                            FuzzySearch.Search(query).GetBestMatches(3).Select(match => $"`{match.SimilarTo}`").JoinToString(", "),
+                            guild.Prefix),
+                        CommonEmoji.Help);
                     return;
                 }
 
@@ -102,9 +107,6 @@ namespace Bot.DiscordRelated.Commands {
 
                 if (!result.IsSuccess) {
                     switch (result.Error) {
-                        case CommandError.UnknownCommand:
-                            await OnCommandNotFound(msg, loc, query, guild);
-                            return;
                         case CommandError.ParseFailed:
                             await SendErrorMessage(msg, loc, loc.Get("CommandHandler.ParseFailed", guild.Prefix, command.Value.Key.Alias));
                             break;
@@ -127,35 +129,32 @@ namespace Bot.DiscordRelated.Commands {
             MessageHistoryManager.TryLogCreatedMessage(s, guild, isCommand);
         }
 
-        private static async Task OnCommandNotFound(SocketUserMessage msg, GuildLocalizationProvider loc, string query, GuildConfig guild) {
+        private static async Task AddEmojiErrorHint(SocketUserMessage targetMessage, ILocalizationProvider loc, IEntry description, IEmote emote) {
             CollectorController? collector = null;
-            collector = CollectorsUtils.CollectReaction(msg, reaction => reaction.UserId == msg.Author.Id, async eventArgs => {
+            collector = CollectorsUtils.CollectReaction(targetMessage, reaction => reaction.UserId == targetMessage.Author.Id, async eventArgs => {
                 await eventArgs.RemoveReason();
                 // ReSharper disable once AccessToModifiedClosure
                 // ReSharper disable once PossibleNullReferenceException
                 collector?.Dispose();
                 try {
                     #pragma warning disable 4014
-                    msg.RemoveReactionAsync(CommonEmoji.Help, Program.Client.CurrentUser);
+                    targetMessage.RemoveReactionAsync(CommonEmoji.Help, Program.Client.CurrentUser);
                     #pragma warning restore 4014
                 }
                 catch {
                     // ignored
                 }
 
-                await SendErrorMessage(msg, loc, loc.Get("CommandHandler.UnknownCommand")
-                                                    .Format(query.SafeSubstring(40, "..."),
-                                                         FuzzySearch.Search(query).GetBestMatches(3).Select(match => $"`{match.SimilarTo}`").JoinToString(", "),
-                                                         guild.Prefix));
+                await SendErrorMessage(targetMessage, loc, description.Get(loc));
             });
-            await msg.AddReactionAsync(CommonEmoji.Help);
+            await targetMessage.AddReactionAsync(emote);
         }
 
         private async Task<KeyValuePair<CommandMatch, ParseResult>?> GetCommand(string query, ICommandContext context) {
             var (commandMatch, result) = await CommandService.FindAsync(context, query, null);
             if (result.IsSuccess)
                 return commandMatch;
-            
+
             string args;
             var command = query.Substring(0, query.IndexOf(" ", StringComparison.Ordinal) > 0 ? query.IndexOf(" ", StringComparison.Ordinal) : query.Length);
             try {
@@ -164,7 +163,7 @@ namespace Bot.DiscordRelated.Commands {
             catch {
                 args = "";
             }
-            
+
             var searchResult = FuzzySearch.Search(command);
             var bestMatch = searchResult.GetFullMatch();
 
