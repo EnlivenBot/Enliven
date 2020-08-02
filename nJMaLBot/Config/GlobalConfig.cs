@@ -5,6 +5,7 @@ using System.IO;
 using System.Text.Json.Serialization;
 using Bot.Music;
 using Newtonsoft.Json;
+// ReSharper disable InconsistentNaming
 
 // ReSharper disable CollectionNeverUpdated.Global
 

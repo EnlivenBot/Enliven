@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Bot.Commands.Chains;
 using Bot.Config;
@@ -10,8 +9,6 @@ using Bot.DiscordRelated.Commands.Modules;
 using Bot.DiscordRelated.Music;
 using Bot.Music;
 using Bot.Utilities;
-using Bot.Utilities.Collector;
-using Discord;
 using Discord.Commands;
 using Lavalink4NET.Player;
 using Lavalink4NET.Rest;
@@ -55,7 +52,7 @@ namespace Bot.Commands {
                 Context.Message?.SafeDelete();
             }
             catch (NothingFoundException) {
-                ReplyFormattedAsync(Loc.Get("Music.NotFound").Format(query.SafeSubstring(100, "...")), true).DelayedDelete(Constants.LongTimeSpan);
+                ReplyFormattedAsync(Loc.Get("Music.NotFound").Format(query!.SafeSubstring(100, "...")), true).DelayedDelete(Constants.LongTimeSpan);
                 if (Player.Playlist.Count == 0) Player.ControlMessage.SafeDelete();
             }
             catch (AttachmentAddFailException) {

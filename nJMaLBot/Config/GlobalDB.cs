@@ -7,7 +7,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bot.DiscordRelated.Logging;
 using Bot.Music;
-using Bot.Utilities;
 using Discord;
 using HarmonyLib;
 using LiteDB;
@@ -319,7 +318,7 @@ namespace Bot.Config {
         }
 
         [DbUpgrade(8)]
-        private static async Task UpgradeTo8(LiteDatabase liteDatabase) {
+        private static Task UpgradeTo8(LiteDatabase liteDatabase) {
             var guildsCollection = liteDatabase.GetCollection(@"Guilds");
             var guildConfigs = guildsCollection.FindAll().ToList();
             guildsCollection.DeleteAll();
@@ -329,6 +328,8 @@ namespace Bot.Config {
             }
 
             guildsCollection.InsertBulk(guildConfigs);
+            
+            return Task.CompletedTask;
         }
 
         [AttributeUsage(AttributeTargets.Method, Inherited = false, AllowMultiple = true)]

@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -77,6 +78,7 @@ namespace Bot.DiscordRelated.Logging {
         }
 
         private static ConcurrentDictionary<ulong, SemaphoreSlim> _packSemaphores = new ConcurrentDictionary<ulong, SemaphoreSlim>();
+
         private static Task ClientOnMessageDeleted(Cacheable<IMessage, ulong> arg1, ISocketMessageChannel arg2) {
             new Task(async o => {
                 try {
@@ -89,10 +91,10 @@ namespace Bot.DiscordRelated.Logging {
 
                     if (!guildConfig.GetChannel(ChannelFunction.Log, out var logChannel) || logChannel!.Id == arg2.Id) return;
                     if (!guildConfig.LoggedChannels.Contains(textChannel.Id)) return;
-                    
+
                     var logPermissions = guild.GetUser(Program.Client.CurrentUser.Id).GetPermissions((IGuildChannel) logChannel);
                     if (!logPermissions.SendMessages) return;
-                    
+
                     var loc = guildConfig.Loc;
                     var embedBuilder = new EmbedBuilder().WithCurrentTimestamp()
                                                          .WithTitle(loc.Get("MessageHistory.MessageWasDeleted"))
@@ -116,11 +118,13 @@ namespace Bot.DiscordRelated.Logging {
                             var historyHtml = await history.ExportToHtml(loc);
                             var uploadStream = guildConfig.LogExportType switch {
                                 LogExportTypes.Html  => new MemoryStream(Encoding.UTF8.GetBytes(historyHtml)),
-                                LogExportTypes.Image => RenderLog(historyHtml)
+                                LogExportTypes.Image => RenderLog(historyHtml),
+                                _                    => throw new SwitchExpressionException(guildConfig.LogExportType)
                             };
                             var fileName = guildConfig.LogExportType switch {
                                 LogExportTypes.Html  => $"History-{history.ChannelId}-{history.MessageId}.html",
-                                LogExportTypes.Image => $"History-{history.ChannelId}-{history.MessageId}.png"
+                                LogExportTypes.Image => $"History-{history.ChannelId}-{history.MessageId}.png",
+                                _                    => throw new SwitchExpressionException(guildConfig.LogExportType)
                             };
                             await ((ISocketMessageChannel) logChannel).SendFileAsync(uploadStream, fileName,
                                 "===========================================", false, embedBuilder.Build());
@@ -133,31 +137,31 @@ namespace Bot.DiscordRelated.Logging {
                             await _packSemaphores.GetOrAdd(guildConfig.GuildId, new SemaphoreSlim(1)).WaitAsync();
                             try {
                                 IUserMessage? packMessage = await Utilities.Utilities.TryAsync(async () => {
-                                    var firstOrDefault = (await (logChannel as ITextChannel).GetMessagesAsync(1).FlattenAsync()).FirstOrDefault();
+                                    var firstOrDefault = (await ((logChannel as ITextChannel)!).GetMessagesAsync(1).FlattenAsync()).FirstOrDefault();
                                     if (firstOrDefault.Author.Id != Program.Client.CurrentUser.Id) return null;
                                     if (!firstOrDefault.Embeds.First().Title.Contains("Pack")) return null;
                                     return (IUserMessage) firstOrDefault;
                                 }, e => null);
                                 if (packMessage == null) {
-                                    SendPackMessage();
+                                    await SendPackMessage();
                                 }
                                 else {
                                     try {
                                         var packBuilder = new EmbedBuilder().WithTitle("Deleted messages Pack")
                                                                             .WithDescription(packMessage.Embeds.First().Description);
                                         packBuilder.Description += $"\n{DateTimeOffset.UtcNow} in {textChannel.Mention}";
-                                        packMessage.ModifyAsync(properties => properties.Embed = packBuilder.Build());
+                                        await packMessage.ModifyAsync(properties => properties.Embed = packBuilder.Build());
                                     }
                                     catch (Exception) {
                                         await SendPackMessage();
                                     }
                                 }
-                                
+
                                 async Task SendPackMessage() {
                                     var packBuilder = new EmbedBuilder().WithTitle("Deleted messages Pack")
                                                                         .WithDescription(loc.Get("MessageHistory.DeletedMessagesPackDescription"));
                                     packBuilder.Description += $"\n{DateTimeOffset.UtcNow} in {textChannel.Mention}";
-                                    await (logChannel as ITextChannel).SendMessageAsync(null, false, packBuilder.Build());
+                                    await ((logChannel as ITextChannel)!).SendMessageAsync(null, false, packBuilder.Build());
                                 }
                             }
                             finally {
@@ -219,7 +223,7 @@ namespace Bot.DiscordRelated.Logging {
                     var guild = GuildConfig.Get(arg.Id);
                     if (!guild.GetChannel(ChannelFunction.Log, out var logChannel)) return;
                     var loc = new GuildLocalizationProvider(guild);
-                    ((SocketTextChannel) logChannel).SendMessageAsync(loc.Get("MessageHistory.GuildLogCleared").Format(
+                    (((SocketTextChannel) logChannel)!).SendMessageAsync(loc.Get("MessageHistory.GuildLogCleared").Format(
                         arg.Name, arg.Id, deletesCount));
                 }
                 finally {
@@ -243,7 +247,7 @@ namespace Bot.DiscordRelated.Logging {
         public static async Task PrintLog(MessageHistory history, ITextChannel outputChannel, ILocalizationProvider loc, IGuildUser requester,
                                           bool forceImage = false) {
             var realMessage = history.GetRealMessage();
-            IUserMessage logMessage = null;
+            IUserMessage? logMessage = null;
             var embedBuilder = new EmbedBuilder().WithCurrentTimestamp()
                                                  .WithTitle(loc.Get("MessageHistory.LogTitle"))
                                                  .WithFooter(loc.Get("MessageHistory.MessageId").Format(history.MessageId))

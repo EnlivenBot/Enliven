@@ -16,16 +16,15 @@ namespace Bot.Utilities.Music {
     public class SpotifyMusicProvider : IMusicProvider {
         private static Logger logger = LogManager.GetCurrentClassLogger();
 
-        private readonly static Regex _playlistRegex =
+        private readonly static Regex PlaylistRegex =
             new Regex(
                 @"^(https:\/\/open\.spotify\.com\/user\/spotify\/playlist\/|https:\/\/open\.spotify\.com\/playlist\/|spotify:user:spotify:playlist:|spotify:playlist:)([a-zA-Z0-9]+)(.*)$");
 
-        private readonly static Regex _trackRegex =
+        private readonly static Regex TrackRegex =
             new Regex(
                 @"^(https:\/\/open\.spotify\.com\/user\/spotify\/track\/|https:\/\/open\.spotify\.com\/track\/|spotify:user:spotify:track:|spotify:track:)([a-zA-Z0-9]+)(.*)$");
 
         private LavalinkCluster _cluster;
-        private string _query;
 
         static SpotifyMusicProvider() {
             SpotifyClient = Task.Run(async () => {
@@ -50,10 +49,9 @@ namespace Bot.Utilities.Music {
         }
 
         public SpotifyMusicProvider(LavalinkCluster cluster, string query) {
-            _query = query;
             _cluster = cluster;
-            var playlistMatch = _playlistRegex.Match(query);
-            var trackMatch = _trackRegex.Match(query);
+            var playlistMatch = PlaylistRegex.Match(query);
+            var trackMatch = TrackRegex.Match(query);
             IsPlaylist = playlistMatch.Success ? true : trackMatch.Success ? (bool?) false : null;
             if (IsPlaylist != null) {
                 Id = ((bool) IsPlaylist ? playlistMatch : trackMatch).Groups[2].Value;
@@ -65,7 +63,7 @@ namespace Bot.Utilities.Music {
         // True - playlist
         // False - Track
         // Null - Fetch error
-        private bool? IsPlaylist { get; set; } = null;
+        private bool? IsPlaylist { get; set; }
 
         private string? Id { get; set; }
 

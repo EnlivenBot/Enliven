@@ -6,7 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bot.Config;
 using Bot.Config.Localization.Providers;
-using Bot.DiscordRelated;
 using Bot.DiscordRelated.Music;
 using Bot.Music;
 using Bot.Utilities;
@@ -24,7 +23,7 @@ namespace Bot.Commands.Chains {
         private SearchMode _searchMode;
         private IMessageChannel _targetChannel = null!;
         private EmbedPlaybackPlayer _player = null!;
-        private CollectorsGroup _collectorGroup;
+        private CollectorsGroup? _collectorGroup;
 
         private AdvancedMusicSearchChain(string? uid, ILocalizationProvider loc) : base(uid, loc) { }
 
@@ -147,7 +146,7 @@ namespace Bot.Commands.Chains {
             _player.Playlist.AddRange(authoredLavalinkTracks.Skip(1));
 
             _cancellationTokenSource.Cancel();
-            _collectorGroup.DisposeAll();
+            _collectorGroup?.DisposeAll();
             msg.SafeDelete();
             OnEnd = localized => { };
             return true;

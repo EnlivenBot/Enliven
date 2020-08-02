@@ -377,7 +377,7 @@ namespace Bot.Utilities {
                 offset = parentNode.IsLeftChild ? -1 : 1;
                 var newParentNode = parentNode.Parent;
 
-                if (this.BalanceAt(parentNode))
+                if (BalanceAt(parentNode))
                     break;
 
                 parentNode = newParentNode;
@@ -407,7 +407,7 @@ namespace Bot.Utilities {
                         offset = parentNode.IsLeftChild ? -1 : 1;
                         var newParentNode = parentNode.Parent;
 
-                        if (parentNode.Balance != 0 && !this.BalanceAt(parentNode))
+                        if (parentNode.Balance != 0 && !BalanceAt(parentNode))
                             break;
 
                         parentNode = newParentNode;
@@ -480,7 +480,7 @@ namespace Bot.Utilities {
                 );
 
                 var rootParent = root.Parent;          //original parent of root node
-                bool makeTreeRoot = this.Root == root; //whether the root was the root of the entire tree
+                bool makeTreeRoot = Root == root; //whether the root was the root of the entire tree
 
                 //Rotate
                 root.RightChild = pivot.LeftChild;
@@ -497,7 +497,7 @@ namespace Bot.Utilities {
 
                 //Update the entire tree's Root if necessary
                 if (makeTreeRoot)
-                    this.Root = pivot;
+                    Root = pivot;
 
                 //Update the original parent's child node
                 if (rootParent != null) {
@@ -529,7 +529,7 @@ namespace Bot.Utilities {
                     root.LeftChild.Balance == 0
                 );
                 var rootParent = root.Parent;          //original parent of root node
-                bool makeTreeRoot = this.Root == root; //whether the root was the root of the entire tree
+                bool makeTreeRoot = Root == root; //whether the root was the root of the entire tree
 
                 //Rotate
                 root.LeftChild = pivot.RightChild;
@@ -546,7 +546,7 @@ namespace Bot.Utilities {
 
                 //Update the entire tree's Root if necessary
                 if (makeTreeRoot)
-                    this.Root = pivot;
+                    Root = pivot;
 
                 //Update the original parent's child node
                 if (rootParent != null) {
@@ -613,17 +613,17 @@ namespace Bot.Utilities {
         /// <summary>
         /// Gets whether the node is a leaf (has no children)
         /// </summary>
-        public virtual bool IsLeaf => this.ChildCount == 0;
+        public virtual bool IsLeaf => ChildCount == 0;
 
         /// <summary>
         /// Gets whether the node is the left child of its parent
         /// </summary>
-        public virtual bool IsLeftChild => this.Parent != null && this.Parent.LeftChild == this;
+        public virtual bool IsLeftChild => Parent != null && Parent.LeftChild == this;
 
         /// <summary>
         /// Gets whether the node is the right child of its parent
         /// </summary>
-        public virtual bool IsRightChild => this.Parent != null && this.Parent.RightChild == this;
+        public virtual bool IsRightChild => Parent != null && Parent.RightChild == this;
 
         /// <summary>
         /// Gets the number of children this node has
@@ -632,10 +632,10 @@ namespace Bot.Utilities {
             get {
                 int count = 0;
 
-                if (this.LeftChild != null)
+                if (LeftChild != null)
                     count++;
 
-                if (this.RightChild != null)
+                if (RightChild != null)
                     count++;
 
                 return count;
@@ -646,7 +646,7 @@ namespace Bot.Utilities {
         /// Create a new instance of a Binary Tree node
         /// </summary>
         public BinaryTreeNode(T value) {
-            this.Value = value;
+            Value = value;
         }
     }
 
@@ -715,16 +715,16 @@ namespace Bot.Utilities {
         public virtual void Add(KeyValuePair<TKey, TValue> value) {
             BinaryTreeNode<KeyValuePair<TKey, TValue>> node =
                 new BinaryTreeNode<KeyValuePair<TKey, TValue>>(value);
-            this.Add(node);
+            Add(node);
         }
 
         /// <summary>
         /// Adds a node to the tree
         /// </summary>
         public virtual void Add(BinaryTreeNode<KeyValuePair<TKey, TValue>> node) {
-            if (this.head == null) //first element being added
+            if (head == null) //first element being added
             {
-                this.head = node; //set node as root of the tree
+                head = node; //set node as root of the tree
                 node.Size = 1;
             }
             else {
@@ -746,7 +746,7 @@ namespace Bot.Utilities {
                     }
                     else {
                         node.Parent = node.Parent.LeftChild; //scan down to left child
-                        this.Add(node);                      //recursive call
+                        Add(node);                      //recursive call
                     }
                 }
                 else //insert on the right
@@ -756,14 +756,14 @@ namespace Bot.Utilities {
                     }
                     else {
                         node.Parent = node.Parent.RightChild;
-                        this.Add(node);
+                        Add(node);
                     }
                 }
             }
         }
 
         protected virtual BinaryTreeNode<KeyValuePair<TKey, TValue>> Find(TKey key) {
-            var node = this.Root; //start at head
+            var node = Root; //start at head
             while (node != null) {
                 var r = comparer.Compare(key, node.Value.Key);
                 if (r == 0) //parameter value found
@@ -799,12 +799,12 @@ namespace Bot.Utilities {
         /// </summary>
         public virtual bool Remove(KeyValuePair<TKey, TValue> value) {
             var removeNode = Find(value.Key);
-            return this.Remove(removeNode);
+            return Remove(removeNode);
         }
 
         public virtual bool Remove(TKey key) {
             var removeNode = Find(key);
-            return this.Remove(removeNode);
+            return Remove(removeNode);
         }
 
         /// <summary>
@@ -817,8 +817,8 @@ namespace Bot.Utilities {
             //Note whether the node to be removed is the root of the tree
             bool wasHead = (removeNode == head);
 
-            if (this.Count == 1) {
-                this.head = null; //only element was the root
+            if (Count == 1) {
+                head = null; //only element was the root
             }
             else if (removeNode.IsLeaf) //Case 1: No Children
             {
@@ -849,7 +849,7 @@ namespace Bot.Utilities {
                     removeNode.LeftChild.Parent = removeNode.Parent; //update parent
 
                     if (wasHead)
-                        this.Root = removeNode.LeftChild; //update root reference if needed
+                        Root = removeNode.LeftChild; //update root reference if needed
                     else {
                         if (removeNode.IsLeftChild) //update the parent's child reference
                             removeNode.Parent.LeftChild = removeNode.LeftChild;
@@ -863,7 +863,7 @@ namespace Bot.Utilities {
                     removeNode.RightChild.Parent = removeNode.Parent; //update parent
 
                     if (wasHead)
-                        this.Root = removeNode.RightChild; //update root reference if needed
+                        Root = removeNode.RightChild; //update root reference if needed
                     else {
                         if (removeNode.IsLeftChild) //update the parent's child reference
                             removeNode.Parent.LeftChild = removeNode.RightChild;
@@ -886,7 +886,7 @@ namespace Bot.Utilities {
 
                 removeNode.Value = successorNode.Value; // Swap the value
 
-                this.Remove(successorNode); //recursively remove the inorder predecessor
+                Remove(successorNode); //recursively remove the inorder predecessor
             }
 
 
@@ -897,15 +897,15 @@ namespace Bot.Utilities {
         /// Removes all the elements stored in the tree
         /// </summary>
         public virtual void Clear() {
-            this.Root = null;
+            Root = null;
         }
 
         /// <summary>
         /// Returns the depth of a subtree rooted at the parameter value
         /// </summary>
         public virtual int GetDepth(KeyValuePair<TKey, TValue> value) {
-            var node = this.Find(value.Key);
-            return this.GetDepth(node);
+            var node = Find(value.Key);
+            return GetDepth(node);
         }
 
         /// <summary>
@@ -963,7 +963,7 @@ namespace Bot.Utilities {
 
         public int IndexOfKey(TKey key, out BinaryTreeNode<KeyValuePair<TKey, TValue>> node) {
             int size = 0;
-            node = this.Root; //start at head
+            node = Root; //start at head
             while (node != null) {
                 var r = comparer.Compare(key, node.Value.Key);
                 if (r == 0) //parameter value found
@@ -991,7 +991,7 @@ namespace Bot.Utilities {
         /// The enumerator uses the traversal set in the TraversalMode property.
         /// </summary>
         public virtual IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator() {
-            switch (this.TraversalOrder) {
+            switch (TraversalOrder) {
                 case TraversalMode.InOrder:
                     return GetInOrderEnumerator();
                 case TraversalMode.PostOrder:
@@ -1008,7 +1008,7 @@ namespace Bot.Utilities {
         /// The enumerator uses the traversal set in the TraversalMode property.
         /// </summary>
         IEnumerator IEnumerable.GetEnumerator() {
-            return this.GetEnumerator();
+            return GetEnumerator();
         }
 
         /// <summary>
@@ -1036,14 +1036,14 @@ namespace Bot.Utilities {
         /// Copies the elements in the tree to an array using the traversal mode specified.
         /// </summary>
         public virtual void CopyTo(KeyValuePair<TKey, TValue>[] array) {
-            this.CopyTo(array, 0);
+            CopyTo(array, 0);
         }
 
         /// <summary>
         /// Copies the elements in the tree to an array using the traversal mode specified.
         /// </summary>
         public virtual void CopyTo(KeyValuePair<TKey, TValue>[] array, int startIndex) {
-            var enumerator = this.GetEnumerator();
+            using var enumerator = GetEnumerator();
 
             for (int i = startIndex; i < array.Length; i++) {
                 if (enumerator.MoveNext())

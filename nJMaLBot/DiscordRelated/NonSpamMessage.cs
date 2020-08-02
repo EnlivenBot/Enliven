@@ -32,7 +32,7 @@ namespace Bot.DiscordRelated {
                     }
                     else {
                         try {
-                            if (await _lastSendTimeChecker.ToCriteria().AddCriterion(new EnsureLastMessage(_currentChannel, Message).Invert()).JudgeAsync()) {
+                            if (await _lastSendTimeChecker.ToCriteria().AddCriterion(new EnsureLastMessage(_currentChannel!, Message).Invert()).JudgeAsync()) {
                                 await Resend();
                             }
                             else {
