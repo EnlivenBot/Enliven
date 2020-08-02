@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
+using Bot.Utilities;
 using Discord;
-using Hellosam.Net.Collections;
 
 #pragma warning disable 8605
 #pragma warning disable 618
