@@ -1,12 +1,15 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Lavalink4NET.Cluster;
+using Lavalink4NET.MemoryCache;
 using Lavalink4NET.Player;
 using Lavalink4NET.Rest;
 
 namespace Bot.Utilities.Music {
     public class DefaultMusicProvider : IMusicProvider {
+        private static LavalinkCache _lavalinkCache = new LavalinkCache();
         private LavalinkCluster _cluster;
         private string _query;
 
@@ -20,6 +23,8 @@ namespace Bot.Utilities.Music {
         }
 
         public async Task<List<LavalinkTrack>> Provide() {
+            if (_lavalinkCache.TryGetItem(_query, out LavalinkTrack cachedTrack)) return new List<LavalinkTrack> {cachedTrack};
+
             if (Utilities.IsValidUrl(_query)) {
                 var lavalinkTracks = await _cluster!.GetTracksAsync(_query);
                 return lavalinkTracks.ToList();
@@ -27,7 +32,13 @@ namespace Bot.Utilities.Music {
 
             // Search two times
             var lavalinkTrack = await _cluster!.GetTrackAsync(_query, SearchMode.YouTube) ?? await _cluster.GetTrackAsync(_query, SearchMode.YouTube);
-            return new List<LavalinkTrack> {lavalinkTrack};
+
+            // Add to cache only if request successful
+            if (lavalinkTrack != null) {
+                _lavalinkCache.AddItem(_query, lavalinkTrack, DateTimeOffset.Now + TimeSpan.FromMinutes(30));
+            }
+
+            return new List<LavalinkTrack> {lavalinkTrack!};
         }
     }
 }
