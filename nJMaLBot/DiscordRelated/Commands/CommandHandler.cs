@@ -149,7 +149,12 @@ namespace Bot.DiscordRelated.Commands {
 
                 await SendErrorMessage(targetMessage, loc, description.Get(loc), builders);
             });
-            await targetMessage.AddReactionAsync(emote);
+            try {
+                await targetMessage.AddReactionAsync(emote);
+            }
+            catch (Exception) {
+                collector.Dispose();
+            }
         }
 
         private async Task<KeyValuePair<CommandMatch, ParseResult>?> GetCommand(string query, ICommandContext context) {
