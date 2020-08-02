@@ -175,7 +175,7 @@ namespace Bot.DiscordRelated.Commands {
             command = bestMatch.SimilarTo;
             query = command + " " + args;
             var (commandMatch2, result2) = await CommandService.FindAsync(context, query, null);
-            return result2.IsSuccess ? commandMatch : commandMatch2;
+            return result2.IsSuccess ? commandMatch2 : commandMatch;
         }
 
         public async Task<IResult> ExecuteCommand(IMessage message, string query, ICommandContext context, KeyValuePair<CommandMatch, ParseResult> pair,
