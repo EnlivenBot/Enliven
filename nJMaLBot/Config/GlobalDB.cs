@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bot.DiscordRelated.Logging;
 using Bot.Music;
+using Bot.Utilities.Music;
 using Discord;
 using HarmonyLib;
 using LiteDB;
@@ -29,6 +30,7 @@ namespace Bot.Config {
             Messages = Database.GetCollection<MessageHistory>(@"MessagesHistory");
             CommandStatistics = Database.GetCollection<StatisticsPart>(@"CommandStatistics");
             Playlists = Database.GetCollection<StoredPlaylist>(@"StoredPlaylists");
+            SpotifyAssociations = Database.GetCollection<SpotifyTrackAssociation>(@"SpotifyAssociations");
         }
 
         public static void Initialize() {
@@ -40,6 +42,7 @@ namespace Bot.Config {
         public static readonly ILiteCollection<MessageHistory> Messages;
         public static readonly ILiteCollection<StatisticsPart> CommandStatistics;
         public static readonly ILiteCollection<StoredPlaylist> Playlists;
+        public static readonly ILiteCollection<SpotifyTrackAssociation> SpotifyAssociations;
 
         // ReSharper disable once NotAccessedField.Local
         private static Timer _checkpointTimer = null!;
