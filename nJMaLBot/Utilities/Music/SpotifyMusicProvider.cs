@@ -77,15 +77,18 @@ namespace Bot.Utilities.Music {
 
         public async Task<List<LavalinkTrack>> Provide() {
             var spotify = await SpotifyClient;
-            List<string> tracksIds = new List<string>();
+            List<SpotifyTrackData> tracksIds = new List<SpotifyTrackData>();
             switch (IsPlaylist) {
                 case true: {
                     var playlist = await spotify.Playlists.Get(Id);
-                    tracksIds = (await spotify.PaginateAll(playlist.Tracks)).Select(track => (track.Track as FullTrack)?.Id).Where(s => !string.IsNullOrWhiteSpace(s)).ToList()!;
+                    tracksIds = (await spotify.PaginateAll(playlist.Tracks))
+                               .Select(track => (track.Track as FullTrack))
+                               .Where(track => track != null)
+                               .Select(track => new SpotifyTrackData(track.Id, track)).ToList()!;
                     break;
                 }
                 case false: {
-                    tracksIds.Add(Id);
+                    tracksIds.Add(new SpotifyTrackData(Id));
                     break;
                 }
             }
@@ -98,15 +101,15 @@ namespace Bot.Utilities.Music {
             // Dummy method to initialize static properties
         }
 
-        public static async Task<LavalinkTrack> ResolveWithCache(string spotifyTrackId, LavalinkCluster lavalinkCluster) {
-            if (TryGetFromCache(spotifyTrackId, out var track)) {
+        public static async Task<LavalinkTrack> ResolveWithCache(SpotifyTrackData spotifyTrack, LavalinkCluster lavalinkCluster) {
+            if (TryGetFromCache(spotifyTrack.Id, out var track)) {
                 return track!;
             }
 
-            var fullTrack = await (await SpotifyClient).Tracks.Get(spotifyTrackId);
+            var fullTrack = await spotifyTrack.GetTrack();
             var lavalinkTracks = await new DefaultMusicProvider(lavalinkCluster, $"{fullTrack.Name} - {fullTrack.Artists[0].Name}").Provide();
             try {
-                GlobalDB.SpotifyAssociations.Upsert(new SpotifyTrackAssociation(spotifyTrackId, lavalinkTracks[0].Identifier));
+                GlobalDB.SpotifyAssociations.Upsert(new SpotifyTrackAssociation(spotifyTrack.Id, lavalinkTracks[0].Identifier));
                 return lavalinkTracks[0];
             }
             catch (Exception) {

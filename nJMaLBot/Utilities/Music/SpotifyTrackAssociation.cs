@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Lavalink4NET.Decoding;
 using Lavalink4NET.Player;
 using LiteDB;
+using SpotifyAPI.Web;
 
 namespace Bot.Utilities.Music {
     public class SpotifyTrackAssociation {
@@ -46,6 +48,19 @@ namespace Bot.Utilities.Music {
             }
 
             public int Score => (AuthorId == 0 ? 0 : 2) + UpvotedUsers.Count - DownvotedUsers.Count;
+        }
+    }
+
+    public class SpotifyTrackData {
+        private FullTrack? _track;
+        public string Id { get; private set; }
+        public SpotifyTrackData(string id, FullTrack? track = null) {
+            _track = track;
+            Id = id;
+        }
+
+        public async Task<FullTrack> GetTrack() {
+            return _track ??= await (await SpotifyMusicProvider.SpotifyClient).Tracks.Get(Id);
         }
     }
 }
