@@ -43,6 +43,7 @@ namespace Bot.Music {
                         Cluster.PlayerMoved += ClusterOnPlayerMoved;
 
                         logger.Info("Trying to connect to nodes");
+                        await Program.WaitStartAsync;
                         await Cluster.InitializeAsync();
                         logger.Info("Cluster  initialized");
 
