@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Bot.Config;
+using Bot.Music;
 using Lavalink4NET.Cluster;
 using Lavalink4NET.Player;
 using NLog;
@@ -50,12 +51,21 @@ namespace Bot.Utilities.Music {
 
         public SpotifyMusicProvider(LavalinkCluster cluster, string query) {
             _cluster = cluster;
+            IsPlaylist = !IsTrack(query, out var id);
+            Id = id;
+        }
+
+        /// <returns>True - track, False - playlist, null - error</returns>
+        public static bool? IsTrack(string query, out string? id) {
+            id = null;
             var playlistMatch = PlaylistRegex.Match(query);
             var trackMatch = TrackRegex.Match(query);
-            IsPlaylist = playlistMatch.Success ? true : trackMatch.Success ? (bool?) false : null;
-            if (IsPlaylist != null) {
-                Id = ((bool) IsPlaylist ? playlistMatch : trackMatch).Groups[2].Value;
+            var isTrack = trackMatch.Success ? true : playlistMatch.Success ? (bool?) false : null;
+            if (isTrack != null) {
+                id = ((bool) isTrack ? trackMatch : playlistMatch).Groups[2].Value;
             }
+
+            return isTrack;
         }
 
         public static Task<SpotifyClient?> SpotifyClient { get; private set; }
@@ -76,32 +86,37 @@ namespace Bot.Utilities.Music {
         }
 
         public async Task<List<LavalinkTrack>> Provide() {
-            var spotify = await SpotifyClient;
-            List<SpotifyTrackData> tracksIds = new List<SpotifyTrackData>();
-            switch (IsPlaylist) {
-                case true: {
-                    var playlist = await spotify.Playlists.Get(Id);
-                    tracksIds = (await spotify.PaginateAll(playlist.Tracks))
-                               .Select(track => (track.Track as FullTrack))
-                               .Where(track => track != null)
-                               .Select(track => new SpotifyTrackData(track.Id, track)).ToList()!;
-                    break;
+            try {
+                var spotify = await SpotifyClient;
+                List<SpotifyTrackData> tracksData = new List<SpotifyTrackData>();
+                switch (IsPlaylist) {
+                    case true: {
+                        var playlist = await spotify.Playlists.Get(Id);
+                        tracksData = (await spotify.PaginateAll(playlist.Tracks))
+                                    .Select(track => (track.Track as FullTrack))
+                                    .Where(track => track != null)
+                                    .Select(track => new SpotifyTrackData(track.Id, track)).ToList()!;
+                        break;
+                    }
+                    case false: {
+                        tracksData.Add(new SpotifyTrackData(Id));
+                        break;
+                    }
                 }
-                case false: {
-                    tracksIds.Add(new SpotifyTrackData(Id));
-                    break;
-                }
-            }
 
-            var enumerable = tracksIds.Select(s => ResolveWithCache(s, _cluster));
-            return (await Task.WhenAll(enumerable)).ToList();
+                var enumerable = tracksData.Select(s => ResolveWithCache(s, _cluster));
+                return (await Task.WhenAll(enumerable)).Select(association => association?.GetBestAssociation()?.Association).ToList()!;
+            }
+            catch (Exception) {
+                throw new NothingFoundException(false);
+            }
         }
 
         public static void Initialize() {
             // Dummy method to initialize static properties
         }
 
-        public static async Task<LavalinkTrack> ResolveWithCache(SpotifyTrackData spotifyTrack, LavalinkCluster lavalinkCluster) {
+        public static async Task<SpotifyTrackAssociation?> ResolveWithCache(SpotifyTrackData spotifyTrack, LavalinkCluster lavalinkCluster) {
             if (TryGetFromCache(spotifyTrack.Id, out var track)) {
                 return track!;
             }
@@ -109,20 +124,21 @@ namespace Bot.Utilities.Music {
             var fullTrack = await spotifyTrack.GetTrack();
             var lavalinkTracks = await new DefaultMusicProvider(lavalinkCluster, $"{fullTrack.Name} - {fullTrack.Artists[0].Name}").Provide();
             try {
-                GlobalDB.SpotifyAssociations.Upsert(new SpotifyTrackAssociation(spotifyTrack.Id, lavalinkTracks[0].Identifier));
-                return lavalinkTracks[0];
+                var spotifyTrackAssociation = new SpotifyTrackAssociation(spotifyTrack.Id, lavalinkTracks[0].Identifier);
+                GlobalDB.SpotifyAssociations.Upsert(spotifyTrackAssociation);
+                return spotifyTrackAssociation;
             }
             catch (Exception) {
                 // ignored
             }
 
-            return null!;
+            return null;
         }
 
-        public static bool TryGetFromCache(string spotifyTrackId, out LavalinkTrack? track) {
+        public static bool TryGetFromCache(string spotifyTrackId, out SpotifyTrackAssociation? track) {
             track = default!;
             try {
-                track = GlobalDB.SpotifyAssociations.FindById(spotifyTrackId)?.GetBestAssociation().Association;
+                track = GlobalDB.SpotifyAssociations.FindById(spotifyTrackId);
                 return track != null;
             }
             catch (Exception) {
