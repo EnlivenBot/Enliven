@@ -88,6 +88,7 @@ namespace Bot {
             MessageHistoryManager.Initialize();
             MusicUtils.Initialize();
             SpotifyMusicProvider.Initialize();
+            Patch.ApplyUsersPatch();
             await Task.Delay(-1);
         }
 

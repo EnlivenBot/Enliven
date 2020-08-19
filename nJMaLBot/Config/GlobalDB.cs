@@ -31,6 +31,7 @@ namespace Bot.Config {
             CommandStatistics = Database.GetCollection<StatisticsPart>(@"CommandStatistics");
             Playlists = Database.GetCollection<StoredPlaylist>(@"StoredPlaylists");
             SpotifyAssociations = Database.GetCollection<SpotifyTrackAssociation>(@"SpotifyAssociations");
+            Users = Database.GetCollection<UserData>("UserData");
         }
 
         public static void Initialize() {
@@ -43,6 +44,7 @@ namespace Bot.Config {
         public static readonly ILiteCollection<StatisticsPart> CommandStatistics;
         public static readonly ILiteCollection<StoredPlaylist> Playlists;
         public static readonly ILiteCollection<SpotifyTrackAssociation> SpotifyAssociations;
+        public static readonly ILiteCollection<UserData> Users;
 
         // ReSharper disable once NotAccessedField.Local
         private static Timer _checkpointTimer = null!;
