@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using Discord;
+using DiscordChatExporter.Domain.Discord.Models;
 using LiteDB;
 
 namespace Bot.Config {
@@ -9,6 +10,8 @@ namespace Bot.Config {
         public ulong UserId { get; set; }
 
         public string? LastKnownUsername { get; set; }
+
+        [BsonIgnore] public bool IsCurrentUser => Program.Client.CurrentUser.Id == UserId;
     }
 
     public partial class UserData {
@@ -32,9 +35,12 @@ namespace Bot.Config {
     }
 
     public partial class UserData {
+        public static UserData Current => Get(0);
+        
         private static ConcurrentDictionary<ulong, UserData> _configCache = new ConcurrentDictionary<ulong, UserData>();
 
         public static UserData Get(ulong userId) {
+            if (userId == 0) userId = Program.Client.CurrentUser.Id;
             return _configCache.GetOrAdd(userId, arg => {
                 var guildConfig = GlobalDB.Users.FindById((long) arg);
                 return guildConfig ?? TryCreate(userId);
@@ -81,11 +87,27 @@ namespace Bot.Config {
             
             return data;
         }
+
+        public UserLink ToLink() {
+            return new UserLink(UserId);
+        }
     }
 
     public class UserLink {
+        [BsonIgnore] public static UserLink Current => new UserLink(0);
+        
+        [Obsolete("")]
+        public UserLink() { }
+        
+        public UserLink(ulong userId) {
+            if (userId == 0) userId = Program.Client.CurrentUser.Id;
+            UserId = userId;
+        }
+        
         [BsonId] public ulong UserId { get; set; }
 
         [BsonIgnore] public UserData Data => UserData.Get(UserId);
+
+        [BsonIgnore] public bool IsCurrentUser => UserId == Program.Client.CurrentUser.Id;
     }
 }
