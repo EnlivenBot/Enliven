@@ -177,7 +177,13 @@ namespace Bot.Music {
 
     public class AttachmentAddFailException : Exception { }
 
-    public class NothingFoundException : Exception { }
+    public class NothingFoundException : Exception {
+        public NothingFoundException(bool allowFallback = true) {
+            AllowFallback = allowFallback;
+        }
+        
+        public bool AllowFallback { get; private set; }
+    }
 
     public class EmptyQueryException : Exception { }
 }

@@ -121,11 +121,11 @@ namespace Bot.Utilities.Music {
                 return track!;
             }
 
-            var fullTrack = await spotifyTrack.GetTrack();
-            var lavalinkTracks = await new DefaultMusicProvider(lavalinkCluster, $"{fullTrack.Name} - {fullTrack.Artists[0].Name}").Provide();
             try {
+                var fullTrack = await spotifyTrack.GetTrack();
+                var lavalinkTracks = await new DefaultMusicProvider(lavalinkCluster, $"{fullTrack.Name} - {fullTrack.Artists[0].Name}").Provide();
                 var spotifyTrackAssociation = new SpotifyTrackAssociation(spotifyTrack.Id, lavalinkTracks[0].Identifier);
-                GlobalDB.SpotifyAssociations.Upsert(spotifyTrackAssociation);
+                spotifyTrackAssociation.Save();
                 return spotifyTrackAssociation;
             }
             catch (Exception) {

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Bot.Config;
 using Lavalink4NET.Decoding;
 using Lavalink4NET.Player;
 using LiteDB;
@@ -14,7 +15,7 @@ namespace Bot.Utilities.Music {
 
         public SpotifyTrackAssociation(string spotifyTrackId, string defaultAssociationIdentifier) {
             SpotifyTrackId = spotifyTrackId;
-            Associations.Add(new TrackAssociationData(defaultAssociationIdentifier, 0));
+            Associations.Add(new TrackAssociationData(defaultAssociationIdentifier, UserLink.Current));
         }
 
         [BsonId] public string SpotifyTrackId { get; set; } = null!;
@@ -25,16 +26,20 @@ namespace Bot.Utilities.Music {
             return Associations.Select(data => (data.Score, data)).Max().data;
         }
 
+        public void Save() {
+            GlobalDB.SpotifyAssociations.Upsert(this);
+        }
+
         public class TrackAssociationData {
             [Obsolete("This constructor for database engine")]
             public TrackAssociationData() { }
 
-            public TrackAssociationData(string identifier, ulong authorId) {
+            public TrackAssociationData(string identifier, UserLink author) {
                 Identifier = identifier;
-                AuthorId = authorId;
+                Author = author;
             }
 
-            public ulong AuthorId { get; set; }
+            public UserLink Author { get; set; }
 
             public List<ulong> UpvotedUsers { get; set; } = new List<ulong>();
             public List<ulong> DownvotedUsers { get; set; } = new List<ulong>();
@@ -47,17 +52,32 @@ namespace Bot.Utilities.Music {
                 set => Identifier = value.Identifier;
             }
 
-            public int Score => (AuthorId == 0 ? 0 : 2) + UpvotedUsers.Count - DownvotedUsers.Count;
+            public int Score => (Author.IsCurrentUser ? 0 : 2) + UpvotedUsers.Count - DownvotedUsers.Count;
+
+            public void AddVote(ulong userId, bool? isUpvote) {
+                UpvotedUsers.Remove(userId);
+                DownvotedUsers.Remove(userId);
+                switch (isUpvote) {
+                    case true:
+                        UpvotedUsers.Add(userId);
+                        break;
+                    case false:
+                        DownvotedUsers.Add(userId);
+                        break;
+                }
+            }
         }
     }
 
     public class SpotifyTrackData {
         private FullTrack? _track;
-        public string Id { get; private set; }
+
         public SpotifyTrackData(string id, FullTrack? track = null) {
             _track = track;
             Id = id;
         }
+
+        public string Id { get; private set; }
 
         public async Task<FullTrack> GetTrack() {
             return _track ??= await (await SpotifyMusicProvider.SpotifyClient).Tracks.Get(Id);

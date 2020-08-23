@@ -14,7 +14,7 @@ using Tyrrrz.Extensions;
 #pragma warning disable 4014
 
 namespace Bot.DiscordRelated {
-    public class PaginatedMessage {
+    public class PaginatedMessage : IDisposable {
         private readonly EmbedBuilder _embedBuilder = new EmbedBuilder();
         private readonly SingleTask<IUserMessage?> _resendTask;
         private readonly SingleTask _updateTask;
@@ -193,7 +193,8 @@ namespace Bot.DiscordRelated {
                             || Options.JumpDisplayOptions == JumpDisplayOptions.WithManageMessages && manageMessages;
                 if (_jumpEnabled) await Message!.AddReactionAsync(Options.Jump);
 
-                await Message!.AddReactionAsync(Options.Stop);
+                if (Options.StopEnabled)
+                    await Message!.AddReactionAsync(Options.Stop);
 
                 if (Options.DisplayInformationIcon)
                     await Message!.AddReactionAsync(Options.Info);
@@ -257,9 +258,8 @@ namespace Bot.DiscordRelated {
         }
 
         public void StopAndClear() {
-            _collectorController?.Dispose();
+            Dispose();
             Message?.DeleteAsync();
-            OnStop();
         }
 
         public void CoercePageNumber() {
@@ -381,6 +381,12 @@ namespace Bot.DiscordRelated {
             public string Description { get; set; } = "";
             public List<EmbedFieldBuilder> Fields { get; set; } = new List<EmbedFieldBuilder>();
         }
+
+        public void Dispose() {
+            _timeoutTimer.Dispose();
+            _collectorController?.Dispose();
+            OnStop();
+        }
     }
 
     public class PaginatedAppearanceOptions {
@@ -399,6 +405,8 @@ namespace Bot.DiscordRelated {
         public JumpDisplayOptions JumpDisplayOptions = JumpDisplayOptions.WithManageMessages;
         public IEmote Last = CommonEmoji.LegacyTrackNext;
         public IEmote Next = CommonEmoji.LegacyPlay;
+
+        public bool StopEnabled = true;
         public IEmote Stop = CommonEmoji.LegacyStop;
 
         public TimeSpan? Timeout = null;
