@@ -463,8 +463,9 @@ namespace Bot.Commands {
         }
 
         [Command("fixspotify", RunMode = RunMode.Async)]
-        [Alias("spotify")]
-        public async Task FixSpotify(string s) {
+        [Alias("spotify, fs")]
+        [Summary("fixspotify0s")]
+        public async Task FixSpotify([Summary("fixspotify0_0s")] string s) {
             var fixSpotifyChain = FixSpotifyChain.CreateInstance(Context.User, Context.Channel, Loc, s);
             await fixSpotifyChain.Start();
         }
