@@ -87,7 +87,7 @@ namespace Bot.Commands {
         }
 
         [Command("goto", RunMode = RunMode.Async)]
-        [Alias("g")]
+        [Alias("g", "go", "gt")]
         [Summary("goto0s")]
         public async Task Goto([Summary("goto0_0s")] int index) {
             if (!await IsPreconditionsValid) return;
