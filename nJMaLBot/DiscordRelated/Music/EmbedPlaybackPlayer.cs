@@ -50,7 +50,7 @@ namespace Bot.DiscordRelated.Music {
             };
             EmbedBuilder.AddField("State", Loc.Get("Music.Empty"), Loc.Get("Music.Empty"), true);
             EmbedBuilder.AddField("Parameters", Loc.Get("Music.Parameters"), Loc.Get("Music.Empty"), true);
-            EmbedBuilder.AddField("Queue", Loc.Get("Music.Queue").Format(0, 0), Loc.Get("Music.Empty"));
+            EmbedBuilder.AddField("Queue", Loc.Get("Music.Queue").Format(0, 0, 0), Loc.Get("Music.Empty"));
             EmbedBuilder.AddField("RequestHistory", Loc.Get("Music.RequestHistory"), Loc.Get("Music.Empty"));
             EmbedBuilder.AddField("Warnings", Loc.Get("Music.Warning"), Loc.Get("Music.Empty"), false, 100, false);
             Playlist.Update += (sender, args) => UpdateQueue();
@@ -441,9 +441,9 @@ namespace Bot.DiscordRelated.Music {
             else if ((State != PlayerState.NotPlaying || State != PlayerState.NotConnected || State != PlayerState.Destroyed) && CurrentTrack != null) {
                 var iconUrl = CurrentTrack.Provider == StreamProvider.YouTube ? $"https://img.youtube.com/vi/{CurrentTrack?.TrackIdentifier}/0.jpg" : null;
                 EmbedBuilder
-                  ?.WithAuthor(CurrentTrack!.Author.SafeSubstring(Constants.MaxEmbedAuthorLength, "...").IsEmpty("Unknown"), iconUrl)
-                  ?.WithTitle(MusicUtils.EscapeTrack(CurrentTrack!.Title).SafeSubstring(Discord.EmbedBuilder.MaxTitleLength, "...")!)
-                  ?.WithUrl(CurrentTrack!.Source);
+                  .WithAuthor(CurrentTrack!.Author.SafeSubstring(Constants.MaxEmbedAuthorLength, "...").IsEmpty("Unknown"), iconUrl)
+                  .WithTitle(MusicUtils.EscapeTrack(CurrentTrack!.Title).SafeSubstring(Discord.EmbedBuilder.MaxTitleLength, "...")!)
+                  .WithUrl(CurrentTrack!.Source);
             }
             else {
                 EmbedBuilder.Author = new EmbedAuthorBuilder();
@@ -464,7 +464,7 @@ namespace Bot.DiscordRelated.Music {
                 EmbedBuilder.Fields["Queue"].Value = Loc.Get("Music.QueueEmpty").Format(GuildConfig.Prefix);
             }
             else {
-                EmbedBuilder.Fields["Queue"].Name = Loc.Get("Music.Queue").Format(CurrentTrackIndex + 1, Playlist.Count);
+                EmbedBuilder.Fields["Queue"].Name = Loc.Get("Music.Queue").Format(CurrentTrackIndex + 1, Playlist.Count, Playlist.TotalPlaylistLenght.FormattedToString());
                 EmbedBuilder.Fields["Queue"].Value = $"```py\n{GetPlaylistString()}```";
             }
 

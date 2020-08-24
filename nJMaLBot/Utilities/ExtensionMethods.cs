@@ -179,5 +179,10 @@ namespace Bot.Utilities {
         public static UserLink ToLink(this IUser user) {
             return new UserLink(user.Id);
         }
+        
+        public static TimeSpan Sum<TSource>(this IEnumerable<TSource> source, Func<TSource, TimeSpan> func)
+        {
+            return new TimeSpan(source.Sum(item => func(item).Ticks));
+        }
     }
 }
