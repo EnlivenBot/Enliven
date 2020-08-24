@@ -172,7 +172,9 @@
       "bassboost0_0s": "Bass boost mode: `Off`, `Low`, `Medium`, `High`, `Extreme`",
       "changenode0s": "Attempts to move playback to another music node. May help if current lags",
       "invite0s": "Represents a link with which you can invite a bot to a server",
-      "logging0s" : "Shows a message logging control panel"
+      "logging0s" : "Shows a message logging control panel",
+      "fixspotify0s" : "Wrong tracks when ordering from Spotify? We need to put an end to this. Together.",
+      "fixspotify0_0s" : "Spotify URL of the desired track"
     },
     "CommandHandler": {
       "FailedTitle": "Error executing command",
@@ -245,7 +247,16 @@
       "CantSend" : "We cannot complete this action in {0} because we do not have the necessary permissions"
     },
     "Chains": {
-      "LoggingTitle": "Logging"
+      "LoggingTitle": "Logging",
+      "FixSpotifyTitle" : "Fix Spotify!",
+      "FixSpotifyQueryNotRecognised": "We cannot recognize the playlist or track in `{0}`",
+      "FixSpotifyAssociationCreationError": "Something went wrong while creating the default association. Try later",
+      "FixSpotifyNotFound" : "We cannot find anything for this request: `{0}`",
+      "FixSpotifyPlaylistChooseName" : "Choose track",
+      "FixSpotifyPlaylistChooseValue" : "To choose a track - write index in the next message. For example: \n> 1",
+      "FixSpotifyNewTrackError" : "No results were found for your query `{0}`, or more than one result was found",
+      "FixSpotifyTrackAlreadyExists" : "Such an association already exists. You automatically upvote it",
+      "FixSpotifyAssociationChoose" : "{0}\n\nTo select an association, write its number, for example:\n> 1\nFast Association Vote:\n> 1 +\nAdding an association:\n> new `Youtube query or url`\nWhen adding a new association, your previous association (if any) will be deleted"
     },
     "Logging": {
       "Enabled": "📝 Logging on this server **enabled** ✅",

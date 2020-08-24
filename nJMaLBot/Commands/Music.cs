@@ -461,5 +461,13 @@ namespace Bot.Commands {
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.NodeChanged").Format(Context.User.Username, newNode.Label));
             Player.UpdateNodeName();
         }
+
+        [Command("fixspotify", RunMode = RunMode.Async)]
+        [Alias("spotify, fs")]
+        [Summary("fixspotify0s")]
+        public async Task FixSpotify([Summary("fixspotify0_0s")] string s) {
+            var fixSpotifyChain = FixSpotifyChain.CreateInstance(Context.User, Context.Channel, Loc, s);
+            await fixSpotifyChain.Start();
+        }
     }
 }

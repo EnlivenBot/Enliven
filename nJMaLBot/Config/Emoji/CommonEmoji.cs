@@ -28,9 +28,12 @@ namespace Bot.Config.Emoji {
         public static global::Discord.Emoji Help { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.Help);
         public static global::Discord.Emoji Memo { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.Memo);
         public static global::Discord.Emoji Robot { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.Robot);
-        public static global::Discord.Emoji ExclamationPoint { get; set; }  = new global::Discord.Emoji(CommonEmojiStrings.Instance.ExclamationPoint);
-        public static global::Discord.Emoji Printer { get; set; }  = new global::Discord.Emoji(CommonEmojiStrings.Instance.Printer);
-        public static global::Discord.Emoji InputNumbers { get; set; }  = new global::Discord.Emoji(CommonEmojiStrings.Instance.InputNumbers);
+        public static global::Discord.Emoji ExclamationPoint { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.ExclamationPoint);
+        public static global::Discord.Emoji Printer { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.Printer);
+        public static global::Discord.Emoji InputNumbers { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.InputNumbers);
+        public static global::Discord.Emoji ThumbsUp { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.ThumbsUp);
+        public static global::Discord.Emoji ThumbsDown { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.ThumbsDown);
+        public static global::Discord.Emoji Warning { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.Warning);
     }
 
     public class CommonEmojiStrings {
@@ -73,5 +76,8 @@ namespace Bot.Config.Emoji {
         public string ExclamationPoint { get; set; } = "⁉️";
         public string Printer { get; set; } = "🖨️";
         public string InputNumbers { get; set; } = "🔢";
+        public string ThumbsUp { get; set; } = "👍";
+        public string ThumbsDown { get; set; } = "👎";
+        public string Warning { get; set; } = "⚠️";
     }
 }

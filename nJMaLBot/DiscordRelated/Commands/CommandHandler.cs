@@ -216,17 +216,17 @@ namespace Bot.DiscordRelated.Commands {
                 return;
             }
                 
-            (await message.Channel.SendMessageAsync(null, false, GetErrorEmbed(message, loc, description).WithFields(fieldBuilders).Build())).DelayedDelete(
+            (await message.Channel.SendMessageAsync(null, false, GetErrorEmbed(message.Author, loc, description).WithFields(fieldBuilders).Build())).DelayedDelete(
                 Constants.LongTimeSpan);
         }
 
         private static async Task SendErrorMessage(SocketUserMessage message, ILocalizationProvider loc, string description) {
-            (await message.Channel.SendMessageAsync(null, false, GetErrorEmbed(message, loc, description).Build())).DelayedDelete(Constants.LongTimeSpan);
+            (await message.Channel.SendMessageAsync(null, false, GetErrorEmbed(message.Author, loc, description).Build())).DelayedDelete(Constants.LongTimeSpan);
         }
 
-        private static EmbedBuilder GetErrorEmbed(SocketUserMessage message, ILocalizationProvider loc, string description) {
+        public static EmbedBuilder GetErrorEmbed(IUser user, ILocalizationProvider loc, string description) {
             var builder = new EmbedBuilder();
-            builder.WithFooter(loc.Get("Commands.RequestedBy").Format(message.Author.Username), message.Author.GetAvatarUrl())
+            builder.WithFooter(loc.Get("Commands.RequestedBy").Format(user.Username), user.GetAvatarUrl())
                    .WithColor(Color.Orange);
             builder.WithTitle(loc.Get("CommandHandler.FailedTitle"))
                    .WithDescription(description);

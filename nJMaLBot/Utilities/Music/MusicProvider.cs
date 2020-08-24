@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Bot.Music;
 using Lavalink4NET.Cluster;
 using Lavalink4NET.Player;
 
@@ -23,6 +24,9 @@ namespace Bot.Utilities.Music {
                 if (musicProvider != null) {
                     return await musicProvider.Provide();
                 }
+            }
+            catch (NothingFoundException e) {
+                if (!e.AllowFallback) throw;
             }
             catch (Exception) {
                 // ignored

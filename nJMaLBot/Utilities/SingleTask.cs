@@ -96,7 +96,7 @@ namespace Bot.Utilities {
                 delay = TimeSpan.Zero;
             }
 
-            _betweenExecutionsDelayTask = Task.Delay(delay);
+            _betweenExecutionsDelayTask = Task.Delay(delay < TimeSpan.FromDays(10) ? delay : TimeSpan.FromMilliseconds(-1));
         }
 
         private async Task<T> QueueExecuteDirty(Task first) {
