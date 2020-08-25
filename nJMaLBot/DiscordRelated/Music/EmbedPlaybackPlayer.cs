@@ -112,7 +112,7 @@ namespace Bot.DiscordRelated.Music {
             UpdateProgress();
         }
 
-        public override async Task Shutdown(string reason, bool needSave = true) {
+        public override async Task ExecuteShutdown(string reason, bool needSave = true) {
             if (ControlMessage != null) {
                 var oldControlMessage = ControlMessage;
                 ControlMessage = null;
@@ -140,14 +140,7 @@ namespace Bot.DiscordRelated.Music {
             _queueMessage?.StopAndClear();
 
             UpdatePlayback = false;
-
-            try {
-                PlayersController.PlaybackPlayers.Remove(this);
-                base.Shutdown(reason, needSave);
-            }
-            catch (Exception) {
-                // ignored
-            }
+            base.ExecuteShutdown(reason, needSave);
         }
 
         public override void WriteToQueueHistory(string entry, bool background = false) {
@@ -441,9 +434,9 @@ namespace Bot.DiscordRelated.Music {
             else if ((State != PlayerState.NotPlaying || State != PlayerState.NotConnected || State != PlayerState.Destroyed) && CurrentTrack != null) {
                 var iconUrl = CurrentTrack.Provider == StreamProvider.YouTube ? $"https://img.youtube.com/vi/{CurrentTrack?.TrackIdentifier}/0.jpg" : null;
                 EmbedBuilder
-                  .WithAuthor(CurrentTrack!.Author.SafeSubstring(Constants.MaxEmbedAuthorLength, "...").IsEmpty("Unknown"), iconUrl)
-                  .WithTitle(MusicUtils.EscapeTrack(CurrentTrack!.Title).SafeSubstring(Discord.EmbedBuilder.MaxTitleLength, "...")!)
-                  .WithUrl(CurrentTrack!.Source);
+                   .WithAuthor(CurrentTrack!.Author.SafeSubstring(Constants.MaxEmbedAuthorLength, "...").IsEmpty("Unknown"), iconUrl)
+                   .WithTitle(MusicUtils.EscapeTrack(CurrentTrack!.Title).SafeSubstring(Discord.EmbedBuilder.MaxTitleLength, "...")!)
+                   .WithUrl(CurrentTrack!.Source);
             }
             else {
                 EmbedBuilder.Author = new EmbedAuthorBuilder();
@@ -464,7 +457,8 @@ namespace Bot.DiscordRelated.Music {
                 EmbedBuilder.Fields["Queue"].Value = Loc.Get("Music.QueueEmpty").Format(GuildConfig.Prefix);
             }
             else {
-                EmbedBuilder.Fields["Queue"].Name = Loc.Get("Music.Queue").Format(CurrentTrackIndex + 1, Playlist.Count, Playlist.TotalPlaylistLenght.FormattedToString());
+                EmbedBuilder.Fields["Queue"].Name =
+                    Loc.Get("Music.Queue").Format(CurrentTrackIndex + 1, Playlist.Count, Playlist.TotalPlaylistLenght.FormattedToString());
                 EmbedBuilder.Fields["Queue"].Value = $"```py\n{GetPlaylistString()}```";
             }
 

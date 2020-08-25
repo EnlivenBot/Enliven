@@ -20,7 +20,7 @@ namespace Bot.DiscordRelated.Music {
         public readonly ILocalizationProvider Loc;
         protected BassBoostMode BassBoostMode { get; private set; } = BassBoostMode.Off;
         private int _updateFailCount;
-        private int UpdateFailThreshold = 2;
+        private const int UpdateFailThreshold = 2;
         protected bool IsExternalEmojiAllowed { get; set; } = true;
 
         public AdvancedLavalinkPlayer(ulong guildId) {
@@ -53,18 +53,22 @@ namespace Bot.DiscordRelated.Music {
 
         public bool IsShutdowned { get; private set; }
 
-        public virtual void Shutdown(EntryLocalized reason, bool needSave = true) {
-            Shutdown(reason.Get(Loc), needSave);
+        public event EventHandler<IEntry> Shutdown; 
+
+        public virtual void ExecuteShutdown(EntryLocalized reason, bool needSave = true) {
+            ExecuteShutdown(reason.Get(Loc), needSave);
         }
 
-        public virtual Task Shutdown(string reason, bool needSave = true) {
+        public virtual Task ExecuteShutdown(string reason, bool needSave = true) {
             IsShutdowned = true;
+            // TODO Fix that
+            Shutdown.Invoke(this, new EntryString(reason));
             base.Dispose();
             return Task.CompletedTask;
         }
 
-        public virtual Task Shutdown(bool needSave = true) {
-            Shutdown(Loc.Get("Music.PlaybackStopped"), needSave);
+        public virtual Task ExecuteShutdown(bool needSave = true) {
+            ExecuteShutdown(Loc.Get("Music.PlaybackStopped"), needSave);
             return Task.CompletedTask;
         }
 
@@ -74,7 +78,7 @@ namespace Bot.DiscordRelated.Music {
         [Obsolete]
         public override void Dispose() {
             if (!IsShutdowned) logger.Error("Player disposed. Stacktrace: \n{stacktrace}", new StackTrace().ToString());
-            Shutdown();
+            ExecuteShutdown();
         }
 
         /// <summary>
@@ -95,7 +99,7 @@ namespace Bot.DiscordRelated.Music {
 
             if (_updateFailCount >= UpdateFailThreshold) {
                 logger.Info("Player {guildId} disposed due to state {state}", GuildId, State);
-                Shutdown();
+                ExecuteShutdown();
                 throw new ObjectDisposedException("Player", $"Player disposed due to {State}");
             }
         }

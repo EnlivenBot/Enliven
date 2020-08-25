@@ -56,13 +56,11 @@ namespace Bot.Music {
                             }, _lavalinkLogger);
                         inactivityTrackingService.InactivePlayer += (sender, args) => {
                             if (args.Player is EmbedPlaybackPlayer embedPlaybackPlayer) {
-                                embedPlaybackPlayer.Shutdown(new EntryLocalized("Music.NoListenersLeft"), false);
+                                embedPlaybackPlayer.ExecuteShutdown(new EntryLocalized("Music.NoListenersLeft"), false);
                             }
 
                             return Task.CompletedTask;
                         };
-
-                        AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
                     }
                     catch (Exception e) {
                         logger.Fatal(e, "Exception while initializing music cluster");
@@ -106,13 +104,6 @@ namespace Bot.Music {
             // Dummy method to initialize static properties
         }
 
-        private static void OnProcessExit(object? sender, EventArgs e) {
-            if (Cluster == null) return;
-            foreach (var embedPlaybackPlayer in Cluster.GetPlayers<EmbedPlaybackPlayer>()) {
-                embedPlaybackPlayer.Shutdown();
-            }
-        }
-
         private static Task ClusterOnPlayerMoved(object sender, PlayerMovedEventArgs args) {
             var player = args.Player as EmbedPlaybackPlayer;
             if (args.CouldBeMoved) {
@@ -120,7 +111,7 @@ namespace Bot.Music {
                 player?.UpdateNodeName();
             }
             else {
-                player?.Shutdown(new EntryLocalized("Music.PlayerDropped"));
+                player?.ExecuteShutdown(new EntryLocalized("Music.PlayerDropped"));
             }
 
             return Task.CompletedTask;

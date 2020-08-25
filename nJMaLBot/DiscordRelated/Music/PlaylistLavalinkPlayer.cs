@@ -118,10 +118,10 @@ namespace Bot.DiscordRelated.Music {
             await base.DisconnectAsync();
         }
 
-        public override Task Shutdown(string reason, bool needSave = true) {
+        public override Task ExecuteShutdown(string reason, bool needSave = true) {
             Playlist.Clear();
             CurrentTrackIndex = 0;
-            return base.Shutdown(reason, needSave);
+            return base.ExecuteShutdown(reason, needSave);
         }
 
         public virtual ExportPlaylist ExportPlaylist(ExportPlaylistOptions options) {

@@ -39,7 +39,7 @@ namespace Bot.DiscordRelated.Commands.Modules {
             ErrorMessageController = nonSpamMessageController;
 
             try {
-                Player = MusicUtils.Cluster.GetPlayer<EmbedPlaybackPlayer>(Context.Guild.Id);
+                Player = PlayersController.GetPlayer(Context.Guild.Id)!;
             }
             catch (NullReferenceException) {
                 nonSpamMessageController.AddEntry(Loc.Get("Music.MusicDisabled")).Update();
@@ -78,7 +78,7 @@ namespace Bot.DiscordRelated.Commands.Modules {
                         return false;
                     }
 
-                    Player = await PlayersController.JoinChannel(Context.Guild.Id, user.VoiceChannel!.Id);
+                    Player = await PlayersController.ProvidePlayer(Context.Guild.Id, user.VoiceChannel!.Id);
                     return true;
                 }
 
