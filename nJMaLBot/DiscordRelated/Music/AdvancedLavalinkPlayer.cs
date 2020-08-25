@@ -55,21 +55,19 @@ namespace Bot.DiscordRelated.Music {
 
         public event EventHandler<IEntry> Shutdown; 
 
-        public virtual void ExecuteShutdown(EntryLocalized reason, bool needSave = true) {
-            ExecuteShutdown(reason.Get(Loc), needSave);
-        }
-
-        public virtual Task ExecuteShutdown(string reason, bool needSave = true) {
+        public virtual Task ExecuteShutdown(IEntry reason, bool needSave = true) {
             IsShutdowned = true;
-            // TODO Fix that
-            Shutdown.Invoke(this, new EntryString(reason));
+            Shutdown.Invoke(this, reason);
             base.Dispose();
             return Task.CompletedTask;
         }
 
-        public virtual Task ExecuteShutdown(bool needSave = true) {
-            ExecuteShutdown(Loc.Get("Music.PlaybackStopped"), needSave);
-            return Task.CompletedTask;
+        public Task ExecuteShutdown(string reason, bool needSave = true) {
+            return ExecuteShutdown(new EntryString(reason), needSave);
+        }
+
+        public Task ExecuteShutdown(bool needSave = true) {
+            return ExecuteShutdown(new EntryLocalized("Music.PlaybackStopped"), needSave);
         }
 
         /// <summary>

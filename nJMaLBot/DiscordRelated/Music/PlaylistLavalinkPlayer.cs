@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Bot.Config.Localization.Entries;
 using Bot.DiscordRelated.Commands;
 using Bot.Music;
 using Bot.Utilities;
@@ -118,7 +119,7 @@ namespace Bot.DiscordRelated.Music {
             await base.DisconnectAsync();
         }
 
-        public override Task ExecuteShutdown(string reason, bool needSave = true) {
+        public override Task ExecuteShutdown(IEntry reason, bool needSave = true) {
             Playlist.Clear();
             CurrentTrackIndex = 0;
             return base.ExecuteShutdown(reason, needSave);

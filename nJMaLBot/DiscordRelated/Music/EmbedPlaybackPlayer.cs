@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Bot.Config;
 using Bot.Config.Emoji;
+using Bot.Config.Localization.Entries;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Criteria;
 using Bot.Music;
@@ -112,17 +113,17 @@ namespace Bot.DiscordRelated.Music {
             UpdateProgress();
         }
 
-        public override async Task ExecuteShutdown(string reason, bool needSave = true) {
+        public override async Task ExecuteShutdown(IEntry reason, bool needSave = true) {
             if (ControlMessage != null) {
                 var oldControlMessage = ControlMessage;
                 ControlMessage = null;
                 var embedBuilder = new EmbedBuilder()
                                   .WithTitle(Loc.Get("Music.PlaybackStopped"))
-                                  .WithDescription(reason);
+                                  .WithDescription(reason.Get(Loc));
                 if (needSave) {
                     var exportPlaylist = ExportPlaylist(ExportPlaylistOptions.AllData);
                     var storedPlaylist = exportPlaylist.StorePlaylist("a" + ObjectId.NewObjectId(), 0);
-                    embedBuilder.Description += Loc.Get("Music.ResumeViaPlaylists").Format(GuildConfig.Get(GuildId).Prefix, storedPlaylist.Id);
+                    embedBuilder.Description += Loc.Get("Music.ResumeViaPlaylists", GuildConfig.Prefix, storedPlaylist.Id);
                 }
                 else {
                     oldControlMessage.DelayedDelete(Constants.LongTimeSpan);
