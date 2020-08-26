@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using Bot.Config;
 using Bot.Config.Localization.Entries;
@@ -7,9 +8,11 @@ using Bot.Config.Localization.Providers;
 using Bot.Music;
 using Bot.Utilities;
 using Discord;
+using HarmonyLib;
 using Lavalink4NET;
 using Lavalink4NET.Player;
 using NLog;
+using Tyrrrz.Extensions;
 
 namespace Bot.DiscordRelated.Music {
     public class AdvancedLavalinkPlayer : LavalinkPlayer {
@@ -36,7 +39,7 @@ namespace Bot.DiscordRelated.Music {
 
         public virtual async Task SetVolumeAsync(int volume = 100) {
             volume = volume.Normalize(0, 150);
-            await base.SetVolumeAsync((float)volume / 100);
+            await base.SetVolumeAsync((float) volume / 100);
             var guildConfig = GuildConfig.Get(GuildId);
             guildConfig.Volume = volume;
             guildConfig.Save();
@@ -44,7 +47,7 @@ namespace Bot.DiscordRelated.Music {
 
         [Obsolete]
         public override async Task SetVolumeAsync(float volume = 1, bool normalize = false) {
-            await SetVolumeAsync((int)(volume * 100));
+            await SetVolumeAsync((int) (volume * 100));
         }
 
         public virtual void SetBassBoostMode(BassBoostMode mode) {
@@ -53,7 +56,7 @@ namespace Bot.DiscordRelated.Music {
 
         public bool IsShutdowned { get; private set; }
 
-        public event EventHandler<IEntry> Shutdown; 
+        public event EventHandler<IEntry> Shutdown;
 
         public virtual Task ExecuteShutdown(IEntry reason, bool needSave = true) {
             IsShutdowned = true;
@@ -74,9 +77,24 @@ namespace Bot.DiscordRelated.Music {
         /// This method is called only from third-party code.
         /// </summary>
         [Obsolete]
-        public override void Dispose() {
+        public override async void Dispose() {
             if (!IsShutdowned) logger.Error("Player disposed. Stacktrace: \n{stacktrace}", new StackTrace().ToString());
-            ExecuteShutdown();
+
+            if (AccessTools.Property(typeof(LavalinkPlayer), "LavalinkSocket").GetValue(this) is LavalinkNode currentNode) {
+                var newNode = MusicUtils.Cluster.Nodes.Where(node => node.IsConnected).Where(node => node != currentNode).RandomOrDefault();
+                if (newNode != null) {
+                    await currentNode.MovePlayerAsync(this, newNode);
+                    await ConnectAsync(VoiceChannelId!.Value);
+                }
+                else {
+                    await currentNode.JoinAsync(() => this, GuildId, VoiceChannelId!.Value);
+                }
+                
+                return;
+            }
+            
+
+            await ExecuteShutdown();
         }
 
         /// <summary>
