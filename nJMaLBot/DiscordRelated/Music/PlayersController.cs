@@ -65,7 +65,7 @@ namespace Bot.DiscordRelated.Music {
             
             var player = await MusicUtils.Cluster!.JoinAsync(() => new EmbedPlaybackPlayer(guildId), guildId, voiceChannelId);
             player.Shutdown += PlayerOnShutdown;
-            player.UpdateNodeName();
+            await player.NodeChanged();
             PlaybackPlayers.Add(player);
             return player;
         }

@@ -13,6 +13,7 @@ using Bot.Music;
 using Bot.Utilities;
 using Bot.Utilities.Collector;
 using Discord;
+using Lavalink4NET;
 using Lavalink4NET.Decoding;
 using Lavalink4NET.Events;
 using Lavalink4NET.Player;
@@ -499,9 +500,10 @@ namespace Bot.DiscordRelated.Music {
             }
         }
 
-        public void UpdateNodeName() {
-            var currentNode = MusicUtils.Cluster!.GetServingNode(GuildId);
-            EmbedBuilder.WithFooter($"Powered by {Program.Client.CurrentUser.Username} | {currentNode.Label}");
+        public override async Task NodeChanged(LavalinkNode? node = null) {
+            node ??= MusicUtils.Cluster!.GetServingNode(GuildId);
+            EmbedBuilder.WithFooter($"Powered by {Program.Client.CurrentUser.Username} | {node.Label}");
+            base.NodeChanged(node);
         }
 
         #endregion

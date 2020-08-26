@@ -7,6 +7,7 @@ using Bot.Config.Localization.Entries;
 using Bot.DiscordRelated.Commands;
 using Bot.Music;
 using Bot.Utilities;
+using Lavalink4NET;
 using Lavalink4NET.Decoding;
 using Lavalink4NET.Events;
 using Lavalink4NET.Player;
@@ -72,6 +73,7 @@ namespace Bot.DiscordRelated.Music {
                     if (newNode != null) {
                         await currentNode.MovePlayerAsync(this, newNode);
                         WriteToQueueHistory(Loc.Get("MusicQueues.NodeChanged").Format("SYSTEM", newNode.Label));
+                        await NodeChanged(newNode);
                     }
                 }
                 finally {
@@ -82,6 +84,10 @@ namespace Bot.DiscordRelated.Music {
             if (eventArgs.MayStartNext && eventArgs.Reason != TrackEndReason.LoadFailed) {
                 await SkipAsync();
             }
+        }
+
+        public virtual Task NodeChanged(LavalinkNode? node = null) {
+            return Task.CompletedTask;
         }
 
         public virtual async Task<int> PlayAsync(LavalinkTrack track, bool enqueue, TimeSpan? startTime = null, TimeSpan? endTime = null,

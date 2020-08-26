@@ -108,7 +108,7 @@ namespace Bot.Music {
             var player = args.Player as EmbedPlaybackPlayer;
             if (args.CouldBeMoved) {
                 player?.WriteToQueueHistory(player.Loc.Get("Music.PlayerMoved"));
-                player?.UpdateNodeName();
+                player?.NodeChanged(args.TargetNode);
             }
             else {
                 player?.ExecuteShutdown(new EntryLocalized("Music.PlayerDropped"));
