@@ -39,7 +39,7 @@ namespace Bot.DiscordRelated.Music {
                         properties.Content = "";
                     });
                 }
-            }) {BetweenExecutionsDelay = TimeSpan.FromSeconds(1), CanBeDirty = true};
+            }) {BetweenExecutionsDelay = TimeSpan.FromSeconds(1.5), CanBeDirty = true};
             _controlMessageSendTask = new SingleTask(async () => {
                 try {
                     await SetControlMessage(await _controlMessageChannel.SendMessageAsync(Loc.Get("Music.Loading")));

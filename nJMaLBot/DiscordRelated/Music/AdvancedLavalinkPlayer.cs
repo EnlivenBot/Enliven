@@ -23,7 +23,8 @@ namespace Bot.DiscordRelated.Music {
         public readonly ILocalizationProvider Loc;
         protected BassBoostMode BassBoostMode { get; private set; } = BassBoostMode.Off;
         private int _updateFailCount;
-        private const int UpdateFailThreshold = 2;
+        private ulong _lastVoiceChannelId;
+        private const int UpdateFailThreshold = 5;
         protected bool IsExternalEmojiAllowed { get; set; } = true;
 
         public AdvancedLavalinkPlayer(ulong guildId) {
@@ -78,23 +79,42 @@ namespace Bot.DiscordRelated.Music {
         /// </summary>
         [Obsolete]
         public override async void Dispose() {
-            if (!IsShutdowned) logger.Error("Player disposed. Stacktrace: \n{stacktrace}", new StackTrace().ToString());
+            if (!IsShutdowned) {
+                logger.Error("Player disposed. Stacktrace: \n{stacktrace}", new StackTrace().ToString());
 
-            if (AccessTools.Property(typeof(LavalinkPlayer), "LavalinkSocket").GetValue(this) is LavalinkNode currentNode) {
-                var newNode = MusicUtils.Cluster.Nodes.Where(node => node.IsConnected).Where(node => node != currentNode).RandomOrDefault();
-                if (newNode != null) {
-                    await currentNode.MovePlayerAsync(this, newNode);
-                    await ConnectAsync(VoiceChannelId!.Value);
+                try {
+                    if (!(AccessTools.Property(typeof(LavalinkPlayer), "LavalinkSocket").GetValue(this) is LavalinkNode currentNode))
+                        throw new Exception("LavalinkSocket not found");
+                    var newNode = MusicUtils.Cluster.Nodes.Where(node => node.IsConnected).Where(node => node != currentNode).RandomOrDefault();
+                    if (newNode != null) {
+                        await currentNode.MovePlayerAsync(this, newNode);
+                        await ConnectAsync(_lastVoiceChannelId);
+                    }
+                    else {
+                        await currentNode.JoinAsync(() => this, GuildId, _lastVoiceChannelId);
+                    }
+
+                    await PlayAsync(CurrentTrack, TrackPosition);
+
+                    if (State != PlayerState.Playing) throw new Exception("Something went wrong, executing shutdown");
                 }
-                else {
-                    await currentNode.JoinAsync(() => this, GuildId, VoiceChannelId!.Value);
+                catch (Exception) {
+                    await ExecuteShutdown();
                 }
-                
-                return;
             }
-            
+            else {
+                try {
+                    base.Dispose();
+                }
+                catch (Exception) {
+                    // ignored
+                }
+            }
+        }
 
-            await ExecuteShutdown();
+        public override Task ConnectAsync(ulong voiceChannelId, bool selfDeaf = false, bool selfMute = false) {
+            _lastVoiceChannelId = voiceChannelId;
+            return base.ConnectAsync(voiceChannelId, selfDeaf, selfMute);
         }
 
         /// <summary>
