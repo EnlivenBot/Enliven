@@ -7,6 +7,7 @@ using Bot.Config.Localization.Entries;
 using Bot.DiscordRelated.Commands;
 using Bot.Music;
 using Bot.Utilities;
+using Bot.Utilities.History;
 using Lavalink4NET;
 using Lavalink4NET.Decoding;
 using Lavalink4NET.Events;
@@ -233,7 +234,8 @@ namespace Bot.DiscordRelated.Music {
             return Task.CompletedTask;
         }
 
-        public virtual void WriteToQueueHistory(string entry, bool background = false) { }
+        public virtual void WriteToQueueHistory(string entry) { }
+        public virtual void WriteToQueueHistory(HistoryEntry entry) { }
     }
 
     public enum LoopingState {

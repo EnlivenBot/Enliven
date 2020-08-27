@@ -12,6 +12,7 @@ using Bot.DiscordRelated.Criteria;
 using Bot.Music;
 using Bot.Utilities;
 using Bot.Utilities.Collector;
+using Bot.Utilities.History;
 using Discord;
 using Lavalink4NET;
 using Lavalink4NET.Decoding;
@@ -25,7 +26,7 @@ using LiteDB;
 
 namespace Bot.DiscordRelated.Music {
     public sealed class EmbedPlaybackPlayer : PlaylistLavalinkPlayer {
-        private readonly StringBuilder _queueHistory = new StringBuilder();
+        private readonly HistoryCollection _queueHistory = new HistoryCollection(Constants.MaxQueueHistoryChars, 1000);
         private PriorityEmbedBuilderWrapper EmbedBuilder = new PriorityEmbedBuilderWrapper();
         public bool UpdatePlayback;
 
@@ -62,6 +63,10 @@ namespace Bot.DiscordRelated.Music {
             UpdateQueue();
             UpdateParameters();
             Playlist.Update += (sender, args) => UpdateQueueMessageContent();
+            _queueHistory.HistoryChanged += (sender, args) => {
+                EmbedBuilder.Fields["RequestHistory"].Value = _queueHistory.GetLastHistory(Loc, out var isChanged);
+                if (isChanged) UpdateControlMessage();
+            };
         }
 
         public IUserMessage? ControlMessage { get; private set; }
@@ -144,16 +149,13 @@ namespace Bot.DiscordRelated.Music {
             UpdatePlayback = false;
             base.ExecuteShutdown(reason, needSave);
         }
+        
+        public override void WriteToQueueHistory(HistoryEntry entry) {
+            _queueHistory.Add(entry);
+        }
 
-        public override void WriteToQueueHistory(string entry, bool background = false) {
-            _queueHistory.AppendLine("- " + entry);
-            while (_queueHistory.Length > Constants.MaxQueueHistoryChars) {
-                var indexOf = _queueHistory.ToString().IndexOf(Environment.NewLine, StringComparison.Ordinal);
-                if (indexOf >= 0) _queueHistory.Remove(0, indexOf + Environment.NewLine.Length);
-            }
-
-            EmbedBuilder.Fields["RequestHistory"].Value = _queueHistory.ToString().Replace("\n\n", "\n");
-            UpdateControlMessage(background);
+        public override void WriteToQueueHistory(string entry) {
+            _queueHistory.Add(new HistoryEntry(new EntryString(entry)));
         }
 
         public Task SetControlMessage(IUserMessage message) {
@@ -182,11 +184,11 @@ namespace Bot.DiscordRelated.Music {
             await base.Enqueue(tracks, position);
             if (tracks.Count == 1) {
                 var track = tracks.First();
-                WriteToQueueHistory(Loc.Get("MusicQueues.Enqueued").Format(track.GetRequester(), MusicUtils.EscapeTrack(track.Title)), true);
+                WriteToQueueHistory(Loc.Get("MusicQueues.Enqueued").Format(track.GetRequester(), MusicUtils.EscapeTrack(track.Title)));
             }
             else if (tracks.Count > 1) {
                 var author = tracks.First().GetRequester();
-                WriteToQueueHistory(Loc.Get("MusicQueues.EnqueuedMany").Format(author, tracks.Count), true);
+                WriteToQueueHistory(Loc.Get("MusicQueues.EnqueuedMany").Format(author, tracks.Count));
             }
         }
 
