@@ -4,9 +4,12 @@ using Bot.Config.Localization.Entries;
 namespace Bot.Utilities.History {
     public class HistoryEntry {
         private IEntry _entry = null!;
+        
+        public string? Identifier { get; private set; }
 
-        public HistoryEntry(IEntry entry) {
+        public HistoryEntry(IEntry entry, string? identifier = null) {
             Entry = entry;
+            Identifier = identifier;
         }
 
         public event EventHandler? Updated;

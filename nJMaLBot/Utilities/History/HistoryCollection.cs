@@ -16,8 +16,10 @@ namespace Bot.Utilities.History {
 
         private readonly List<HistoryEntry> entries = new List<HistoryEntry>();
         private int _firstAffectedIndex;
+        private bool _ignoreDuplicateIds;
 
-        public HistoryCollection(int maxLastHistoryLenght = int.MaxValue, int maxEntriesCount = int.MaxValue) {
+        public HistoryCollection(int maxLastHistoryLenght = int.MaxValue, int maxEntriesCount = int.MaxValue, bool ignoreDuplicateIds = true) {
+            _ignoreDuplicateIds = ignoreDuplicateIds;
             _maxEntriesCount = maxEntriesCount;
             _maxLastHistoryLenght = maxLastHistoryLenght;
         }
@@ -53,6 +55,10 @@ namespace Bot.Utilities.History {
         }
 
         public void Add(HistoryEntry item) {
+            if (item.Identifier != null && !_ignoreDuplicateIds && entries.LastOrDefault()?.Identifier == item.Identifier) {
+                RemoveAt(Count - 1);
+            }
+
             entries.Add(item);
             SubscribeItem(item);
             OnHistoryChanged(entries.Count - 1);
@@ -76,11 +82,16 @@ namespace Bot.Utilities.History {
         }
 
         public bool Remove(HistoryEntry item) {
-            var index = IndexOf(item);
-            var result = entries.Remove(item);
-            UnsubscribeItem(item);
-            OnHistoryChanged(index);
-            return result;
+            try {
+                var index = IndexOf(item);
+                var result = entries.Remove(item);
+                UnsubscribeItem(item);
+                OnHistoryChanged(index);
+                return result;
+            }
+            catch (Exception) {
+                return false;
+            }
         }
 
         public int Count => entries.Count;
