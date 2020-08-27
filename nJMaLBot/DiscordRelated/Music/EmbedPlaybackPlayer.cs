@@ -26,7 +26,7 @@ using LiteDB;
 
 namespace Bot.DiscordRelated.Music {
     public sealed class EmbedPlaybackPlayer : PlaylistLavalinkPlayer {
-        private readonly HistoryCollection _queueHistory = new HistoryCollection(Constants.MaxQueueHistoryChars, 1000);
+        private readonly HistoryCollection _queueHistory = new HistoryCollection(Constants.MaxQueueHistoryChars, 1000, false);
         private PriorityEmbedBuilderWrapper EmbedBuilder = new PriorityEmbedBuilderWrapper();
         public bool UpdatePlayback;
 

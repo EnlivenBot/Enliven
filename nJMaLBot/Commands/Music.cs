@@ -4,11 +4,13 @@ using System.Linq;
 using System.Threading.Tasks;
 using Bot.Commands.Chains;
 using Bot.Config;
+using Bot.Config.Localization.Entries;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
 using Bot.DiscordRelated.Music;
 using Bot.Music;
 using Bot.Utilities;
+using Bot.Utilities.History;
 using Discord.Commands;
 using Lavalink4NET.Player;
 using Lavalink4NET.Rest;
@@ -126,7 +128,9 @@ namespace Bot.Commands {
             }
 
             await Player.SetVolumeAsync(volume);
-            Player.WriteToQueueHistory(Loc.Get("MusicQueues.NewVolume").Format(Context.User.Username, volume));
+            Player.WriteToQueueHistory(new HistoryEntry(
+                new EntryLocalized("MusicQueues.NewVolume", Context.User.Username, volume),
+                $"{Context.User.Id}volume"));
         }
 
         [Command("repeat", RunMode = RunMode.Async)]
@@ -141,7 +145,9 @@ namespace Bot.Commands {
 
             Player.LoopingState = state;
             Player.UpdateProgress();
-            Player.WriteToQueueHistory(Loc.Get("MusicQueues.RepeatSet").Format(Context.User.Username, Player.LoopingState.ToString()));
+            Player.WriteToQueueHistory(new HistoryEntry(
+                new EntryLocalized("MusicQueues.RepeatSet", Context.User.Username, Player.LoopingState.ToString()),
+                $"{Context.User.Id}repeat"));
         }
 
         [Command("repeat", RunMode = RunMode.Async)]
