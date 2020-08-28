@@ -1,28 +1,26 @@
 ﻿using System;
 using Bot.Config.Localization.Entries;
+using Bot.Config.Localization.Providers;
 
 namespace Bot.Utilities.History {
-    public class HistoryEntry {
-        private IEntry _entry = null!;
-        
-        public string? Identifier { get; private set; }
-
+    // ReSharper disable once ClassWithVirtualMembersNeverInherited.Global
+    public class HistoryEntry : IEntry {
         public HistoryEntry(IEntry entry, string? identifier = null) {
             Entry = entry;
             Identifier = identifier;
         }
 
+        public string? Identifier { get; private set; }
+
+        private IEntry Entry { get; set; }
+
+        public virtual string Get(ILocalizationProvider provider, params object[] additionalArgs) {
+            return Entry.Get(provider, additionalArgs);
+        }
+
         public event EventHandler? Updated;
         public event EventHandler? Removing;
         public event EventHandler<InsertingEventArgs>? Inserting;
-
-        public IEntry Entry {
-            get => _entry;
-            set {
-                _entry = value;
-                OnEntryUpdated();
-            }
-        }
 
         protected virtual void OnEntryUpdated() {
             Updated?.Invoke(this, EventArgs.Empty);
@@ -34,6 +32,17 @@ namespace Bot.Utilities.History {
 
         protected virtual void Insert(HistoryEntry entryToInsert, bool insertToStart) {
             Inserting?.Invoke(this, new InsertingEventArgs(entryToInsert, insertToStart));
+        }
+
+        public virtual void Update(IEntry? entry = null) {
+            if (entry != null) {
+                SilentUpdate(entry);
+            }
+            OnEntryUpdated();
+        }
+
+        public virtual void SilentUpdate(IEntry entry) {
+            Entry = entry;
         }
 
         public class InsertingEventArgs : EventArgs {

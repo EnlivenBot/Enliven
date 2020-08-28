@@ -8,15 +8,14 @@ using Bot.Config.Localization.Providers;
 
 namespace Bot.Utilities.History {
     public class HistoryCollection : IList<HistoryEntry>, IEntry {
-        private string? _lastHistory;
-        private bool _isChanged = true;
-        private ILocalizationProvider? _lastProvider;
-        private int _maxEntriesCount;
-        private int _maxLastHistoryLenght;
-
         private readonly List<HistoryEntry> entries = new List<HistoryEntry>();
         private int _firstAffectedIndex;
         private bool _ignoreDuplicateIds;
+        private bool _isChanged = true;
+        private string? _lastHistory;
+        private ILocalizationProvider? _lastProvider;
+        private int _maxEntriesCount;
+        private int _maxLastHistoryLenght;
 
         public HistoryCollection(int maxLastHistoryLenght = int.MaxValue, int maxEntriesCount = int.MaxValue, bool ignoreDuplicateIds = true) {
             _ignoreDuplicateIds = ignoreDuplicateIds;
@@ -139,13 +138,10 @@ namespace Bot.Utilities.History {
 
             var index = entries.Count - 1;
             for (; index >= 0; index--) {
-                var s = entries[index].Entry.Get(provider);
-                if (stringBuilder.Length + s.Length <= MaxLastHistoryLenght) {
-                    stringBuilder.Insert(0, s + Environment.NewLine);
-                }
-                else {
+                var s = entries[index].Get(provider);
+                if (stringBuilder.Length + s.Length > MaxLastHistoryLenght)
                     break;
-                }
+                stringBuilder.Insert(0, s + Environment.NewLine);
             }
 
             _firstAffectedIndex = index;
