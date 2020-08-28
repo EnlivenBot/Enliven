@@ -134,25 +134,44 @@ namespace Bot.Utilities.History {
                 return _lastHistory;
             }
 
-            var stringBuilder = new StringBuilder();
-
-            var index = entries.Count - 1;
-            for (; index >= 0; index--) {
-                var s = entries[index].Get(provider);
-                if (stringBuilder.Length + s.Length > MaxLastHistoryLenght)
-                    break;
-                stringBuilder.Insert(0, s + Environment.NewLine);
-            }
-
-            _firstAffectedIndex = index;
+            var result = BuildHistory();
 
             _isChanged = false;
             _lastProvider = provider;
 
-            var result = stringBuilder.ToString();
             isChanged = _lastHistory != result;
-
             return _lastHistory = result;
+
+            string BuildHistory() {
+                string? lastEntry = null;
+                var count = 1;
+                var stringBuilder = new StringBuilder();
+
+                var index = entries.Count - 1;
+                for (; index >= 0; index--) {
+                    var s = entries[index].Get(provider);
+                    if (lastEntry == s && !_ignoreDuplicateIds) {
+                        count++;
+                    }
+                    else {
+                        if (!AppendEntry()) return stringBuilder.ToString();
+                        lastEntry = s;
+                        count = 1;
+                    }
+                }
+
+                _firstAffectedIndex = index;
+                AppendEntry();
+                return stringBuilder.ToString();
+
+                bool AppendEntry() {
+                    if (lastEntry == null) return true;
+                    var final = count > 1 ? $"{lastEntry} (**x{count}**){Environment.NewLine}" : $"{lastEntry}{Environment.NewLine}";
+                    if (stringBuilder.Length + final.Length > MaxLastHistoryLenght) return false;
+                    stringBuilder.Insert(0, final);
+                    return true;
+                }
+            }
         }
 
         protected virtual void OnHistoryChanged(int? affectedIndex = null) {

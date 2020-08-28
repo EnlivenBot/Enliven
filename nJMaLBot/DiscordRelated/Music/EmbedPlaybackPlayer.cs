@@ -64,7 +64,7 @@ namespace Bot.DiscordRelated.Music {
             UpdateParameters();
             Playlist.Update += (sender, args) => UpdateQueueMessageContent();
             _queueHistory.HistoryChanged += (sender, args) => {
-                EmbedBuilder.Fields["RequestHistory"].Value = _queueHistory.GetLastHistory(Loc, out var isChanged);
+                EmbedBuilder.Fields["RequestHistory"].Value = _queueHistory.GetLastHistory(Loc, out var isChanged).IsEmpty(Loc.Get("Music.Empty"));
                 if (isChanged) UpdateControlMessage();
             };
         }
