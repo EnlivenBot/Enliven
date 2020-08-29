@@ -4,11 +4,13 @@ using System.Linq;
 using System.Threading.Tasks;
 using Bot.Commands.Chains;
 using Bot.Config;
+using Bot.Config.Localization.Entries;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
 using Bot.DiscordRelated.Music;
 using Bot.Music;
 using Bot.Utilities;
+using Bot.Utilities.History;
 using Discord.Commands;
 using Lavalink4NET.Player;
 using Lavalink4NET.Rest;
@@ -43,21 +45,25 @@ namespace Bot.Commands {
 
         private async Task PlayInternal(string? query, int position) {
             Player.EnqueueControlMessageSend(ResponseChannel);
+            var queries = MusicUtils.GetMusicQueries(Context.Message, query.IsEmpty(""));
+            if (queries.Count == 0) {
+                Context.Message?.SafeDelete();
+                return;
+            }
+
+            var historyEntry = new HistoryEntry(new EntryLocalized("Music.ResolvingTracks", queries.Count));
+            Player.WriteToQueueHistory(historyEntry);
 
             try {
-                var lavalinkTracks = await MusicUtils.QueueLoadMusic(Context.Message, query, Player);
+                var lavalinkTracks = await MusicUtils.LoadMusic(queries);
                 Player.TryEnqueue(lavalinkTracks, Context.Message?.Author?.Username ?? "Unknown", position);
-            }
-            catch (EmptyQueryException) {
-                Context.Message?.SafeDelete();
             }
             catch (NothingFoundException) {
                 ReplyFormattedAsync(Loc.Get("Music.NotFound").Format(query!.SafeSubstring(100, "...")), true).DelayedDelete(Constants.LongTimeSpan);
                 if (Player.Playlist.Count == 0) Player.ControlMessage.SafeDelete();
             }
-            catch (AttachmentAddFailException) {
-                ReplyFormattedAsync(Loc.Get("Music.AttachmentFail"), true).DelayedDelete(Constants.LongTimeSpan);
-                if (Player.Playlist.Count == 0) Player.ControlMessage.SafeDelete();
+            finally {
+                historyEntry.Remove();
             }
         }
 
@@ -67,8 +73,7 @@ namespace Bot.Commands {
         public async Task Stop() {
             if (!await IsPreconditionsValid) return;
 
-            Player.Shutdown(Loc.Get("Music.UserStopPlayback").Format(Context.User.Username), false);
-            PlayersController.ForceRemove(Context.Guild.Id, Loc.Get("Music.UserStopPlayback").Format(Context.User.Username), false);
+            Player.ExecuteShutdown(Loc.Get("Music.UserStopPlayback").Format(Context.User.Username), false);
         }
 
         [Command("jump", RunMode = RunMode.Async)]
@@ -127,7 +132,9 @@ namespace Bot.Commands {
             }
 
             await Player.SetVolumeAsync(volume);
-            Player.WriteToQueueHistory(Loc.Get("MusicQueues.NewVolume").Format(Context.User.Username, volume));
+            Player.WriteToQueueHistory(new HistoryEntry(
+                new EntryLocalized("MusicQueues.NewVolume", Context.User.Username, volume),
+                $"{Context.User.Id}volume"));
         }
 
         [Command("repeat", RunMode = RunMode.Async)]
@@ -142,7 +149,9 @@ namespace Bot.Commands {
 
             Player.LoopingState = state;
             Player.UpdateProgress();
-            Player.WriteToQueueHistory(Loc.Get("MusicQueues.RepeatSet").Format(Context.User.Username, Player.LoopingState.ToString()));
+            Player.WriteToQueueHistory(new HistoryEntry(
+                new EntryLocalized("MusicQueues.RepeatSet", Context.User.Username, Player.LoopingState.ToString()),
+                $"{Context.User.Id}repeat"));
         }
 
         [Command("repeat", RunMode = RunMode.Async)]
@@ -459,7 +468,7 @@ namespace Bot.Commands {
 
             await currentNode.MovePlayerAsync(Player, newNode);
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.NodeChanged").Format(Context.User.Username, newNode.Label));
-            Player.UpdateNodeName();
+            Player.NodeChanged(newNode);
         }
 
         [Command("fixspotify", RunMode = RunMode.Async)]

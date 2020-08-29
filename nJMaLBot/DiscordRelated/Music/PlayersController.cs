@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Bot.Config.Localization.Entries;
 using Bot.Music;
 using Bot.Utilities;
 using NLog;
@@ -12,11 +13,18 @@ namespace Bot.DiscordRelated.Music {
         private static Logger logger = LogManager.GetCurrentClassLogger();
         // ReSharper disable once NotAccessedField.Local
         private static readonly Thread UpdateThread = new Thread(UpdateCycle);
-        public static readonly List<EmbedPlaybackPlayer> PlaybackPlayers = new List<EmbedPlaybackPlayer>();
+        private static readonly List<EmbedPlaybackPlayer> PlaybackPlayers = new List<EmbedPlaybackPlayer>();
 
         static PlayersController() {
             UpdateThread.Priority = ThreadPriority.BelowNormal;
             UpdateThread.Start();
+            AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
+        }
+
+        private static void OnProcessExit(object? sender, EventArgs e) {
+            foreach (var player in PlaybackPlayers.ToList()) {
+                player.ExecuteShutdown();
+            }
         }
 
         private static void UpdateCycle() {
@@ -45,34 +53,32 @@ namespace Bot.DiscordRelated.Music {
             // ReSharper disable once FunctionNeverReturns
         }
 
-        public static async Task ForceRemove(ulong guildId, string reason, bool needSave) {
-            foreach (var embedPlaybackPlayer in PlaybackPlayers.ToList().Where(player => player.GuildId == guildId)) {
-                try {
-                    if (String.IsNullOrWhiteSpace(reason)) {
-                        await embedPlaybackPlayer.Shutdown(needSave);
-                    }
-                    else {
-                        await embedPlaybackPlayer.Shutdown(reason, needSave);
-                    }
-                }
-                finally {
-                    PlaybackPlayers.Remove(embedPlaybackPlayer);
-                }
-            }
-        }
-
-        public static async Task<EmbedPlaybackPlayer> JoinChannel(ulong guildId, ulong voiceChannelId) {
-            // Clearing previous player, if we have one
+        public static async Task<EmbedPlaybackPlayer> ProvidePlayer(ulong guildId, ulong voiceChannelId, bool recreate = false) {
             var oldPlayer = PlaybackPlayers.FirstOrDefault(playbackPlayer => playbackPlayer.GuildId == guildId);
             if (oldPlayer != null) {
-                await oldPlayer.Shutdown();
+                if (!recreate) return oldPlayer;
+                if (!oldPlayer.IsShutdowned) {
+                    await oldPlayer.ExecuteShutdown();
+                }
                 PlaybackPlayers.Remove(oldPlayer);
             }
-
+            
             var player = await MusicUtils.Cluster!.JoinAsync(() => new EmbedPlaybackPlayer(guildId), guildId, voiceChannelId);
-            player.UpdateNodeName();
+            player.Shutdown += PlayerOnShutdown;
+            await player.NodeChanged();
             PlaybackPlayers.Add(player);
             return player;
+        }
+
+        private static void PlayerOnShutdown(object? sender, IEntry e) {
+            var player = (sender as EmbedPlaybackPlayer)!;
+            player.Shutdown -= PlayerOnShutdown;
+            PlaybackPlayers.Remove(player);
+        }
+
+        public static EmbedPlaybackPlayer? GetPlayer(ulong guildId) {
+            var embedPlaybackPlayer = PlaybackPlayers.FirstOrDefault(player => player.GuildId == guildId);
+            return embedPlaybackPlayer?.IsShutdowned == true ? null : embedPlaybackPlayer;
         }
     }
 }

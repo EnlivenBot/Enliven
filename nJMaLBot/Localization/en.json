@@ -59,7 +59,6 @@
       "UserStopPlayback": "**{0}** stopped playback\n\nHelp us by voting (`vote` command)",
       "PlaybackStopped": "Playback stopped",
       "NoListenersLeft": "Playback stopped - no listeners or tracks left\n\nHelp us by voting (`vote` command)",
-      "AttachmentFail": "It looks like not one of your attachments is music",
       "NotFound": "No results for `{0}`",
       "Loading": "Loading",
       "Queue": "Queue - `{0}` of `{1}`  (`{2}` total)",
@@ -97,7 +96,10 @@
       "WarningEmojiRemoval" : "❗The bot can not remove reactions for users as intended. To do this, he needs permission `MANAGE_MESSAGES`",
       "WarningEmojiAdding" : "‼️Management through reactions is not available - the bot cannot add them to the message. To do this, he needs разрешение `ADD_REACTIONS`",
       "WarningCustomEmoji" : "‼️Custom reactions for a beautiful display of the player are not available for the bot. To do this, he needs permission `USE_EXTERNAL_EMOJIS`",
-      "TrackNotSeekable" : "{0}, unfortunately this track is not seek-able"
+      "TrackNotSeekable" : "{0}, unfortunately this track is not seek-able",
+      "TryingReconnectAfterDispose" : "Playback disposed! We're trying to fix everything...",
+      "ReconnectAfterDisposeFailed" : "We fixed everything. If not, then use the commands `{0}stop` and `{0}loadplaylist {1}`",
+      "ResolvingTracks" : "Resolving tracks from `{0}` queries"
     },
     "Groups": {
       "" : "Other",
