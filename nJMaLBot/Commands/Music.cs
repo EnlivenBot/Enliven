@@ -45,21 +45,25 @@ namespace Bot.Commands {
 
         private async Task PlayInternal(string? query, int position) {
             Player.EnqueueControlMessageSend(ResponseChannel);
+            var queries = MusicUtils.GetMusicQueries(Context.Message, query.IsEmpty(""));
+            if (queries.Count == 0) {
+                Context.Message?.SafeDelete();
+                return;
+            }
+
+            var historyEntry = new HistoryEntry(new EntryLocalized("Music.ResolvingTracks", queries.Count));
+            Player.WriteToQueueHistory(historyEntry);
 
             try {
-                var lavalinkTracks = await MusicUtils.QueueLoadMusic(Context.Message, query, Player);
+                var lavalinkTracks = await MusicUtils.LoadMusic(queries);
                 Player.TryEnqueue(lavalinkTracks, Context.Message?.Author?.Username ?? "Unknown", position);
-            }
-            catch (EmptyQueryException) {
-                Context.Message?.SafeDelete();
             }
             catch (NothingFoundException) {
                 ReplyFormattedAsync(Loc.Get("Music.NotFound").Format(query!.SafeSubstring(100, "...")), true).DelayedDelete(Constants.LongTimeSpan);
                 if (Player.Playlist.Count == 0) Player.ControlMessage.SafeDelete();
             }
-            catch (AttachmentAddFailException) {
-                ReplyFormattedAsync(Loc.Get("Music.AttachmentFail"), true).DelayedDelete(Constants.LongTimeSpan);
-                if (Player.Playlist.Count == 0) Player.ControlMessage.SafeDelete();
+            finally {
+                historyEntry.Remove();
             }
         }
 

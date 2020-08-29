@@ -22,15 +22,15 @@ namespace Bot.Utilities.History {
         public event EventHandler? Removing;
         public event EventHandler<InsertingEventArgs>? Inserting;
 
-        protected virtual void OnEntryUpdated() {
+        public void OnEntryUpdated() {
             Updated?.Invoke(this, EventArgs.Empty);
         }
 
-        protected virtual void Remove() {
+        public void Remove() {
             Removing?.Invoke(this, EventArgs.Empty);
         }
 
-        protected virtual void Insert(HistoryEntry entryToInsert, bool insertToStart) {
+        public void Insert(HistoryEntry entryToInsert, bool insertToStart) {
             Inserting?.Invoke(this, new InsertingEventArgs(entryToInsert, insertToStart));
         }
 

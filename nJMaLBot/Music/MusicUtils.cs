@@ -117,30 +117,20 @@ namespace Bot.Music {
             return Task.CompletedTask;
         }
 
-        public static async Task<List<LavalinkTrack>> QueueLoadMusic(IUserMessage message, string? query, EmbedPlaybackPlayer player) {
-            var lavalinkTracks = new List<LavalinkTrack>();
-            if (message != null && message.Attachments.Count != 0) {
-                foreach (var messageAttachment in message.Attachments) {
-                    var lavalinkTrack = await MusicProvider.GetTracks(messageAttachment.Url, Cluster);
-                    if (lavalinkTrack != null)
-                        lavalinkTracks.AddRange(lavalinkTrack);
-                }
+        public static List<string> GetMusicQueries(IUserMessage message, string query) {
+            return message.Attachments.Select(attachment => attachment.Url)
+                          .Concat(query.Split('\n').Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s.Trim())).ToList();
+        }
 
-                if (lavalinkTracks.Count == 0) {
-                    throw new AttachmentAddFailException();
-                }
-            }
-            else if (string.IsNullOrWhiteSpace(query)) {
-                throw new EmptyQueryException();
-            }
-            else {
-                var counter = 0;
-                var tasks = query.Split('\n').Select(s => (counter++, s, MusicProvider.GetTracks(s, Cluster))).ToList();
-                await Task.WhenAll(tasks.Select((tuple, i) => tuple.Item3));
-                foreach (var (_, _, tracks) in tasks.OrderBy(tuple => tuple.Item1)) {
-                    if (tracks?.Result != null) {
-                        lavalinkTracks.AddRange(tracks.Result);
-                    }
+        public static async Task<List<LavalinkTrack>> LoadMusic(IEnumerable<string> queries) {
+            var lavalinkTracks = new List<LavalinkTrack>();
+
+            var counter = 0;
+            var tasks = queries.Select(s => (counter++, s, MusicProvider.GetTracks(s, Cluster))).ToList();
+            await Task.WhenAll(tasks.Select((tuple, i) => tuple.Item3));
+            foreach (var (_, _, tracks) in tasks.OrderBy(tuple => tuple.Item1)) {
+                if (tracks?.Result != null) {
+                    lavalinkTracks.AddRange(tracks.Result);
                 }
             }
 
@@ -167,15 +157,11 @@ namespace Bot.Music {
         }
     }
 
-    public class AttachmentAddFailException : Exception { }
-
     public class NothingFoundException : Exception {
         public NothingFoundException(bool allowFallback = true) {
             AllowFallback = allowFallback;
         }
-        
+
         public bool AllowFallback { get; private set; }
     }
-
-    public class EmptyQueryException : Exception { }
 }
