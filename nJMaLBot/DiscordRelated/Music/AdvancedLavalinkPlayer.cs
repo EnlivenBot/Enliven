@@ -1,26 +1,31 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using Bot.Config;
 using Bot.Config.Localization.Entries;
 using Bot.Config.Localization.Providers;
 using Bot.Music;
 using Bot.Utilities;
+using Bot.Utilities.History;
 using Discord;
+using HarmonyLib;
 using Lavalink4NET;
 using Lavalink4NET.Player;
 using NLog;
+using Tyrrrz.Extensions;
 
 namespace Bot.DiscordRelated.Music {
     public class AdvancedLavalinkPlayer : LavalinkPlayer {
         // ReSharper disable once InconsistentNaming
-        private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+        protected static readonly Logger logger = LogManager.GetCurrentClassLogger();
         protected GuildConfig GuildConfig;
         protected IGuild Guild;
         public readonly ILocalizationProvider Loc;
         protected BassBoostMode BassBoostMode { get; private set; } = BassBoostMode.Off;
         private int _updateFailCount;
-        private int UpdateFailThreshold = 2;
+        protected ulong _lastVoiceChannelId;
+        private const int UpdateFailThreshold = 5;
         protected bool IsExternalEmojiAllowed { get; set; } = true;
 
         public AdvancedLavalinkPlayer(ulong guildId) {
@@ -36,7 +41,7 @@ namespace Bot.DiscordRelated.Music {
 
         public virtual async Task SetVolumeAsync(int volume = 100) {
             volume = volume.Normalize(0, 150);
-            await base.SetVolumeAsync((float)volume / 100);
+            await base.SetVolumeAsync((float) volume / 100);
             var guildConfig = GuildConfig.Get(GuildId);
             guildConfig.Volume = volume;
             guildConfig.Save();
@@ -44,7 +49,7 @@ namespace Bot.DiscordRelated.Music {
 
         [Obsolete]
         public override async Task SetVolumeAsync(float volume = 1, bool normalize = false) {
-            await SetVolumeAsync((int)(volume * 100), normalize);
+            await SetVolumeAsync((int) (volume * 100));
         }
 
         public virtual void SetBassBoostMode(BassBoostMode mode) {
@@ -53,28 +58,26 @@ namespace Bot.DiscordRelated.Music {
 
         public bool IsShutdowned { get; private set; }
 
-        public virtual void Shutdown(EntryLocalized reason, bool needSave = true) {
-            Shutdown(reason.Get(Loc), needSave);
-        }
+        public event EventHandler<IEntry> Shutdown;
 
-        public virtual Task Shutdown(string reason, bool needSave = true) {
+        public virtual Task ExecuteShutdown(IEntry reason, bool needSave = true) {
             IsShutdowned = true;
+            Shutdown.Invoke(this, reason);
             base.Dispose();
             return Task.CompletedTask;
         }
 
-        public virtual Task Shutdown(bool needSave = true) {
-            Shutdown(Loc.Get("Music.PlaybackStopped"), needSave);
-            return Task.CompletedTask;
+        public Task ExecuteShutdown(string reason, bool needSave = true) {
+            return ExecuteShutdown(new EntryString(reason), needSave);
         }
 
-        /// <summary>
-        /// This method is called only from third-party code.
-        /// </summary>
-        [Obsolete]
-        public override void Dispose() {
-            if (!IsShutdowned) logger.Error("Player disposed. Stacktrace: \n{stacktrace}", new StackTrace().ToString());
-            Shutdown();
+        public Task ExecuteShutdown(bool needSave = true) {
+            return ExecuteShutdown(new EntryLocalized("Music.PlaybackStopped"), needSave);
+        }
+
+        public override Task ConnectAsync(ulong voiceChannelId, bool selfDeaf = false, bool selfMute = false) {
+            _lastVoiceChannelId = voiceChannelId;
+            return base.ConnectAsync(voiceChannelId, selfDeaf, selfMute);
         }
 
         /// <summary>
@@ -95,9 +98,12 @@ namespace Bot.DiscordRelated.Music {
 
             if (_updateFailCount >= UpdateFailThreshold) {
                 logger.Info("Player {guildId} disposed due to state {state}", GuildId, State);
-                Shutdown();
+                ExecuteShutdown();
                 throw new ObjectDisposedException("Player", $"Player disposed due to {State}");
             }
         }
+        
+        public virtual void WriteToQueueHistory(string entry) { }
+        public virtual void WriteToQueueHistory(HistoryEntry entry) { }
     }
 }

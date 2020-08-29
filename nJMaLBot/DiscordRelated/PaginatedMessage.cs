@@ -11,9 +11,10 @@ using Bot.Utilities;
 using Bot.Utilities.Collector;
 using Discord;
 using Tyrrrz.Extensions;
+#pragma warning disable 4014
 
 namespace Bot.DiscordRelated {
-    public class PaginatedMessage {
+    public class PaginatedMessage : IDisposable {
         private readonly EmbedBuilder _embedBuilder = new EmbedBuilder();
         private readonly SingleTask<IUserMessage?> _resendTask;
         private readonly SingleTask _updateTask;
@@ -21,7 +22,7 @@ namespace Bot.DiscordRelated {
         private CollectorController? _collectorController;
         private bool _jumpEnabled;
         private TaskCompletionSource<bool> _stopTask = new TaskCompletionSource<bool>();
-        private bool _isCollectionUpdating = true;
+        private bool _isCollectionUpdating;
 
         private Timer _timeoutTimer;
 
@@ -135,7 +136,7 @@ namespace Bot.DiscordRelated {
                 // Ignored
             }
 
-            _collectorController = CollectorsUtils.CollectReaction(Message, reaction => true, args => {
+            _collectorController = CollectorsUtils.CollectReaction(Message!, reaction => true, args => {
                 if (args.Reaction.Emote.Equals(Options.Back)) {
                     PageNumber--;
                 }
@@ -180,22 +181,23 @@ namespace Bot.DiscordRelated {
                 _updateTask.Execute(true, TimeSpan.FromSeconds(1));
             }, CollectorFilter.IgnoreBots);
             _ = Task.Run(async () => {
-                await Message.AddReactionAsync(Options.First);
-                await Message.AddReactionAsync(Options.Back);
-                await Message.AddReactionAsync(Options.Next);
-                await Message.AddReactionAsync(Options.Last);
+                await Message!.AddReactionAsync(Options.First);
+                await Message!.AddReactionAsync(Options.Back);
+                await Message!.AddReactionAsync(Options.Next);
+                await Message!.AddReactionAsync(Options.Last);
 
                 var manageMessages = Channel is IGuildChannel guildChannel &&
                                      (await guildChannel.GetUserAsync(Program.Client.CurrentUser.Id)).GetPermissions(guildChannel).ManageMessages;
 
                 _jumpEnabled = Options.JumpDisplayOptions == JumpDisplayOptions.Always
                             || Options.JumpDisplayOptions == JumpDisplayOptions.WithManageMessages && manageMessages;
-                if (_jumpEnabled) await Message.AddReactionAsync(Options.Jump);
+                if (_jumpEnabled) await Message!.AddReactionAsync(Options.Jump);
 
-                await Message.AddReactionAsync(Options.Stop);
+                if (Options.StopEnabled)
+                    await Message!.AddReactionAsync(Options.Stop);
 
                 if (Options.DisplayInformationIcon)
-                    await Message.AddReactionAsync(Options.Info);
+                    await Message!.AddReactionAsync(Options.Info);
             });
         }
 
@@ -249,16 +251,15 @@ namespace Bot.DiscordRelated {
                 TimeSpan.FromMilliseconds(-1));
         }
 
-        public event EventHandler Stop;
+        public event EventHandler Stop = null!;
 
         public Task Wait() {
             return _stopTask.Task;
         }
 
         public void StopAndClear() {
-            _collectorController?.Dispose();
+            Dispose();
             Message?.DeleteAsync();
-            OnStop();
         }
 
         public void CoercePageNumber() {
@@ -380,6 +381,12 @@ namespace Bot.DiscordRelated {
             public string Description { get; set; } = "";
             public List<EmbedFieldBuilder> Fields { get; set; } = new List<EmbedFieldBuilder>();
         }
+
+        public void Dispose() {
+            _timeoutTimer.Dispose();
+            _collectorController?.Dispose();
+            OnStop();
+        }
     }
 
     public class PaginatedAppearanceOptions {
@@ -398,6 +405,8 @@ namespace Bot.DiscordRelated {
         public JumpDisplayOptions JumpDisplayOptions = JumpDisplayOptions.WithManageMessages;
         public IEmote Last = CommonEmoji.LegacyTrackNext;
         public IEmote Next = CommonEmoji.LegacyPlay;
+
+        public bool StopEnabled = true;
         public IEmote Stop = CommonEmoji.LegacyStop;
 
         public TimeSpan? Timeout = null;

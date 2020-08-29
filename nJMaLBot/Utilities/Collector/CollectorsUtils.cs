@@ -217,7 +217,7 @@ namespace Bot.Utilities.Collector {
 
         public static CollectorController CollectCommand([NotNull] CommandInfo info, Func<ICommandContext, CommandMatch, bool> predicate,
                                                          Action<CommandCollectorEventArgs> action) {
-            info ??= default;
+            info ??= default!;
             var collectorController = new CollectorController();
             var key = Guid.NewGuid();
             collectorController.Stop += (sender, args) => {

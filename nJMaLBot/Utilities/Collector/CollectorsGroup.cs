@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using Tyrrrz.Extensions;
+
 #pragma warning disable 8606
 
 namespace Bot.Utilities.Collector {
@@ -53,6 +54,10 @@ namespace Bot.Utilities.Collector {
                 Controllers[0]?.Dispose();
                 Controllers.RemoveAt(0);
             }
+        }
+
+        public static implicit operator CollectorsGroup(CollectorController controller) {
+            return new CollectorsGroup(controller);
         }
     }
 }

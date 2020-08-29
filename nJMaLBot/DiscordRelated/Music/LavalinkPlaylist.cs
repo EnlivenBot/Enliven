@@ -2,31 +2,22 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Bot.Utilities;
 using Lavalink4NET.Player;
 
 namespace Bot.DiscordRelated.Music {
     public sealed class LavalinkPlaylist : IList<LavalinkTrack> {
         private readonly List<LavalinkTrack> _list;
         private readonly object _syncRoot;
-        public event EventHandler? Update;
+        private TimeSpan? _totalPlaylistLenght;
 
         public LavalinkPlaylist() {
             _list = new List<LavalinkTrack>();
             _syncRoot = new object();
         }
 
-        public int Count {
-            get {
-                lock (_syncRoot) return _list.Count;
-            }
-        }
-
         public bool IsEmpty {
             get { return Count == 0; }
-        }
-
-        public bool IsReadOnly {
-            get { return true; }
         }
 
         public IReadOnlyList<LavalinkTrack> Tracks {
@@ -40,6 +31,18 @@ namespace Bot.DiscordRelated.Music {
                     OnUpdate();
                 }
             }
+        }
+
+        public TimeSpan TotalPlaylistLenght => _totalPlaylistLenght ??= Tracks.Sum(track => track.IsSeekable ? track.Duration : TimeSpan.Zero);
+
+        public int Count {
+            get {
+                lock (_syncRoot) return _list.Count;
+            }
+        }
+
+        public bool IsReadOnly {
+            get { return true; }
         }
 
         public LavalinkTrack this[int index] {
@@ -60,6 +63,59 @@ namespace Bot.DiscordRelated.Music {
             }
         }
 
+        void ICollection<LavalinkTrack>.Clear() {
+            lock (_syncRoot) {
+                _list.Clear();
+                OnUpdate();
+            }
+        }
+
+        public bool Contains(LavalinkTrack track) {
+            if (track == null) throw new ArgumentNullException(nameof(track));
+            lock (_syncRoot) return _list.Contains(track);
+        }
+
+        public void CopyTo(LavalinkTrack[] array, int index) {
+            lock (_syncRoot) _list.CopyTo(array, index);
+        }
+
+        public IEnumerator<LavalinkTrack> GetEnumerator() {
+            lock (_syncRoot) return _list.ToList().GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator() {
+            lock (_syncRoot) return _list.ToArray().GetEnumerator();
+        }
+
+        public int IndexOf(LavalinkTrack track) {
+            if (track == null) throw new ArgumentNullException(nameof(track));
+            lock (_syncRoot) return _list.IndexOf(track);
+        }
+
+        public void Insert(int index, LavalinkTrack track) {
+            lock (_syncRoot) {
+                _list.Insert(index, track);
+                OnUpdate();
+            }
+        }
+
+        public bool Remove(LavalinkTrack track) {
+            lock (_syncRoot) {
+                var result = _list.Remove(track);
+                OnUpdate();
+                return result;
+            }
+        }
+
+        public void RemoveAt(int index) {
+            lock (_syncRoot) {
+                _list.RemoveAt(index);
+                OnUpdate();
+            }
+        }
+
+        public event EventHandler? Update;
+
         public void AddRange(IEnumerable<LavalinkTrack> tracks) {
             if (tracks == null) throw new ArgumentNullException(nameof(tracks));
             lock (_syncRoot) {
@@ -75,22 +131,6 @@ namespace Bot.DiscordRelated.Music {
                 OnUpdate();
                 return count;
             }
-        }
-
-        void ICollection<LavalinkTrack>.Clear() {
-            lock (_syncRoot) {
-                _list.Clear();
-                OnUpdate();
-            }
-        }
-
-        public bool Contains(LavalinkTrack track) {
-            if (track == null) throw new ArgumentNullException(nameof(track));
-            lock (_syncRoot) return _list.Contains(track);
-        }
-
-        public void CopyTo(LavalinkTrack[] array, int index) {
-            lock (_syncRoot) _list.CopyTo(array, index);
         }
 
         public bool TryGetValue(int index, out LavalinkTrack? track) {
@@ -116,26 +156,6 @@ namespace Bot.DiscordRelated.Music {
             }
         }
 
-        public IEnumerator<LavalinkTrack> GetEnumerator() {
-            lock (_syncRoot) return _list.ToList().GetEnumerator();
-        }
-
-        IEnumerator IEnumerable.GetEnumerator() {
-            lock (_syncRoot) return _list.ToArray().GetEnumerator();
-        }
-
-        public int IndexOf(LavalinkTrack track) {
-            if (track == null) throw new ArgumentNullException(nameof(track));
-            lock (_syncRoot) return _list.IndexOf(track);
-        }
-
-        public void Insert(int index, LavalinkTrack track) {
-            lock (_syncRoot) {
-                _list.Insert(index, track);
-                OnUpdate();
-            }
-        }
-        
         public void InsertRange(int index, IEnumerable<LavalinkTrack> tracks) {
             lock (_syncRoot) {
                 var lavalinkTracks = tracks.ToList();
@@ -147,26 +167,11 @@ namespace Bot.DiscordRelated.Music {
             }
         }
 
-        public bool Remove(LavalinkTrack track) {
-            lock (_syncRoot) {
-                var result = _list.Remove(track);
-                OnUpdate();
-                return result;
-            }
-        }
-
         public int RemoveAll(Predicate<LavalinkTrack> predicate) {
             lock (_syncRoot) {
                 var result =  _list.RemoveAll(predicate);
                 OnUpdate();
                 return result;
-            }
-        }
-
-        public void RemoveAt(int index) {
-            lock (_syncRoot) {
-                _list.RemoveAt(index);
-                OnUpdate();
             }
         }
 
@@ -215,6 +220,7 @@ namespace Bot.DiscordRelated.Music {
         }
 
         private void OnUpdate() {
+            _totalPlaylistLenght = null;
             Update?.Invoke(this, EventArgs.Empty);
         }
     }

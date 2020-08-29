@@ -149,7 +149,12 @@ namespace Bot.DiscordRelated.Commands {
 
                 await SendErrorMessage(targetMessage, loc, description.Get(loc), builders);
             });
-            await targetMessage.AddReactionAsync(emote);
+            try {
+                await targetMessage.AddReactionAsync(emote);
+            }
+            catch (Exception) {
+                collector.Dispose();
+            }
         }
 
         private async Task<KeyValuePair<CommandMatch, ParseResult>?> GetCommand(string query, ICommandContext context) {
@@ -175,7 +180,7 @@ namespace Bot.DiscordRelated.Commands {
             command = bestMatch.SimilarTo;
             query = command + " " + args;
             var (commandMatch2, result2) = await CommandService.FindAsync(context, query, null);
-            return result2.IsSuccess ? commandMatch : commandMatch2;
+            return result2.IsSuccess ? commandMatch2 : commandMatch;
         }
 
         public async Task<IResult> ExecuteCommand(IMessage message, string query, ICommandContext context, KeyValuePair<CommandMatch, ParseResult> pair,
@@ -211,17 +216,17 @@ namespace Bot.DiscordRelated.Commands {
                 return;
             }
                 
-            (await message.Channel.SendMessageAsync(null, false, GetErrorEmbed(message, loc, description).WithFields(fieldBuilders).Build())).DelayedDelete(
+            (await message.Channel.SendMessageAsync(null, false, GetErrorEmbed(message.Author, loc, description).WithFields(fieldBuilders).Build())).DelayedDelete(
                 Constants.LongTimeSpan);
         }
 
         private static async Task SendErrorMessage(SocketUserMessage message, ILocalizationProvider loc, string description) {
-            (await message.Channel.SendMessageAsync(null, false, GetErrorEmbed(message, loc, description).Build())).DelayedDelete(Constants.LongTimeSpan);
+            (await message.Channel.SendMessageAsync(null, false, GetErrorEmbed(message.Author, loc, description).Build())).DelayedDelete(Constants.LongTimeSpan);
         }
 
-        private static EmbedBuilder GetErrorEmbed(SocketUserMessage message, ILocalizationProvider loc, string description) {
+        public static EmbedBuilder GetErrorEmbed(IUser user, ILocalizationProvider loc, string description) {
             var builder = new EmbedBuilder();
-            builder.WithFooter(loc.Get("Commands.RequestedBy").Format(message.Author.Username), message.Author.GetAvatarUrl())
+            builder.WithFooter(loc.Get("Commands.RequestedBy").Format(user.Username), user.GetAvatarUrl())
                    .WithColor(Color.Orange);
             builder.WithTitle(loc.Get("CommandHandler.FailedTitle"))
                    .WithDescription(description);

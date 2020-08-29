@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -169,6 +170,19 @@ namespace Bot.Utilities {
             if ((int) span.TotalHours != 0)
                 s = s.Insert(0, $"{(int) span.TotalHours}:");
             return s;
+        }
+
+        public static UserData GetData(this IUser user) {
+            return UserData.FromUser(user);
+        }
+
+        public static UserLink ToLink(this IUser user) {
+            return new UserLink(user.Id);
+        }
+        
+        public static TimeSpan Sum<TSource>(this IEnumerable<TSource> source, Func<TSource, TimeSpan> func)
+        {
+            return new TimeSpan(source.Sum(item => func(item).Ticks));
         }
     }
 }

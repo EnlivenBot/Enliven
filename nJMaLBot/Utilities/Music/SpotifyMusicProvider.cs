@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Bot.Config;
+using Bot.Music;
 using Lavalink4NET.Cluster;
 using Lavalink4NET.Player;
 using NLog;
@@ -16,16 +17,15 @@ namespace Bot.Utilities.Music {
     public class SpotifyMusicProvider : IMusicProvider {
         private static Logger logger = LogManager.GetCurrentClassLogger();
 
-        private readonly static Regex _playlistRegex =
+        private readonly static Regex PlaylistRegex =
             new Regex(
                 @"^(https:\/\/open\.spotify\.com\/user\/spotify\/playlist\/|https:\/\/open\.spotify\.com\/playlist\/|spotify:user:spotify:playlist:|spotify:playlist:)([a-zA-Z0-9]+)(.*)$");
 
-        private readonly static Regex _trackRegex =
+        private readonly static Regex TrackRegex =
             new Regex(
                 @"^(https:\/\/open\.spotify\.com\/user\/spotify\/track\/|https:\/\/open\.spotify\.com\/track\/|spotify:user:spotify:track:|spotify:track:)([a-zA-Z0-9]+)(.*)$");
 
         private LavalinkCluster _cluster;
-        private string _query;
 
         static SpotifyMusicProvider() {
             SpotifyClient = Task.Run(async () => {
@@ -50,14 +50,22 @@ namespace Bot.Utilities.Music {
         }
 
         public SpotifyMusicProvider(LavalinkCluster cluster, string query) {
-            _query = query;
             _cluster = cluster;
-            var playlistMatch = _playlistRegex.Match(query);
-            var trackMatch = _trackRegex.Match(query);
-            IsPlaylist = playlistMatch.Success ? true : trackMatch.Success ? (bool?) false : null;
-            if (IsPlaylist != null) {
-                Id = ((bool) IsPlaylist ? playlistMatch : trackMatch).Groups[2].Value;
+            IsPlaylist = !IsTrack(query, out var id);
+            Id = id;
+        }
+
+        /// <returns>True - track, False - playlist, null - error</returns>
+        public static bool? IsTrack(string query, out string? id) {
+            id = null;
+            var playlistMatch = PlaylistRegex.Match(query);
+            var trackMatch = TrackRegex.Match(query);
+            var isTrack = trackMatch.Success ? true : playlistMatch.Success ? (bool?) false : null;
+            if (isTrack != null) {
+                id = ((bool) isTrack ? trackMatch : playlistMatch).Groups[2].Value;
             }
+
+            return isTrack;
         }
 
         public static Task<SpotifyClient?> SpotifyClient { get; private set; }
@@ -65,7 +73,7 @@ namespace Bot.Utilities.Music {
         // True - playlist
         // False - Track
         // Null - Fetch error
-        private bool? IsPlaylist { get; set; } = null;
+        private bool? IsPlaylist { get; set; }
 
         private string? Id { get; set; }
 
@@ -78,32 +86,64 @@ namespace Bot.Utilities.Music {
         }
 
         public async Task<List<LavalinkTrack>> Provide() {
-            var spotify = await SpotifyClient;
-            List<IPlayableItem> tracks = new List<IPlayableItem>();
-            switch (IsPlaylist) {
-                case true: {
-                    var playlist = await spotify.Playlists.Get(Id);
-                    tracks = (await spotify.PaginateAll(playlist.Tracks)).Select(track => track.Track).ToList();
-                    break;
+            try {
+                var spotify = await SpotifyClient;
+                List<SpotifyTrackData> tracksData = new List<SpotifyTrackData>();
+                switch (IsPlaylist) {
+                    case true: {
+                        var playlist = await spotify.Playlists.Get(Id);
+                        tracksData = (await spotify.PaginateAll(playlist.Tracks))
+                                    .Select(track => (track.Track as FullTrack))
+                                    .Where(track => track != null)
+                                    .Select(track => new SpotifyTrackData(track.Id, track)).ToList()!;
+                        break;
+                    }
+                    case false: {
+                        tracksData.Add(new SpotifyTrackData(Id));
+                        break;
+                    }
                 }
-                case false: {
-                    var track = await spotify.Tracks.Get(Id);
-                    tracks.Add(track);
-                    break;
-                }
-                default:
-                    throw new NotSupportedException();
+
+                var enumerable = tracksData.Select(s => ResolveWithCache(s, _cluster));
+                return (await Task.WhenAll(enumerable)).Select(association => association?.GetBestAssociation()?.Association).ToList()!;
             }
-            var enumerable = tracks.Where(track => track is FullTrack).Select(async track => {
-                var fullTrack = track as FullTrack;
-                return await new DefaultMusicProvider(_cluster, $"{fullTrack.Name} - {fullTrack.Artists[0].Name}").Provide();
-            });
-            var whenAll = await Task.WhenAll(enumerable);
-            return whenAll.SelectMany(list => list).ToList();
+            catch (Exception) {
+                throw new NothingFoundException(false);
+            }
         }
 
         public static void Initialize() {
             // Dummy method to initialize static properties
+        }
+
+        public static async Task<SpotifyTrackAssociation?> ResolveWithCache(SpotifyTrackData spotifyTrack, LavalinkCluster lavalinkCluster) {
+            if (TryGetFromCache(spotifyTrack.Id, out var track)) {
+                return track!;
+            }
+
+            try {
+                var fullTrack = await spotifyTrack.GetTrack();
+                var lavalinkTracks = await new DefaultMusicProvider(lavalinkCluster, $"{fullTrack.Name} - {fullTrack.Artists[0].Name}").Provide();
+                var spotifyTrackAssociation = new SpotifyTrackAssociation(spotifyTrack.Id, lavalinkTracks[0].Identifier);
+                spotifyTrackAssociation.Save();
+                return spotifyTrackAssociation;
+            }
+            catch (Exception) {
+                // ignored
+            }
+
+            return null;
+        }
+
+        public static bool TryGetFromCache(string spotifyTrackId, out SpotifyTrackAssociation? track) {
+            track = default!;
+            try {
+                track = GlobalDB.SpotifyAssociations.FindById(spotifyTrackId);
+                return track != null;
+            }
+            catch (Exception) {
+                return false;
+            }
         }
     }
 }

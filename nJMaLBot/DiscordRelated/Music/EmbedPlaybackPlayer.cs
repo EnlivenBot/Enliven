@@ -6,12 +6,15 @@ using System.Text;
 using System.Threading.Tasks;
 using Bot.Config;
 using Bot.Config.Emoji;
+using Bot.Config.Localization.Entries;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Criteria;
 using Bot.Music;
 using Bot.Utilities;
 using Bot.Utilities.Collector;
+using Bot.Utilities.History;
 using Discord;
+using Lavalink4NET;
 using Lavalink4NET.Decoding;
 using Lavalink4NET.Events;
 using Lavalink4NET.Player;
@@ -23,7 +26,7 @@ using LiteDB;
 
 namespace Bot.DiscordRelated.Music {
     public sealed class EmbedPlaybackPlayer : PlaylistLavalinkPlayer {
-        private readonly StringBuilder _queueHistory = new StringBuilder();
+        private readonly HistoryCollection _queueHistory = new HistoryCollection(Constants.MaxQueueHistoryChars, 1000, false);
         private PriorityEmbedBuilderWrapper EmbedBuilder = new PriorityEmbedBuilderWrapper();
         public bool UpdatePlayback;
 
@@ -36,7 +39,7 @@ namespace Bot.DiscordRelated.Music {
                         properties.Content = "";
                     });
                 }
-            }) {BetweenExecutionsDelay = TimeSpan.FromSeconds(1), CanBeDirty = true};
+            }) {BetweenExecutionsDelay = TimeSpan.FromSeconds(1.5), CanBeDirty = true};
             _controlMessageSendTask = new SingleTask(async () => {
                 try {
                     await SetControlMessage(await _controlMessageChannel.SendMessageAsync(Loc.Get("Music.Loading")));
@@ -50,7 +53,7 @@ namespace Bot.DiscordRelated.Music {
             };
             EmbedBuilder.AddField("State", Loc.Get("Music.Empty"), Loc.Get("Music.Empty"), true);
             EmbedBuilder.AddField("Parameters", Loc.Get("Music.Parameters"), Loc.Get("Music.Empty"), true);
-            EmbedBuilder.AddField("Queue", Loc.Get("Music.Queue").Format(0, 0), Loc.Get("Music.Empty"));
+            EmbedBuilder.AddField("Queue", Loc.Get("Music.Queue").Format(0, 0, 0), Loc.Get("Music.Empty"));
             EmbedBuilder.AddField("RequestHistory", Loc.Get("Music.RequestHistory"), Loc.Get("Music.Empty"));
             EmbedBuilder.AddField("Warnings", Loc.Get("Music.Warning"), Loc.Get("Music.Empty"), false, 100, false);
             Playlist.Update += (sender, args) => UpdateQueue();
@@ -60,6 +63,10 @@ namespace Bot.DiscordRelated.Music {
             UpdateQueue();
             UpdateParameters();
             Playlist.Update += (sender, args) => UpdateQueueMessageContent();
+            _queueHistory.HistoryChanged += (sender, args) => {
+                EmbedBuilder.Fields["RequestHistory"].Value = _queueHistory.GetLastHistory(Loc, out var isChanged).IsEmpty(Loc.Get("Music.Empty"));
+                if (isChanged) UpdateControlMessage();
+            };
         }
 
         public IUserMessage? ControlMessage { get; private set; }
@@ -112,17 +119,17 @@ namespace Bot.DiscordRelated.Music {
             UpdateProgress();
         }
 
-        public override async Task Shutdown(string reason, bool needSave = true) {
+        public override async Task ExecuteShutdown(IEntry reason, bool needSave = true) {
             if (ControlMessage != null) {
                 var oldControlMessage = ControlMessage;
                 ControlMessage = null;
                 var embedBuilder = new EmbedBuilder()
                                   .WithTitle(Loc.Get("Music.PlaybackStopped"))
-                                  .WithDescription(reason);
+                                  .WithDescription(reason.Get(Loc));
                 if (needSave) {
                     var exportPlaylist = ExportPlaylist(ExportPlaylistOptions.AllData);
                     var storedPlaylist = exportPlaylist.StorePlaylist("a" + ObjectId.NewObjectId(), 0);
-                    embedBuilder.Description += Loc.Get("Music.ResumeViaPlaylists").Format(GuildConfig.Get(GuildId).Prefix, storedPlaylist.Id);
+                    embedBuilder.Description += Loc.Get("Music.ResumeViaPlaylists", GuildConfig.Prefix, storedPlaylist.Id);
                 }
                 else {
                     oldControlMessage.DelayedDelete(Constants.LongTimeSpan);
@@ -140,25 +147,15 @@ namespace Bot.DiscordRelated.Music {
             _queueMessage?.StopAndClear();
 
             UpdatePlayback = false;
-
-            try {
-                PlayersController.PlaybackPlayers.Remove(this);
-                base.Shutdown(reason, needSave);
-            }
-            catch (Exception) {
-                // ignored
-            }
+            base.ExecuteShutdown(reason, needSave);
+        }
+        
+        public override void WriteToQueueHistory(HistoryEntry entry) {
+            _queueHistory.Add(entry);
         }
 
-        public override void WriteToQueueHistory(string entry, bool background = false) {
-            _queueHistory.AppendLine("- " + entry);
-            while (_queueHistory.Length > Constants.MaxQueueHistoryChars) {
-                var indexOf = _queueHistory.ToString().IndexOf(Environment.NewLine, StringComparison.Ordinal);
-                if (indexOf >= 0) _queueHistory.Remove(0, indexOf + Environment.NewLine.Length);
-            }
-
-            EmbedBuilder.Fields["RequestHistory"].Value = _queueHistory.ToString().Replace("\n\n", "\n");
-            UpdateControlMessage(background);
+        public override void WriteToQueueHistory(string entry) {
+            _queueHistory.Add(new HistoryEntry(new EntryString(entry)));
         }
 
         public Task SetControlMessage(IUserMessage message) {
@@ -187,11 +184,11 @@ namespace Bot.DiscordRelated.Music {
             await base.Enqueue(tracks, position);
             if (tracks.Count == 1) {
                 var track = tracks.First();
-                WriteToQueueHistory(Loc.Get("MusicQueues.Enqueued").Format(track.GetRequester(), MusicUtils.EscapeTrack(track.Title)), true);
+                WriteToQueueHistory(Loc.Get("MusicQueues.Enqueued").Format(track.GetRequester(), MusicUtils.EscapeTrack(track.Title)));
             }
             else if (tracks.Count > 1) {
                 var author = tracks.First().GetRequester();
-                WriteToQueueHistory(Loc.Get("MusicQueues.EnqueuedMany").Format(author, tracks.Count), true);
+                WriteToQueueHistory(Loc.Get("MusicQueues.EnqueuedMany").Format(author, tracks.Count));
             }
         }
 
@@ -441,9 +438,9 @@ namespace Bot.DiscordRelated.Music {
             else if ((State != PlayerState.NotPlaying || State != PlayerState.NotConnected || State != PlayerState.Destroyed) && CurrentTrack != null) {
                 var iconUrl = CurrentTrack.Provider == StreamProvider.YouTube ? $"https://img.youtube.com/vi/{CurrentTrack?.TrackIdentifier}/0.jpg" : null;
                 EmbedBuilder
-                  ?.WithAuthor(CurrentTrack!.Author.SafeSubstring(Constants.MaxEmbedAuthorLength, "...").IsEmpty("Unknown"), iconUrl)
-                  ?.WithTitle(MusicUtils.EscapeTrack(CurrentTrack!.Title).SafeSubstring(Discord.EmbedBuilder.MaxTitleLength, "...")!)
-                  ?.WithUrl(CurrentTrack!.Source);
+                   .WithAuthor(CurrentTrack!.Author.SafeSubstring(Constants.MaxEmbedAuthorLength, "...").IsEmpty("Unknown"), iconUrl)
+                   .WithTitle(MusicUtils.EscapeTrack(CurrentTrack!.Title).SafeSubstring(Discord.EmbedBuilder.MaxTitleLength, "...")!)
+                   .WithUrl(CurrentTrack!.Source);
             }
             else {
                 EmbedBuilder.Author = new EmbedAuthorBuilder();
@@ -464,7 +461,8 @@ namespace Bot.DiscordRelated.Music {
                 EmbedBuilder.Fields["Queue"].Value = Loc.Get("Music.QueueEmpty").Format(GuildConfig.Prefix);
             }
             else {
-                EmbedBuilder.Fields["Queue"].Name = Loc.Get("Music.Queue").Format(CurrentTrackIndex + 1, Playlist.Count);
+                EmbedBuilder.Fields["Queue"].Name =
+                    Loc.Get("Music.Queue").Format(CurrentTrackIndex + 1, Playlist.Count, Playlist.TotalPlaylistLenght.FormattedToString());
                 EmbedBuilder.Fields["Queue"].Value = $"```py\n{GetPlaylistString()}```";
             }
 
@@ -504,9 +502,10 @@ namespace Bot.DiscordRelated.Music {
             }
         }
 
-        public void UpdateNodeName() {
-            var currentNode = MusicUtils.Cluster!.GetServingNode(GuildId);
-            EmbedBuilder.WithFooter($"Powered by {Program.Client.CurrentUser.Username} | {currentNode.Label}");
+        public override async Task NodeChanged(LavalinkNode? node = null) {
+            node ??= MusicUtils.Cluster!.GetServingNode(GuildId);
+            EmbedBuilder.WithFooter($"Powered by {Program.Client.CurrentUser.Username} | {node.Label}");
+            base.NodeChanged(node);
         }
 
         #endregion
