@@ -9,7 +9,7 @@ namespace Bot.DiscordRelated.Music {
     public sealed class LavalinkPlaylist : IList<LavalinkTrack> {
         private readonly List<LavalinkTrack> _list;
         private readonly object _syncRoot;
-        private TimeSpan? _totalPlaylistLenght;
+        private TimeSpan? _totalPlaylistLength;
 
         public LavalinkPlaylist() {
             _list = new List<LavalinkTrack>();
@@ -33,7 +33,7 @@ namespace Bot.DiscordRelated.Music {
             }
         }
 
-        public TimeSpan TotalPlaylistLenght => _totalPlaylistLenght ??= Tracks.Sum(track => track.IsSeekable ? track.Duration : TimeSpan.Zero);
+        public TimeSpan TotalPlaylistLength => _totalPlaylistLength ??= Tracks.Sum(track => track.IsSeekable ? track.Duration : TimeSpan.Zero);
 
         public int Count {
             get {
@@ -220,7 +220,7 @@ namespace Bot.DiscordRelated.Music {
         }
 
         private void OnUpdate() {
-            _totalPlaylistLenght = null;
+            _totalPlaylistLength = null;
             Update?.Invoke(this, EventArgs.Empty);
         }
     }

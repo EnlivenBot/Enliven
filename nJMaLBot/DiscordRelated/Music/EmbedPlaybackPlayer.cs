@@ -462,7 +462,7 @@ namespace Bot.DiscordRelated.Music {
             }
             else {
                 EmbedBuilder.Fields["Queue"].Name =
-                    Loc.Get("Music.Queue").Format(CurrentTrackIndex + 1, Playlist.Count, Playlist.TotalPlaylistLenght.FormattedToString());
+                    Loc.Get("Music.Queue").Format(CurrentTrackIndex + 1, Playlist.Count, Playlist.TotalPlaylistLength.FormattedToString());
                 EmbedBuilder.Fields["Queue"].Value = $"```py\n{GetPlaylistString()}```";
             }
 
