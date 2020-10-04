@@ -34,10 +34,17 @@ namespace Bot.DiscordRelated.Music {
         public EmbedPlaybackPlayer(ulong guildId) : base(guildId) {
             _updateControlMessageTask = new SingleTask(async () => {
                 if (ControlMessage != null) {
-                    await ControlMessage.ModifyAsync(properties => {
-                        properties.Embed = EmbedBuilder.Build();
-                        properties.Content = "";
-                    });
+                    try {
+                        await ControlMessage.ModifyAsync(properties => {
+                            properties.Embed = EmbedBuilder.Build();
+                            properties.Content = "";
+                        });
+                    }
+                    catch (Exception) {
+                        (await _controlMessageChannel.GetMessageAsync(ControlMessage.Id)).SafeDelete();
+                        ControlMessage = null;
+                        EnqueueControlMessageSend(_controlMessageChannel);
+                    }
                 }
             }) {BetweenExecutionsDelay = TimeSpan.FromSeconds(1.5), CanBeDirty = true};
             _controlMessageSendTask = new SingleTask(async () => {
@@ -367,8 +374,8 @@ namespace Bot.DiscordRelated.Music {
         private readonly SingleTask _controlMessageSendTask;
         private IMessageChannel _controlMessageChannel = null!;
 
-        public async Task EnqueueControlMessageSend(IMessageChannel channel) {
-            _controlMessageChannel = channel;
+        public async Task EnqueueControlMessageSend(IMessageChannel? channel = null) {
+            _controlMessageChannel = channel ?? _controlMessageChannel;
             _controlMessageSendTask.Execute();
         }
 
