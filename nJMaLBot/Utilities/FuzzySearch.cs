@@ -33,7 +33,7 @@ namespace Bot.Utilities {
                 return Matches.Take(matchesCount);
             }
 
-            public SearchMatch GetFullMatch() {
+            public SearchMatch? GetFullMatch() {
                 return Matches.FirstOrDefault(match => Math.Abs(match.Difficulty) < 10);
             }
         }
