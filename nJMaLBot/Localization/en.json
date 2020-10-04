@@ -175,7 +175,8 @@
       "invite0s": "Represents a link with which you can invite a bot to a server",
       "logging0s" : "Shows a message logging control panel",
       "fixspotify0s" : "Wrong tracks when ordering from Spotify? We need to put an end to this. Together.",
-      "fixspotify0_0s" : "Spotify URL of the desired track"
+      "fixspotify0_0s" : "Spotify URL of the desired track",
+      "playnext0s" : "Same as `play`, but adds tracks immediately after the current one, not to the end of the queue"
     },
     "CommandHandler": {
       "FailedTitle": "Error executing command",
