@@ -62,8 +62,7 @@ namespace Bot.DiscordRelated.Commands {
 
             Patch.ApplyCommandPatch();
 
-            if (!Program.CmdOptions.Observer)
-                client.MessageReceived += message => Task.Run(() => commandHandler.HandleCommand(message));
+            client.MessageReceived += message => Task.Run(() => commandHandler.HandleCommand(message));
 
             return commandHandler;
         }
@@ -102,6 +101,7 @@ namespace Bot.DiscordRelated.Commands {
                                 FuzzySearch.Search(query).GetBestMatches(3).Select(match => $"`{match.SimilarTo}`").JoinToString(", "),
                                 guild.Prefix));
                     }
+
                     return;
                 }
 
@@ -217,13 +217,15 @@ namespace Bot.DiscordRelated.Commands {
                 await SendErrorMessage(message, loc, description);
                 return;
             }
-                
-            (await message.Channel.SendMessageAsync(null, false, GetErrorEmbed(message.Author, loc, description).WithFields(fieldBuilders).Build())).DelayedDelete(
-                Constants.LongTimeSpan);
+
+            (await message.Channel.SendMessageAsync(null, false, GetErrorEmbed(message.Author, loc, description).WithFields(fieldBuilders).Build()))
+               .DelayedDelete(
+                    Constants.LongTimeSpan);
         }
 
         private static async Task SendErrorMessage(SocketUserMessage message, ILocalizationProvider loc, string description) {
-            (await message.Channel.SendMessageAsync(null, false, GetErrorEmbed(message.Author, loc, description).Build())).DelayedDelete(Constants.LongTimeSpan);
+            (await message.Channel.SendMessageAsync(null, false, GetErrorEmbed(message.Author, loc, description).Build()))
+               .DelayedDelete(Constants.LongTimeSpan);
         }
 
         public static EmbedBuilder GetErrorEmbed(IUser user, ILocalizationProvider loc, string description) {

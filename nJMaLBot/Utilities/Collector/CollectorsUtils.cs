@@ -17,7 +17,6 @@ namespace Bot.Utilities.Collector {
         private static Logger logger = LogManager.GetCurrentClassLogger();
 
         static CollectorsUtils() {
-            if (Program.CmdOptions.Observer) return;
             Program.Client.ReactionAdded += ClientOnReactionAdded;
             Program.Client.MessageReceived += ClientOnMessageReceived;
         }

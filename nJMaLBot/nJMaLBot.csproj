@@ -16,7 +16,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CommandLineParser" Version="2.8.0" />
     <PackageReference Include="Discord.Net" Version="2.2.0" />
     <PackageReference Include="GrapeCity.Documents.Html" Version="3.1.0.514" />
     <PackageReference Include="GrapeCity.Documents.Html.Linux.X64" Version="3.1.0.514" />

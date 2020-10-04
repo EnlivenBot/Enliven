@@ -9,7 +9,6 @@ using Bot.DiscordRelated.Logging;
 using Bot.Music;
 using Bot.Utilities;
 using Bot.Utilities.Music;
-using CommandLine;
 using Discord;
 using Discord.WebSocket;
 using ICSharpCode.SharpZipLib.Core;
@@ -33,19 +32,12 @@ namespace Bot {
         // ReSharper disable once InconsistentNaming
         private static readonly TaskCompletionSource<bool> waitStartSource = new TaskCompletionSource<bool>();
         public static Task WaitStartAsync = waitStartSource.Task;
-        public static CmdOptions CmdOptions = null!;
 
         // ReSharper disable once UnusedParameter.Local
 
         private static bool _clientStarted;
 
         private static async Task Main(string[] args) {
-            Parser.Default.ParseArguments<CmdOptions>(args).WithParsed(options => {
-                CmdOptions = options;
-                if (CmdOptions.BotToken != null) {
-                    GlobalConfig.Instance.BotToken = CmdOptions.BotToken;
-                }
-            });
             InstallLogger();
             #if !DEBUG
             InstallErrorHandlers();

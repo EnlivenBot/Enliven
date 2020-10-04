@@ -26,7 +26,6 @@ namespace Bot.DiscordRelated.Logging {
         public static readonly DiffMatchPatch.DiffMatchPatch DiffMatchPatch = new DiffMatchPatch.DiffMatchPatch();
 
         static MessageHistoryManager() {
-            if (Program.CmdOptions.Observer) return;
             // Message created handled located in CommandHandler
             Program.Client.MessageUpdated += ClientOnMessageUpdated;
             Program.Client.MessageDeleted += ClientOnMessageDeleted;
