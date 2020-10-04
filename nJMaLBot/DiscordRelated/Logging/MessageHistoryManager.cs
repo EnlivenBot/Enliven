@@ -48,7 +48,7 @@ namespace Bot.DiscordRelated.Logging {
             // Sorry for this hack
             // But this project does not bring me income, and I can not afford to buy this license
             // If you using it consider buying license at https://www.grapecity.com/documents-api/licensing
-            var type = typeof(GcHtmlRenderer).Assembly.GetType("anz");
+            var type = typeof(GcHtmlRenderer).Assembly.GetType("aov");
             AccessTools.Field(type, "c").SetValue(null, int.MaxValue);
         }
 
