@@ -69,18 +69,31 @@ namespace Bot.Utilities.Music {
         }
     }
 
-    public class SpotifyTrackData {
+    public class SpotifyTrack {
         private FullTrack? _track;
+        private string? _trackInfo;
 
-        public SpotifyTrackData(string id, FullTrack? track = null) {
+        public SpotifyTrack(string id, FullTrack? track = null) {
             _track = track;
             Id = id;
+        }
+        
+        public SpotifyTrack(SimpleTrack track) {
+            _trackInfo = $"{track.Name} - {track.Artists[0].Name}";
+            Id = track.Id;
         }
 
         public string Id { get; private set; }
 
-        public async Task<FullTrack> GetTrack() {
-            return _track ??= await (await SpotifyMusicProvider.SpotifyClient).Tracks.Get(Id);
+        public async Task<FullTrack> GetFullTrack() {
+            return _track ??= await (await SpotifyMusicProvider.SpotifyClient)!.Tracks.Get(Id);
+        }
+        
+        public async Task<string> GetTrackInfo() {
+            if (_trackInfo != null)
+                return _trackInfo;
+            var fullTrack = await GetFullTrack();
+            return _trackInfo = $"{fullTrack.Name} - {fullTrack.Artists[0].Name}";
         }
     }
 }

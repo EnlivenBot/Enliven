@@ -92,30 +92,32 @@ namespace Bot.DiscordRelated.Commands {
 
                 var command = await GetCommand(query, context);
 
-                if (command == null) {
-                    await AddEmojiErrorHint(msg, loc, CommonEmoji.Help,
-                        new EntryLocalized("CommandHandler.UnknownCommand").Add(query.SafeSubstring(40, "...")!,
-                            FuzzySearch.Search(query).GetBestMatches(3).Select(match => $"`{match.SimilarTo}`").JoinToString(", "),
-                            guild.Prefix));
+                if (command.Item1 == null) {
+                    if (command.Item2.Error == CommandError.UnmetPrecondition) {
+                        await SendErrorMessage(msg, loc, loc.Get("CommandHandler.UnmetPrecondition"));
+                    }
+                    else {
+                        await AddEmojiErrorHint(msg, loc, CommonEmoji.Help,
+                            new EntryLocalized("CommandHandler.UnknownCommand").Add(query.SafeSubstring(40, "...")!,
+                                FuzzySearch.Search(query).GetBestMatches(3).Select(match => $"`{match.SimilarTo}`").JoinToString(", "),
+                                guild.Prefix));
+                    }
                     return;
                 }
 
-                var result = command.Value.Value.IsSuccess
-                    ? await ExecuteCommand(msg, query, context, command.Value, s.Author.Id.ToString())
-                    : command.Value.Value;
+                var result = command.Item1.Value.Value.IsSuccess
+                    ? await ExecuteCommand(msg, query, context, command.Item1.Value, s.Author.Id.ToString())
+                    : command.Item1.Value.Value;
 
                 if (!result.IsSuccess) {
                     switch (result.Error) {
                         case CommandError.ParseFailed:
                             await AddEmojiErrorHint(msg, loc, CommonEmoji.Help, new EntryLocalized("CommandHandler.ParseFailed"),
-                                HelpUtils.BuildHelpFields(command.Value.Key.Alias, guild.Prefix, loc));
+                                HelpUtils.BuildHelpFields(command.Item1.Value.Key.Alias, guild.Prefix, loc));
                             break;
                         case CommandError.BadArgCount:
                             await AddEmojiErrorHint(msg, loc, CommonEmoji.Help, new EntryLocalized("CommandHandler.BadArgCount"),
-                                HelpUtils.BuildHelpFields(command.Value.Key.Alias, guild.Prefix, loc));
-                            break;
-                        case CommandError.UnmetPrecondition:
-                            await SendErrorMessage(msg, loc, loc.Get("CommandHandler.UnmetPrecondition"));
+                                HelpUtils.BuildHelpFields(command.Item1.Value.Key.Alias, guild.Prefix, loc));
                             break;
                         case CommandError.ObjectNotFound:
                             await SendErrorMessage(msg, loc, result.ErrorReason);
@@ -157,11 +159,11 @@ namespace Bot.DiscordRelated.Commands {
             }
         }
 
-        private async Task<KeyValuePair<CommandMatch, ParseResult>?> GetCommand(string query, ICommandContext context) {
+        private async Task<(KeyValuePair<CommandMatch, ParseResult>?, IResult)> GetCommand(string query, ICommandContext context) {
             var (commandMatch, result) = await CommandService.FindAsync(context, query, null);
-            if (result.IsSuccess)
-                return commandMatch;
+            if (result.IsSuccess) return (commandMatch, result);
 
+            if (result.Error != CommandError.UnknownCommand) return (commandMatch, result);
             string args;
             var command = query.Substring(0, query.IndexOf(" ", StringComparison.Ordinal) > 0 ? query.IndexOf(" ", StringComparison.Ordinal) : query.Length);
             try {
@@ -175,12 +177,12 @@ namespace Bot.DiscordRelated.Commands {
             var bestMatch = searchResult.GetFullMatch();
 
             // Check for a another keyboard layout
-            if (bestMatch == null) return commandMatch;
+            if (bestMatch == null) return (commandMatch, result);
 
             command = bestMatch.SimilarTo;
-            query = command + " " + args;
+            query = $"{command} {args}";
             var (commandMatch2, result2) = await CommandService.FindAsync(context, query, null);
-            return result2.IsSuccess ? commandMatch2 : commandMatch;
+            return result2.IsSuccess ? (commandMatch2, result2) : (commandMatch, result);
         }
 
         public async Task<IResult> ExecuteCommand(IMessage message, string query, ICommandContext context, KeyValuePair<CommandMatch, ParseResult> pair,

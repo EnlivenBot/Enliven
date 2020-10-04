@@ -15,15 +15,13 @@ using Bot.Utilities;
 using Bot.Utilities.Collector;
 using Bot.Utilities.Music;
 using Discord;
-using Org.BouncyCastle.Utilities.Collections;
 using SpotifyAPI.Web;
 
 namespace Bot.Commands.Chains {
     public class FixSpotifyChain : ChainBase {
         private IMessageChannel _channel = null!;
-        private string _request = null!;
+        private SpotifyUrl _request = null!;
         private IUser _requester = null!;
-        private string? _trackId;
         private IUserMessage? _controlMessage;
         private PaginatedMessage? _paginatedMessage;
         private CollectorsGroup? _collectorController;
@@ -32,15 +30,13 @@ namespace Bot.Commands.Chains {
 
         public static FixSpotifyChain CreateInstance(IUser requester, IMessageChannel channel, ILocalizationProvider loc, string request) {
             var fixSpotifyChain = new FixSpotifyChain($"{nameof(FixSpotifyChain)}_{requester.Id}", loc) {
-                _request = request, _requester = requester, _channel = channel
+                _request = new SpotifyUrl(request), _requester = requester, _channel = channel
             };
 
             return fixSpotifyChain;
         }
 
         public async Task Start() {
-            var isTrack = SpotifyMusicProvider.IsTrack(_request, out var trackId);
-            _trackId = trackId;
             MainBuilder.WithColor(Color.Gold).WithTitle(Loc.Get("Chains.FixSpotifyTitle"));
             _controlMessage = await _channel.SendMessageAsync(null, false, MainBuilder.Build());
             SetTimeout(Constants.StandardTimeSpan);
@@ -60,32 +56,35 @@ namespace Bot.Commands.Chains {
 
                 controlMessage.DelayedDelete(Constants.StandardTimeSpan);
             };
-            switch (isTrack) {
-                case true:
-                    await StartWithTrack(new SpotifyTrackData(_trackId!));
-                    break;
-                case false:
+            switch (_request.Type) {
+                case SpotifyUrl.SpotifyUrlType.Album:
+                case SpotifyUrl.SpotifyUrlType.Playlist:
                     await StartWithPlaylist();
                     break;
-                case null:
-                    OnEnd.Invoke(new EntryLocalized("Chains.FixSpotifyQueryNotRecognised", _request.SafeSubstring(50)!));
+                case SpotifyUrl.SpotifyUrlType.Track:
+                    await StartWithTrack(new SpotifyTrack(_request.Id));
                     break;
+                case SpotifyUrl.SpotifyUrlType.Unknown:
+                    OnEnd.Invoke(new EntryLocalized("Chains.FixSpotifyQueryNotRecognised", _request.Request.SafeSubstring(50)!));
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
         }
 
         private async Task StartWithPlaylist() {
             var spotify = (await SpotifyMusicProvider.SpotifyClient)!;
             try {
-                var playlist = await spotify.Playlists.Get(_trackId!);
+                var playlist = await spotify.Playlists.Get(_request.Id);
                 var tracks = (await spotify.PaginateAll(playlist!.Tracks!))
                             .Select(track => track.Track as FullTrack)
                             .Where(track => track != null)
-                            .Select(track => new SpotifyTrackData(track!.Id, track)).ToList()!;
+                            .Select(track => new SpotifyTrack(track!.Id, track)).ToList()!;
 
                 var stringBuilder = new StringBuilder();
                 for (var index = 0; index < tracks.Count; index++) {
                     var spotifyTrackData = tracks[index];
-                    var fullTrack = await spotifyTrackData.GetTrack();
+                    var fullTrack = await spotifyTrackData.GetFullTrack();
                     stringBuilder.AppendLine($"{index + 1}. [{fullTrack.Name}]({fullTrack.Uri}) *by {fullTrack.Artists.First().Name}*");
                 }
 
@@ -110,13 +109,13 @@ namespace Bot.Commands.Chains {
                 });
             }
             catch (Exception) {
-                OnEnd.Invoke(new EntryLocalized("Chains.FixSpotifyNotFound", _request.SafeSubstring(50)!));
+                OnEnd.Invoke(new EntryLocalized("Chains.FixSpotifyNotFound", _request.Request.SafeSubstring(50)!));
             }
         }
 
-        private async Task StartWithTrack(SpotifyTrackData spotifyTrackData) {
+        private async Task StartWithTrack(SpotifyTrack spotifyTrack) {
             SetTimeout(Constants.StandardTimeSpan);
-            var association = await SpotifyMusicProvider.ResolveWithCache(spotifyTrackData, MusicUtils.Cluster);
+            var association = await SpotifyMusicProvider.ResolveWithCache(spotifyTrack, MusicUtils.Cluster);
             if (association == null) {
                 OnEnd.Invoke(new EntryLocalized("Chains.FixSpotifyAssociationCreationError"));
                 return;
@@ -124,7 +123,7 @@ namespace Bot.Commands.Chains {
             
             var onPaginatedMessageStop = new EventHandler((sender, args) => End());
             // ReSharper disable once RedundantAssignment
-            var fullTrack = await spotifyTrackData.GetTrack();
+            var fullTrack = await spotifyTrack.GetFullTrack();
 
             UpdateMessage();
 
@@ -153,7 +152,7 @@ namespace Bot.Commands.Chains {
                     _paginatedMessage!.Stop -= onPaginatedMessageStop;
                     _paginatedMessage.StopAndClear();
 
-                    await StartWithAssociation(association, spotifyTrackData, association.Associations[index.Normalize(1, association.Associations.Count) - 1]);
+                    await StartWithAssociation(association, spotifyTrack, association.Associations[index.Normalize(1, association.Associations.Count) - 1]);
                     SetTimeout(Constants.StandardTimeSpan);
                     return;
                 }
@@ -207,10 +206,10 @@ namespace Bot.Commands.Chains {
             }
         }
 
-        private async Task StartWithAssociation(SpotifyTrackAssociation association, SpotifyTrackData trackData,
+        private async Task StartWithAssociation(SpotifyTrackAssociation association, SpotifyTrack track,
                                                 SpotifyTrackAssociation.TrackAssociationData data) {
             SetTimeout(Constants.StandardTimeSpan);
-            var fullTrack = await trackData.GetTrack();
+            var fullTrack = await track.GetFullTrack();
             UpdateBuilder();
             _controlMessage = await _channel.SendMessageAsync(null, false, MainBuilder.Build());
             var emojiCancellation = new CancellationTokenSource();
@@ -232,7 +231,7 @@ namespace Bot.Commands.Chains {
                         // ignored
                     }
 
-                    await StartWithTrack(trackData);
+                    await StartWithTrack(track);
                 }
                 else if (args.Reaction.Emote.Equals(CommonEmoji.ThumbsUp)) {
                     data.AddVote(_requester.Id, true);

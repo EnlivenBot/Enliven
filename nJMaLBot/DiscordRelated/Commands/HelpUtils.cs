@@ -38,16 +38,13 @@ namespace Bot.DiscordRelated.Commands {
         public static string GetAliasesString(IEnumerable<string> aliases, ILocalizationProvider loc, bool skipFirst = true) {
             aliases = skipFirst ? aliases.Skip(1) : aliases;
             var enumerable = aliases.ToList();
-            if (!enumerable.Any())
-                return "";
-
-            return "(" + loc.Get("Help.Aliases") + GetAliases(enumerable) + ")";
+            return !enumerable.Any() ? "" : $"({GetAliases(enumerable)})";
         }
 
         private static string GetAliases(IEnumerable<string> aliases) {
             var s = new StringBuilder();
-            foreach (var aliase in aliases) {
-                s.Append($" `{aliase}` ");
+            foreach (var alias in aliases) {
+                s.Append($" `{alias}` ");
             }
 
             return s.ToString().Trim();

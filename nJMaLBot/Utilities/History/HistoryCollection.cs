@@ -15,12 +15,12 @@ namespace Bot.Utilities.History {
         private string? _lastHistory;
         private ILocalizationProvider? _lastProvider;
         private int _maxEntriesCount;
-        private int _maxLastHistoryLenght;
+        private int _maxLastHistoryLength;
 
-        public HistoryCollection(int maxLastHistoryLenght = int.MaxValue, int maxEntriesCount = int.MaxValue, bool ignoreDuplicateIds = true) {
+        public HistoryCollection(int maxLastHistoryLength = int.MaxValue, int maxEntriesCount = int.MaxValue, bool ignoreDuplicateIds = true) {
             _ignoreDuplicateIds = ignoreDuplicateIds;
             _maxEntriesCount = maxEntriesCount;
-            _maxLastHistoryLenght = maxLastHistoryLenght;
+            _maxLastHistoryLength = maxLastHistoryLength;
         }
 
         public int MaxEntriesCount {
@@ -32,10 +32,10 @@ namespace Bot.Utilities.History {
             }
         }
 
-        public int MaxLastHistoryLenght {
-            get => _maxLastHistoryLenght;
+        public int MaxLastHistoryLength {
+            get => _maxLastHistoryLength;
             set {
-                _maxLastHistoryLenght = value;
+                _maxLastHistoryLength = value;
                 OnHistoryChanged();
             }
         }
@@ -167,7 +167,7 @@ namespace Bot.Utilities.History {
                 bool AppendEntry() {
                     if (lastEntry == null) return true;
                     var final = count > 1 ? $"{lastEntry} (**x{count}**){Environment.NewLine}" : $"{lastEntry}{Environment.NewLine}";
-                    if (stringBuilder.Length + final.Length > MaxLastHistoryLenght) return false;
+                    if (stringBuilder.Length + final.Length > MaxLastHistoryLength) return false;
                     stringBuilder.Insert(0, final);
                     return true;
                 }
