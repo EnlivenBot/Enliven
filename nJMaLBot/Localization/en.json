@@ -116,7 +116,6 @@
       "CommandsOfGroup": "Available commands from group `{0}`",
       "CommandTitle": "**{0}** - {1}",
       "ByCommand": "Command help: `{0}`",
-      "Aliases": "Aliases: ",
       "stats0s": "Bot command usage statistics",
       "userstats0s": "Bot command usage statistics by a specific user",
       "userstats1s": "Bot command usage statistics by you",
