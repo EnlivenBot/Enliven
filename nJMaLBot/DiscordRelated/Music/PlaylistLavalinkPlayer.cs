@@ -216,11 +216,12 @@ namespace Bot.DiscordRelated.Music {
         public virtual async Task Enqueue(List<AuthoredTrack> tracks, int position = -1) {
             if (tracks.Any()) {
                 if (position == -1) {
-                    await PlayAsync(tracks.First(), true);
-
-                    if (tracks.Count > 1) {
-                        Playlist.AddRange(tracks.Skip(1));
+                    if (State != PlayerState.Paused) {
+                        await PlayAsync(tracks.First(), true);
+                        tracks.RemoveAt(0);
                     }
+
+                    Playlist.AddRange(tracks);
                 }
                 else {
                     Playlist.InsertRange(position, tracks);
@@ -259,7 +260,7 @@ namespace Bot.DiscordRelated.Music {
                     await PlayAsync(CurrentTrack, TrackPosition);
 
                     if (State != PlayerState.Playing) throw new Exception("Something went wrong, executing shutdown");
-                    
+
                     var storedPlaylist = ExportPlaylist(ExportPlaylistOptions.AllData).StorePlaylist("a" + ObjectId.NewObjectId(), 0);
                     WriteToQueueHistory(Loc.Get("Music.ReconnectAfterDisposeFailed", GuildConfig.Prefix, storedPlaylist.Id));
                 }
