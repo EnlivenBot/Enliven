@@ -32,6 +32,13 @@ namespace Bot.Config {
             Playlists = Database.GetCollection<StoredPlaylist>(@"StoredPlaylists");
             SpotifyAssociations = Database.GetCollection<SpotifyTrackAssociation>(@"SpotifyAssociations");
             Users = Database.GetCollection<UserData>("UserData");
+            
+            //Fix for mapping TimeSpan?
+            BsonMapper.Global.RegisterType
+            (
+                timeSpan => BsonMapper.Global.Serialize(timeSpan?.Ticks),
+                bson => bson == null ?(TimeSpan?) null : TimeSpan.FromTicks((long) bson.RawValue)
+            );
         }
 
         public static void Initialize() {
