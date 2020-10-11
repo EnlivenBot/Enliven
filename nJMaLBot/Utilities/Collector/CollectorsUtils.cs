@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using System.Threading;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
@@ -38,7 +35,7 @@ namespace Bot.Utilities.Collector {
         public static CollectorController CollectReaction(Predicate<SocketReaction> predicate,
                                                           Action<EmoteCollectorEventArgs> action, CollectorFilter filter = CollectorFilter.Off) {
             var collectorController = new CollectorController();
-            
+
             predicate = ApplyFilters(predicate, filter);
             var disposable = ReactionAdded.Subscribe(tuple => {
                 logger.Swallow(() => {
@@ -53,7 +50,7 @@ namespace Bot.Utilities.Collector {
         public static CollectorController CollectMessage(Predicate<IMessage> predicate,
                                                          Action<MessageCollectorEventArgs> action, CollectorFilter filter = CollectorFilter.Off) {
             var collectorController = new CollectorController();
-            
+
             predicate = ApplyFilters(predicate, filter);
             var disposable = MessageReceived.Subscribe(message => {
                 logger.Swallow(() => {
@@ -88,7 +85,32 @@ namespace Bot.Utilities.Collector {
         public static CollectorController CollectMessage(IChannel channel, Predicate<IMessage> predicate,
                                                          Action<MessageCollectorEventArgs> action, CollectorFilter filter = CollectorFilter.Off)
             => CollectMessage(message => channel.Id == message.Channel.Id && predicate(message), action, filter);
+
+        public static CollectorsGroup CollectReactions<T>(Predicate<SocketReaction> predicate, Action<EmoteMultiCollectorEventArgs, T> action,
+                                                          params (IEmote, T)[] selectors) {
+            return CollectReactions(predicate, action, selectors.Select(tuple => (tuple.Item1, new Func<T>(() => tuple.Item2))).ToArray());
+        }
         
+        public static CollectorsGroup CollectReactions<T>(Predicate<SocketReaction> predicate, Action<EmoteMultiCollectorEventArgs, T> action,
+                                                          params (IEmote, Func<T>)[] selectors) {
+            var collectorsGroup = new CollectorsGroup();
+            foreach (var selector in selectors.ToList()) {
+                var collectorController = new CollectorController();
+
+                var localPredicate = new Predicate<SocketReaction>(reaction => reaction.Emote.Equals(selector.Item1) && predicate(reaction));
+                var disposable = ReactionAdded.Subscribe(tuple => {
+                    logger.Swallow(() => {
+                        if (localPredicate(tuple.Item3)) action(new EmoteMultiCollectorEventArgs(collectorController, collectorsGroup, tuple.Item3), selector.Item2());
+                    });
+                });
+                collectorController.Stop += (sender, args) => disposable.Dispose();
+                
+                collectorsGroup.Add(collectorController);
+            }
+
+            return collectorsGroup;
+        }
+
         #region Collect commands
 
         private static ConcurrentDictionary<CommandInfo, ConcurrentDictionary<Guid, (Func<ICommandContext, CommandMatch, bool>,
