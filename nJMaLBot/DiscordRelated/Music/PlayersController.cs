@@ -64,18 +64,14 @@ namespace Bot.DiscordRelated.Music {
             }
             
             var player = await MusicUtils.Cluster!.JoinAsync(() => new EmbedPlaybackPlayer(guildId), guildId, voiceChannelId);
-            player.Shutdown += PlayerOnShutdown;
+            player.Shutdown.Subscribe(entry => {
+                PlaybackPlayers.Remove(player);
+            });
             await player.NodeChanged();
             PlaybackPlayers.Add(player);
             return player;
         }
-
-        private static void PlayerOnShutdown(object? sender, IEntry e) {
-            var player = (sender as EmbedPlaybackPlayer)!;
-            player.Shutdown -= PlayerOnShutdown;
-            PlaybackPlayers.Remove(player);
-        }
-
+        
         public static EmbedPlaybackPlayer? GetPlayer(ulong guildId) {
             var embedPlaybackPlayer = PlaybackPlayers.FirstOrDefault(player => player.GuildId == guildId);
             return embedPlaybackPlayer?.IsShutdowned == true ? null : embedPlaybackPlayer;

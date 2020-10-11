@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Reactive.Subjects;
 using System.Threading.Tasks;
 using Bot.Config;
 using Bot.Config.Localization.Entries;
@@ -58,11 +59,12 @@ namespace Bot.DiscordRelated.Music {
 
         public bool IsShutdowned { get; private set; }
 
-        public event EventHandler<IEntry> Shutdown;
+        public readonly Subject<IEntry> Shutdown = new Subject<IEntry>();
 
         public virtual Task ExecuteShutdown(IEntry reason, bool needSave = true) {
             IsShutdowned = true;
-            Shutdown.Invoke(this, reason);
+            Shutdown.OnNext(reason);
+            Shutdown.Dispose();
             base.Dispose();
             return Task.CompletedTask;
         }
