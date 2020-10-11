@@ -214,19 +214,20 @@ namespace Bot.DiscordRelated.Music {
         }
 
         public virtual async Task Enqueue(List<AuthoredTrack> tracks, int position = -1) {
-            if (tracks.Any()) {
+            var localTracks = tracks.ToList();
+            if (localTracks.Any()) {
                 if (position == -1) {
                     if (State != PlayerState.Paused) {
-                        await PlayAsync(tracks.First(), true);
-                        tracks.RemoveAt(0);
+                        await PlayAsync(localTracks.First(), true);
+                        localTracks.RemoveAt(0);
                     }
 
-                    Playlist.AddRange(tracks);
+                    Playlist.AddRange(localTracks);
                 }
                 else {
-                    Playlist.InsertRange(position, tracks);
+                    Playlist.InsertRange(position, localTracks);
                     if (State == PlayerState.NotPlaying) {
-                        await PlayAsync(tracks.First(), false, null, null, true);
+                        await PlayAsync(localTracks.First(), false, null, null, true);
                     }
                 }
             }
