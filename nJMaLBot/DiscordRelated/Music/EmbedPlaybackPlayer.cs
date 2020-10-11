@@ -127,35 +127,33 @@ namespace Bot.DiscordRelated.Music {
             UpdateProgress();
         }
 
-        public override async Task ExecuteShutdown(IEntry reason, bool needSave = true) {
-            if (ControlMessage != null) {
-                var oldControlMessage = ControlMessage;
-                ControlMessage = null;
-                var embedBuilder = new EmbedBuilder()
-                                  .WithTitle(Loc.Get("Music.PlaybackStopped"))
-                                  .WithDescription(reason.Get(Loc));
-                if (needSave) {
-                    var exportPlaylist = ExportPlaylist(ExportPlaylistOptions.AllData);
-                    var storedPlaylist = exportPlaylist.StorePlaylist("a" + ObjectId.NewObjectId(), 0);
-                    embedBuilder.Description += Loc.Get("Music.ResumeViaPlaylists", GuildConfig.Prefix, storedPlaylist.Id);
+        public override async Task ExecuteShutdown(IEntry reason, PlayerShutdownParameters parameters) {
+            parameters.LastControlMessage = ControlMessage;
+            await base.ExecuteShutdown(reason, parameters);
+
+            var oldControlMessage = ControlMessage;
+            ControlMessage = null;
+            if (oldControlMessage != null && !parameters.LeaveMessageUnchanged) {
+                var embedBuilder = new EmbedBuilder().WithTitle(Loc.Get("Music.PlaybackStopped")).WithDescription(reason.Get(Loc));
+                if (parameters.StoredPlaylist != null) {
+                    embedBuilder.Description += Loc.Get("Music.ResumeViaPlaylists", GuildConfig.Prefix, parameters.StoredPlaylist.Id);
                 }
                 else {
                     oldControlMessage.DelayedDelete(Constants.LongTimeSpan);
                 }
 
                 if (_updateControlMessageTask.IsExecuting) await _updateControlMessageTask.Execute(false);
-                oldControlMessage?.ModifyAsync(properties => {
+                oldControlMessage.ModifyAsync(properties => {
                     properties.Embed = embedBuilder.Build();
                     properties.Content = null;
                 });
-                _collectorsGroup?.DisposeAll();
                 oldControlMessage?.RemoveAllReactionsAsync();
             }
-
+            
+            _collectorsGroup?.DisposeAll();
             _queueMessage?.StopAndClear();
 
             UpdatePlayback = false;
-            base.ExecuteShutdown(reason, needSave);
         }
 
         public override void WriteToQueueHistory(HistoryEntry entry) {

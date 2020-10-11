@@ -23,7 +23,7 @@ namespace Bot.DiscordRelated.Music {
 
         private static void OnProcessExit(object? sender, EventArgs e) {
             foreach (var player in PlaybackPlayers.ToList()) {
-                player.ExecuteShutdown();
+                player.ExecuteShutdown(new PlayerShutdownParameters());
             }
         }
 
@@ -58,7 +58,7 @@ namespace Bot.DiscordRelated.Music {
             if (oldPlayer != null) {
                 if (!recreate) return oldPlayer;
                 if (!oldPlayer.IsShutdowned) {
-                    await oldPlayer.ExecuteShutdown();
+                    await oldPlayer.ExecuteShutdown(new PlayerShutdownParameters());
                 }
                 PlaybackPlayers.Remove(oldPlayer);
             }

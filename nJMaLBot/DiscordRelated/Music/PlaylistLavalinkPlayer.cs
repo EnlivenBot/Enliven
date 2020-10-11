@@ -207,6 +207,15 @@ namespace Bot.DiscordRelated.Music {
             }
         }
 
+        public override async Task ExecuteShutdown(IEntry reason, PlayerShutdownParameters parameters) {
+            await base.ExecuteShutdown(reason, parameters);
+            if (parameters.NeedSave) {
+                var exportPlaylist = ExportPlaylist(ExportPlaylistOptions.AllData);
+                var storedPlaylist = exportPlaylist.StorePlaylist("a" + ObjectId.NewObjectId(), 0);
+                parameters.StoredPlaylist = storedPlaylist;
+            }
+        }
+
         public virtual async Task Enqueue(List<AuthoredTrack> tracks, int position = -1) {
             var localTracks = tracks.ToList();
             if (localTracks.Any()) {
@@ -260,7 +269,7 @@ namespace Bot.DiscordRelated.Music {
                     WriteToQueueHistory(Loc.Get("Music.ReconnectAfterDisposeFailed", GuildConfig.Prefix, storedPlaylist.Id));
                 }
                 catch (Exception) {
-                    await ExecuteShutdown();
+                    await ExecuteShutdown(new PlayerShutdownParameters());
                 }
             }
             else {

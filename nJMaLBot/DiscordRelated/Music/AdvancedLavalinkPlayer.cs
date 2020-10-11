@@ -61,7 +61,7 @@ namespace Bot.DiscordRelated.Music {
 
         public readonly Subject<IEntry> Shutdown = new Subject<IEntry>();
 
-        public virtual Task ExecuteShutdown(IEntry reason, bool needSave = true) {
+        public virtual Task ExecuteShutdown(IEntry reason, PlayerShutdownParameters parameters) {
             IsShutdowned = true;
             Shutdown.OnNext(reason);
             Shutdown.Dispose();
@@ -69,12 +69,12 @@ namespace Bot.DiscordRelated.Music {
             return Task.CompletedTask;
         }
 
-        public Task ExecuteShutdown(string reason, bool needSave = true) {
-            return ExecuteShutdown(new EntryString(reason), needSave);
+        public Task ExecuteShutdown(string reason, PlayerShutdownParameters parameters) {
+            return ExecuteShutdown(new EntryString(reason), parameters);
         }
 
-        public Task ExecuteShutdown(bool needSave = true) {
-            return ExecuteShutdown(new EntryLocalized("Music.PlaybackStopped"), needSave);
+        public Task ExecuteShutdown(PlayerShutdownParameters parameters) {
+            return ExecuteShutdown(new EntryLocalized("Music.PlaybackStopped"), parameters);
         }
 
         public override Task ConnectAsync(ulong voiceChannelId, bool selfDeaf = false, bool selfMute = false) {
@@ -100,7 +100,7 @@ namespace Bot.DiscordRelated.Music {
 
             if (_updateFailCount >= UpdateFailThreshold) {
                 logger.Info("Player {guildId} disposed due to state {state}", GuildId, State);
-                ExecuteShutdown();
+                ExecuteShutdown(new PlayerShutdownParameters());
                 throw new ObjectDisposedException("Player", $"Player disposed due to {State}");
             }
         }
