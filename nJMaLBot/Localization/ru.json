@@ -99,7 +99,8 @@
       "TrackNotSeekable": "{0}, к сожалению этот трек нельзя перемотать",
       "TryingReconnectAfterDispose" : "Разрушительный сбой! Мы пытаемся все починить...",
       "ReconnectAfterDisposeFailed" : "Мы все починили. Если нет, то используйте команды `{0}stop` и `{0}loadplaylist {1}`",
-      "ResolvingTracks" : "Получение треков из `{0}` запросов"
+      "ResolvingTracks" : "Получение треков из `{0}` запросов",
+      "CurrentTrackNonSpotify" : "Текущий трек не получен из Spotify. Переключитесь на трек из Spotify или укажите ID трека как аргумент к этой команде"
     },
     "Groups": {
       "": "Другие",
