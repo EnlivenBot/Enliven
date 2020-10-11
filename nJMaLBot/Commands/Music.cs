@@ -8,6 +8,7 @@ using Bot.Config.Localization.Entries;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
 using Bot.DiscordRelated.Music;
+using Bot.DiscordRelated.Music.Tracks;
 using Bot.Music;
 using Bot.Utilities;
 using Bot.Utilities.History;
@@ -474,7 +475,28 @@ namespace Bot.Commands {
         [Command("fixspotify", RunMode = RunMode.Async)]
         [Alias("spotify, fs")]
         [Summary("fixspotify0s")]
-        public async Task FixSpotify([Summary("fixspotify0_0s")] string s) {
+        public async Task FixSpotify() {
+            if (!await IsPreconditionsValid) return;
+            if (Player == null) {
+                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix)).UpdateTimeout(Constants.StandardTimeSpan).Update();
+                return;
+            }
+
+            if (Player.CurrentTrack is AuthoredTrack authoredTrack && authoredTrack.Track is SpotifyLavalinkTrack spotifyLavalinkTrack) {
+                var fixSpotifyChain = FixSpotifyChain.CreateInstance(Context.User, Context.Channel, Loc,
+                    $"spotify:track:{spotifyLavalinkTrack.RelatedSpotifyTrack.Id}");
+                await fixSpotifyChain.Start();
+            }
+            else {
+                ErrorMessageController.AddEntry(Loc.Get("Music.CurrentTrackNonSpotify")).UpdateTimeout(Constants.StandardTimeSpan).Update();
+            }
+        }
+
+        [Command("fixspotify", RunMode = RunMode.Async)]
+        [Alias("spotify, fs")]
+        [Summary("fixspotify0s")]
+        public async Task FixSpotify([Remainder] [Summary("fixspotify0_0s")]
+                                     string s) {
             var fixSpotifyChain = FixSpotifyChain.CreateInstance(Context.User, Context.Channel, Loc, s);
             await fixSpotifyChain.Start();
         }

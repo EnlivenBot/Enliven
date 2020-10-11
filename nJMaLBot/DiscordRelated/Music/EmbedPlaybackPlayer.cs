@@ -9,6 +9,7 @@ using Bot.Config.Emoji;
 using Bot.Config.Localization.Entries;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Criteria;
+using Bot.DiscordRelated.Music.Tracks;
 using Bot.Music;
 using Bot.Utilities;
 using Bot.Utilities.Collector;
@@ -156,7 +157,7 @@ namespace Bot.DiscordRelated.Music {
             UpdatePlayback = false;
             base.ExecuteShutdown(reason, needSave);
         }
-        
+
         public override void WriteToQueueHistory(HistoryEntry entry) {
             _queueHistory.Add(entry);
         }
@@ -187,7 +188,7 @@ namespace Bot.DiscordRelated.Music {
             }
         }
 
-        public override async Task Enqueue(List<AuthoredLavalinkTrack> tracks, int position = -1) {
+        public override async Task Enqueue(List<AuthoredTrack> tracks, int position = -1) {
             await base.Enqueue(tracks, position);
             if (tracks.Count == 1) {
                 var track = tracks.First();
@@ -231,7 +232,7 @@ namespace Bot.DiscordRelated.Music {
             }
 
             var tracks = playlist.Tracks.Select(s => TrackDecoder.DecodeTrack(s))
-                                 .Select(track => AuthoredLavalinkTrack.FromLavalinkTrack(track, requester)).ToList();
+                                 .Select(track => new AuthoredTrack(track, requester)).ToList();
             if (options == ImportPlaylistOptions.Replace) {
                 try {
                     await StopAsync();
@@ -396,25 +397,36 @@ namespace Bot.DiscordRelated.Music {
 
         public void UpdateProgress(bool background = false) {
             if (CurrentTrack != null) {
+                EmbedBuilder.Fields["State"].Name = Loc.Get("Music.RequestedBy").Format(CurrentTrack.GetRequester());
+
                 var progressPercentage = Convert.ToInt32(TrackPosition.TotalSeconds / CurrentTrack.Duration.TotalSeconds * 100);
-                var requester = CurrentTrack is AuthoredLavalinkTrack authoredLavalinkTrack ? authoredLavalinkTrack.GetRequester() : "Unknown";
-                EmbedBuilder.Fields["State"].Name = Loc.Get("Music.RequestedBy").Format(requester);
+                var progressBar = (IsExternalEmojiAllowed ? ProgressEmoji.CustomEmojiPack : ProgressEmoji.TextEmojiPack).GetProgress(progressPercentage);
 
                 var stateString = State switch {
                     PlayerState.Playing => IsExternalEmojiAllowed ? CommonEmojiStrings.Instance.Play : "▶",
                     PlayerState.Paused  => IsExternalEmojiAllowed ? CommonEmojiStrings.Instance.Pause : "⏸",
                     _                   => IsExternalEmojiAllowed ? CommonEmojiStrings.Instance.Stop : "⏹"
                 };
-
                 var loopingStateString = LoopingState switch {
                     LoopingState.One => IsExternalEmojiAllowed ? CommonEmojiStrings.Instance.RepeatOnce : "🔂",
                     LoopingState.All => IsExternalEmojiAllowed ? CommonEmojiStrings.Instance.Repeat : "🔁",
                     LoopingState.Off => IsExternalEmojiAllowed ? CommonEmojiStrings.Instance.RepeatOff : "❌",
                     _                => throw new InvalidEnumArgumentException()
                 };
-                EmbedBuilder.Fields["State"].Value =
-                    (IsExternalEmojiAllowed ? ProgressEmoji.CustomEmojiPack : ProgressEmoji.TextEmojiPack).GetProgress(progressPercentage)
-                  + "\n" + GetProgressInfo(stateString, loopingStateString, CurrentTrack.IsSeekable);
+                var spotifyId = (CurrentTrack is AuthoredTrack authoredTrack && authoredTrack.Track is SpotifyLavalinkTrack spotifyLavalinkTrack)
+                    ? spotifyLavalinkTrack.RelatedSpotifyTrack.Id
+                    : null;
+                var spotifyEmojiExists = spotifyId != null && IsExternalEmojiAllowed;
+                var sb = new StringBuilder(TrackPosition.FormattedToString());
+                if (CurrentTrack.IsSeekable) {
+                    sb.Append(" / ");
+                    sb.Append(CurrentTrack.Duration.FormattedToString());
+                }
+
+                var space = new string(' ', Math.Max(0, ((spotifyEmojiExists ? 18 : 22) - sb.Length) / 2));
+                var detailsBar = stateString + '`' + space + sb + space + '`' + loopingStateString;
+                if (spotifyEmojiExists) detailsBar += $"[{CommonEmojiStrings.Instance.Spotify}](https://open.spotify.com/track/{spotifyId})";
+                EmbedBuilder.Fields["State"].Value = progressBar + "\n" + detailsBar;
             }
             else {
                 EmbedBuilder.Fields["State"].Name = Loc.Get("Music.Playback");
@@ -422,18 +434,6 @@ namespace Bot.DiscordRelated.Music {
             }
 
             UpdateControlMessage(background);
-
-            string GetProgressInfo(string playingState, string repeatState, bool isSeekable) {
-                var sb = new StringBuilder("");
-                sb.Append(TrackPosition.FormattedToString());
-                if (isSeekable) {
-                    sb.Append(" / ");
-                    sb.Append(CurrentTrack.Duration.FormattedToString());
-                }
-
-                var space = new string(' ', Math.Max(0, (22 - sb.Length) / 2));
-                return playingState + '`' + space + sb + space + '`' + repeatState;
-            }
         }
 
         public void UpdateTrackInfo() {
@@ -481,7 +481,7 @@ namespace Bot.DiscordRelated.Music {
                 var authorStringBuilder = new StringBuilder();
                 for (var i = Math.Max(CurrentTrackIndex - 1, 0); i < CurrentTrackIndex + 5; i++) {
                     if (!Playlist.TryGetValue(i, out var track)) continue;
-                    var author = track is AuthoredLavalinkTrack authoredLavalinkTrack ? authoredLavalinkTrack.GetRequester() : "Unknown";
+                    var author = track is AuthoredTrack authoredLavalinkTrack ? authoredLavalinkTrack.GetRequester() : "Unknown";
                     if (author != lastAuthor && lastAuthor != null) FinalizeBlock();
                     authorStringBuilder.Replace("└", "├").Replace("▬", "│");
                     authorStringBuilder.Append(GetTrackString(MusicUtils.EscapeTrack(track!.Title),

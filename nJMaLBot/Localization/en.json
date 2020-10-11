@@ -99,7 +99,8 @@
       "TrackNotSeekable" : "{0}, unfortunately this track is not seek-able",
       "TryingReconnectAfterDispose" : "Playback disposed! We're trying to fix everything...",
       "ReconnectAfterDisposeFailed" : "We fixed everything. If not, then use the commands `{0}stop` and `{0}loadplaylist {1}`",
-      "ResolvingTracks" : "Resolving tracks from `{0}` queries"
+      "ResolvingTracks" : "Resolving tracks from `{0}` queries",
+      "CurrentTrackNonSpotify" : "The current track is not received from Spotify. Switch to a track from Spotify or provide the track ID as an argument to this command"
     },
     "Groups": {
       "" : "Other",
