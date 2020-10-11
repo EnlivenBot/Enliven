@@ -127,12 +127,6 @@ namespace Bot.DiscordRelated.Music {
             await base.DisconnectAsync();
         }
 
-        public override Task ExecuteShutdown(IEntry reason, bool needSave = true) {
-            Playlist.Clear();
-            CurrentTrackIndex = 0;
-            return base.ExecuteShutdown(reason, needSave);
-        }
-
         public virtual ExportPlaylist ExportPlaylist(ExportPlaylistOptions options) {
             var exportPlaylist = new ExportPlaylist {Tracks = Playlist.Select(track => track.Identifier).ToList()};
             if (options != ExportPlaylistOptions.IgnoreTrackIndex) {
