@@ -11,6 +11,7 @@ namespace Bot.Config.Emoji {
         public static Emote Play { get; set; } = Emote.Parse(CommonEmojiStrings.Instance.Play);
         public static Emote Pause { get; set; } = Emote.Parse(CommonEmojiStrings.Instance.Pause);
         public static Emote Stop { get; set; } = Emote.Parse(CommonEmojiStrings.Instance.Stop);
+        public static Emote Spotify { get; set; } = Emote.Parse(CommonEmojiStrings.Instance.Spotify);
         public static global::Discord.Emoji LegacyTrackNext { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.LegacyTrackNext);
         public static global::Discord.Emoji LegacyTrackPrevious { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.LegacyTrackPrevious);
         public static global::Discord.Emoji LegacyPause { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.LegacyPause);
@@ -56,6 +57,7 @@ namespace Bot.Config.Emoji {
         public string Play { get; set; } = "<:play:682580118358458368>";
         public string Pause { get; set; } = "<:pause:682580118425960469>";
         public string Stop { get; set; } = "<:stop:682658172615524382>";
+        public string Spotify { get; set; } = "<:spotify:764837934519156746>";
         public string LegacyTrackNext { get; set; } = "⏭️";
         public string LegacyTrackPrevious { get; set; } = "⏮️";
         public string LegacyPause { get; set; } = "⏸️";
