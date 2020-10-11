@@ -6,9 +6,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bot.Config.Localization.Entries;
 using Bot.DiscordRelated.Commands;
+using Bot.DiscordRelated.Music.Tracks;
 using Bot.Music;
 using Bot.Utilities;
-using Bot.Utilities.History;
 using HarmonyLib;
 using Lavalink4NET;
 using Lavalink4NET.Decoding;
@@ -152,7 +152,7 @@ namespace Bot.DiscordRelated.Music {
             }
 
             var tracks = playlist.Tracks.Select(s => TrackDecoder.DecodeTrack(s))
-                                 .Select(track => AuthoredLavalinkTrack.FromLavalinkTrack(track, requester)).ToList();
+                                 .Select(track => new AuthoredTrack(track, requester)).ToList();
             if (options == ImportPlaylistOptions.Replace) {
                 try {
                     await StopAsync();
@@ -199,7 +199,7 @@ namespace Bot.DiscordRelated.Music {
             try {
                 var lavalinkTracks = tracks.ToList();
                 var authoredTracks = lavalinkTracks.Take(Constants.MaxTracksCount - Playlist.Tracks.Count)
-                                                   .Select(track => AuthoredLavalinkTrack.FromLavalinkTrack(track, author)).ToList();
+                                                   .Select(track => new AuthoredTrack(track, author)).ToList();
 
                 await Enqueue(authoredTracks, index);
 
@@ -213,7 +213,7 @@ namespace Bot.DiscordRelated.Music {
             }
         }
 
-        public virtual async Task Enqueue(List<AuthoredLavalinkTrack> tracks, int position = -1) {
+        public virtual async Task Enqueue(List<AuthoredTrack> tracks, int position = -1) {
             if (tracks.Any()) {
                 if (position == -1) {
                     await PlayAsync(tracks.First(), true);

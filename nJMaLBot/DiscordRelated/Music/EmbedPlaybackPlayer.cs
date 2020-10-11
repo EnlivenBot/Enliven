@@ -9,6 +9,7 @@ using Bot.Config.Emoji;
 using Bot.Config.Localization.Entries;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Criteria;
+using Bot.DiscordRelated.Music.Tracks;
 using Bot.Music;
 using Bot.Utilities;
 using Bot.Utilities.Collector;
@@ -187,7 +188,7 @@ namespace Bot.DiscordRelated.Music {
             }
         }
 
-        public override async Task Enqueue(List<AuthoredLavalinkTrack> tracks, int position = -1) {
+        public override async Task Enqueue(List<AuthoredTrack> tracks, int position = -1) {
             await base.Enqueue(tracks, position);
             if (tracks.Count == 1) {
                 var track = tracks.First();
@@ -231,7 +232,7 @@ namespace Bot.DiscordRelated.Music {
             }
 
             var tracks = playlist.Tracks.Select(s => TrackDecoder.DecodeTrack(s))
-                                 .Select(track => AuthoredLavalinkTrack.FromLavalinkTrack(track, requester)).ToList();
+                                 .Select(track => new AuthoredTrack(track, requester)).ToList();
             if (options == ImportPlaylistOptions.Replace) {
                 try {
                     await StopAsync();
@@ -397,8 +398,7 @@ namespace Bot.DiscordRelated.Music {
         public void UpdateProgress(bool background = false) {
             if (CurrentTrack != null) {
                 var progressPercentage = Convert.ToInt32(TrackPosition.TotalSeconds / CurrentTrack.Duration.TotalSeconds * 100);
-                var requester = CurrentTrack is AuthoredLavalinkTrack authoredLavalinkTrack ? authoredLavalinkTrack.GetRequester() : "Unknown";
-                EmbedBuilder.Fields["State"].Name = Loc.Get("Music.RequestedBy").Format(requester);
+                EmbedBuilder.Fields["State"].Name = Loc.Get("Music.RequestedBy").Format(CurrentTrack.GetRequester());
 
                 var stateString = State switch {
                     PlayerState.Playing => IsExternalEmojiAllowed ? CommonEmojiStrings.Instance.Play : "▶",
@@ -481,7 +481,7 @@ namespace Bot.DiscordRelated.Music {
                 var authorStringBuilder = new StringBuilder();
                 for (var i = Math.Max(CurrentTrackIndex - 1, 0); i < CurrentTrackIndex + 5; i++) {
                     if (!Playlist.TryGetValue(i, out var track)) continue;
-                    var author = track is AuthoredLavalinkTrack authoredLavalinkTrack ? authoredLavalinkTrack.GetRequester() : "Unknown";
+                    var author = track is AuthoredTrack authoredLavalinkTrack ? authoredLavalinkTrack.GetRequester() : "Unknown";
                     if (author != lastAuthor && lastAuthor != null) FinalizeBlock();
                     authorStringBuilder.Replace("└", "├").Replace("▬", "│");
                     authorStringBuilder.Append(GetTrackString(MusicUtils.EscapeTrack(track!.Title),
