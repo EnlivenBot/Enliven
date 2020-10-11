@@ -42,6 +42,10 @@ namespace Bot.Utilities.Collector {
         public void Add(params CollectorController[] controllers) {
             Controllers.AddRange(controllers);
         }
+        
+        public void Add(CollectorsGroup group) {
+            Controllers.AddRange(group.Controllers);
+        }
 
         public void SetTimeoutToAll(TimeSpan timeout) {
             foreach (var controller in Controllers) {
