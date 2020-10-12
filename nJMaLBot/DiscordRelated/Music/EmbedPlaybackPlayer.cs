@@ -15,11 +15,13 @@ using Bot.Utilities;
 using Bot.Utilities.Collector;
 using Bot.Utilities.History;
 using Discord;
+using HarmonyLib;
 using Lavalink4NET;
 using Lavalink4NET.Decoding;
 using Lavalink4NET.Events;
 using Lavalink4NET.Player;
 using LiteDB;
+using Tyrrrz.Extensions;
 
 #pragma warning disable 1998
 
@@ -149,11 +151,21 @@ namespace Bot.DiscordRelated.Music {
                 });
                 oldControlMessage?.RemoveAllReactionsAsync();
             }
-            
+
             _collectorsGroup?.DisposeAll();
             _queueMessage?.StopAndClear();
 
             UpdatePlayback = false;
+        }
+
+        /// <inheritdoc/>
+        [Obsolete("To graceful shutdown use ExecuteShutdown")]
+        public override async Task<bool> Dispose(PlayerShutdownParameters parameters) {
+            WriteToQueueHistory(Loc.Get("Music.TryingReconnectAfterDispose"));
+            if (!await base.Dispose(parameters)) return false;
+            
+            WriteToQueueHistory(Loc.Get("Music.ReconnectAfterDisposeFailed", GuildConfig.Prefix, parameters.StoredPlaylist!.Id));
+            return true;
         }
 
         public override void WriteToQueueHistory(HistoryEntry entry) {

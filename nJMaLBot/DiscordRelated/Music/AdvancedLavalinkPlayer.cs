@@ -13,6 +13,7 @@ using Discord;
 using HarmonyLib;
 using Lavalink4NET;
 using Lavalink4NET.Player;
+using LiteDB;
 using NLog;
 using Tyrrrz.Extensions;
 
@@ -104,8 +105,53 @@ namespace Bot.DiscordRelated.Music {
                 throw new ObjectDisposedException("Player", $"Player disposed due to {State}");
             }
         }
-        
+
         public virtual void WriteToQueueHistory(string entry) { }
         public virtual void WriteToQueueHistory(HistoryEntry entry) { }
+        
+        /// <summary>
+        /// Actual dispose handler
+        /// </summary>
+        /// <param name="parameters">User only for storing playlist!!!</param>
+        /// <returns>True - if success</returns>
+        [Obsolete("To graceful shutdown use ExecuteShutdown")]
+        public virtual async Task<bool> Dispose(PlayerShutdownParameters parameters) {
+            try {
+                if (!(AccessTools.Property(typeof(LavalinkPlayer), "LavalinkSocket").GetValue(this) is LavalinkNode currentNode))
+                    throw new Exception("LavalinkSocket not found");
+                var newNode = MusicUtils.Cluster.Nodes.Where(node => node.IsConnected).Where(node => node != currentNode).RandomOrDefault();
+                if (newNode != null) {
+                    await currentNode.MovePlayerAsync(this, newNode);
+                    await ConnectAsync(_lastVoiceChannelId);
+                }
+                else {
+                    await currentNode.JoinAsync(() => this, GuildId, _lastVoiceChannelId);
+                }
+
+                await PlayAsync(CurrentTrack!, TrackPosition);
+
+                return State == PlayerState.Playing;
+            }
+            catch (Exception) {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// This method is called only from third-party code.
+        /// </summary>
+        [Obsolete]
+        public override async void Dispose() {
+            if (!IsShutdowned) {
+                logger.Error("Player disposed. Stacktrace: \n{stacktrace}", new StackTrace().ToString());
+
+                if (!await Dispose(new PlayerShutdownParameters())) {
+                    await ExecuteShutdown(new PlayerShutdownParameters());
+                }
+            }
+            else {
+                base.Dispose();
+            }
+        }
     }
 }

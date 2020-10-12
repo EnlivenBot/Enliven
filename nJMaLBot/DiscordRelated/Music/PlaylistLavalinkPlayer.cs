@@ -240,41 +240,14 @@ namespace Bot.DiscordRelated.Music {
             return Task.CompletedTask;
         }
 
-        /// <summary>
-        /// This method is called only from third-party code.
-        /// </summary>
-        [Obsolete]
-        public override async void Dispose() {
-            if (!IsShutdowned) {
-                logger.Error("Player disposed. Stacktrace: \n{stacktrace}", new StackTrace().ToString());
+        /// <inheritdoc/>
+        [Obsolete("To graceful shutdown use ExecuteShutdown")]
+        public override async Task<bool> Dispose(PlayerShutdownParameters parameters) {
+            if (!await base.Dispose(parameters)) return false;
+            
+            parameters.StoredPlaylist = ExportPlaylist(ExportPlaylistOptions.AllData).StorePlaylist("a" + ObjectId.NewObjectId(), 0);
 
-                try {
-                    WriteToQueueHistory(Loc.Get("Music.TryingReconnectAfterDispose"));
-                    if (!(AccessTools.Property(typeof(LavalinkPlayer), "LavalinkSocket").GetValue(this) is LavalinkNode currentNode))
-                        throw new Exception("LavalinkSocket not found");
-                    var newNode = MusicUtils.Cluster.Nodes.Where(node => node.IsConnected).Where(node => node != currentNode).RandomOrDefault();
-                    if (newNode != null) {
-                        await currentNode.MovePlayerAsync(this, newNode);
-                        await ConnectAsync(_lastVoiceChannelId);
-                    }
-                    else {
-                        await currentNode.JoinAsync<AdvancedLavalinkPlayer>(() => this, GuildId, _lastVoiceChannelId);
-                    }
-
-                    await PlayAsync(CurrentTrack, TrackPosition);
-
-                    if (State != PlayerState.Playing) throw new Exception("Something went wrong, executing shutdown");
-
-                    var storedPlaylist = ExportPlaylist(ExportPlaylistOptions.AllData).StorePlaylist("a" + ObjectId.NewObjectId(), 0);
-                    WriteToQueueHistory(Loc.Get("Music.ReconnectAfterDisposeFailed", GuildConfig.Prefix, storedPlaylist.Id));
-                }
-                catch (Exception) {
-                    await ExecuteShutdown(new PlayerShutdownParameters());
-                }
-            }
-            else {
-                base.Dispose();
-            }
+            return true;
         }
     }
 
