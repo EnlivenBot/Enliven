@@ -130,7 +130,6 @@ namespace Bot.DiscordRelated.Music {
         }
 
         public override async Task ExecuteShutdown(IEntry reason, PlayerShutdownParameters parameters) {
-            parameters.LastControlMessage = ControlMessage;
             await base.ExecuteShutdown(reason, parameters);
 
             var oldControlMessage = ControlMessage;
@@ -158,14 +157,9 @@ namespace Bot.DiscordRelated.Music {
             UpdatePlayback = false;
         }
 
-        /// <inheritdoc/>
-        [Obsolete("To graceful shutdown use ExecuteShutdown")]
-        public override async Task<bool> Dispose(PlayerShutdownParameters parameters) {
-            WriteToQueueHistory(Loc.Get("Music.TryingReconnectAfterDispose"));
-            if (!await base.Dispose(parameters)) return false;
-            
-            WriteToQueueHistory(Loc.Get("Music.ReconnectAfterDisposeFailed", GuildConfig.Prefix, parameters.StoredPlaylist!.Id));
-            return true;
+        public override PlayerShutdownParameters GetPlayerShutdownParameters(PlayerShutdownParameters parameters) {
+            parameters.LastControlMessage = ControlMessage;
+            return base.GetPlayerShutdownParameters(parameters);
         }
 
         public override void WriteToQueueHistory(HistoryEntry entry) {

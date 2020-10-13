@@ -1,5 +1,7 @@
+using System;
 using Bot.Music;
 using Discord;
+using Lavalink4NET.Player;
 
 namespace Bot.DiscordRelated.Music {
     public class PlayerShutdownParameters {
@@ -12,8 +14,14 @@ namespace Bot.DiscordRelated.Music {
 
         #region Storage
 
-        public IUserMessage? LastControlMessage { get; set; } = null!;
+        public IUserMessage? LastControlMessage { get; set; }
         public StoredPlaylist? StoredPlaylist { get; set; }
+        
+        public ulong LastVoiceChannelId { get; set; }
+        public LavalinkTrack? LastTrack { get; set; }
+        public LavalinkPlaylist Playlist { get; set; }
+        public TimeSpan TrackPosition { get; set; }
+        public PlayerState PlayerState { get; set; }
 
         #endregion
     }

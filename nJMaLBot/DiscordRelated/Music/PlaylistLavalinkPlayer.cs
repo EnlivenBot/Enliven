@@ -1,15 +1,12 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Bot.Config.Localization.Entries;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Music.Tracks;
 using Bot.Music;
 using Bot.Utilities;
-using HarmonyLib;
 using Lavalink4NET;
 using Lavalink4NET.Decoding;
 using Lavalink4NET.Events;
@@ -207,15 +204,6 @@ namespace Bot.DiscordRelated.Music {
             }
         }
 
-        public override async Task ExecuteShutdown(IEntry reason, PlayerShutdownParameters parameters) {
-            await base.ExecuteShutdown(reason, parameters);
-            if (parameters.NeedSave) {
-                var exportPlaylist = ExportPlaylist(ExportPlaylistOptions.AllData);
-                var storedPlaylist = exportPlaylist.StorePlaylist("a" + ObjectId.NewObjectId(), 0);
-                parameters.StoredPlaylist = storedPlaylist;
-            }
-        }
-
         public virtual async Task Enqueue(List<AuthoredTrack> tracks, int position = -1) {
             var localTracks = tracks.ToList();
             if (localTracks.Any()) {
@@ -240,14 +228,13 @@ namespace Bot.DiscordRelated.Music {
             return Task.CompletedTask;
         }
 
-        /// <inheritdoc/>
-        [Obsolete("To graceful shutdown use ExecuteShutdown")]
-        public override async Task<bool> Dispose(PlayerShutdownParameters parameters) {
-            if (!await base.Dispose(parameters)) return false;
+        public override PlayerShutdownParameters GetPlayerShutdownParameters(PlayerShutdownParameters parameters) {
+            parameters.Playlist = Playlist;
+            if (parameters.NeedSave && parameters.StoredPlaylist != null) {
+                parameters.StoredPlaylist = ExportPlaylist(ExportPlaylistOptions.AllData).StorePlaylist("a" + ObjectId.NewObjectId(), 0);
+            }
             
-            parameters.StoredPlaylist = ExportPlaylist(ExportPlaylistOptions.AllData).StorePlaylist("a" + ObjectId.NewObjectId(), 0);
-
-            return true;
+            return base.GetPlayerShutdownParameters(parameters);
         }
     }
 

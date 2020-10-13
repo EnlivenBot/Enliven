@@ -63,6 +63,7 @@ namespace Bot.DiscordRelated.Music {
         public readonly Subject<IEntry> Shutdown = new Subject<IEntry>();
 
         public virtual Task ExecuteShutdown(IEntry reason, PlayerShutdownParameters parameters) {
+            GetPlayerShutdownParameters(parameters);
             IsShutdowned = true;
             Shutdown.OnNext(reason);
             Shutdown.Dispose();
@@ -108,33 +109,14 @@ namespace Bot.DiscordRelated.Music {
 
         public virtual void WriteToQueueHistory(string entry) { }
         public virtual void WriteToQueueHistory(HistoryEntry entry) { }
-        
-        /// <summary>
-        /// Actual dispose handler
-        /// </summary>
-        /// <param name="parameters">User only for storing playlist!!!</param>
-        /// <returns>True - if success</returns>
-        [Obsolete("To graceful shutdown use ExecuteShutdown")]
-        public virtual async Task<bool> Dispose(PlayerShutdownParameters parameters) {
-            try {
-                if (!(AccessTools.Property(typeof(LavalinkPlayer), "LavalinkSocket").GetValue(this) is LavalinkNode currentNode))
-                    throw new Exception("LavalinkSocket not found");
-                var newNode = MusicUtils.Cluster.Nodes.Where(node => node.IsConnected).Where(node => node != currentNode).RandomOrDefault();
-                if (newNode != null) {
-                    await currentNode.MovePlayerAsync(this, newNode);
-                    await ConnectAsync(_lastVoiceChannelId);
-                }
-                else {
-                    await currentNode.JoinAsync(() => this, GuildId, _lastVoiceChannelId);
-                }
 
-                await PlayAsync(CurrentTrack!, TrackPosition);
+        public virtual PlayerShutdownParameters GetPlayerShutdownParameters(PlayerShutdownParameters parameters) {
+            parameters.LastVoiceChannelId = _lastVoiceChannelId;
+            parameters.LastTrack = CurrentTrack;
+            parameters.TrackPosition = TrackPosition;
+            parameters.PlayerState = State;
 
-                return State == PlayerState.Playing;
-            }
-            catch (Exception) {
-                return false;
-            }
+            return parameters;
         }
 
         /// <summary>
@@ -145,9 +127,17 @@ namespace Bot.DiscordRelated.Music {
             if (!IsShutdowned) {
                 logger.Error("Player disposed. Stacktrace: \n{stacktrace}", new StackTrace().ToString());
 
-                if (!await Dispose(new PlayerShutdownParameters())) {
-                    await ExecuteShutdown(new PlayerShutdownParameters());
+                var playerShutdownParameters = new PlayerShutdownParameters();
+                await ExecuteShutdown(playerShutdownParameters);
+                await Task.Delay(1000);
+                var newPlayer = await PlayersController.ProvidePlayer(GuildId, playerShutdownParameters.LastVoiceChannelId, true);
+                newPlayer.Playlist.AddRange(playerShutdownParameters.Playlist);
+                await newPlayer.PlayAsync(playerShutdownParameters.LastTrack!, playerShutdownParameters.TrackPosition);
+                if (playerShutdownParameters.PlayerState == PlayerState.Paused) {
+                    await newPlayer.PauseAsync();
                 }
+                newPlayer.UpdateCurrentTrackIndex();
+                await newPlayer.EnqueueControlMessageSend(playerShutdownParameters.LastControlMessage!.Channel);
             }
             else {
                 base.Dispose();
