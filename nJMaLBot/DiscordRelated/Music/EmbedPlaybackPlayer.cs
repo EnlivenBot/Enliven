@@ -136,11 +136,13 @@ namespace Bot.DiscordRelated.Music {
             ControlMessage = null;
             if (oldControlMessage != null && !parameters.LeaveMessageUnchanged) {
                 var embedBuilder = new EmbedBuilder().WithTitle(Loc.Get("Music.PlaybackStopped")).WithDescription(reason.Get(Loc));
-                if (parameters.StoredPlaylist != null) {
-                    embedBuilder.Description += Loc.Get("Music.ResumeViaPlaylists", GuildConfig.Prefix, parameters.StoredPlaylist.Id);
-                }
-                else {
-                    oldControlMessage.DelayedDelete(Constants.LongTimeSpan);
+                if (parameters.AddResumeToMessage) {
+                    if (parameters.StoredPlaylist != null) {
+                        embedBuilder.Description += Loc.Get("Music.ResumeViaPlaylists", GuildConfig.Prefix, parameters.StoredPlaylist.Id);
+                    }
+                    else {
+                        oldControlMessage.DelayedDelete(Constants.LongTimeSpan);
+                    }
                 }
 
                 if (_updateControlMessageTask.IsExecuting) await _updateControlMessageTask.Execute(false);
@@ -157,9 +159,9 @@ namespace Bot.DiscordRelated.Music {
             UpdatePlayback = false;
         }
 
-        public override PlayerShutdownParameters GetPlayerShutdownParameters(PlayerShutdownParameters parameters) {
+        public override void GetPlayerShutdownParameters(PlayerShutdownParameters parameters) {
+            base.GetPlayerShutdownParameters(parameters);
             parameters.LastControlMessage = ControlMessage;
-            return base.GetPlayerShutdownParameters(parameters);
         }
 
         public override void WriteToQueueHistory(HistoryEntry entry) {

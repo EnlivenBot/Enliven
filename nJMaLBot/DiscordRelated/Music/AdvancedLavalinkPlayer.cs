@@ -110,13 +110,11 @@ namespace Bot.DiscordRelated.Music {
         public virtual void WriteToQueueHistory(string entry) { }
         public virtual void WriteToQueueHistory(HistoryEntry entry) { }
 
-        public virtual PlayerShutdownParameters GetPlayerShutdownParameters(PlayerShutdownParameters parameters) {
+        public virtual void GetPlayerShutdownParameters(PlayerShutdownParameters parameters) {
             parameters.LastVoiceChannelId = _lastVoiceChannelId;
             parameters.LastTrack = CurrentTrack;
             parameters.TrackPosition = TrackPosition;
             parameters.PlayerState = State;
-
-            return parameters;
         }
 
         /// <summary>
@@ -127,8 +125,10 @@ namespace Bot.DiscordRelated.Music {
             if (!IsShutdowned) {
                 logger.Error("Player disposed. Stacktrace: \n{stacktrace}", new StackTrace().ToString());
 
-                var playerShutdownParameters = new PlayerShutdownParameters();
-                await ExecuteShutdown(playerShutdownParameters);
+                var playerShutdownParameters = new PlayerShutdownParameters {AddResumeToMessage = false};
+                GetPlayerShutdownParameters(playerShutdownParameters);
+                await ExecuteShutdown(new EntryLocalized("Music.TryReconnectAfterDispose", GuildConfig.Prefix, playerShutdownParameters.StoredPlaylist!.Id),
+                    playerShutdownParameters);
                 await Task.Delay(1000);
                 var newPlayer = await PlayersController.ProvidePlayer(GuildId, playerShutdownParameters.LastVoiceChannelId, true);
                 newPlayer.Playlist.AddRange(playerShutdownParameters.Playlist);
@@ -136,7 +136,10 @@ namespace Bot.DiscordRelated.Music {
                 if (playerShutdownParameters.PlayerState == PlayerState.Paused) {
                     await newPlayer.PauseAsync();
                 }
+
                 newPlayer.UpdateCurrentTrackIndex();
+                newPlayer.WriteToQueueHistory(new HistoryEntry(
+                    new EntryLocalized("Music.ReconnectedAfterDispose", GuildConfig.Prefix, playerShutdownParameters.StoredPlaylist!.Id)));
                 await newPlayer.EnqueueControlMessageSend(playerShutdownParameters.LastControlMessage!.Channel);
             }
             else {

@@ -9,6 +9,7 @@ namespace Bot.DiscordRelated.Music {
 
         public bool NeedSave { get; set; } = true;
         public bool LeaveMessageUnchanged { get; set; }
+        public bool AddResumeToMessage { get; set; } = true;
 
         #endregion
 

@@ -228,13 +228,12 @@ namespace Bot.DiscordRelated.Music {
             return Task.CompletedTask;
         }
 
-        public override PlayerShutdownParameters GetPlayerShutdownParameters(PlayerShutdownParameters parameters) {
+        public override void GetPlayerShutdownParameters(PlayerShutdownParameters parameters) {
+            base.GetPlayerShutdownParameters(parameters);
             parameters.Playlist = Playlist;
-            if (parameters.NeedSave && parameters.StoredPlaylist != null) {
+            if (parameters.NeedSave && parameters.StoredPlaylist == null) {
                 parameters.StoredPlaylist = ExportPlaylist(ExportPlaylistOptions.AllData).StorePlaylist("a" + ObjectId.NewObjectId(), 0);
             }
-            
-            return base.GetPlayerShutdownParameters(parameters);
         }
     }
 
