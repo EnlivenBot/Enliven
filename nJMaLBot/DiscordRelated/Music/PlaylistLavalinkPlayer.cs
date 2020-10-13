@@ -1,15 +1,12 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Bot.Config.Localization.Entries;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Music.Tracks;
 using Bot.Music;
 using Bot.Utilities;
-using HarmonyLib;
 using Lavalink4NET;
 using Lavalink4NET.Decoding;
 using Lavalink4NET.Events;
@@ -127,12 +124,6 @@ namespace Bot.DiscordRelated.Music {
             await base.DisconnectAsync();
         }
 
-        public override Task ExecuteShutdown(IEntry reason, bool needSave = true) {
-            Playlist.Clear();
-            CurrentTrackIndex = 0;
-            return base.ExecuteShutdown(reason, needSave);
-        }
-
         public virtual ExportPlaylist ExportPlaylist(ExportPlaylistOptions options) {
             var exportPlaylist = new ExportPlaylist {Tracks = Playlist.Select(track => track.Identifier).ToList()};
             if (options != ExportPlaylistOptions.IgnoreTrackIndex) {
@@ -237,40 +228,11 @@ namespace Bot.DiscordRelated.Music {
             return Task.CompletedTask;
         }
 
-        /// <summary>
-        /// This method is called only from third-party code.
-        /// </summary>
-        [Obsolete]
-        public override async void Dispose() {
-            if (!IsShutdowned) {
-                logger.Error("Player disposed. Stacktrace: \n{stacktrace}", new StackTrace().ToString());
-
-                try {
-                    WriteToQueueHistory(Loc.Get("Music.TryingReconnectAfterDispose"));
-                    if (!(AccessTools.Property(typeof(LavalinkPlayer), "LavalinkSocket").GetValue(this) is LavalinkNode currentNode))
-                        throw new Exception("LavalinkSocket not found");
-                    var newNode = MusicUtils.Cluster.Nodes.Where(node => node.IsConnected).Where(node => node != currentNode).RandomOrDefault();
-                    if (newNode != null) {
-                        await currentNode.MovePlayerAsync(this, newNode);
-                        await ConnectAsync(_lastVoiceChannelId);
-                    }
-                    else {
-                        await currentNode.JoinAsync<AdvancedLavalinkPlayer>(() => this, GuildId, _lastVoiceChannelId);
-                    }
-
-                    await PlayAsync(CurrentTrack, TrackPosition);
-
-                    if (State != PlayerState.Playing) throw new Exception("Something went wrong, executing shutdown");
-
-                    var storedPlaylist = ExportPlaylist(ExportPlaylistOptions.AllData).StorePlaylist("a" + ObjectId.NewObjectId(), 0);
-                    WriteToQueueHistory(Loc.Get("Music.ReconnectAfterDisposeFailed", GuildConfig.Prefix, storedPlaylist.Id));
-                }
-                catch (Exception) {
-                    await ExecuteShutdown();
-                }
-            }
-            else {
-                base.Dispose();
+        public override void GetPlayerShutdownParameters(PlayerShutdownParameters parameters) {
+            base.GetPlayerShutdownParameters(parameters);
+            parameters.Playlist = Playlist;
+            if (parameters.NeedSave && parameters.StoredPlaylist == null) {
+                parameters.StoredPlaylist = ExportPlaylist(ExportPlaylistOptions.AllData).StorePlaylist("a" + ObjectId.NewObjectId(), 0);
             }
         }
     }

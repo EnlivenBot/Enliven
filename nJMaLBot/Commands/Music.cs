@@ -74,7 +74,7 @@ namespace Bot.Commands {
         public async Task Stop() {
             if (!await IsPreconditionsValid) return;
 
-            Player.ExecuteShutdown(Loc.Get("Music.UserStopPlayback").Format(Context.User.Username), false);
+            Player.ExecuteShutdown(Loc.Get("Music.UserStopPlayback").Format(Context.User.Username), new PlayerShutdownParameters{NeedSave = false});
         }
 
         [Command("jump", RunMode = RunMode.Async)]

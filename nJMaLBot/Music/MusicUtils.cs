@@ -56,7 +56,8 @@ namespace Bot.Music {
                             }, _lavalinkLogger);
                         inactivityTrackingService.InactivePlayer += (sender, args) => {
                             if (args.Player is EmbedPlaybackPlayer embedPlaybackPlayer) {
-                                embedPlaybackPlayer.ExecuteShutdown(new EntryLocalized("Music.NoListenersLeft"), false);
+                                embedPlaybackPlayer.ExecuteShutdown(new EntryLocalized("Music.NoListenersLeft"),
+                                    new PlayerShutdownParameters {NeedSave = false});
                             }
 
                             return Task.CompletedTask;
@@ -111,7 +112,7 @@ namespace Bot.Music {
                 player?.NodeChanged(args.TargetNode);
             }
             else {
-                player?.ExecuteShutdown(new EntryLocalized("Music.PlayerDropped"));
+                player?.ExecuteShutdown(new EntryLocalized("Music.PlayerDropped"), new PlayerShutdownParameters());
             }
 
             return Task.CompletedTask;

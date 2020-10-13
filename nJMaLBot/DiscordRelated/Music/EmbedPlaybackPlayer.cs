@@ -15,11 +15,13 @@ using Bot.Utilities;
 using Bot.Utilities.Collector;
 using Bot.Utilities.History;
 using Discord;
+using HarmonyLib;
 using Lavalink4NET;
 using Lavalink4NET.Decoding;
 using Lavalink4NET.Events;
 using Lavalink4NET.Player;
 using LiteDB;
+using Tyrrrz.Extensions;
 
 #pragma warning disable 1998
 
@@ -127,35 +129,39 @@ namespace Bot.DiscordRelated.Music {
             UpdateProgress();
         }
 
-        public override async Task ExecuteShutdown(IEntry reason, bool needSave = true) {
-            if (ControlMessage != null) {
-                var oldControlMessage = ControlMessage;
-                ControlMessage = null;
-                var embedBuilder = new EmbedBuilder()
-                                  .WithTitle(Loc.Get("Music.PlaybackStopped"))
-                                  .WithDescription(reason.Get(Loc));
-                if (needSave) {
-                    var exportPlaylist = ExportPlaylist(ExportPlaylistOptions.AllData);
-                    var storedPlaylist = exportPlaylist.StorePlaylist("a" + ObjectId.NewObjectId(), 0);
-                    embedBuilder.Description += Loc.Get("Music.ResumeViaPlaylists", GuildConfig.Prefix, storedPlaylist.Id);
-                }
-                else {
-                    oldControlMessage.DelayedDelete(Constants.LongTimeSpan);
+        public override async Task ExecuteShutdown(IEntry reason, PlayerShutdownParameters parameters) {
+            await base.ExecuteShutdown(reason, parameters);
+
+            var oldControlMessage = ControlMessage;
+            ControlMessage = null;
+            if (oldControlMessage != null && !parameters.LeaveMessageUnchanged) {
+                var embedBuilder = new EmbedBuilder().WithTitle(Loc.Get("Music.PlaybackStopped")).WithDescription(reason.Get(Loc));
+                if (parameters.AddResumeToMessage) {
+                    if (parameters.StoredPlaylist != null) {
+                        embedBuilder.Description += Loc.Get("Music.ResumeViaPlaylists", GuildConfig.Prefix, parameters.StoredPlaylist.Id);
+                    }
+                    else {
+                        oldControlMessage.DelayedDelete(Constants.LongTimeSpan);
+                    }
                 }
 
                 if (_updateControlMessageTask.IsExecuting) await _updateControlMessageTask.Execute(false);
-                oldControlMessage?.ModifyAsync(properties => {
+                oldControlMessage.ModifyAsync(properties => {
                     properties.Embed = embedBuilder.Build();
                     properties.Content = null;
                 });
-                _collectorsGroup?.DisposeAll();
                 oldControlMessage?.RemoveAllReactionsAsync();
             }
 
+            _collectorsGroup?.DisposeAll();
             _queueMessage?.StopAndClear();
 
             UpdatePlayback = false;
-            base.ExecuteShutdown(reason, needSave);
+        }
+
+        public override void GetPlayerShutdownParameters(PlayerShutdownParameters parameters) {
+            base.GetPlayerShutdownParameters(parameters);
+            parameters.LastControlMessage = ControlMessage;
         }
 
         public override void WriteToQueueHistory(HistoryEntry entry) {
