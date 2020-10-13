@@ -187,6 +187,7 @@ namespace Bot.DiscordRelated.Commands {
 
         public async Task<IResult> ExecuteCommand(IMessage message, string query, ICommandContext context, KeyValuePair<CommandMatch, ParseResult> pair,
                                                   string authorId) {
+            #pragma warning disable 618
             IResult result = CollectorsUtils.OnCommandExecute(pair, context, message)
                 ? await pair.Key.ExecuteAsync(context, pair.Value, EmptyServiceProvider.Instance)
                 : ExecuteResult.FromSuccess();
@@ -198,6 +199,7 @@ namespace Bot.DiscordRelated.Commands {
             }
 
             return result;
+            #pragma warning restore 618
         }
 
         public async Task<IResult> ExecuteCommand(string query, ICommandContext context, string authorId) {

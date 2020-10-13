@@ -45,7 +45,7 @@ namespace Bot.Utilities {
                     info.Module.Attributes.FirstOrDefault(attribute => attribute is GroupingAttribute)) as GroupingAttribute;
         }
 
-        public static string GetLocalizedName(this GroupingAttribute groupingAttribute, ILocalizationProvider loc) {
+        public static string GetLocalizedName(this GroupingAttribute? groupingAttribute, ILocalizationProvider loc) {
             return loc.Get($"Groups.{groupingAttribute?.GroupName ?? ""}");
         }
 
@@ -66,7 +66,7 @@ namespace Bot.Utilities {
                                                   : text.Substring(start, length);
         }
 
-        public static string? SafeSubstring(this string text, int length, string postContent = "") {
+        public static string? SafeSubstring(this string? text, int length, string postContent = "") {
             if (text == null) return null;
 
             return text.Length <= length ? text : text.Substring(0, length - postContent.Length) + postContent;

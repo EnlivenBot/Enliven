@@ -105,6 +105,7 @@ namespace Bot.Utilities.Collector {
                 });
                 collectorController.Stop += (sender, args) => disposable.Dispose();
                 
+                // ReSharper disable once PossiblyMistakenUseOfParamsMethod
                 collectorsGroup.Add(collectorController);
             }
 
@@ -118,7 +119,7 @@ namespace Bot.Utilities.Collector {
             new ConcurrentDictionary<CommandInfo, ConcurrentDictionary<Guid, (Func<ICommandContext, CommandMatch, bool>,
                 Action<IMessage, KeyValuePair<CommandMatch, ParseResult>, ICommandContext>)>>();
 
-        public static CollectorController CollectCommand([NotNull] CommandInfo info, Func<ICommandContext, CommandMatch, bool> predicate,
+        public static CollectorController CollectCommand([NotNull] CommandInfo? info, Func<ICommandContext, CommandMatch, bool> predicate,
                                                          Action<CommandCollectorEventArgs> action) {
             info ??= default!;
             var collectorController = new CollectorController();

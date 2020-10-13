@@ -1,7 +1,5 @@
 using System;
-using Discord;
 using Lavalink4NET.Player;
-using Lavalink4NET.Util;
 
 namespace Bot.DiscordRelated.Music.Tracks {
     public class AuthoredTrack : LavalinkTrack {

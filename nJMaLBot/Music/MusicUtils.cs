@@ -80,7 +80,7 @@ namespace Bot.Music {
                 case NodeRequestType.Backup:
                     return LoadBalancingStrategies.LoadStrategy(cluster, nodes, type);
                 case NodeRequestType.LoadTrack:
-                    var targetNode = nodes.Where(node => node.IsConnected).FirstOrDefault(node => node.Label.Contains("[RU]"));
+                    var targetNode = nodes.Where(node => node.IsConnected).FirstOrDefault(node => node.Label!.Contains("[RU]"));
                     if (targetNode != null)
                         return targetNode;
                     goto default;
@@ -130,7 +130,7 @@ namespace Bot.Music {
             var tasks = queries.Select(s => (counter++, s, MusicProvider.GetTracks(s, Cluster))).ToList();
             await Task.WhenAll(tasks.Select((tuple, i) => tuple.Item3));
             foreach (var (_, _, tracks) in tasks.OrderBy(tuple => tuple.Item1)) {
-                if (tracks?.Result != null) {
+                if (tracks.Result != null) {
                     lavalinkTracks.AddRange(tracks.Result);
                 }
             }

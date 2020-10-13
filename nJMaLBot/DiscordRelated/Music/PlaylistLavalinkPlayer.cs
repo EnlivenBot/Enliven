@@ -28,7 +28,7 @@ namespace Bot.DiscordRelated.Music {
 
         public LavalinkPlaylist Playlist { get; }
 
-        public event EventHandler<int> CurrentTrackIndexChange = null!;
+        public event EventHandler<int>? CurrentTrackIndexChange;
 
         public int CurrentTrackIndex {
             get => _currentTrackIndex;

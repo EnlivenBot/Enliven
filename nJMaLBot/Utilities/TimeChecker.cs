@@ -4,7 +4,7 @@ using Bot.DiscordRelated.Criteria;
 
 namespace Bot.Utilities {
     public class TimeChecker {
-        private CustomCriterion _customCriterion = null!;
+        private CustomCriterion? _customCriterion;
 
         public TimeChecker(TimeSpan timeout) : this(timeout, DateTime.Now) { }
 

@@ -1,6 +1,5 @@
 ﻿using System;
 using Bot.Utilities.Music;
-using Discord;
 using Lavalink4NET.Player;
 using Lavalink4NET.Util;
 

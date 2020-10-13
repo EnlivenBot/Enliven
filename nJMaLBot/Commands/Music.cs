@@ -17,6 +17,8 @@ using Lavalink4NET.Player;
 using Lavalink4NET.Rest;
 using LiteDB;
 using Tyrrrz.Extensions;
+// ReSharper disable ConditionIsAlwaysTrueOrFalse
+// ReSharper disable ConstantConditionalAccessQualifier
 
 #pragma warning disable 4014
 
@@ -89,7 +91,7 @@ namespace Bot.Commands {
 
             await Player.SkipAsync(index, true);
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.Jumped", Context.User.Username, Player.CurrentTrackIndex + 1,
-                MusicUtils.EscapeTrack(Player.CurrentTrack.Title).SafeSubstring(0, 40) + "..."));
+                MusicUtils.EscapeTrack(Player.CurrentTrack!.Title).SafeSubstring(0, 40) + "..."));
         }
 
         [Command("goto", RunMode = RunMode.Async)]
@@ -109,7 +111,7 @@ namespace Bot.Commands {
                 await Player.PlayAsync(track!, false);
                 Player.WriteToQueueHistory(Loc.Get("MusicQueues.Jumped")
                                               .Format(Context.User.Username, Player.CurrentTrackIndex + 1,
-                                                   Player.CurrentTrack.Title.SafeSubstring(0, 40) + "..."));
+                                                   Player.CurrentTrack!.Title.SafeSubstring(0, 40) + "..."));
             }
             else {
                 ReplyFormattedAsync(Loc.Get("Music.TrackIndexWrong").Format(Context.User.Mention, index, Player.Playlist.Count),

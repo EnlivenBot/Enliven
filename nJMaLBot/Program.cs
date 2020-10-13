@@ -37,6 +37,7 @@ namespace Bot {
 
         private static bool _clientStarted;
 
+        // ReSharper disable once UnusedParameter.Local
         private static async Task Main(string[] args) {
             InstallLogger();
             #if !DEBUG

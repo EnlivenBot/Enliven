@@ -222,7 +222,7 @@ namespace Bot.DiscordRelated.Logging {
                     var guild = GuildConfig.Get(arg.Id);
                     if (!guild.GetChannel(ChannelFunction.Log, out var logChannel)) return;
                     var loc = new GuildLocalizationProvider(guild);
-                    (((SocketTextChannel) logChannel)!).SendMessageAsync(loc.Get("MessageHistory.GuildLogCleared").Format(
+                    ((SocketTextChannel) logChannel)!.SendMessageAsync(loc.Get("MessageHistory.GuildLogCleared").Format(
                         arg.Name, arg.Id, deletesCount));
                 }
                 finally {

@@ -16,7 +16,7 @@ namespace Bot.Utilities.Collector {
         public void Dispose() {
             TaskCompletionSource?.SetResult(null);
             Stop?.Invoke(null, EventArgs.Empty);
-            _timer?.Dispose();
+            _timer.Dispose();
         }
 
         public virtual void OnRemoveArgsFailed(CollectorEventArgsBase e) {

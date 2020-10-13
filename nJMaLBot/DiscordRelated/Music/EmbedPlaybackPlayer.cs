@@ -4,7 +4,6 @@ using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Bot.Config;
 using Bot.Config.Emoji;
 using Bot.Config.Localization.Entries;
 using Bot.DiscordRelated.Commands;
@@ -15,13 +14,10 @@ using Bot.Utilities;
 using Bot.Utilities.Collector;
 using Bot.Utilities.History;
 using Discord;
-using HarmonyLib;
 using Lavalink4NET;
 using Lavalink4NET.Decoding;
 using Lavalink4NET.Events;
 using Lavalink4NET.Player;
-using LiteDB;
-using Tyrrrz.Extensions;
 
 #pragma warning disable 1998
 
@@ -98,7 +94,7 @@ namespace Bot.DiscordRelated.Music {
 
         public override async Task OnTrackEndAsync(TrackEndEventArgs eventArgs) {
             if (eventArgs.Reason == TrackEndReason.LoadFailed) {
-                WriteToQueueHistory(Loc.Get(CurrentTrack.Identifier == LoadFailedId ? "Music.DecodingErrorRemove" : "Music.DecodingError",
+                WriteToQueueHistory(Loc.Get(CurrentTrack!.Identifier == LoadFailedId ? "Music.DecodingErrorRemove" : "Music.DecodingError",
                     MusicUtils.EscapeTrack(CurrentTrack.Title).SafeSubstring(40, "...") ?? ""));
             }
 
@@ -150,10 +146,10 @@ namespace Bot.DiscordRelated.Music {
                     properties.Embed = embedBuilder.Build();
                     properties.Content = null;
                 });
-                oldControlMessage?.RemoveAllReactionsAsync();
+                oldControlMessage.RemoveAllReactionsAsync();
             }
 
-            _collectorsGroup?.DisposeAll();
+            _collectorsGroup.DisposeAll();
             _queueMessage?.StopAndClear();
 
             UpdatePlayback = false;
@@ -266,7 +262,7 @@ namespace Bot.DiscordRelated.Music {
 
                 await PlayAsync(track, false, position);
                 WriteToQueueHistory(Loc.Get("MusicQueues.Jumped")
-                                       .Format(requester, CurrentTrackIndex + 1, MusicUtils.EscapeTrack(CurrentTrack.Title).SafeSubstring(100, "...")));
+                                       .Format(requester, CurrentTrackIndex + 1, MusicUtils.EscapeTrack(CurrentTrack!.Title).SafeSubstring(100, "...")));
             }
             else if (State == PlayerState.NotPlaying) {
                 await PlayAsync(Playlist[0], false);
@@ -277,12 +273,12 @@ namespace Bot.DiscordRelated.Music {
 
         #region Emoji
 
-        private CollectorsGroup _collectorsGroup = new CollectorsGroup();
+        private readonly CollectorsGroup _collectorsGroup = new CollectorsGroup();
 
         private Task SetupControlReactions() {
-            _collectorsGroup?.DisposeAll();
+            _collectorsGroup.DisposeAll();
             if (ControlMessage == null) return Task.CompletedTask;
-            _collectorsGroup?.Add(
+            _collectorsGroup.Add(
                 CollectorsUtils.CollectReactions<string>(
                     reaction => reaction.MessageId == ControlMessage.Id && reaction.UserId != Program.Client.CurrentUser.Id,
                     async (args, s) => {
@@ -305,7 +301,7 @@ namespace Bot.DiscordRelated.Music {
                 CommonEmoji.LegacyStop, CommonEmoji.LegacyRepeat, CommonEmoji.LegacyShuffle, CommonEmoji.LegacySound, CommonEmoji.LegacyLoudSound
             });
 
-            _collectorsGroup?.Controllers.Add(CollectorsUtils.CollectMessage(ControlMessage.Channel, message => true, async args => {
+            _collectorsGroup.Controllers.Add(CollectorsUtils.CollectMessage(ControlMessage.Channel, message => true, async args => {
                 args.StopCollect();
                 try {
                     await _addReactionsAsync;
@@ -412,7 +408,7 @@ namespace Bot.DiscordRelated.Music {
                 EmbedBuilder
                    .WithAuthor(CurrentTrack!.Author.SafeSubstring(Constants.MaxEmbedAuthorLength, "...").IsEmpty("Unknown"), iconUrl)
                    .WithTitle(MusicUtils.EscapeTrack(CurrentTrack!.Title).SafeSubstring(Discord.EmbedBuilder.MaxTitleLength, "...")!)
-                   .WithUrl(CurrentTrack!.Source);
+                   .WithUrl(CurrentTrack.Source!);
             }
             else {
                 EmbedBuilder.Author = new EmbedAuthorBuilder();

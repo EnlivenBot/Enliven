@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Linq;
 using System.Reactive.Subjects;
 using System.Threading.Tasks;
 using Bot.Config;
@@ -10,23 +9,20 @@ using Bot.Music;
 using Bot.Utilities;
 using Bot.Utilities.History;
 using Discord;
-using HarmonyLib;
 using Lavalink4NET;
 using Lavalink4NET.Player;
-using LiteDB;
 using NLog;
-using Tyrrrz.Extensions;
 
 namespace Bot.DiscordRelated.Music {
     public class AdvancedLavalinkPlayer : LavalinkPlayer {
         // ReSharper disable once InconsistentNaming
-        protected static readonly Logger logger = LogManager.GetCurrentClassLogger();
+        protected internal static readonly Logger logger = LogManager.GetCurrentClassLogger();
         protected GuildConfig GuildConfig;
         protected IGuild Guild;
         public readonly ILocalizationProvider Loc;
         protected BassBoostMode BassBoostMode { get; private set; } = BassBoostMode.Off;
         private int _updateFailCount;
-        protected ulong _lastVoiceChannelId;
+        private ulong _lastVoiceChannelId;
         private const int UpdateFailThreshold = 5;
         protected bool IsExternalEmojiAllowed { get; set; } = true;
 
@@ -131,7 +127,7 @@ namespace Bot.DiscordRelated.Music {
                     playerShutdownParameters);
                 await Task.Delay(1000);
                 var newPlayer = await PlayersController.ProvidePlayer(GuildId, playerShutdownParameters.LastVoiceChannelId, true);
-                newPlayer.Playlist.AddRange(playerShutdownParameters.Playlist);
+                newPlayer.Playlist.AddRange(playerShutdownParameters.Playlist!);
                 await newPlayer.PlayAsync(playerShutdownParameters.LastTrack!, playerShutdownParameters.TrackPosition);
                 if (playerShutdownParameters.PlayerState == PlayerState.Paused) {
                     await newPlayer.PauseAsync();

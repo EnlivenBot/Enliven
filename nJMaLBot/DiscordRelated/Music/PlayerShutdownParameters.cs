@@ -20,7 +20,7 @@ namespace Bot.DiscordRelated.Music {
         
         public ulong LastVoiceChannelId { get; set; }
         public LavalinkTrack? LastTrack { get; set; }
-        public LavalinkPlaylist Playlist { get; set; }
+        public LavalinkPlaylist? Playlist { get; set; }
         public TimeSpan TrackPosition { get; set; }
         public PlayerState PlayerState { get; set; }
 
