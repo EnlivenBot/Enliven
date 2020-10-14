@@ -57,7 +57,7 @@ namespace Bot.Commands {
                         if (t.IsSuccess) {
                             message.SafeDelete();
                             // ReSharper disable once AccessToModifiedClosure
-                            collectors?.DisposeAll();
+                            collectors.DisposeAll();
                         }
                     }, CollectorFilter.IgnoreBots);
                 }));

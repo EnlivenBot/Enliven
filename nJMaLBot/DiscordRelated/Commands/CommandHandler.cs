@@ -62,8 +62,7 @@ namespace Bot.DiscordRelated.Commands {
 
             Patch.ApplyCommandPatch();
 
-            if (!Program.CmdOptions.Observer)
-                client.MessageReceived += message => Task.Run(() => commandHandler.HandleCommand(message));
+            client.MessageReceived += message => Task.Run(() => commandHandler.HandleCommand(message));
 
             return commandHandler;
         }
@@ -102,6 +101,7 @@ namespace Bot.DiscordRelated.Commands {
                                 FuzzySearch.Search(query).GetBestMatches(3).Select(match => $"`{match.SimilarTo}`").JoinToString(", "),
                                 guild.Prefix));
                     }
+
                     return;
                 }
 
@@ -187,6 +187,7 @@ namespace Bot.DiscordRelated.Commands {
 
         public async Task<IResult> ExecuteCommand(IMessage message, string query, ICommandContext context, KeyValuePair<CommandMatch, ParseResult> pair,
                                                   string authorId) {
+            #pragma warning disable 618
             IResult result = CollectorsUtils.OnCommandExecute(pair, context, message)
                 ? await pair.Key.ExecuteAsync(context, pair.Value, EmptyServiceProvider.Instance)
                 : ExecuteResult.FromSuccess();
@@ -198,6 +199,7 @@ namespace Bot.DiscordRelated.Commands {
             }
 
             return result;
+            #pragma warning restore 618
         }
 
         public async Task<IResult> ExecuteCommand(string query, ICommandContext context, string authorId) {
@@ -217,13 +219,15 @@ namespace Bot.DiscordRelated.Commands {
                 await SendErrorMessage(message, loc, description);
                 return;
             }
-                
-            (await message.Channel.SendMessageAsync(null, false, GetErrorEmbed(message.Author, loc, description).WithFields(fieldBuilders).Build())).DelayedDelete(
-                Constants.LongTimeSpan);
+
+            (await message.Channel.SendMessageAsync(null, false, GetErrorEmbed(message.Author, loc, description).WithFields(fieldBuilders).Build()))
+               .DelayedDelete(
+                    Constants.LongTimeSpan);
         }
 
         private static async Task SendErrorMessage(SocketUserMessage message, ILocalizationProvider loc, string description) {
-            (await message.Channel.SendMessageAsync(null, false, GetErrorEmbed(message.Author, loc, description).Build())).DelayedDelete(Constants.LongTimeSpan);
+            (await message.Channel.SendMessageAsync(null, false, GetErrorEmbed(message.Author, loc, description).Build()))
+               .DelayedDelete(Constants.LongTimeSpan);
         }
 
         public static EmbedBuilder GetErrorEmbed(IUser user, ILocalizationProvider loc, string description) {
@@ -248,27 +252,27 @@ namespace Bot.DiscordRelated.Commands {
         }
 
         public static void RegisterUsage(string command, string userId) {
-            var userStatistics = GlobalDB.CommandStatistics.FindById(userId) ?? new StatisticsPart {Id = userId};
+            var userStatistics = StatisticsPart.Get(userId);
             if (!userStatistics.UsagesList.TryGetValue(command, out var userUsageCount)) {
                 userUsageCount = 0;
             }
 
             userStatistics.UsagesList[command] = ++userUsageCount;
-            GlobalDB.CommandStatistics.Upsert(userStatistics);
+            userStatistics.Save();
         }
 
         public static void RegisterMusicTime(TimeSpan span) {
-            var userStatistics = GlobalDB.CommandStatistics.FindById("Music") ?? new StatisticsPart {Id = "Music"};
+            var userStatistics = StatisticsPart.Get("Music");
             if (!userStatistics.UsagesList.TryGetValue("PlaybackTime", out var userUsageCount)) {
                 userUsageCount = 0;
             }
 
             userStatistics.UsagesList["PlaybackTime"] = (int) (userUsageCount + span.TotalSeconds);
-            GlobalDB.CommandStatistics.Upsert(userStatistics);
+            userStatistics.Save();
         }
 
         public static TimeSpan GetTotalMusicTime() {
-            var userStatistics = GlobalDB.CommandStatistics.FindById("Music") ?? new StatisticsPart {Id = "Music"};
+            var userStatistics = StatisticsPart.Get("Music");
             if (!userStatistics.UsagesList.TryGetValue("PlaybackTime", out var userUsageCount)) {
                 userUsageCount = 0;
             }

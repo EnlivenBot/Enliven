@@ -40,7 +40,7 @@ namespace Bot.DiscordRelated {
             mainDiscord.Disconnected += exception => DisconnectedAsync(exception, mainDiscord);
         }
 
-        public ReliabilityService(DiscordShardedClient mainDiscord, Func<LogMessage, Task> logger) {
+        public ReliabilityService(DiscordShardedClient mainDiscord, Func<LogMessage, Task>? logger = null) {
             _logger = logger ?? (_ => Task.CompletedTask);
 
             mainDiscord.ShardConnected += ConnectedAsync;

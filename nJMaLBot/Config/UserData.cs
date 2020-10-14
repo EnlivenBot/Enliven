@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using Discord;
-using DiscordChatExporter.Domain.Discord.Models;
 using LiteDB;
 
 namespace Bot.Config {

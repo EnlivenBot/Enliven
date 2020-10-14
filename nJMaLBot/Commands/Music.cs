@@ -8,6 +8,7 @@ using Bot.Config.Localization.Entries;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
 using Bot.DiscordRelated.Music;
+using Bot.DiscordRelated.Music.Tracks;
 using Bot.Music;
 using Bot.Utilities;
 using Bot.Utilities.History;
@@ -16,6 +17,8 @@ using Lavalink4NET.Player;
 using Lavalink4NET.Rest;
 using LiteDB;
 using Tyrrrz.Extensions;
+// ReSharper disable ConditionIsAlwaysTrueOrFalse
+// ReSharper disable ConstantConditionalAccessQualifier
 
 #pragma warning disable 4014
 
@@ -73,7 +76,7 @@ namespace Bot.Commands {
         public async Task Stop() {
             if (!await IsPreconditionsValid) return;
 
-            Player.ExecuteShutdown(Loc.Get("Music.UserStopPlayback").Format(Context.User.Username), false);
+            Player.ExecuteShutdown(Loc.Get("Music.UserStopPlayback").Format(Context.User.Username), new PlayerShutdownParameters{NeedSave = false});
         }
 
         [Command("jump", RunMode = RunMode.Async)]
@@ -88,7 +91,7 @@ namespace Bot.Commands {
 
             await Player.SkipAsync(index, true);
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.Jumped", Context.User.Username, Player.CurrentTrackIndex + 1,
-                MusicUtils.EscapeTrack(Player.CurrentTrack.Title).SafeSubstring(0, 40) + "..."));
+                MusicUtils.EscapeTrack(Player.CurrentTrack!.Title).SafeSubstring(0, 40) + "..."));
         }
 
         [Command("goto", RunMode = RunMode.Async)]
@@ -108,7 +111,7 @@ namespace Bot.Commands {
                 await Player.PlayAsync(track!, false);
                 Player.WriteToQueueHistory(Loc.Get("MusicQueues.Jumped")
                                               .Format(Context.User.Username, Player.CurrentTrackIndex + 1,
-                                                   Player.CurrentTrack.Title.SafeSubstring(0, 40) + "..."));
+                                                   Player.CurrentTrack!.Title.SafeSubstring(0, 40) + "..."));
             }
             else {
                 ReplyFormattedAsync(Loc.Get("Music.TrackIndexWrong").Format(Context.User.Mention, index, Player.Playlist.Count),
@@ -474,7 +477,28 @@ namespace Bot.Commands {
         [Command("fixspotify", RunMode = RunMode.Async)]
         [Alias("spotify, fs")]
         [Summary("fixspotify0s")]
-        public async Task FixSpotify([Summary("fixspotify0_0s")] string s) {
+        public async Task FixSpotify() {
+            if (!await IsPreconditionsValid) return;
+            if (Player == null) {
+                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix)).UpdateTimeout(Constants.StandardTimeSpan).Update();
+                return;
+            }
+
+            if (Player.CurrentTrack is AuthoredTrack authoredTrack && authoredTrack.Track is SpotifyLavalinkTrack spotifyLavalinkTrack) {
+                var fixSpotifyChain = FixSpotifyChain.CreateInstance(Context.User, Context.Channel, Loc,
+                    $"spotify:track:{spotifyLavalinkTrack.RelatedSpotifyTrack.Id}");
+                await fixSpotifyChain.Start();
+            }
+            else {
+                ErrorMessageController.AddEntry(Loc.Get("Music.CurrentTrackNonSpotify")).UpdateTimeout(Constants.StandardTimeSpan).Update();
+            }
+        }
+
+        [Command("fixspotify", RunMode = RunMode.Async)]
+        [Alias("spotify, fs")]
+        [Summary("fixspotify0s")]
+        public async Task FixSpotify([Remainder] [Summary("fixspotify0_0s")]
+                                     string s) {
             var fixSpotifyChain = FixSpotifyChain.CreateInstance(Context.User, Context.Channel, Loc, s);
             await fixSpotifyChain.Start();
         }

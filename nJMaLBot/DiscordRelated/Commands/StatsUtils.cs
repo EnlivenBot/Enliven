@@ -24,14 +24,14 @@ namespace Bot.DiscordRelated.Commands {
             new Temporary<int>(() => Program.Client.Guilds.Sum(guild => guild.MemberCount), Constants.LongTimeSpan);
 
         private static Temporary<int> _commandUsagesCount =
-            new Temporary<int>(() => GlobalDB.CommandStatistics.FindById("Global").UsagesList.Sum(pair => pair.Value), Constants.LongTimeSpan);
+            new Temporary<int>(() => StatisticsPart.Get("Global").UsagesList.Sum(pair => pair.Value), Constants.LongTimeSpan);
 
         private static Temporary<int> _commandUsersCount =
             new Temporary<int>(() => GlobalDB.CommandStatistics.Count(), Constants.LongTimeSpan);
 
         [SuppressMessage("ReSharper", "ConditionIsAlwaysTrueOrFalse")]
         public static EmbedBuilder BuildStats(IUser? user, ILocalizationProvider loc) {
-            var stats = GlobalDB.CommandStatistics.FindById(user?.Id.ToString() ?? "Global");
+            var stats = StatisticsPart.Get(user?.Id.ToString() ?? "Global");
             var embedBuilder = new EmbedBuilder().WithColor(Color.Gold)
                                                  .WithTitle(loc.Get("Statistics.Title"))
                                                  .WithDescription(user == null
@@ -61,7 +61,7 @@ namespace Bot.DiscordRelated.Commands {
                     // This exception appears that an element has appeared in ours that is not in the commands
                     stats.UsagesList = stats.UsagesList.Where(pair => Program.Handler.CommandAliases.Contains(pair.Key))
                                             .ToDictionary(pair => pair.Key, pair => pair.Value);
-                    GlobalDB.CommandStatistics.Upsert(stats);
+                    stats.Save();
                     // Assigning non null value to avoid endless cycle
                     valueTuples = new List<(CommandInfo, double)>();
                 }
@@ -73,7 +73,7 @@ namespace Bot.DiscordRelated.Commands {
             }
 
             if (user != null) return embedBuilder;
-            var messageStats = GlobalDB.CommandStatistics.FindById("Messages");
+            var messageStats = StatisticsPart.Get("Messages");
             if (messageStats != null && messageStats.UsagesList.Count != 0) {
                 embedBuilder.AddField(loc.Get("Statistics.ByMessages"),
                     messageStats.UsagesList.Select(pair => $"`{loc.Get("Statistics." + pair.Key)}` - {pair.Value}").JoinToString("\n"));

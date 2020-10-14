@@ -9,8 +9,10 @@ using Bot.Config.Localization.Providers;
 using Bot.DiscordRelated;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
+using Bot.DiscordRelated.Music.Tracks;
 using Discord;
 using Discord.Commands;
+using Lavalink4NET.Player;
 using NLog;
 
 namespace Bot.Utilities {
@@ -43,7 +45,7 @@ namespace Bot.Utilities {
                     info.Module.Attributes.FirstOrDefault(attribute => attribute is GroupingAttribute)) as GroupingAttribute;
         }
 
-        public static string GetLocalizedName(this GroupingAttribute groupingAttribute, ILocalizationProvider loc) {
+        public static string GetLocalizedName(this GroupingAttribute? groupingAttribute, ILocalizationProvider loc) {
             return loc.Get($"Groups.{groupingAttribute?.GroupName ?? ""}");
         }
 
@@ -64,7 +66,7 @@ namespace Bot.Utilities {
                                                   : text.Substring(start, length);
         }
 
-        public static string? SafeSubstring(this string text, int length, string postContent = "") {
+        public static string? SafeSubstring(this string? text, int length, string postContent = "") {
             if (text == null) return null;
 
             return text.Length <= length ? text : text.Substring(0, length - postContent.Length) + postContent;
@@ -183,6 +185,10 @@ namespace Bot.Utilities {
         public static TimeSpan Sum<TSource>(this IEnumerable<TSource> source, Func<TSource, TimeSpan> func)
         {
             return new TimeSpan(source.Sum(item => func(item).Ticks));
+        }
+
+        public static string GetRequester(this LavalinkTrack track) {
+            return track is AuthoredTrack authoredTrack ? authoredTrack.GetRequester() : "Unknown";
         }
     }
 }

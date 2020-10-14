@@ -1,15 +1,12 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Bot.Config.Localization.Entries;
 using Bot.DiscordRelated.Commands;
+using Bot.DiscordRelated.Music.Tracks;
 using Bot.Music;
 using Bot.Utilities;
-using Bot.Utilities.History;
-using HarmonyLib;
 using Lavalink4NET;
 using Lavalink4NET.Decoding;
 using Lavalink4NET.Events;
@@ -31,7 +28,7 @@ namespace Bot.DiscordRelated.Music {
 
         public LavalinkPlaylist Playlist { get; }
 
-        public event EventHandler<int> CurrentTrackIndexChange = null!;
+        public event EventHandler<int>? CurrentTrackIndexChange;
 
         public int CurrentTrackIndex {
             get => _currentTrackIndex;
@@ -127,12 +124,6 @@ namespace Bot.DiscordRelated.Music {
             await base.DisconnectAsync();
         }
 
-        public override Task ExecuteShutdown(IEntry reason, bool needSave = true) {
-            Playlist.Clear();
-            CurrentTrackIndex = 0;
-            return base.ExecuteShutdown(reason, needSave);
-        }
-
         public virtual ExportPlaylist ExportPlaylist(ExportPlaylistOptions options) {
             var exportPlaylist = new ExportPlaylist {Tracks = Playlist.Select(track => track.Identifier).ToList()};
             if (options != ExportPlaylistOptions.IgnoreTrackIndex) {
@@ -152,7 +143,7 @@ namespace Bot.DiscordRelated.Music {
             }
 
             var tracks = playlist.Tracks.Select(s => TrackDecoder.DecodeTrack(s))
-                                 .Select(track => AuthoredLavalinkTrack.FromLavalinkTrack(track, requester)).ToList();
+                                 .Select(track => new AuthoredTrack(track, requester)).ToList();
             if (options == ImportPlaylistOptions.Replace) {
                 try {
                     await StopAsync();
@@ -199,7 +190,7 @@ namespace Bot.DiscordRelated.Music {
             try {
                 var lavalinkTracks = tracks.ToList();
                 var authoredTracks = lavalinkTracks.Take(Constants.MaxTracksCount - Playlist.Tracks.Count)
-                                                   .Select(track => AuthoredLavalinkTrack.FromLavalinkTrack(track, author)).ToList();
+                                                   .Select(track => new AuthoredTrack(track, author)).ToList();
 
                 await Enqueue(authoredTracks, index);
 
@@ -213,19 +204,21 @@ namespace Bot.DiscordRelated.Music {
             }
         }
 
-        public virtual async Task Enqueue(List<AuthoredLavalinkTrack> tracks, int position = -1) {
-            if (tracks.Any()) {
+        public virtual async Task Enqueue(List<AuthoredTrack> tracks, int position = -1) {
+            var localTracks = tracks.ToList();
+            if (localTracks.Any()) {
                 if (position == -1) {
-                    await PlayAsync(tracks.First(), true);
-
-                    if (tracks.Count > 1) {
-                        Playlist.AddRange(tracks.Skip(1));
+                    if (State != PlayerState.Paused) {
+                        await PlayAsync(localTracks.First(), true);
+                        localTracks.RemoveAt(0);
                     }
+
+                    Playlist.AddRange(localTracks);
                 }
                 else {
-                    Playlist.InsertRange(position, tracks);
+                    Playlist.InsertRange(position, localTracks);
                     if (State == PlayerState.NotPlaying) {
-                        await PlayAsync(tracks.First(), false, null, null, true);
+                        await PlayAsync(localTracks.First(), false, null, null, true);
                     }
                 }
             }
@@ -235,40 +228,11 @@ namespace Bot.DiscordRelated.Music {
             return Task.CompletedTask;
         }
 
-        /// <summary>
-        /// This method is called only from third-party code.
-        /// </summary>
-        [Obsolete]
-        public override async void Dispose() {
-            if (!IsShutdowned) {
-                logger.Error("Player disposed. Stacktrace: \n{stacktrace}", new StackTrace().ToString());
-
-                try {
-                    WriteToQueueHistory(Loc.Get("Music.TryingReconnectAfterDispose"));
-                    if (!(AccessTools.Property(typeof(LavalinkPlayer), "LavalinkSocket").GetValue(this) is LavalinkNode currentNode))
-                        throw new Exception("LavalinkSocket not found");
-                    var newNode = MusicUtils.Cluster.Nodes.Where(node => node.IsConnected).Where(node => node != currentNode).RandomOrDefault();
-                    if (newNode != null) {
-                        await currentNode.MovePlayerAsync(this, newNode);
-                        await ConnectAsync(_lastVoiceChannelId);
-                    }
-                    else {
-                        await currentNode.JoinAsync<AdvancedLavalinkPlayer>(() => this, GuildId, _lastVoiceChannelId);
-                    }
-
-                    await PlayAsync(CurrentTrack, TrackPosition);
-
-                    if (State != PlayerState.Playing) throw new Exception("Something went wrong, executing shutdown");
-                    
-                    var storedPlaylist = ExportPlaylist(ExportPlaylistOptions.AllData).StorePlaylist("a" + ObjectId.NewObjectId(), 0);
-                    WriteToQueueHistory(Loc.Get("Music.ReconnectAfterDisposeFailed", GuildConfig.Prefix, storedPlaylist.Id));
-                }
-                catch (Exception) {
-                    await ExecuteShutdown();
-                }
-            }
-            else {
-                base.Dispose();
+        public override void GetPlayerShutdownParameters(PlayerShutdownParameters parameters) {
+            base.GetPlayerShutdownParameters(parameters);
+            parameters.Playlist = Playlist;
+            if (parameters.NeedSave && parameters.StoredPlaylist == null) {
+                parameters.StoredPlaylist = ExportPlaylist(ExportPlaylistOptions.AllData).StorePlaylist("a" + ObjectId.NewObjectId(), 0);
             }
         }
     }

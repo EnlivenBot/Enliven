@@ -251,7 +251,7 @@ namespace Bot.DiscordRelated {
                 TimeSpan.FromMilliseconds(-1));
         }
 
-        public event EventHandler Stop = null!;
+        public event EventHandler? Stop;
 
         public Task Wait() {
             return _stopTask.Task;

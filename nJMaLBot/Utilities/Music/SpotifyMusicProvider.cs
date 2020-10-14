@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Bot.Config;
+using Bot.DiscordRelated.Music.Tracks;
 using Bot.Music;
 using Lavalink4NET.Cluster;
 using Lavalink4NET.Player;
@@ -62,8 +62,9 @@ namespace Bot.Utilities.Music {
             try {
                 var spotify = await SpotifyClient;
                 var spotifyTracks = await Query.Resolve(spotify);
-                var enumerable = spotifyTracks.Select(s => ResolveWithCache(s, _cluster));
-                return (await Task.WhenAll(enumerable)).Select(association => association?.GetBestAssociation().Association).ToList()!;
+                var enumerable = spotifyTracks.Select(async s =>
+                    new SpotifyLavalinkTrack(s, (await ResolveWithCache(s, _cluster)).GetBestAssociation().Association)).ToList();
+                return (await Task.WhenAll(enumerable)).Cast<LavalinkTrack>().ToList();
             }
             catch (Exception) {
                 throw new NothingFoundException(false);

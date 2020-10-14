@@ -42,6 +42,13 @@ namespace Bot.Utilities.Collector {
         }
     }
 
+    public class EmoteMultiCollectorEventArgs : EmoteCollectorEventArgs {
+        public CollectorsGroup CollectorsGroup { get; set; }
+        public EmoteMultiCollectorEventArgs(CollectorController controller, CollectorsGroup group, SocketReaction reaction) : base(controller, reaction) {
+            CollectorsGroup = group;
+        }
+    }
+
     public class MessageCollectorEventArgs : CollectorEventArgsBase {
         public IMessage Message { get; set; }
 

@@ -2,14 +2,14 @@
 
 namespace Bot.Config.Localization.Providers {
     public class LocalizationContainer : ILocalizationProvider {
-        private ILocalizationProvider _provider = null!;
+        private ILocalizationProvider? _provider;
 
         public LocalizationContainer(ILocalizationProvider provider) {
             Provider = provider;
         }
 
         public ILocalizationProvider Provider {
-            get => _provider;
+            get => _provider!;
             set {
                 if (_provider != null) _provider.LanguageChanged -= ProviderLanguageChanged;
                 _provider = value ?? throw new ArgumentNullException(nameof(value), $"Provider in {nameof(LocalizationContainer)} can not be null");

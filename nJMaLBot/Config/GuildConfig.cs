@@ -8,7 +8,7 @@ using LiteDB;
 
 namespace Bot.Config {
     public partial class GuildConfig {
-        private ILocalizationProvider _loc = null!;
+        private ILocalizationProvider? _loc;
         [BsonId] public ulong GuildId { get; set; }
         public string Prefix { get; set; } = "&";
         public int Volume { get; set; } = 100;
@@ -55,7 +55,7 @@ namespace Bot.Config {
             FunctionalChannelsChanged?.Invoke(this, e);
         }
 
-        public static event EventHandler<string> LocalizationChanged = null!;
+        public static event EventHandler<string>? LocalizationChanged;
         public GuildConfig SetChannel(string channelId, ChannelFunction func) {
             if (channelId == "null")
                 FunctionalChannels.TryRemove(func, out _);

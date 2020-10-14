@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Bot.Config;
 using Bot.Config.Localization.Providers;
 using Bot.DiscordRelated.Music;
+using Bot.DiscordRelated.Music.Tracks;
 using Bot.Music;
 using Bot.Utilities;
 using Bot.Utilities.Collector;
@@ -126,10 +127,10 @@ namespace Bot.Commands.Chains {
         }
 
         private async Task<bool> ProcessAdd(int i, List<LavalinkTrack> tracks, IUserMessage msg) {
-            var authoredLavalinkTracks = new List<AuthoredLavalinkTrack>();
+            var authoredLavalinkTracks = new List<AuthoredTrack>();
             if (i == -2)
-                authoredLavalinkTracks.AddRange(tracks.Take(10).Select(track => AuthoredLavalinkTrack.FromLavalinkTrack(track, _requester.Username)));
-            if (i >= 0 && i <= tracks.Count - 1) authoredLavalinkTracks.Add(AuthoredLavalinkTrack.FromLavalinkTrack(tracks[i], _requester.Username));
+                authoredLavalinkTracks.AddRange(tracks.Take(10).Select(track => new AuthoredTrack(track, _requester.Username)));
+            if (i >= 0 && i <= tracks.Count - 1) authoredLavalinkTracks.Add(new AuthoredTrack(tracks[i], _requester.Username));
             switch (authoredLavalinkTracks.Count) {
                 case 0:
                     return false;

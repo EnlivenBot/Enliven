@@ -24,7 +24,7 @@ namespace Bot.Config.Localization {
         }
 
         [JsonIgnore]
-        public IEmote LocalizationFlagEmoji { get; set; } = null!;
+        public IEmote? LocalizationFlagEmoji { get; set; }
 
         public string FallbackLanguage { get; set; } = null!;
         public string Authors { get; set; } = null!;

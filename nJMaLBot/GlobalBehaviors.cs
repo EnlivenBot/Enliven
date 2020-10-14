@@ -7,8 +7,7 @@ using Discord.WebSocket;
 namespace Bot {
     public static class GlobalBehaviors {
         static GlobalBehaviors() {
-            if (!Program.CmdOptions.Observer) 
-                Program.Client.JoinedGuild += ClientOnJoinedGuild;
+            Program.Client.JoinedGuild += ClientOnJoinedGuild;
         }
 
         private static async Task ClientOnJoinedGuild(SocketGuild arg) {
@@ -19,7 +18,7 @@ namespace Bot {
         public static async Task<IUserMessage> PrintWelcomeMessage(SocketGuild guild, IMessageChannel? channel = null) {
             var guildConfig = GuildConfig.Get(guild.Id);
             var loc = guildConfig.Loc;
-            
+
             var embedBuilder = new EmbedBuilder().WithColor(Color.Gold).WithFooter($"Powered by {Program.Client.CurrentUser.Username}");
             embedBuilder.WithAuthor(Program.Client.CurrentUser.Username, Program.Client.CurrentUser.GetAvatarUrl());
             embedBuilder.WithDescription(loc.Get("Messages.WelcomeDescription").Format(guildConfig.Prefix, Program.Client.CurrentUser.Mention));
@@ -33,6 +32,6 @@ namespace Bot {
 
         public static void Initialize() {
             // Dummy method to call static constructor
-        } 
+        }
     }
 }

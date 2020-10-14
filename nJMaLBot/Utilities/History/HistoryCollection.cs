@@ -8,7 +8,7 @@ using Bot.Config.Localization.Providers;
 
 namespace Bot.Utilities.History {
     public class HistoryCollection : IList<HistoryEntry>, IEntry {
-        private readonly List<HistoryEntry> entries = new List<HistoryEntry>();
+        private readonly List<HistoryEntry> _entries = new List<HistoryEntry>();
         private int _firstAffectedIndex;
         private bool _ignoreDuplicateIds;
         private bool _isChanged = true;
@@ -27,7 +27,7 @@ namespace Bot.Utilities.History {
             get => _maxEntriesCount;
             set {
                 _maxEntriesCount = value;
-                entries.RemoveRange(0, (Count - value).Normalize(0, int.MaxValue));
+                _entries.RemoveRange(0, (Count - value).Normalize(0, int.MaxValue));
                 OnHistoryChanged();
             }
         }
@@ -46,7 +46,7 @@ namespace Bot.Utilities.History {
         }
 
         public IEnumerator<HistoryEntry> GetEnumerator() {
-            return entries.GetEnumerator();
+            return _entries.GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator() {
@@ -54,36 +54,36 @@ namespace Bot.Utilities.History {
         }
 
         public void Add(HistoryEntry item) {
-            if (item.Identifier != null && !_ignoreDuplicateIds && entries.LastOrDefault()?.Identifier == item.Identifier) {
+            if (item.Identifier != null && !_ignoreDuplicateIds && _entries.LastOrDefault()?.Identifier == item.Identifier) {
                 RemoveAt(Count - 1);
             }
 
-            entries.Add(item);
+            _entries.Add(item);
             SubscribeItem(item);
-            OnHistoryChanged(entries.Count - 1);
+            OnHistoryChanged(_entries.Count - 1);
         }
 
         public void Clear() {
-            foreach (var historyEntry in entries.ToList()) {
+            foreach (var historyEntry in _entries.ToList()) {
                 UnsubscribeItem(historyEntry);
             }
 
-            entries.Clear();
+            _entries.Clear();
             OnHistoryChanged();
         }
 
         public bool Contains(HistoryEntry item) {
-            return entries.Contains(item);
+            return _entries.Contains(item);
         }
 
         public void CopyTo(HistoryEntry[] array, int arrayIndex) {
-            entries.CopyTo(array, arrayIndex);
+            _entries.CopyTo(array, arrayIndex);
         }
 
         public bool Remove(HistoryEntry item) {
             try {
                 var index = IndexOf(item);
-                var result = entries.Remove(item);
+                var result = _entries.Remove(item);
                 UnsubscribeItem(item);
                 OnHistoryChanged(index);
                 return result;
@@ -93,30 +93,30 @@ namespace Bot.Utilities.History {
             }
         }
 
-        public int Count => entries.Count;
+        public int Count => _entries.Count;
         public bool IsReadOnly => false;
 
         public int IndexOf(HistoryEntry item) {
-            return entries.IndexOf(item);
+            return _entries.IndexOf(item);
         }
 
         public void Insert(int index, HistoryEntry item) {
-            entries.Insert(index, item);
+            _entries.Insert(index, item);
             SubscribeItem(item);
             OnHistoryChanged(index);
         }
 
         public void RemoveAt(int index) {
-            UnsubscribeItem(entries[index]);
-            entries.RemoveAt(index);
+            UnsubscribeItem(_entries[index]);
+            _entries.RemoveAt(index);
             OnHistoryChanged(index);
         }
 
         public HistoryEntry this[int index] {
-            get => entries[index];
+            get => _entries[index];
             set {
-                UnsubscribeItem(entries[index]);
-                entries[index] = value;
+                UnsubscribeItem(_entries[index]);
+                _entries[index] = value;
                 SubscribeItem(value);
                 OnHistoryChanged(index);
             }
@@ -147,9 +147,9 @@ namespace Bot.Utilities.History {
                 var count = 1;
                 var stringBuilder = new StringBuilder();
 
-                var index = entries.Count - 1;
+                var index = _entries.Count - 1;
                 for (; index >= 0; index--) {
-                    var s = entries[index].Get(provider);
+                    var s = _entries[index].Get(provider);
                     if (lastEntry == s && !_ignoreDuplicateIds) {
                         count++;
                     }

@@ -40,6 +40,10 @@ namespace Bot.DiscordRelated.Commands.Modules {
 
             try {
                 Player = PlayersController.GetPlayer(Context.Guild.Id)!;
+                // ReSharper disable once ConditionIsAlwaysTrueOrFalse
+                if (Player == null && !MusicUtils.Cluster.Nodes.Any(node => node.IsConnected)) {
+                    throw new InvalidOperationException("No node available.");
+                }
             }
             catch (NullReferenceException) {
                 nonSpamMessageController.AddEntry(Loc.Get("Music.MusicDisabled")).Update();

@@ -39,7 +39,7 @@ namespace Bot.Utilities.Music {
                 Author = author;
             }
 
-            public UserLink Author { get; set; }
+            public UserLink Author { get; set; } = null!;
 
             public List<ulong> UpvotedUsers { get; set; } = new List<ulong>();
             public List<ulong> DownvotedUsers { get; set; } = new List<ulong>();

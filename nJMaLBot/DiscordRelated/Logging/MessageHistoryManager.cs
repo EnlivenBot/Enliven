@@ -26,7 +26,6 @@ namespace Bot.DiscordRelated.Logging {
         public static readonly DiffMatchPatch.DiffMatchPatch DiffMatchPatch = new DiffMatchPatch.DiffMatchPatch();
 
         static MessageHistoryManager() {
-            if (Program.CmdOptions.Observer) return;
             // Message created handled located in CommandHandler
             Program.Client.MessageUpdated += ClientOnMessageUpdated;
             Program.Client.MessageDeleted += ClientOnMessageDeleted;
@@ -49,7 +48,7 @@ namespace Bot.DiscordRelated.Logging {
             // Sorry for this hack
             // But this project does not bring me income, and I can not afford to buy this license
             // If you using it consider buying license at https://www.grapecity.com/documents-api/licensing
-            var type = typeof(GcHtmlRenderer).Assembly.GetType("anz");
+            var type = typeof(GcHtmlRenderer).Assembly.GetType("aov");
             AccessTools.Field(type, "c").SetValue(null, int.MaxValue);
         }
 
@@ -223,7 +222,7 @@ namespace Bot.DiscordRelated.Logging {
                     var guild = GuildConfig.Get(arg.Id);
                     if (!guild.GetChannel(ChannelFunction.Log, out var logChannel)) return;
                     var loc = new GuildLocalizationProvider(guild);
-                    (((SocketTextChannel) logChannel)!).SendMessageAsync(loc.Get("MessageHistory.GuildLogCleared").Format(
+                    ((SocketTextChannel) logChannel)!.SendMessageAsync(loc.Get("MessageHistory.GuildLogCleared").Format(
                         arg.Name, arg.Id, deletesCount));
                 }
                 finally {

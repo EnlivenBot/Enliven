@@ -11,6 +11,7 @@ using DiscordChatExporter.Domain.Exporting.Writers;
 using DiscordChatExporter.Domain.Exporting.Writers.MarkdownVisitors;
 using Scriban;
 using Scriban.Runtime;
+// ReSharper disable ConstantConditionalAccessQualifier
 
 namespace Bot.DiscordRelated.Logging.Rendering {
     public class LogMessageWriter : MessageWriter {

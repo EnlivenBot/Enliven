@@ -14,6 +14,9 @@ using System.Threading;
 // ReSharper disable InconsistentNaming
 // ReSharper disable RedundantExtendsListEntry
 // ReSharper disable NotAccessedVariable
+// ReSharper disable ConstantNullCoalescingCondition
+// ReSharper disable ConditionIsAlwaysTrueOrFalse
+// ReSharper disable ConstantConditionalAccessQualifier
 #pragma warning disable 8625
 #pragma warning disable 8601
 #pragma warning disable 8603
@@ -290,8 +293,7 @@ namespace Bot.Utilities {
             }
 
             var handler = CollectionChanged;
-            if (handler != null)
-                handler(this, args);
+            handler?.Invoke(this, args);
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -303,9 +305,7 @@ namespace Bot.Utilities {
             }
 
             PropertyChangedEventHandler handler = PropertyChanged;
-            if (handler != null) {
-                handler(this, new PropertyChangedEventArgs(name));
-            }
+            handler?.Invoke(this, new PropertyChangedEventArgs(name));
         }
     }
 

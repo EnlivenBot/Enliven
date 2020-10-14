@@ -80,7 +80,7 @@ namespace Bot.DiscordRelated.Logging {
             AddSnapshot(message.EditedTimestamp ?? message.Timestamp, message.Content);
         }
 
-        public void AddSnapshot(DateTimeOffset editTime, string newContent) {
+        public void AddSnapshot(DateTimeOffset editTime, string? newContent) {
             newContent ??= "";
             Edits.Add(new MessageSnapshot {
                 EditTimestamp = editTime,
@@ -102,7 +102,7 @@ namespace Bot.DiscordRelated.Logging {
                 lastSnapshot = edit;
             }
 
-            return commonCount - (lastSnapshot?.EditTimestamp.ToString()?.Length ?? 0) +
+            return commonCount - (lastSnapshot?.EditTimestamp.ToString().Length ?? 0) +
                 loc.Get("MessageHistory.LastContent").Format(lastSnapshot?.EditTimestamp).Length <= 5500;
         }
 
@@ -297,7 +297,7 @@ namespace Bot.DiscordRelated.Logging {
         public async Task<IUserMessage?> GetRealMessage() {
             try {
                 var textChannel = (ITextChannel) Program.Client.GetChannel(ChannelId);
-                var messageAsync = await textChannel?.GetMessageAsync(MessageId)!;
+                var messageAsync = await textChannel.GetMessageAsync(MessageId)!;
                 return messageAsync as IUserMessage;
             }
             catch (Exception) {
