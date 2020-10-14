@@ -252,27 +252,27 @@ namespace Bot.DiscordRelated.Commands {
         }
 
         public static void RegisterUsage(string command, string userId) {
-            var userStatistics = GlobalDB.CommandStatistics.FindById(userId) ?? new StatisticsPart {Id = userId};
+            var userStatistics = StatisticsPart.Get(userId);
             if (!userStatistics.UsagesList.TryGetValue(command, out var userUsageCount)) {
                 userUsageCount = 0;
             }
 
             userStatistics.UsagesList[command] = ++userUsageCount;
-            GlobalDB.CommandStatistics.Upsert(userStatistics);
+            userStatistics.Save();
         }
 
         public static void RegisterMusicTime(TimeSpan span) {
-            var userStatistics = GlobalDB.CommandStatistics.FindById("Music") ?? new StatisticsPart {Id = "Music"};
+            var userStatistics = StatisticsPart.Get("Music");
             if (!userStatistics.UsagesList.TryGetValue("PlaybackTime", out var userUsageCount)) {
                 userUsageCount = 0;
             }
 
             userStatistics.UsagesList["PlaybackTime"] = (int) (userUsageCount + span.TotalSeconds);
-            GlobalDB.CommandStatistics.Upsert(userStatistics);
+            userStatistics.Save();
         }
 
         public static TimeSpan GetTotalMusicTime() {
-            var userStatistics = GlobalDB.CommandStatistics.FindById("Music") ?? new StatisticsPart {Id = "Music"};
+            var userStatistics = StatisticsPart.Get("Music");
             if (!userStatistics.UsagesList.TryGetValue("PlaybackTime", out var userUsageCount)) {
                 userUsageCount = 0;
             }

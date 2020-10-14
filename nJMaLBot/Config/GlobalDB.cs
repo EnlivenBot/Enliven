@@ -192,21 +192,6 @@ namespace Bot.Config {
         }
 
         #pragma warning disable 618
-        [DbUpgradeAttribute(2, false)]
-        private static void UpgradeTo2(LiteDatabase liteDatabase) {
-            var oldStatsCollection = liteDatabase.GetCollection<ObsoleteStatisticsPart>(@"CommandStatistics");
-            var oldStats = oldStatsCollection.FindAll().ToList();
-            var newStats = oldStats.Select(part => new StatisticsPart {
-                Id = part.Id, UsagesList = (long.TryParse(part.Id, out _) || part.Id == "Global"
-                        ? part.UsagesList.Where(pair => Program.Handler.CommandAliases.Contains(pair.Key))
-                        : part.UsagesList)
-                   .ToDictionary(pair => pair.Key, pair => (int) pair.Value)
-            });
-            liteDatabase.DropCollection(@"CommandStatistics");
-            var statsCollection = liteDatabase.GetCollection<StatisticsPart>(@"CommandStatistics");
-            statsCollection.InsertBulk(newStats);
-        }
-
         [DbUpgradeAttribute(3, false)]
         private static void UpgradeTo3(LiteDatabase liteDatabase) {
             var oldIgnoredMessages = liteDatabase.GetCollection<BsonDocument>(@"IgnoredMessages");
