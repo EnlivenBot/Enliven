@@ -48,7 +48,7 @@ namespace Bot.DiscordRelated.Music {
             }) {BetweenExecutionsDelay = TimeSpan.FromSeconds(1.5), CanBeDirty = true};
             _controlMessageSendTask = new SingleTask(async () => {
                 try {
-                    await SetControlMessage(await _controlMessageChannel.SendMessageAsync(Loc.Get("Music.Loading")));
+                    await SetControlMessage(await _controlMessageChannel.SendMessageAsync(null, false, EmbedBuilder.Build()));
                 }
                 catch (Exception) {
                     // ignored
