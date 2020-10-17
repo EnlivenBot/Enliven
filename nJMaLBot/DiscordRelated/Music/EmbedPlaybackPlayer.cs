@@ -280,7 +280,7 @@ namespace Bot.DiscordRelated.Music {
             if (ControlMessage == null) return Task.CompletedTask;
             _collectorsGroup.Add(
                 CollectorsUtils.CollectReactions<string>(
-                    reaction => reaction.MessageId == ControlMessage.Id && reaction.UserId != Program.Client.CurrentUser.Id,
+                    reaction => reaction.MessageId == ControlMessage?.Id && reaction.UserId != Program.Client.CurrentUser.Id,
                     async (args, s) => {
                         args.RemoveReason();
                         await Program.Handler.ExecuteCommand(s, new ReactionCommandContext(Program.Client, args.Reaction),
