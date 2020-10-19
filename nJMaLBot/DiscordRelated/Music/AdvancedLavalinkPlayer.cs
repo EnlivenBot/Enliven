@@ -120,23 +120,34 @@ namespace Bot.DiscordRelated.Music {
         public override async void Dispose() {
             if (!IsShutdowned) {
                 logger.Error("Player disposed. Stacktrace: \n{stacktrace}", new StackTrace().ToString());
+                try {
 
-                var playerShutdownParameters = new PlayerShutdownParameters {AddResumeToMessage = false};
-                GetPlayerShutdownParameters(playerShutdownParameters);
-                await ExecuteShutdown(new EntryLocalized("Music.TryReconnectAfterDispose", GuildConfig.Prefix, playerShutdownParameters.StoredPlaylist!.Id),
-                    playerShutdownParameters);
-                await Task.Delay(1000);
-                var newPlayer = await PlayersController.ProvidePlayer(GuildId, playerShutdownParameters.LastVoiceChannelId, true);
-                newPlayer.Playlist.AddRange(playerShutdownParameters.Playlist!);
-                await newPlayer.PlayAsync(playerShutdownParameters.LastTrack!, playerShutdownParameters.TrackPosition);
-                if (playerShutdownParameters.PlayerState == PlayerState.Paused) {
-                    await newPlayer.PauseAsync();
+                    var playerShutdownParameters = new PlayerShutdownParameters {AddResumeToMessage = false};
+                    GetPlayerShutdownParameters(playerShutdownParameters);
+                    await ExecuteShutdown(new EntryLocalized("Music.TryReconnectAfterDispose", GuildConfig.Prefix, playerShutdownParameters.StoredPlaylist!.Id),
+                        playerShutdownParameters);
+                    if (State != PlayerState.Destroyed) {
+                        base.Dispose();
+                    }
+                    logger.Info("Old player state - {State}", State);
+                    await Task.Delay(3000);
+                    var newPlayer = await PlayersController.ProvidePlayer(GuildId, playerShutdownParameters.LastVoiceChannelId, true);
+                    newPlayer.Playlist.AddRange(playerShutdownParameters.Playlist!);
+                    await newPlayer.PlayAsync(playerShutdownParameters.LastTrack!, playerShutdownParameters.TrackPosition);
+                    if (playerShutdownParameters.PlayerState == PlayerState.Paused) {
+                        await newPlayer.PauseAsync();
+                    }
+
+                    newPlayer.UpdateCurrentTrackIndex();
+                    newPlayer.WriteToQueueHistory(new HistoryEntry(
+                        new EntryLocalized("Music.ReconnectedAfterDispose", GuildConfig.Prefix, playerShutdownParameters.StoredPlaylist!.Id)));
+                    await newPlayer.EnqueueControlMessageSend(playerShutdownParameters.LastControlMessage!.Channel);
+                    logger.Info("New player state - {State}", newPlayer.State);
+                    logger.Info("Track - {Track}: {Position}", newPlayer.CurrentTrack, newPlayer.TrackPosition);
                 }
-
-                newPlayer.UpdateCurrentTrackIndex();
-                newPlayer.WriteToQueueHistory(new HistoryEntry(
-                    new EntryLocalized("Music.ReconnectedAfterDispose", GuildConfig.Prefix, playerShutdownParameters.StoredPlaylist!.Id)));
-                await newPlayer.EnqueueControlMessageSend(playerShutdownParameters.LastControlMessage!.Channel);
+                catch (Exception e) {
+                    logger.Error(e, "Error while resuming player");
+                }
             }
             else {
                 base.Dispose();
