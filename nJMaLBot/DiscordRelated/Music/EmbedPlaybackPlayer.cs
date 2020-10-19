@@ -353,7 +353,7 @@ namespace Bot.DiscordRelated.Music {
         private PaginatedMessage? _queueMessage;
 
         private async Task UpdateControlMessage(bool background = false) {
-            _updateControlMessageTask.Execute(!background);
+            if (State != PlayerState.Destroyed) _updateControlMessageTask.Execute(!background);
         }
 
         public void UpdateProgress(bool background = false) {
