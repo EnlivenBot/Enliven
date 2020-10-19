@@ -170,7 +170,10 @@ namespace Bot.Utilities.Collector {
             return filter switch {
                 CollectorFilter.Off        => initial,
                 CollectorFilter.IgnoreSelf => (reaction => reaction.UserId != Program.Client.CurrentUser.Id && initial(reaction)),
-                CollectorFilter.IgnoreBots => (reaction => !reaction.User.Value.IsBot && !reaction.User.Value.IsWebhook && initial(reaction)),
+                CollectorFilter.IgnoreBots => reaction => {
+                    var user = reaction.User.GetValueOrDefault(Program.Client.GetUser(reaction.UserId));
+                    return !user.IsBot && !user.IsWebhook && initial(reaction);
+                },
                 _                          => throw new ArgumentOutOfRangeException(nameof(filter), filter, null)
             };
         }
