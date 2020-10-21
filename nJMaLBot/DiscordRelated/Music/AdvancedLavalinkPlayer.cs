@@ -118,10 +118,9 @@ namespace Bot.DiscordRelated.Music {
         /// </summary>
         [Obsolete]
         public override async void Dispose() {
+            logger.Error("Player disposed. Shutdowned: {Shutdowned} Stacktrace: \n{stacktrace}", IsShutdowned, new StackTrace().ToString());
             if (!IsShutdowned) {
-                logger.Error("Player disposed. Stacktrace: \n{stacktrace}", new StackTrace().ToString());
                 try {
-
                     var playerShutdownParameters = new PlayerShutdownParameters {AddResumeToMessage = false};
                     GetPlayerShutdownParameters(playerShutdownParameters);
                     await ExecuteShutdown(new EntryLocalized("Music.TryReconnectAfterDispose", GuildConfig.Prefix, playerShutdownParameters.StoredPlaylist!.Id),

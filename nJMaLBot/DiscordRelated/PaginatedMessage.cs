@@ -24,7 +24,7 @@ namespace Bot.DiscordRelated {
         private TaskCompletionSource<bool> _stopTask = new TaskCompletionSource<bool>();
         private bool _isCollectionUpdating;
 
-        private Timer _timeoutTimer;
+        private readonly Timer _timeoutTimer;
 
         public IUserMessage? Message;
         public ILocalizationProvider Loc;
