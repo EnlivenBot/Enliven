@@ -49,7 +49,6 @@ namespace Bot.DiscordRelated.Music {
                 CommandHandler.RegisterMusicTime(TrackPosition);
             }
 
-            //if (eventArgs.Reason != TrackEndReason.Replaced) await base.OnTrackEndAsync(eventArgs);
             if (eventArgs.Reason == TrackEndReason.LoadFailed) {
                 if (LoadFailedId == CurrentTrack?.Identifier) {
                     await SkipAsync();
@@ -82,6 +81,9 @@ namespace Bot.DiscordRelated.Music {
 
             if (eventArgs.MayStartNext && eventArgs.Reason != TrackEndReason.LoadFailed) {
                 await SkipAsync();
+            }
+            else if (eventArgs.Reason != TrackEndReason.Replaced) {
+                await base.OnTrackEndAsync(eventArgs);
             }
         }
 
