@@ -292,13 +292,11 @@ namespace Bot.DiscordRelated.Music {
                     (CommonEmoji.LegacyTrackNext, () => "skip"),
                     (CommonEmoji.LegacyStop, () => "stop"),
                     (CommonEmoji.LegacyRepeat, () => "repeat"),
-                    (CommonEmoji.LegacyShuffle, () => "shuffle"),
-                    (CommonEmoji.LegacySound, () => $"volume {GuildConfig.Volume - 10}"),
-                    (CommonEmoji.LegacyLoudSound, () => $"volume {GuildConfig.Volume + 10}")
+                    (CommonEmoji.LegacyShuffle, () => "shuffle")
                 ));
             _addReactionsAsync = ControlMessage.AddReactionsAsync(new IEmote[] {
                 CommonEmoji.LegacyTrackPrevious, CommonEmoji.LegacyPlay, CommonEmoji.LegacyPause, CommonEmoji.LegacyTrackNext,
-                CommonEmoji.LegacyStop, CommonEmoji.LegacyRepeat, CommonEmoji.LegacyShuffle, CommonEmoji.LegacySound, CommonEmoji.LegacyLoudSound
+                CommonEmoji.LegacyStop, CommonEmoji.LegacyRepeat, CommonEmoji.LegacyShuffle
             });
 
             _collectorsGroup.Controllers.Add(CollectorsUtils.CollectMessage(ControlMessage.Channel, message => true, async args => {
