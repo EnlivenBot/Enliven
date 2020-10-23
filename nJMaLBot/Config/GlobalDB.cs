@@ -328,6 +328,17 @@ namespace Bot.Config {
             
             return Task.CompletedTask;
         }
+        
+        [DbUpgrade(9)]
+        private static Task UpgradeTo9(LiteDatabase liteDatabase) {
+            var guildsCollection = liteDatabase.GetCollection<GuildConfig>(@"Guilds");
+            foreach (var guildConfig in guildsCollection.FindAll()) {
+                guildConfig.Volume = Math.Min(100, guildConfig.Volume);
+                guildsCollection.Upsert(guildConfig);
+            }
+            
+            return Task.CompletedTask;
+        }
 
         [AttributeUsage(AttributeTargets.Method, Inherited = false, AllowMultiple = true)]
         private sealed class DbUpgradeAttribute : Attribute {
