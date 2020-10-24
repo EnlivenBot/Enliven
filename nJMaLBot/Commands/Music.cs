@@ -129,7 +129,7 @@ namespace Bot.Commands {
                 return;
             }
 
-            if (volume > 150 || volume < 0) {
+            if (volume > 200 || volume < 10) {
                 ErrorMessageController.AddEntry(Loc.Get("Music.VolumeOutOfRange")).UpdateTimeout(Constants.StandardTimeSpan).Update();
                 return;
             }

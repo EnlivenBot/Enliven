@@ -51,7 +51,7 @@
     "Music": {
       "RequestHistory": "Request history",
       "QueueEmpty": "The queue is empty. Order tracks via `{0}play [request]`",
-      "VolumeOutOfRange": "Volume out of range: 0% - 150%!",
+      "VolumeOutOfRange": "Volume out of range: 10% - 200%!",
       "RequestedBy": "Requested by: {0}",
       "NothingPlaying": "Nothing playing. Order tracks via `{0}play [request]`",
       "Fail": "Error",
