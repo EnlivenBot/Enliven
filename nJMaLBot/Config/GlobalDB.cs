@@ -333,7 +333,7 @@ namespace Bot.Config {
         private static Task UpgradeTo9(LiteDatabase liteDatabase) {
             var guildsCollection = liteDatabase.GetCollection<GuildConfig>(@"Guilds");
             foreach (var guildConfig in guildsCollection.FindAll()) {
-                guildConfig.Volume = Math.Min(100, guildConfig.Volume);
+                guildConfig.Volume = 100;
                 guildsCollection.Upsert(guildConfig);
             }
             
