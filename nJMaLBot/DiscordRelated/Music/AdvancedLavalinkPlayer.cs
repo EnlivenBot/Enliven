@@ -46,8 +46,8 @@ namespace Bot.DiscordRelated.Music {
         }
 
         [Obsolete]
-        public override async Task SetVolumeAsync(float volume = 1, bool normalize = false) {
-            await SetVolumeAsync((int) (volume * 100));
+        public override async Task SetVolumeAsync(float volume = 1, bool normalize = false, bool force = false) {
+            await SetVolumeAsync((int) (volume * 100), force);
         }
 
         public virtual void SetBassBoostMode(BassBoostMode mode) {
