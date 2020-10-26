@@ -37,9 +37,9 @@ namespace Bot.DiscordRelated.Music {
             await base.OnConnectedAsync(voiceServer, voiceState);
         }
 
-        public virtual async Task SetVolumeAsync(int volume = 100) {
+        public virtual async Task SetVolumeAsync(int volume = 100, bool force = false) {
             volume = volume.Normalize(0, 200);
-            await base.SetVolumeAsync((float) volume / 200);
+            await base.SetVolumeAsync((float) volume / 200, force);
             var guildConfig = GuildConfig.Get(GuildId);
             guildConfig.Volume = volume;
             guildConfig.Save();

@@ -77,8 +77,8 @@ namespace Bot.DiscordRelated.Music {
 
         public IUserMessage? ControlMessage { get; private set; }
 
-        public override async Task SetVolumeAsync(int volume = 100) {
-            await base.SetVolumeAsync(volume);
+        public override async Task SetVolumeAsync(int volume = 100, bool force = false) {
+            await base.SetVolumeAsync(volume, force);
             UpdateParameters();
         }
 
