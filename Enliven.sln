@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29123.89
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "nJMaLBot", "nJMaLBot\nJMaLBot.csproj", "{E2448BB5-9F9A-405B-AEAE-6B26CE9A06F1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Enliven", "Enliven\Enliven.csproj", "{E2448BB5-9F9A-405B-AEAE-6B26CE9A06F1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
