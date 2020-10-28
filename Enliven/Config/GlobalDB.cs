@@ -191,19 +191,6 @@ namespace Bot.Config {
             Database.CheckpointSize = liteDatabaseCheckpointSize;
         }
 
-        #pragma warning disable 618
-        [DbUpgradeAttribute(3, false)]
-        private static void UpgradeTo3(LiteDatabase liteDatabase) {
-            var oldIgnoredMessages = liteDatabase.GetCollection<BsonDocument>(@"IgnoredMessages");
-            var sortedIgnoredMessages = oldIgnoredMessages.FindAll()
-                                                          .Select(document => document.ToString().Split(':'))
-                                                          .GroupBy(strings => strings[0]).Select(grouping => new ListedEntry
-                                                               {Id = grouping.Key, Data = grouping.Select(strings => strings[1]).ToList()});
-            liteDatabase.DropCollection(@"IgnoredMessages");
-            var newIgnoredMessages = liteDatabase.GetCollection<ListedEntry>(@"IgnoredMessages");
-            newIgnoredMessages.Upsert(sortedIgnoredMessages);
-        }
-
         [DbUpgrade(4)]
         private static void UpgradeTo4(LiteDatabase liteDatabase) {
             var regex0 = new Regex(Regex.Escape("-1,17"));
