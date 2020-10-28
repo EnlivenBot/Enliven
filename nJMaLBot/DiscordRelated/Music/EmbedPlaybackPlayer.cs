@@ -48,7 +48,7 @@ namespace Bot.DiscordRelated.Music {
             }) {BetweenExecutionsDelay = TimeSpan.FromSeconds(1.5), CanBeDirty = true};
             _controlMessageSendTask = new SingleTask(async () => {
                 try {
-                    await SetControlMessage(await _controlMessageChannel.SendMessageAsync(Loc.Get("Music.Loading")));
+                    await SetControlMessage(await _controlMessageChannel.SendMessageAsync(null, false, EmbedBuilder.Build()));
                 }
                 catch (Exception) {
                     // ignored
@@ -77,8 +77,8 @@ namespace Bot.DiscordRelated.Music {
 
         public IUserMessage? ControlMessage { get; private set; }
 
-        public override async Task SetVolumeAsync(int volume = 100) {
-            await base.SetVolumeAsync(volume);
+        public override async Task SetVolumeAsync(int volume = 100, bool force = false) {
+            await base.SetVolumeAsync(volume, force);
             UpdateParameters();
         }
 
@@ -280,7 +280,7 @@ namespace Bot.DiscordRelated.Music {
             if (ControlMessage == null) return Task.CompletedTask;
             _collectorsGroup.Add(
                 CollectorsUtils.CollectReactions<string>(
-                    reaction => reaction.MessageId == ControlMessage.Id && reaction.UserId != Program.Client.CurrentUser.Id,
+                    reaction => reaction.MessageId == ControlMessage?.Id && reaction.UserId != Program.Client.CurrentUser.Id,
                     async (args, s) => {
                         args.RemoveReason();
                         await Program.Handler.ExecuteCommand(s, new ReactionCommandContext(Program.Client, args.Reaction),
@@ -292,13 +292,11 @@ namespace Bot.DiscordRelated.Music {
                     (CommonEmoji.LegacyTrackNext, () => "skip"),
                     (CommonEmoji.LegacyStop, () => "stop"),
                     (CommonEmoji.LegacyRepeat, () => "repeat"),
-                    (CommonEmoji.LegacyShuffle, () => "shuffle"),
-                    (CommonEmoji.LegacySound, () => $"volume {GuildConfig.Volume - 10}"),
-                    (CommonEmoji.LegacyLoudSound, () => $"volume {GuildConfig.Volume + 10}")
+                    (CommonEmoji.LegacyShuffle, () => "shuffle")
                 ));
             _addReactionsAsync = ControlMessage.AddReactionsAsync(new IEmote[] {
                 CommonEmoji.LegacyTrackPrevious, CommonEmoji.LegacyPlay, CommonEmoji.LegacyPause, CommonEmoji.LegacyTrackNext,
-                CommonEmoji.LegacyStop, CommonEmoji.LegacyRepeat, CommonEmoji.LegacyShuffle, CommonEmoji.LegacySound, CommonEmoji.LegacyLoudSound
+                CommonEmoji.LegacyStop, CommonEmoji.LegacyRepeat, CommonEmoji.LegacyShuffle
             });
 
             _collectorsGroup.Controllers.Add(CollectorsUtils.CollectMessage(ControlMessage.Channel, message => true, async args => {
@@ -353,7 +351,7 @@ namespace Bot.DiscordRelated.Music {
         private PaginatedMessage? _queueMessage;
 
         private async Task UpdateControlMessage(bool background = false) {
-            _updateControlMessageTask.Execute(!background);
+            if (State != PlayerState.Destroyed) _updateControlMessageTask.Execute(!background);
         }
 
         public void UpdateProgress(bool background = false) {

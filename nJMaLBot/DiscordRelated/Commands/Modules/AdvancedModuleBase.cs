@@ -28,7 +28,7 @@ namespace Bot.DiscordRelated.Commands.Modules {
         }
 
         // ReSharper disable once InconsistentNaming
-        protected override async Task<IUserMessage> ReplyAsync(string? message = null, bool isTTS = false, Embed? embed = null, RequestOptions? options = null) {
+        protected override async Task<IUserMessage> ReplyAsync(string? message = null, bool isTTS = false, Embed? embed = null, RequestOptions? options = null, AllowedMentions allowedMentions = null) {
             return await (await GetResponseChannel()).SendMessageAsync(message, isTTS, embed, options).ConfigureAwait(false);
         }
 

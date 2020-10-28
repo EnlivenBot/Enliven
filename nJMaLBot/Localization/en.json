@@ -51,7 +51,7 @@
     "Music": {
       "RequestHistory": "Request history",
       "QueueEmpty": "The queue is empty. Order tracks via `{0}play [request]`",
-      "VolumeOutOfRange": "Volume out of range: 0% - 150%!",
+      "VolumeOutOfRange": "Volume out of range: 10% - 200%!",
       "RequestedBy": "Requested by: {0}",
       "NothingPlaying": "Nothing playing. Order tracks via `{0}play [request]`",
       "Fail": "Error",
@@ -98,7 +98,7 @@
       "WarningCustomEmoji" : "‼️Custom reactions for a beautiful display of the player are not available for the bot. To do this, he needs permission `USE_EXTERNAL_EMOJIS`",
       "TrackNotSeekable" : "{0}, unfortunately this track is not seek-able",
       "TryReconnectAfterDispose" : "We are trying to revive the player automatically.\n If we didn't succeed, use `{0}loadplaylist {1}`",
-      "ReconnectedAfterDispose" : "The player has been restarted. We fixed everything. If not, use `{0}loadplaylist {1}`",
+      "ReconnectedAfterDispose" : "The player has been restarted. We fixed everything. If not, use `{0}stop` and `{0}loadplaylist {1}`",
       "ResolvingTracks" : "Resolving tracks from `{0}` queries",
       "CurrentTrackNonSpotify" : "The current track is not received from Spotify. Switch to a track from Spotify or provide the track ID as an argument to this command"
     },

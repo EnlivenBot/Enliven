@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 namespace Bot.Utilities.Collector {
     public class CollectorController {
         public event EventHandler<CollectorEventArgsBase>? RemoveArgsFailed;
-        private Timer _timer = null!;
+        private Timer? _timer;
 
         public void SetTimeout(TimeSpan timeout) {
             _timer = new Timer(state => { Dispose(); }, null, timeout, TimeSpan.FromSeconds(0));
@@ -16,7 +16,7 @@ namespace Bot.Utilities.Collector {
         public void Dispose() {
             TaskCompletionSource?.SetResult(null);
             Stop?.Invoke(null, EventArgs.Empty);
-            _timer.Dispose();
+            _timer?.Dispose();
         }
 
         public virtual void OnRemoveArgsFailed(CollectorEventArgsBase e) {

@@ -49,7 +49,6 @@ namespace Bot.DiscordRelated.Music {
                 CommandHandler.RegisterMusicTime(TrackPosition);
             }
 
-            if (eventArgs.Reason != TrackEndReason.Replaced) await base.OnTrackEndAsync(eventArgs);
             if (eventArgs.Reason == TrackEndReason.LoadFailed) {
                 if (LoadFailedId == CurrentTrack?.Identifier) {
                     await SkipAsync();
@@ -80,8 +79,13 @@ namespace Bot.DiscordRelated.Music {
                 }
             }
 
+            var needEnd = eventArgs.Reason != TrackEndReason.Replaced;
             if (eventArgs.MayStartNext && eventArgs.Reason != TrackEndReason.LoadFailed) {
-                await SkipAsync();
+                needEnd = needEnd && !await SkipAsync();
+            }
+
+            if (needEnd) {
+                await base.OnTrackEndAsync(eventArgs);
             }
         }
 
@@ -100,24 +104,24 @@ namespace Bot.DiscordRelated.Music {
             return 0;
         }
 
-        public virtual async Task SkipAsync(int count = 1, bool force = false) {
+        public virtual async Task<bool> SkipAsync(int count = 1, bool force = false) {
             EnsureNotDestroyed();
             EnsureConnected();
             if (!force && LoopingState == LoopingState.One && CurrentTrack != null) {
-                await PlayAsync(CurrentTrack, false, new TimeSpan?(), new TimeSpan?());
-                return;
+                await PlayAsync(CurrentTrack, false);
+                return true;
             }
 
             if (Playlist.IsEmpty)
-                return;
+                return false;
 
             CurrentTrackIndex += count;
             if ((force || LoopingState == LoopingState.All) && CurrentTrackIndex > Playlist.Count - 1) CurrentTrackIndex = 0;
             if (force && CurrentTrackIndex < 0) CurrentTrackIndex = Playlist.Count - 1;
 
-            if (Playlist.TryGetValue(CurrentTrackIndex, out var track)) {
-                await PlayAsync(track!, false, new TimeSpan?(), new TimeSpan?());
-            }
+            if (!Playlist.TryGetValue(CurrentTrackIndex, out var track)) return false;
+            await PlayAsync(track!, false);
+            return true;
         }
 
         public override async Task DisconnectAsync() {

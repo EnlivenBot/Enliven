@@ -6,6 +6,7 @@ using Lavalink4NET.Cluster;
 using Lavalink4NET.MemoryCache;
 using Lavalink4NET.Player;
 using Lavalink4NET.Rest;
+using Tyrrrz.Extensions;
 
 namespace Bot.Utilities.Music {
     public class DefaultMusicProvider : IMusicProvider {
@@ -31,7 +32,10 @@ namespace Bot.Utilities.Music {
             }
 
             // Search two times
-            var lavalinkTrack = await _cluster!.GetTrackAsync(_query, SearchMode.YouTube) ?? await _cluster.GetTrackAsync(_query, SearchMode.YouTube);
+            var preferredNode = _cluster.GetPreferredNode(NodeRequestType.LoadTrack);
+            var lavalinkTrack = await preferredNode.GetTrackAsync(_query, SearchMode.YouTube) ??
+                                await (_cluster.Nodes.Where(node => node != preferredNode).RandomOrDefault() ?? preferredNode)
+                                   .GetTrackAsync(_query, SearchMode.YouTube);
 
             // Add to cache only if request successful
             if (lavalinkTrack != null) {
