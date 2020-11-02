@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
-using Bot.Config;
-using Bot.Utilities;
+using Common;
+using Common.Config;
 using Discord;
 using Discord.WebSocket;
 
@@ -11,7 +11,7 @@ namespace Bot {
         }
 
         private static async Task ClientOnJoinedGuild(SocketGuild arg) {
-            GuildConfig.TryCreate(arg.Id, false);
+            GuildConfig.TryCreate(arg.Id);
             await PrintWelcomeMessage(arg);
         }
 

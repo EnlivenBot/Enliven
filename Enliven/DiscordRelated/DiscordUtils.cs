@@ -1,5 +1,5 @@
-﻿using Bot.Config.Localization.Providers;
-using Bot.Utilities;
+﻿using Common;
+using Common.Localization.Providers;
 using Discord;
 
 namespace Bot.DiscordRelated {

@@ -3,20 +3,23 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Bot.Commands.Chains;
-using Bot.Config;
-using Bot.Config.Localization.Entries;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
-using Bot.DiscordRelated.Music;
-using Bot.DiscordRelated.Music.Tracks;
-using Bot.Music;
-using Bot.Utilities;
-using Bot.Utilities.History;
+using Bot.Utilities.Music;
+using Common;
+using Common.Config;
+using Common.History;
+using Common.Localization.Entries;
+using Common.Music;
+using Common.Music.Controller;
+using Common.Music.Players;
+using Common.Music.Tracks;
 using Discord.Commands;
 using Lavalink4NET.Player;
 using Lavalink4NET.Rest;
 using LiteDB;
 using Tyrrrz.Extensions;
+
 // ReSharper disable ConditionIsAlwaysTrueOrFalse
 // ReSharper disable ConstantConditionalAccessQualifier
 
@@ -26,6 +29,8 @@ namespace Bot.Commands {
     [Grouping("music")]
     [RequireContext(ContextType.Guild)]
     public sealed class MusicCommands : MusicModuleBase {
+        public MusicCommands(IMusicController musicController) : base(musicController) { }
+
         [SummonToUser]
         [Command("play", RunMode = RunMode.Async)]
         [Alias("p")]
@@ -47,8 +52,8 @@ namespace Bot.Commands {
         }
 
         private async Task PlayInternal(string? query, int position) {
-            Player.EnqueueControlMessageSend(ResponseChannel);
-            var queries = MusicUtils.GetMusicQueries(Context.Message, query.IsEmpty(""));
+            // Player.EnqueueControlMessageSend(ResponseChannel);
+            var queries = Common.Music.Controller.MusicController.GetMusicQueries(Context.Message, query.IsBlank(""));
             if (queries.Count == 0) {
                 Context.Message?.SafeDelete();
                 return;
@@ -58,12 +63,15 @@ namespace Bot.Commands {
             Player.WriteToQueueHistory(historyEntry);
 
             try {
-                var lavalinkTracks = await MusicUtils.LoadMusic(queries);
+                var lavalinkTracks =
+                    (await Task.WhenAll((await MusicController.ResolveQueries(queries))
+                       .Select(resolver => resolver.GetTracks()))).SelectMany(list => list);
                 Player.TryEnqueue(lavalinkTracks, Context.Message?.Author?.Username ?? "Unknown", position);
             }
-            catch (NothingFoundException) {
-                ReplyFormattedAsync(Loc.Get("Music.NotFound").Format(query!.SafeSubstring(100, "...")), true).DelayedDelete(Constants.LongTimeSpan);
-                if (Player.Playlist.Count == 0) Player.ControlMessage.SafeDelete();
+            catch (TrackNotFoundException) {
+                ReplyFormattedAsync(Loc.Get("Music.NotFound").Format(query!.SafeSubstring(100, "...")), true)
+                   .DelayedDelete(Constants.LongTimeSpan);
+                // if (Player.Playlist.Count == 0) Player.ControlMessage.SafeDelete();
             }
             finally {
                 historyEntry.Remove();
@@ -76,7 +84,8 @@ namespace Bot.Commands {
         public async Task Stop() {
             if (!await IsPreconditionsValid) return;
 
-            Player.ExecuteShutdown(Loc.Get("Music.UserStopPlayback").Format(Context.User.Username), new PlayerShutdownParameters{NeedSave = false});
+            Player.ExecuteShutdown(Loc.Get("Music.UserStopPlayback").Format(Context.User.Username),
+                new PlayerShutdownParameters {NeedSave = false});
         }
 
         [Command("jump", RunMode = RunMode.Async)]
@@ -85,13 +94,15 @@ namespace Bot.Commands {
         public async Task Jump([Summary("jump0_0s")] int index = 1) {
             if (!await IsPreconditionsValid) return;
             if (Player == null || Player.Playlist.IsEmpty) {
-                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying".Format(GuildConfig.Prefix))).UpdateTimeout(Constants.StandardTimeSpan).Update();
+                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying".Format(GuildConfig.Prefix)))
+                                      .UpdateTimeout(Constants.StandardTimeSpan).Update();
                 return;
             }
 
             await Player.SkipAsync(index, true);
-            Player.WriteToQueueHistory(Loc.Get("MusicQueues.Jumped", Context.User.Username, Player.CurrentTrackIndex + 1,
-                MusicUtils.EscapeTrack(Player.CurrentTrack!.Title).SafeSubstring(0, 40) + "..."));
+            Player.WriteToQueueHistory(Loc.Get("MusicQueues.Jumped", Context.User.Username,
+                Player.CurrentTrackIndex + 1,
+                Common.Music.Controller.MusicController.EscapeTrack(Player.CurrentTrack!.Title).SafeSubstring(0, 40) + "..."));
         }
 
         [Command("goto", RunMode = RunMode.Async)]
@@ -100,7 +111,8 @@ namespace Bot.Commands {
         public async Task Goto([Summary("goto0_0s")] int index) {
             if (!await IsPreconditionsValid) return;
             if (Player == null || Player.Playlist.IsEmpty) {
-                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix)).UpdateTimeout(Constants.StandardTimeSpan).Update();
+                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix))
+                                      .UpdateTimeout(Constants.StandardTimeSpan).Update();
                 return;
             }
 
@@ -114,7 +126,8 @@ namespace Bot.Commands {
                                                    Player.CurrentTrack!.Title.SafeSubstring(0, 40) + "..."));
             }
             else {
-                ReplyFormattedAsync(Loc.Get("Music.TrackIndexWrong").Format(Context.User.Mention, index, Player.Playlist.Count),
+                ReplyFormattedAsync(
+                    Loc.Get("Music.TrackIndexWrong").Format(Context.User.Mention, index, Player.Playlist.Count),
                     true).DelayedDelete(Constants.StandardTimeSpan);
             }
         }
@@ -125,12 +138,14 @@ namespace Bot.Commands {
         public async Task Volume([Summary("volume0_0s")] int volume = 100) {
             if (!await IsPreconditionsValid) return;
             if (Player == null) {
-                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix)).UpdateTimeout(Constants.StandardTimeSpan).Update();
+                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix))
+                                      .UpdateTimeout(Constants.StandardTimeSpan).Update();
                 return;
             }
 
             if (volume > 200 || volume < 10) {
-                ErrorMessageController.AddEntry(Loc.Get("Music.VolumeOutOfRange")).UpdateTimeout(Constants.StandardTimeSpan).Update();
+                ErrorMessageController.AddEntry(Loc.Get("Music.VolumeOutOfRange"))
+                                      .UpdateTimeout(Constants.StandardTimeSpan).Update();
                 return;
             }
 
@@ -146,12 +161,13 @@ namespace Bot.Commands {
         public async Task Repeat(LoopingState state) {
             if (!await IsPreconditionsValid) return;
             if (Player == null) {
-                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix)).UpdateTimeout(Constants.StandardTimeSpan).Update();
+                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix))
+                                      .UpdateTimeout(Constants.StandardTimeSpan).Update();
                 return;
             }
 
             Player.LoopingState = state;
-            Player.UpdateProgress();
+            // Player.UpdateProgress();
             Player.WriteToQueueHistory(new HistoryEntry(
                 new EntryLocalized("MusicQueues.RepeatSet", Context.User.Username, Player.LoopingState.ToString()),
                 $"{Context.User.Id}repeat"));
@@ -169,7 +185,8 @@ namespace Bot.Commands {
         public async Task Pause() {
             if (!await IsPreconditionsValid) return;
             if (Player == null) {
-                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix)).UpdateTimeout(Constants.StandardTimeSpan).Update();
+                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix))
+                                      .UpdateTimeout(Constants.StandardTimeSpan).Update();
                 return;
             }
 
@@ -185,7 +202,8 @@ namespace Bot.Commands {
         public async Task Resume() {
             if (!await IsPreconditionsValid) return;
             if (Player == null) {
-                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix)).UpdateTimeout(Constants.StandardTimeSpan).Update();
+                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix))
+                                      .UpdateTimeout(Constants.StandardTimeSpan).Update();
                 return;
             }
 
@@ -201,7 +219,8 @@ namespace Bot.Commands {
         public async Task Shuffle() {
             if (!await IsPreconditionsValid) return;
             if (Player == null || Player.Playlist.IsEmpty) {
-                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix)).UpdateTimeout(Constants.StandardTimeSpan).Update();
+                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix))
+                                      .UpdateTimeout(Constants.StandardTimeSpan).Update();
                 return;
             }
 
@@ -209,18 +228,18 @@ namespace Bot.Commands {
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.Shuffle").Format(Context.User.Username));
         }
 
-        [Command("list", RunMode = RunMode.Async)]
-        [Alias("l", "q", "queue")]
-        [Summary("list0s")]
-        public async Task List() {
-            if (!await IsPreconditionsValid) return;
-            if (Player == null || Player.Playlist.IsEmpty) {
-                ReplyFormattedAsync(Loc.Get("Music.QueueEmpty").Format(GuildConfig.Prefix), true);
-                return;
-            }
-
-            Player.PrintQueue(Context.Channel);
-        }
+        // [Command("list", RunMode = RunMode.Async)]
+        // [Alias("l", "q", "queue")]
+        // [Summary("list0s")]
+        // public async Task List() {
+        //     if (!await IsPreconditionsValid) return;
+        //     if (Player == null || Player.Playlist.IsEmpty) {
+        //         ReplyFormattedAsync(Loc.Get("Music.QueueEmpty").Format(GuildConfig.Prefix), true);
+        //         return;
+        //     }
+        //
+        //     // Player.PrintQueue(Context.Channel);
+        // }
 
         [Hidden]
         [Command("saveplaylist", RunMode = RunMode.Async)]
@@ -229,7 +248,8 @@ namespace Bot.Commands {
         public async Task SavePlaylist() {
             if (!await IsPreconditionsValid) return;
             if (Player == null || Player.Playlist.IsEmpty) {
-                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix)).UpdateTimeout(Constants.StandardTimeSpan).Update();
+                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix))
+                                      .UpdateTimeout(Constants.StandardTimeSpan).Update();
                 return;
             }
 
@@ -238,8 +258,9 @@ namespace Bot.Commands {
                 Tracks = playlist.Tracks, TrackIndex = playlist.TrackIndex, TrackPosition = playlist.TrackPosition,
                 Id = "u" + ObjectId.NewObjectId()
             };
-            GlobalDB.Playlists.Insert(storedPlaylist);
-            ReplyFormattedAsync(Loc.Get("Music.PlaylistSaved").Format(storedPlaylist.Id.ToString(), GuildConfig.Prefix));
+            Database.Playlists.Insert(storedPlaylist);
+            ReplyFormattedAsync(Loc.Get("Music.PlaylistSaved")
+                                   .Format(storedPlaylist.Id.ToString(), GuildConfig.Prefix));
         }
 
         [SummonToUser]
@@ -270,14 +291,15 @@ namespace Bot.Commands {
             if (!await IsPreconditionsValid) return;
             var logMessage = await GetLogMessage();
 
-            Player.SetControlMessage(logMessage);
-            var playlist = GlobalDB.Playlists.FindById(id);
+            var playlist = Database.Playlists.FindById(id);
             if (playlist == null) {
-                ReplyFormattedAsync(Loc.Get("Music.PlaylistNotFound", id.SafeSubstring(100, "...") ?? ""), true, logMessage);
+                ReplyFormattedAsync(Loc.Get("Music.PlaylistNotFound", id.SafeSubstring(100, "...") ?? ""), true,
+                    logMessage);
                 return;
             }
 
-            Player.WriteToQueueHistory(Loc.Get("Music.LoadPlaylist", Context.User.Username, id.SafeSubstring(100, "...") ?? ""));
+            Player.WriteToQueueHistory(Loc.Get("Music.LoadPlaylist", Context.User.Username,
+                id.SafeSubstring(100, "...") ?? ""));
             Player.ImportPlaylist(playlist, options, Context.User.Username);
             Context?.Message?.SafeDelete();
         }
@@ -288,7 +310,7 @@ namespace Bot.Commands {
         [Summary("youtube0s")]
         public async Task SearchYoutube([Summary("play0_0s")] [Remainder] string query) {
             if (!await IsPreconditionsValid) return;
-            AdvancedMusicSearchChain.CreateInstance(GuildConfig, Player, Context.Channel, Context.User, SearchMode.YouTube, query).Start();
+            AdvancedMusicSearchChain.CreateInstance(GuildConfig, Player, Context.Channel, Context.User, SearchMode.YouTube, query, MusicController).Start();
         }
 
         [SummonToUser]
@@ -297,7 +319,9 @@ namespace Bot.Commands {
         [Summary("soundcloud0s")]
         public async Task SearchSoundCloud([Summary("play0_0s")] [Remainder] string query) {
             if (!await IsPreconditionsValid) return;
-            AdvancedMusicSearchChain.CreateInstance(GuildConfig, Player, Context.Channel, Context.User, SearchMode.SoundCloud, query).Start();
+            AdvancedMusicSearchChain
+               .CreateInstance(GuildConfig, Player, Context.Channel, Context.User, SearchMode.SoundCloud, query, MusicController)
+               .Start();
         }
 
         [Command("fastforward", RunMode = RunMode.Async)]
@@ -306,18 +330,21 @@ namespace Bot.Commands {
         public async Task FastForward([Summary("fastforward0_0s")] TimeSpan? timeSpan = null) {
             if (!await IsPreconditionsValid) return;
             if (Player?.CurrentTrack == null) {
-                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix)).UpdateTimeout(Constants.StandardTimeSpan).Update();
+                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix))
+                                      .UpdateTimeout(Constants.StandardTimeSpan).Update();
                 return;
             }
 
             if (!Player.CurrentTrack.IsSeekable) {
-                ReplyFormattedAsync(Loc.Get("Music.TrackNotSeekable").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromSeconds(1));
+                ReplyFormattedAsync(Loc.Get("Music.TrackNotSeekable").Format(GuildConfig.Prefix), true)
+                   .DelayedDelete(TimeSpan.FromSeconds(1));
                 return;
             }
 
             var time = timeSpan ?? TimeSpan.FromSeconds(10);
             Player.SeekPositionAsync(Player.TrackPosition + time);
-            Player.WriteToQueueHistory(Loc.Get("MusicQueues.FF").Format(Context.User.Username, Player.CurrentTrackIndex, time.TotalSeconds));
+            Player.WriteToQueueHistory(Loc.Get("MusicQueues.FF")
+                                          .Format(Context.User.Username, Player.CurrentTrackIndex, time.TotalSeconds));
         }
 
         [Command("rewind", RunMode = RunMode.Async)]
@@ -326,18 +353,21 @@ namespace Bot.Commands {
         public async Task Rewind([Summary("fastforward0_0s")] TimeSpan? timeSpan = null) {
             if (!await IsPreconditionsValid) return;
             if (Player?.CurrentTrack == null) {
-                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix)).UpdateTimeout(Constants.StandardTimeSpan).Update();
+                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix))
+                                      .UpdateTimeout(Constants.StandardTimeSpan).Update();
                 return;
             }
 
             if (!Player.CurrentTrack.IsSeekable) {
-                ReplyFormattedAsync(Loc.Get("Music.TrackNotSeekable").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromSeconds(1));
+                ReplyFormattedAsync(Loc.Get("Music.TrackNotSeekable").Format(GuildConfig.Prefix), true)
+                   .DelayedDelete(TimeSpan.FromSeconds(1));
                 return;
             }
 
             var time = timeSpan ?? new TimeSpan(0, 0, 10);
             Player.SeekPositionAsync(Player.TrackPosition - time);
-            Player.WriteToQueueHistory(Loc.Get("MusicQueues.Rewind").Format(Context.User.Username, Player.CurrentTrackIndex, time.TotalSeconds));
+            Player.WriteToQueueHistory(Loc.Get("MusicQueues.Rewind")
+                                          .Format(Context.User.Username, Player.CurrentTrackIndex, time.TotalSeconds));
         }
 
         [Command("seek", RunMode = RunMode.Async)]
@@ -346,17 +376,20 @@ namespace Bot.Commands {
         public async Task Seek([Summary("seek0_0s")] TimeSpan position) {
             if (!await IsPreconditionsValid) return;
             if (Player?.CurrentTrack == null) {
-                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix)).UpdateTimeout(Constants.StandardTimeSpan).Update();
+                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix))
+                                      .UpdateTimeout(Constants.StandardTimeSpan).Update();
                 return;
             }
 
             if (!Player.CurrentTrack.IsSeekable) {
-                ReplyFormattedAsync(Loc.Get("Music.TrackNotSeekable").Format(GuildConfig.Prefix), true).DelayedDelete(TimeSpan.FromSeconds(1));
+                ReplyFormattedAsync(Loc.Get("Music.TrackNotSeekable").Format(GuildConfig.Prefix), true)
+                   .DelayedDelete(TimeSpan.FromSeconds(1));
                 return;
             }
 
             Player.SeekPositionAsync(position);
-            Player.WriteToQueueHistory(Loc.Get("MusicQueues.Seek").Format(Context.User.Username, position.FormattedToString()));
+            Player.WriteToQueueHistory(Loc.Get("MusicQueues.Seek")
+                                          .Format(Context.User.Username, position.FormattedToString()));
         }
 
         [Command("removerange", RunMode = RunMode.Async)]
@@ -365,7 +398,8 @@ namespace Bot.Commands {
         public async Task RemoveRange([Summary("remove0_0s")] int start, [Summary("remove0_1s")] int end = -1) {
             if (!await IsPreconditionsValid) return;
             if (Player == null || Player.Playlist.IsEmpty) {
-                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix)).UpdateTimeout(Constants.StandardTimeSpan).Update();
+                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix))
+                                      .UpdateTimeout(Constants.StandardTimeSpan).Update();
                 return;
             }
 
@@ -373,7 +407,8 @@ namespace Bot.Commands {
             end = end.Normalize(start, Player.Playlist.Count);
             var removesCurrent = Player.CurrentTrackIndex + 1 >= start && Player.CurrentTrackIndex + 1 <= end;
             Player.Playlist.RemoveRange(start - 1, end - start + 1);
-            Player.WriteToQueueHistory(Loc.Get("MusicQueues.Remove").Format(Context.User.Username, end - start + 1, start, end));
+            Player.WriteToQueueHistory(Loc.Get("MusicQueues.Remove")
+                                          .Format(Context.User.Username, end - start + 1, start, end));
             if (removesCurrent) {
                 Jump();
             }
@@ -392,20 +427,23 @@ namespace Bot.Commands {
         public async Task Move([Summary("move0_0s")] int trackIndex, [Summary("move0_1s")] int newIndex = 1) {
             if (!await IsPreconditionsValid) return;
             if (Player == null || Player.Playlist.IsEmpty) {
-                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix)).UpdateTimeout(Constants.StandardTimeSpan).Update();
+                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix))
+                                      .UpdateTimeout(Constants.StandardTimeSpan).Update();
                 return;
             }
 
             // For programmers
             if (trackIndex == 0) trackIndex = 1;
             if (trackIndex < 1 || trackIndex > Player.Playlist.Count) {
-                ReplyFormattedAsync(Loc.Get("Music.TrackIndexWrong").Format(Context.User.Mention, trackIndex, Player.Playlist.Count),
+                ReplyFormattedAsync(
+                    Loc.Get("Music.TrackIndexWrong").Format(Context.User.Mention, trackIndex, Player.Playlist.Count),
                     true).DelayedDelete(Constants.ShortTimeSpan);
             }
 
             newIndex = Math.Max(1, Math.Min(Player.Playlist.Count, newIndex));
             Player.Playlist.Move(trackIndex - 1, newIndex - 1);
-            Player.WriteToQueueHistory(Loc.Get("MusicQueues.TrackMoved").Format(Context.User.Mention, trackIndex, newIndex));
+            Player.WriteToQueueHistory(Loc.Get("MusicQueues.TrackMoved")
+                                          .Format(Context.User.Mention, trackIndex, newIndex));
         }
 
         [Command("bassboost", RunMode = RunMode.Async)]
@@ -414,7 +452,8 @@ namespace Bot.Commands {
         public async Task ApplyBassBoost([Summary("bassboost0_0s")] BassBoostMode mode) {
             if (!await IsPreconditionsValid) return;
             if (Player == null) {
-                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix)).UpdateTimeout(Constants.StandardTimeSpan).Update();
+                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix))
+                                      .UpdateTimeout(Constants.StandardTimeSpan).Update();
                 return;
             }
 
@@ -453,17 +492,19 @@ namespace Bot.Commands {
         public async Task ChangeNode() {
             if (!await IsPreconditionsValid) return;
             if (Player == null) {
-                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix)).UpdateTimeout(Constants.StandardTimeSpan).Update();
+                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix))
+                                      .UpdateTimeout(Constants.StandardTimeSpan).Update();
                 return;
             }
 
-            if (MusicUtils.Cluster!.Nodes.Count <= 1) {
+            if (MusicController.Cluster.Nodes.Count <= 1) {
                 ReplyFormattedAsync(Loc.Get("Music.OnlyOneNode"), true);
                 return;
             }
 
-            var currentNode = MusicUtils.Cluster.GetServingNode(Context.Guild.Id);
-            var newNode = MusicUtils.Cluster.Nodes.Where(node => node.IsConnected).Where(node => node != currentNode).RandomOrDefault();
+            var currentNode = MusicController.Cluster.GetServingNode(Context.Guild.Id);
+            var newNode = MusicController.Cluster.Nodes.Where(node => node.IsConnected)
+                                         .Where(node => node != currentNode).RandomOrDefault();
             if (newNode == null) {
                 ReplyFormattedAsync(Loc.Get("Music.OnlyOneNode"), true);
                 return;
@@ -480,17 +521,20 @@ namespace Bot.Commands {
         public async Task FixSpotify() {
             if (!await IsPreconditionsValid) return;
             if (Player == null) {
-                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix)).UpdateTimeout(Constants.StandardTimeSpan).Update();
+                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix))
+                                      .UpdateTimeout(Constants.StandardTimeSpan).Update();
                 return;
             }
 
-            if (Player.CurrentTrack is AuthoredTrack authoredTrack && authoredTrack.Track is SpotifyLavalinkTrack spotifyLavalinkTrack) {
+            if (Player.CurrentTrack is AuthoredTrack authoredTrack &&
+                authoredTrack.Track is SpotifyLavalinkTrack spotifyLavalinkTrack) {
                 var fixSpotifyChain = FixSpotifyChain.CreateInstance(Context.User, Context.Channel, Loc,
-                    $"spotify:track:{spotifyLavalinkTrack.RelatedSpotifyTrack.Id}");
+                    $"spotify:track:{spotifyLavalinkTrack.RelatedSpotifyTrack.Id}", MusicController);
                 await fixSpotifyChain.Start();
             }
             else {
-                ErrorMessageController.AddEntry(Loc.Get("Music.CurrentTrackNonSpotify")).UpdateTimeout(Constants.StandardTimeSpan).Update();
+                ErrorMessageController.AddEntry(Loc.Get("Music.CurrentTrackNonSpotify"))
+                                      .UpdateTimeout(Constants.StandardTimeSpan).Update();
             }
         }
 
@@ -499,7 +543,7 @@ namespace Bot.Commands {
         [Summary("fixspotify0s")]
         public async Task FixSpotify([Remainder] [Summary("fixspotify0_0s")]
                                      string s) {
-            var fixSpotifyChain = FixSpotifyChain.CreateInstance(Context.User, Context.Channel, Loc, s);
+            var fixSpotifyChain = FixSpotifyChain.CreateInstance(Context.User, Context.Channel, Loc, s, MusicController);
             await fixSpotifyChain.Start();
         }
     }

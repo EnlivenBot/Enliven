@@ -2,13 +2,14 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Bot.Commands.Chains;
-using Bot.Config;
-using Bot.Config.Localization;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
 using Bot.DiscordRelated.Logging;
 using Bot.Utilities;
 using Bot.Utilities.Collector;
+using Common;
+using Common.Config;
+using Common.Localization;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;

@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Bot.Config;
-using Bot.DiscordRelated.Music;
-using Bot.Music;
+using Common.Config;
+using Common.Music;
+using Common.Music.Players;
 using Discord.Commands;
 
 namespace Bot.DiscordRelated.Commands {

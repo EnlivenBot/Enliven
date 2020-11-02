@@ -6,10 +6,10 @@ using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Bot.Config;
-using Bot.Config.Localization.Providers;
 using Bot.DiscordRelated.Logging.Rendering;
-using Bot.Utilities;
+using Common;
+using Common.Config;
+using Common.Localization.Providers;
 using DiffMatchPatch;
 using Discord;
 using Discord.WebSocket;
@@ -22,6 +22,8 @@ using MessageType = DiscordChatExporter.Domain.Discord.Models.MessageType;
 
 namespace Bot.DiscordRelated.Logging {
     public class MessageHistory {
+        private static ILiteCollection<MessageHistory> Messages = Database.LiteDatabase.GetCollection<MessageHistory>(@"MessagesHistory");
+
         public static MessageHistory FromMessage(IMessage arg) {
             var history = new MessageHistory {
                 AuthorId = arg.Author.Id,
@@ -63,11 +65,11 @@ namespace Bot.DiscordRelated.Logging {
         [BsonIgnore] private static Regex AttachmentRegex = new Regex(@"(\d+)\/(\d+)\/(.+?)$");
 
         public void Save() {
-            GlobalDB.Messages.Upsert(this);
+            Messages.Upsert(this);
         }
 
         public static MessageHistory Get(ulong channelId, ulong messageId, ulong authorId = default) {
-            return GlobalDB.Messages.FindById($"{channelId}:{messageId}") ?? new MessageHistory {
+            return Messages.FindById($"{channelId}:{messageId}") ?? new MessageHistory {
                 AuthorId = authorId, Id = $"{channelId}:{messageId}"
             };
         }

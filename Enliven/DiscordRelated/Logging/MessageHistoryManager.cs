@@ -7,16 +7,17 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Bot.Config;
 using Bot.Config.Emoji;
-using Bot.Config.Localization.Providers;
 using Bot.DiscordRelated.Commands;
-using Bot.Utilities;
 using Bot.Utilities.Collector;
+using Common;
+using Common.Config;
+using Common.Localization.Providers;
 using Discord;
 using Discord.WebSocket;
 using GrapeCity.Documents.Html;
 using HarmonyLib;
+using LiteDB;
 using NLog;
 
 namespace Bot.DiscordRelated.Logging {
@@ -24,6 +25,7 @@ namespace Bot.DiscordRelated.Logging {
         // ReSharper disable once InconsistentNaming
         private static readonly Logger logger = LogManager.GetCurrentClassLogger();
         public static readonly DiffMatchPatch.DiffMatchPatch DiffMatchPatch = new DiffMatchPatch.DiffMatchPatch();
+        private static ILiteCollection<MessageHistory> Messages = Database.LiteDatabase.GetCollection<MessageHistory>(@"MessagesHistory");
 
         static MessageHistoryManager() {
             // Message created handled located in CommandHandler
@@ -88,7 +90,8 @@ namespace Bot.DiscordRelated.Logging {
                     var guildConfig = GuildConfig.Get(textChannel.GuildId);
                     if (!guildConfig.IsLoggingEnabled) return;
 
-                    if (!guildConfig.GetChannel(ChannelFunction.Log, out var logChannel) || logChannel!.Id == arg2.Id) return;
+                    if (!guildConfig.GetChannel(ChannelFunction.Log, out var logChannelId) || logChannelId == arg2.Id) return;
+                    var logChannel = Program.Client.GetChannel(logChannelId);
                     if (!guildConfig.LoggedChannels.Contains(textChannel.Id)) return;
 
                     var logPermissions = guild.GetUser(Program.Client.CurrentUser.Id).GetPermissions((IGuildChannel) logChannel);
@@ -135,7 +138,7 @@ namespace Bot.DiscordRelated.Logging {
                         if (guildConfig.HistoryMissingPacks) {
                             await _packSemaphores.GetOrAdd(guildConfig.GuildId, new SemaphoreSlim(1)).WaitAsync();
                             try {
-                                IUserMessage? packMessage = await Utilities.Utilities.TryAsync(async () => {
+                                IUserMessage? packMessage = await Common.Utilities.TryAsync(async () => {
                                     var firstOrDefault = (await ((logChannel as ITextChannel)!).GetMessagesAsync(1).FlattenAsync()).FirstOrDefault();
                                     if (firstOrDefault.Author.Id != Program.Client.CurrentUser.Id) return null;
                                     if (!firstOrDefault.Embeds.First().Title.Contains("Pack")) return null;
@@ -160,7 +163,7 @@ namespace Bot.DiscordRelated.Logging {
                                     var packBuilder = new EmbedBuilder().WithTitle("Deleted messages Pack")
                                                                         .WithDescription(loc.Get("MessageHistory.DeletedMessagesPackDescription"));
                                     packBuilder.Description += $"\n{DateTimeOffset.UtcNow} in {textChannel.Mention}";
-                                    await ((logChannel as ITextChannel)!).SendMessageAsync(null, false, packBuilder.Build());
+                                    await (logChannel as ITextChannel)!.SendMessageAsync(null, false, packBuilder.Build());
                                 }
                             }
                             finally {
@@ -180,7 +183,7 @@ namespace Bot.DiscordRelated.Logging {
                     logger.Error(e, "Failed to print log message");
                 }
                 finally {
-                    GlobalDB.Messages.Delete($"{arg2.Id}:{arg1.Id}");
+                    Messages.Delete($"{arg2.Id}:{arg1.Id}");
                 }
             }, TaskCreationOptions.LongRunning).Start();
 
@@ -196,7 +199,7 @@ namespace Bot.DiscordRelated.Logging {
         // private static Task ClientOnChannelDestroyed(SocketChannel arg) {
         //     if (arg is SocketTextChannel channel) {
         //         new Task(() => {
-        //             var deletesCount = GlobalDB.Messages.DeleteMany(history => history.ChannelId == arg.Id);
+        //             var deletesCount = LiteDatabase.Messages.DeleteMany(history => history.ChannelId == arg.Id);
         //             try {
         //                 var guild = GuildConfig.Get(channel.Guild.Id);
         //                 if (!guild.GetChannel(ChannelFunction.Log, out var logChannel)) return;
@@ -217,11 +220,12 @@ namespace Bot.DiscordRelated.Logging {
         public static Task ClearGuildLogs(SocketGuild arg) {
             new Task(() => {
                 var socketGuildChannels = arg.Channels.Where(channel => channel is SocketTextChannel _).ToList();
-                var deletesCount = socketGuildChannels.Select(channel => GlobalDB.Messages.DeleteMany(history => channel.Id == history.ChannelId)).Sum();
+                var deletesCount = socketGuildChannels.Select(channel => Messages.DeleteMany(history => channel.Id == history.ChannelId)).Sum();
                 try {
                     var guild = GuildConfig.Get(arg.Id);
-                    if (!guild.GetChannel(ChannelFunction.Log, out var logChannel)) return;
+                    if (!guild.GetChannel(ChannelFunction.Log, out var logChannelId)) return;
                     var loc = new GuildLocalizationProvider(guild);
+                    var logChannel = Program.Client.GetChannel(logChannelId);
                     ((SocketTextChannel) logChannel)!.SendMessageAsync(loc.Get("MessageHistory.GuildLogCleared").Format(
                         arg.Name, arg.Id, deletesCount));
                 }

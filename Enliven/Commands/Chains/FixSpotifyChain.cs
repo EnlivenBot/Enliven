@@ -6,14 +6,15 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Bot.Config.Emoji;
-using Bot.Config.Localization.Entries;
-using Bot.Config.Localization.Providers;
 using Bot.DiscordRelated;
 using Bot.DiscordRelated.Commands;
-using Bot.Music;
-using Bot.Utilities;
 using Bot.Utilities.Collector;
 using Bot.Utilities.Music;
+using Common;
+using Common.Localization.Entries;
+using Common.Localization.Providers;
+using Common.Music.Controller;
+using Common.Music.Resolvers;
 using Discord;
 using SpotifyAPI.Web;
 
@@ -25,12 +26,13 @@ namespace Bot.Commands.Chains {
         private IUserMessage? _controlMessage;
         private PaginatedMessage? _paginatedMessage;
         private CollectorsGroup? _collectorController;
+        private IMusicController _musicController;
 
         private FixSpotifyChain(string? uid, ILocalizationProvider loc) : base(uid, loc) { }
 
-        public static FixSpotifyChain CreateInstance(IUser requester, IMessageChannel channel, ILocalizationProvider loc, string request) {
+        public static FixSpotifyChain CreateInstance(IUser requester, IMessageChannel channel, ILocalizationProvider loc, string request, IMusicController musicController) {
             var fixSpotifyChain = new FixSpotifyChain($"{nameof(FixSpotifyChain)}_{requester.Id}", loc) {
-                _request = new SpotifyUrl(request), _requester = requester, _channel = channel
+                _request = new SpotifyUrl(request), _requester = requester, _channel = channel, _musicController = musicController
             };
 
             return fixSpotifyChain;
@@ -73,7 +75,7 @@ namespace Bot.Commands.Chains {
         }
 
         private async Task StartWithPlaylist() {
-            var spotify = (await SpotifyMusicProvider.SpotifyClient)!;
+            var spotify = (await SpotifyMusicResolver.SpotifyClient)!;
             try {
                 var playlist = await spotify.Playlists.Get(_request.Id);
                 var tracks = (await spotify.PaginateAll(playlist!.Tracks!))
@@ -115,7 +117,7 @@ namespace Bot.Commands.Chains {
 
         private async Task StartWithTrack(SpotifyTrack spotifyTrack) {
             SetTimeout(Constants.StandardTimeSpan);
-            var association = await SpotifyMusicProvider.ResolveWithCache(spotifyTrack, MusicUtils.Cluster);
+            var association = await SpotifyMusicResolver.ResolveWithCache(spotifyTrack, _musicController.Cluster);
             if (association == null) {
                 OnEnd.Invoke(new EntryLocalized("Chains.FixSpotifyAssociationCreationError"));
                 return;
@@ -159,7 +161,7 @@ namespace Bot.Commands.Chains {
 
                 var addMatch = Regex.Match(args.Message.Content, @"^(new|add) (.*)$");
                 if (addMatch.Success) {
-                    var searchResults = (await new DefaultMusicProvider(MusicUtils.Cluster, addMatch.Groups[2].Value).Provide())
+                    var searchResults = (await new DefaultMusicResolver(_musicController.Cluster, addMatch.Groups[2].Value).Provide())
                                        .Where(track => track != null).ToList();
                     try {
                         var resultTrack = searchResults.Single();
@@ -194,7 +196,7 @@ namespace Bot.Commands.Chains {
                 var fields = association.Associations.Select((data, i) =>
                     new EmbedFieldBuilder {
                         Name = $"{i + 1}. {data.Association.Title.SafeSubstring(200, "...")}",
-                        Value = $"[[Source]({data.Association.Source})] *by {data.Author.Data.GetMention(true)}*\n" +
+                        Value = $"[[Source]({data.Association.Source})] *by {data.Author.Data.GetMentionWithUsername()}*\n" +
                                 $"Score: `{data.Score}` | " +
                                 (data.UpvotedUsers.Contains(_requester.Id) ? $"**{data.UpvotedUsers.Count} 👍** | " : $"{data.UpvotedUsers.Count} 👍 | ") +
                                 (data.DownvotedUsers.Contains(_requester.Id) ? $"**{data.DownvotedUsers.Count} 👎**" : $"{data.DownvotedUsers.Count} 👎")
@@ -256,7 +258,7 @@ namespace Bot.Commands.Chains {
 
             void UpdateBuilder() {
                 MainBuilder.WithDescription($"{fullTrack.Name} - {fullTrack.Artists[0].Name}\n\n" +
-                                            $"[{data.Association.Title.SafeSubstring(200)}]({data.Association.Source}) *by {data.Author.Data.GetMention(true)}*\n" +
+                                            $"[{data.Association.Title.SafeSubstring(200)}]({data.Association.Source}) *by {data.Author.Data.GetMentionWithUsername()}*\n" +
                                             $"Score: `{data.Score}` | " +
                                             (data.UpvotedUsers.Contains(_requester.Id)
                                                 ? $"**{data.UpvotedUsers.Count} 👍** | "

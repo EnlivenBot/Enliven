@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Bot.DiscordRelated.Commands;
+using Common;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;

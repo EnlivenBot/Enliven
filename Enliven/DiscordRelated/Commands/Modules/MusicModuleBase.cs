@@ -2,10 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Bot.Config;
-using Bot.DiscordRelated.Music;
-using Bot.Music;
 using Bot.Utilities;
+using Bot.Utilities.Music;
+using Common;
+using Common.Config;
+using Common.Music;
+using Common.Music.Controller;
+using Common.Music.Players;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -17,10 +20,15 @@ namespace Bot.DiscordRelated.Commands.Modules {
     public class MusicModuleBase : AdvancedModuleBase {
         public IMessageChannel ResponseChannel = null!;
         // Actually it can be null but only if IsPreconditionsValid is false
-        public EmbedPlaybackPlayer Player = null!;
+        public FinalLavalinkPlayer? Player;
         public Task<bool> IsPreconditionsValid = null!;
         public static Dictionary<ulong, NonSpamMessageController> ErrorsMessagesControllers { get; set; } = new Dictionary<ulong, NonSpamMessageController>();
         public NonSpamMessageController ErrorMessageController = null!;
+        private protected readonly IMusicController MusicController;
+
+        public MusicModuleBase(IMusicController musicController) {
+            MusicController = musicController;
+        }
 
         protected override void BeforeExecute(CommandInfo command) {
             base.BeforeExecute(command);
@@ -39,9 +47,9 @@ namespace Bot.DiscordRelated.Commands.Modules {
             ErrorMessageController = nonSpamMessageController;
 
             try {
-                Player = PlayersController.GetPlayer(Context.Guild.Id)!;
+                Player = MusicController.GetPlayer(Context.Guild.Id)!;
                 // ReSharper disable once ConditionIsAlwaysTrueOrFalse
-                if (Player == null && !MusicUtils.Cluster.Nodes.Any(node => node.IsConnected)) {
+                if (Player == null && MusicController.Cluster.Nodes.Any(node => node.IsConnected)) {
                     throw new InvalidOperationException("No node available.");
                 }
             }
@@ -82,7 +90,7 @@ namespace Bot.DiscordRelated.Commands.Modules {
                         return false;
                     }
 
-                    Player = await PlayersController.ProvidePlayer(Context.Guild.Id, user.VoiceChannel!.Id);
+                    Player = await MusicController.ProvidePlayer(Context.Guild.Id, user.VoiceChannel!.Id);
                     return true;
                 }
 
@@ -121,8 +129,8 @@ namespace Bot.DiscordRelated.Commands.Modules {
 
         public bool GetChannel(out IMessageChannel channel) {
             channel = Context.Channel;
-            if (!GuildConfig.GetChannel(ChannelFunction.Music, out var musicChannel) || musicChannel!.Id == channel.Id) return true;
-            channel = (IMessageChannel) musicChannel;
+            if (!GuildConfig.GetChannel(ChannelFunction.Music, out var musicChannelId) || musicChannelId == channel.Id) return true;
+            channel = (IMessageChannel) Context.Client.GetChannelAsync(musicChannelId).Result;
             return false;
         }
 

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Bot.Config;
+using Common.Config;
 using Lavalink4NET.Decoding;
 using Lavalink4NET.Player;
 using LiteDB;
@@ -10,6 +10,8 @@ using SpotifyAPI.Web;
 
 namespace Bot.Utilities.Music {
     public class SpotifyTrackAssociation {
+        private static readonly ILiteCollection<SpotifyTrackAssociation> SpotifyAssociations =
+            Database.LiteDatabase.GetCollection<SpotifyTrackAssociation>(@"SpotifyAssociations");
         [Obsolete("This constructor for database engine")]
         public SpotifyTrackAssociation() { }
 
@@ -27,7 +29,18 @@ namespace Bot.Utilities.Music {
         }
 
         public void Save() {
-            GlobalDB.SpotifyAssociations.Upsert(this);
+            SpotifyAssociations.Upsert(this);
+        }
+
+        public static bool TryGet(string id, out SpotifyTrackAssociation association) {
+            association = default;
+            try {
+                association = SpotifyAssociations.FindById(id);
+                return association != null;
+            }
+            catch (Exception) {
+                return false;
+            }
         }
 
         public class TrackAssociationData {
@@ -86,7 +99,7 @@ namespace Bot.Utilities.Music {
         public string Id { get; private set; }
 
         public async Task<FullTrack> GetFullTrack() {
-            return _track ??= await (await SpotifyMusicProvider.SpotifyClient)!.Tracks.Get(Id);
+            return _track ??= await (await SpotifyMusicResolver.SpotifyClient)!.Tracks.Get(Id);
         }
         
         public async Task<string> GetTrackInfo() {

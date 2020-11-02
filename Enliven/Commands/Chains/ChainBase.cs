@@ -3,10 +3,10 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using Bot.Config.Localization.Entries;
-using Bot.Config.Localization.Providers;
 using Bot.DiscordRelated;
-using Bot.Utilities;
+using Common;
+using Common.Localization.Entries;
+using Common.Localization.Providers;
 
 namespace Bot.Commands.Chains {
     public abstract class ChainBase {

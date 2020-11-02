@@ -2,8 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Bot.Config.Localization.Providers;
 using Bot.Utilities;
+using Common;
+using Common.Localization.Providers;
 using Discord;
 using Discord.Commands;
 

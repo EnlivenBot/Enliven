@@ -16,6 +16,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Autofac" Version="6.0.0" />
+    <PackageReference Include="Autofac.Extras.NLog" Version="4.0.0" />
     <PackageReference Include="Discord.Net" Version="2.3.0-dev-20201014.8" />
     <PackageReference Include="GrapeCity.Documents.Html" Version="3.2.0.556" />
     <PackageReference Include="GrapeCity.Documents.Html.Linux.X64" Version="3.2.0.556" />
@@ -38,26 +40,53 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Localization\en.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="Localization\ru.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
+    <None Remove="Localization\en.json" />
   </ItemGroup>
 
   <ItemGroup>
     <Compile Remove="Music\AdvancedPlayer.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Include="Music\application.yml" />
+    <Compile Remove="Config\Entity.cs" />
+    <Compile Remove="Config\GuildConfig.cs" />
+    <Compile Remove="Config\StatisticsPart.cs" />
+    <Compile Remove="Config\UserData.cs" />
+    <Compile Remove="Utilities\History\HistoryCollection.cs" />
+    <Compile Remove="Config\Localization\Entries\EntryContainer.cs" />
+    <Compile Remove="Config\Localization\Entries\EntryLocalized.cs" />
+    <Compile Remove="Config\Localization\Entries\EntryString.cs" />
+    <Compile Remove="Config\Localization\Providers\GuildLocalizationProvider.cs" />
+    <Compile Remove="Config\Localization\Providers\ILocalizationProvider.cs" />
+    <Compile Remove="Config\Localization\Providers\LangLocalizationProvider.cs" />
+    <Compile Remove="Config\Localization\LocalizationManager.cs" />
+    <Compile Remove="Config\Localization\LocalizationPack.cs" />
+    <Compile Remove="DiscordRelated\Music\Tracks\AuthoredTrack.cs" />
+    <Compile Remove="DiscordRelated\Music\AdvancedLavalinkPlayer.cs" />
+    <Compile Remove="Music\BassBoostMode.cs" />
+    <Compile Remove="Music\ExportPlaylist.cs" />
+    <Compile Remove="Music\LavalinkNodeInfo.cs" />
+    <Compile Remove="DiscordRelated\Music\LavalinkPlaylist.cs" />
+    <Compile Remove="DiscordRelated\Music\PlayerShutdownParameters.cs" />
+    <Compile Remove="Utilities\Constants.cs" />
+    <Compile Remove="DiscordRelated\Music\PlayersController.cs" />
+    <Compile Remove="Music\MusicUtils.cs" />
+    <Compile Remove="DiscordRelated\Music\EmbedPlaybackPlayer.cs" />
   </ItemGroup>
 
   <ItemGroup>
     <Reference Include="DiscordChatExporter.Domain, Version=2.20.0.0, Culture=neutral, PublicKeyToken=null">
       <HintPath>..\packages\DiscordChatExporter.Domain.dll</HintPath>
     </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="DiscordRelated\Music\Tracks" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Common\Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="DiscordRelated\Music" />
   </ItemGroup>
 
 </Project>

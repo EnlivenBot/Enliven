@@ -2,9 +2,10 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using Bot.Config;
-using Bot.Config.Localization.Providers;
 using Bot.Utilities;
+using Common;
+using Common.Config;
+using Common.Localization.Providers;
 using Discord;
 using Discord.Commands;
 using NLog;
@@ -27,7 +28,7 @@ namespace Bot.DiscordRelated.Commands {
             new Temporary<int>(() => StatisticsPart.Get("Global").UsagesList.Sum(pair => pair.Value), Constants.LongTimeSpan);
 
         private static Temporary<int> _commandUsersCount =
-            new Temporary<int>(() => GlobalDB.CommandStatistics.Count(), Constants.LongTimeSpan);
+            new Temporary<int>(() => Database.CommandStatistics.Count(), Constants.LongTimeSpan);
 
         [SuppressMessage("ReSharper", "ConditionIsAlwaysTrueOrFalse")]
         public static EmbedBuilder BuildStats(IUser? user, ILocalizationProvider loc) {

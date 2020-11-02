@@ -1,8 +1,9 @@
 using System;
 using System.Threading.Tasks;
-using Bot.Config;
-using Bot.Config.Localization.Providers;
 using Bot.Utilities;
+using Common;
+using Common.Config;
+using Common.Localization.Providers;
 using Discord;
 using Discord.Commands;
 
