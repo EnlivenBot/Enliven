@@ -6,6 +6,33 @@ using Common.Localization.Providers;
 using LiteDB;
 
 namespace Common.Config {
+    public interface IGuildConfigProvider {
+        GuildConfig Get(ulong guildId);
+    }
+
+    public class GuildConfigProvider : IGuildConfigProvider {
+        private ILiteCollection<GuildConfig> _collection;
+
+        public GuildConfigProvider(ILiteCollection<GuildConfig> collection) {
+            _collection = collection;
+        }
+
+        private ConcurrentDictionary<ulong, GuildConfig> _configCache = new ConcurrentDictionary<ulong, GuildConfig>();
+
+        public GuildConfig Get(ulong guildId) {
+            return _configCache.GetOrAdd(guildId, arg => {
+                var guildConfig = _collection.FindById((long) arg);
+                if (guildConfig == null) {
+                    guildConfig = new GuildConfig() {GuildId = guildId};
+                    _collection.Upsert(guildConfig);
+                }
+
+                guildConfig.SaveRequest.Subscribe(config => _collection.Upsert(config));
+                return guildConfig;
+            });
+        }
+    }
+
     public partial class GuildConfig {
         private ILocalizationProvider? _loc;
         [BsonId] public ulong GuildId { get; set; }
@@ -38,24 +65,16 @@ namespace Common.Config {
     }
 
     public partial class GuildConfig {
-        private static ConcurrentDictionary<ulong, GuildConfig> _configCache = new ConcurrentDictionary<ulong, GuildConfig>();
-
-        public static GuildConfig Get(ulong guildId) {
-            return _configCache.GetOrAdd(guildId, arg => {
-                var guildConfig = Database.Guilds.FindById((long) arg);
-                return guildConfig ?? TryCreate(guildId);
-            });
-        }
+        [BsonIgnore] private readonly Subject<GuildConfig> _saveRequest = new Subject<GuildConfig>();
+        [BsonIgnore] public ISubject<GuildConfig> SaveRequest => _saveRequest;
 
         public void Save() {
-            Database.Guilds.Upsert(this);
+            _saveRequest.OnNext(this);
         }
 
         protected virtual void OnFunctionalChannelsChanged(ChannelFunction e) {
             FunctionalChannelsChanged?.Invoke(this, e);
         }
-
-        public static event EventHandler<string>? LocalizationChanged;
 
         public GuildConfig SetChannel(string channelId, ChannelFunction func) {
             if (channelId == "null")
@@ -78,25 +97,16 @@ namespace Common.Config {
             return GuildLanguage;
         }
 
+        [BsonIgnore] public ISubject<GuildConfig> LocalizationChanged { get; } = new Subject<GuildConfig>();
+
         public GuildConfig SetLanguage(string language) {
             GuildLanguage = language;
-            LocalizationChanged?.Invoke(this, language);
+            LocalizationChanged.OnNext(this);
             return this;
         }
 
-        public static GuildConfig TryCreate(ulong guildId) {
-            var guildConfig = Database.Guilds.FindById(guildId);
-            if (guildConfig != null) {
-                return guildConfig;
-            }
+        public static Subject<ulong> ChannelLoggingDisabled { get; } = new Subject<ulong>();
 
-            guildConfig = new GuildConfig {GuildId = guildId};
-            guildConfig.Save();
-
-            return guildConfig;
-        }
-
-        public static Subject<ulong> ChannelLoggingDisabled { get; } = new Subject<ulong>(); 
         public void ToggleChannelLogging(ulong channelId) {
             if (LoggedChannels.Contains(channelId)) {
                 LoggedChannels.Remove(channelId);

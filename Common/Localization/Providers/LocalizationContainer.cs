@@ -1,19 +1,22 @@
 ﻿using System;
+using System.Reactive.Subjects;
 
 namespace Common.Localization.Providers {
     public class LocalizationContainer : ILocalizationProvider {
         private ILocalizationProvider? _provider;
+        private IDisposable? _languageChangedSubscriber;
 
         public LocalizationContainer(ILocalizationProvider provider) {
             Provider = provider;
+            LanguageChanged = new Subject<ILocalizationProvider>();
         }
 
         public ILocalizationProvider Provider {
             get => _provider!;
             set {
-                if (_provider != null) _provider.LanguageChanged -= ProviderLanguageChanged;
+                _languageChangedSubscriber?.Dispose();
                 _provider = value ?? throw new ArgumentNullException(nameof(value), $"Provider in {nameof(LocalizationContainer)} can not be null");
-                _provider.LanguageChanged += ProviderLanguageChanged;
+                _languageChangedSubscriber = _provider.LanguageChanged?.Subscribe(LanguageChanged);
             }
         }
 
@@ -21,14 +24,6 @@ namespace Common.Localization.Providers {
             return Provider.Get(id, formatArgs);
         }
 
-        public event EventHandler? LanguageChanged;
-
-        private void ProviderLanguageChanged(object? sender, EventArgs e) {
-            OnLanguageChanged();
-        }
-
-        protected virtual void OnLanguageChanged() {
-            LanguageChanged?.Invoke(this, EventArgs.Empty);
-        }
+        public ISubject<ILocalizationProvider> LanguageChanged { get; }
     }
 }

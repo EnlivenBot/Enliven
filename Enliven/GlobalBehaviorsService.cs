@@ -5,18 +5,20 @@ using Discord;
 using Discord.WebSocket;
 
 namespace Bot {
-    public static class GlobalBehaviors {
-        static GlobalBehaviors() {
-            Program.Client.JoinedGuild += ClientOnJoinedGuild;
+    public class GlobalBehaviorsService : IService {
+        private IGuildConfigProvider _guildConfigProvider;
+
+        public GlobalBehaviorsService(IGuildConfigProvider guildConfigProvider) {
+            _guildConfigProvider = guildConfigProvider;
         }
 
-        private static async Task ClientOnJoinedGuild(SocketGuild arg) {
-            GuildConfig.TryCreate(arg.Id);
+        private async Task ClientOnJoinedGuild(SocketGuild arg) {
+            _guildConfigProvider.Get(arg.Id);
             await PrintWelcomeMessage(arg);
         }
 
-        public static async Task<IUserMessage> PrintWelcomeMessage(SocketGuild guild, IMessageChannel? channel = null) {
-            var guildConfig = GuildConfig.Get(guild.Id);
+        public async Task<IUserMessage> PrintWelcomeMessage(SocketGuild guild, IMessageChannel? channel = null) {
+            var guildConfig = _guildConfigProvider.Get(guild.Id);
             var loc = guildConfig.Loc;
 
             var embedBuilder = new EmbedBuilder().WithColor(Color.Gold).WithFooter($"Powered by {Program.Client.CurrentUser.Username}");
@@ -30,8 +32,9 @@ namespace Bot {
             return await (channel ?? guild.DefaultChannel).SendMessageAsync(null, false, embedBuilder.Build());
         }
 
-        public static void Initialize() {
-            // Dummy method to call static constructor
+        public Task Initialize() {
+            Program.Client.JoinedGuild += ClientOnJoinedGuild;
+            return Task.CompletedTask;
         }
     }
 }

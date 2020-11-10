@@ -15,59 +15,44 @@ using NLog;
 
 namespace Common.Config {
     // ReSharper disable once InconsistentNaming
-    public static class Database {
-        private static Logger logger = LogManager.GetCurrentClassLogger();
-        public static LiteDatabase LiteDatabase = null!;
-
-        static Database() {
-            InitializeDatabase();
-            GlobalSettings = LiteDatabase.GetCollection<Entity>(@"Global");
-            Guilds = LiteDatabase.GetCollection<GuildConfig>(@"Guilds");
-            CommandStatistics = LiteDatabase.GetCollection<StatisticsPart>(@"CommandStatistics");
-            Playlists = LiteDatabase.GetCollection<StoredPlaylist>(@"StoredPlaylists");
-            Users = LiteDatabase.GetCollection<UserData>("UserData");
-            
-            //Fix for mapping TimeSpan?
-            BsonMapper.Global.RegisterType
-            (
-                timeSpan => BsonMapper.Global.Serialize(timeSpan?.Ticks),
-                bson => bson == null ?(TimeSpan?) null : TimeSpan.FromTicks((long) bson.RawValue)
-            );
-        }
-
-        public static void Initialize() {
-            // Dummy method to initialize static properties
-        }
-
-        public static readonly ILiteCollection<Entity> GlobalSettings;
-        public static readonly ILiteCollection<GuildConfig> Guilds;
-        public static readonly ILiteCollection<StatisticsPart> CommandStatistics;
-        public static readonly ILiteCollection<StoredPlaylist> Playlists;
-        public static readonly ILiteCollection<UserData> Users;
-
+    public class LiteDatabaseProvider {
         // ReSharper disable once NotAccessedField.Local
         private static Timer _checkpointTimer = null!;
 
         // ReSharper disable once NotAccessedField.Local
         private static Timer _rebuildTimer = null!;
+        private readonly Task<LiteDatabase> _databaseProvider;
+        private readonly ILogger logger;
 
-        private static void InitializeDatabase() {
+        public LiteDatabaseProvider(ILogger logger) {
+            this.logger = logger;
+            _databaseProvider = ProvideDatabaseInternal();
+        }
+
+        public Task<LiteDatabase> ProvideDatabase() {
+            return _databaseProvider;
+        }
+
+        private async Task<LiteDatabase> ProvideDatabaseInternal() {
+            //Fix for mapping TimeSpan?
+            BsonMapper.Global.RegisterType
+            (
+                timeSpan => BsonMapper.Global.Serialize(timeSpan?.Ticks),
+                bson => bson == null ? (TimeSpan?) null : TimeSpan.FromTicks((long) bson.RawValue)
+            );
             logger.Info("Loading database");
-            if (File.Exists(Path.Combine(Directory.GetCurrentDirectory(), @"DataBase.db"))) {
-                Directory.CreateDirectory("Config");
-                File.Move(Path.Combine(Directory.GetCurrentDirectory(), @"DataBase.db"),
-                    Path.Combine(Directory.GetCurrentDirectory(), "Config", @"DataBase.db"));
-            }
 
-            LiteDatabase = LoadDatabase();
-            LiteDatabase.CheckpointSize = 10000;
+            var db = LoadDatabase();
+            db.CheckpointSize = 10000;
 
-            PerformUpgrades().Wait();
-            LiteDatabase.Checkpoint();
+            db = await PerformUpgrades(db);
+            db.Checkpoint();
 
-            _checkpointTimer = new Timer(state => LiteDatabase.Checkpoint(), null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(30));
-            _rebuildTimer = new Timer(state => LiteDatabase.Rebuild(), null, TimeSpan.FromMinutes(30), TimeSpan.FromMinutes(180));
+            _checkpointTimer = new Timer(state => db.Checkpoint(), null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(30));
+            _rebuildTimer = new Timer(state => db.Rebuild(), null, TimeSpan.FromMinutes(30), TimeSpan.FromMinutes(180));
             logger.Info("LiteDatabase loaded");
+
+            return db;
         }
 
         private static LiteDatabase LoadDatabase() {
@@ -78,10 +63,10 @@ namespace Common.Config {
             return Path.Combine(Directory.GetCurrentDirectory(), "Config", @"DataBase.db");
         }
 
-        private static async Task PerformUpgrades() {
+        private async Task<LiteDatabase> PerformUpgrades(LiteDatabase db) {
             logger.Info("Looking for database upgrades");
-            var liteDatabaseCheckpointSize = LiteDatabase.CheckpointSize;
-            LiteDatabase.CheckpointSize = 0;
+            var liteDatabaseCheckpointSize = db.CheckpointSize;
+            db.CheckpointSize = 0;
             var upgrades = Assembly.GetExecutingAssembly().GetTypes()
                                    .SelectMany(AccessTools.GetDeclaredMethods)
                                    .Where(m => m.GetCustomAttributes(typeof(DbUpgradeAttribute), false).Length > 0)
@@ -89,38 +74,38 @@ namespace Common.Config {
                                    .Select(info => ((DbUpgradeAttribute) info.GetCustomAttribute(typeof(DbUpgradeAttribute))!, info))
                                    .OrderBy(tuple => tuple.Item1.Version)
                                    .ToList();
-            foreach (var upgrade in upgrades.SkipWhile((tuple, i) => tuple.Item1.Version <= LiteDatabase.UserVersion)) {
+            foreach (var upgrade in upgrades.SkipWhile((tuple, i) => tuple.Item1.Version <= db.UserVersion)) {
                 logger.Info("Upgrading database to version {version}", upgrade.Item1.Version);
 
                 if (upgrade.Item1.TransactionsFriendly) {
-                    LiteDatabase.BeginTrans();
+                    db.BeginTrans();
                 }
                 else {
                     logger.Info("Upgrade does not support transactions. We make a backup.");
-                    LiteDatabase.Checkpoint();
-                    LiteDatabase.Dispose();
+                    db.Checkpoint();
+                    db.Dispose();
                     File.Copy(GetDatabasePath(), Path.ChangeExtension(GetDatabasePath(), ".bak"), true);
                     logger.Info("Backup maked");
-                    LiteDatabase = LoadDatabase();
+                    db = LoadDatabase();
                 }
 
                 try {
-                    var upgradeResult = upgrade.info.Invoke(null, new object?[] {LiteDatabase});
+                    var upgradeResult = upgrade.info.Invoke(null, new object?[] {db});
                     if (upgradeResult is Task upgradeTask)
                         await upgradeTask;
                     if (upgrade.Item1.TransactionsFriendly) {
-                        LiteDatabase.Commit();
+                        db.Commit();
                     }
                 }
                 catch (Exception e) {
                     logger.Fatal(e, "Error while upgrading database");
                     logger.Fatal("Rollbacking changes");
                     if (upgrade.Item1.TransactionsFriendly) {
-                        LiteDatabase.Rollback();
+                        db.Rollback();
                     }
                     else {
-                        LiteDatabase.Checkpoint();
-                        LiteDatabase.Dispose();
+                        db.Checkpoint();
+                        db.Dispose();
                         File.Copy(Path.ChangeExtension(GetDatabasePath(), ".bak"), GetDatabasePath(), true);
                     }
 
@@ -139,8 +124,8 @@ namespace Common.Config {
 
                 logger.Info("Making a checkpoint");
                 try {
-                    LiteDatabase.Checkpoint();
-                    LiteDatabase.Rebuild();
+                    db.Checkpoint();
+                    db.Rebuild();
                 }
                 catch (Exception e) {
                     // This is very bad
@@ -152,10 +137,10 @@ namespace Common.Config {
                         true);
                     logger.Fatal("Trying to copy intact information");
                     using (LiteDatabase newDb = new LiteDatabase("newDb.db")) {
-                        foreach (var collectionName in LiteDatabase.GetCollectionNames()) {
+                        foreach (var collectionName in db.GetCollectionNames()) {
                             try {
                                 var collection = newDb.GetCollection(collectionName);
-                                foreach (var bsonDocument in LiteDatabase.GetCollection(collectionName).FindAll()) {
+                                foreach (var bsonDocument in db.GetCollection(collectionName).FindAll()) {
                                     try {
                                         collection.Insert(bsonDocument);
                                     }
@@ -170,30 +155,32 @@ namespace Common.Config {
                         }
                     }
 
-                    LiteDatabase.Dispose();
+                    db.Dispose();
                     File.Move("newDb.db", GetDatabasePath(), true);
-                    LiteDatabase = LoadDatabase();
+                    db = LoadDatabase();
                 }
 
                 logger.Info("Checkpoint done");
                 logger.Info("LiteDatabase upgraded to version {version}", upgrade.Item1.Version);
-                LiteDatabase.UserVersion = upgrade.Item1.Version;
+                db.UserVersion = upgrade.Item1.Version;
             }
 
-            LiteDatabase.CheckpointSize = liteDatabaseCheckpointSize;
+            db.CheckpointSize = liteDatabaseCheckpointSize;
+
+            return db;
         }
 
         [AttributeUsage(AttributeTargets.Method, Inherited = false, AllowMultiple = true)]
         private sealed class DbUpgradeAttribute : Attribute {
-            public int Version { get; }
-            public bool TransactionsFriendly { get; }
-
             // See the attribute guidelines at 
             //  http://go.microsoft.com/fwlink/?LinkId=85236
             public DbUpgradeAttribute(int version, bool transactionsFriendly = true) {
                 Version = version;
                 TransactionsFriendly = transactionsFriendly;
             }
+
+            public int Version { get; }
+            public bool TransactionsFriendly { get; }
         }
     }
 }

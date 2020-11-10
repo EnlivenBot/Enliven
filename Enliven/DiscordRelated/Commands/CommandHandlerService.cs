@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using Autofac;
 using Bot.Config.Emoji;
 using Bot.DiscordRelated.Logging;
+using Bot.Patches;
 using Bot.Utilities;
 using Bot.Utilities.Collector;
 using Common;
@@ -20,11 +22,22 @@ using NLog;
 using Tyrrrz.Extensions;
 
 namespace Bot.DiscordRelated.Commands {
-    public class CommandHandler {
-        private static Logger logger = LogManager.GetCurrentClassLogger();
-        private IDiscordClient _client;
+    public class CommandHandlerService : IService {
+        private DiscordShardedClient _client;
+        private IGuildConfigProvider _guildConfigProvider;
+        private IStatisticsPartProvider _statisticsPartProvider;
+        private ILogger _logger;
+        private MessageHistoryService _messageHistoryService;
+        private ILifetimeScope _serviceProvider;
 
-        private CommandHandler(IDiscordClient client, CustomCommandService commandService) {
+        public CommandHandlerService(DiscordShardedClient client, CustomCommandService commandService, IGuildConfigProvider guildConfigProvider,
+                                     IStatisticsPartProvider statisticsPartProvider, ILogger logger, MessageHistoryService messageHistoryService,
+                                     ILifetimeScope serviceProvider) {
+            _serviceProvider = serviceProvider;
+            _messageHistoryService = messageHistoryService;
+            _logger = logger;
+            _statisticsPartProvider = statisticsPartProvider;
+            _guildConfigProvider = guildConfigProvider;
             _client = client;
             CommandService = commandService;
         }
@@ -32,40 +45,12 @@ namespace Bot.DiscordRelated.Commands {
         public CustomCommandService CommandService { get; private set; }
         public static FuzzySearch FuzzySearch { get; set; } = new FuzzySearch();
         public List<CommandInfo> AllCommands { get; } = new List<CommandInfo>();
-        public Lookup<string, CommandInfo> CommandAliases { get; set; } = null!;
 
-        public static async Task<CommandHandler> Create(DiscordShardedClient client) {
-            var commandService = new CustomCommandService();
-            var commandHandler = new CommandHandler(client, commandService);
-            logger.Info("Creating new query service");
+        public Task Initialize() {
+            FuzzySearch.AddData(CommandService.Aliases.Select(infos => infos.Key));
 
-            logger.Info("Adding modules");
-            await commandService.AddModulesAsync(Assembly.GetEntryAssembly(), null);
-            commandService.AddTypeReader(typeof(ChannelFunction), new ChannelFunctionTypeReader());
-            commandService.AddTypeReader(typeof(LoopingState), new LoopingStateTypeReader());
-            commandService.AddTypeReader(typeof(BassBoostMode), new BassBoostModeTypeReader());
-            foreach (var cmdsModule in commandService.Modules) {
-                foreach (var command in cmdsModule.Commands) commandHandler.AllCommands.Add(command);
-            }
-
-            var items = new List<KeyValuePair<string, CommandInfo>>();
-            foreach (var command in commandHandler.AllCommands) {
-                items.AddRange(command.Aliases.Select(alias => new KeyValuePair<string, CommandInfo>(alias, command)));
-            }
-
-            commandHandler.CommandAliases = (Lookup<string, CommandInfo>) items.ToLookup(pair => pair.Key, pair => pair.Value);
-
-            logger.Info("Adding commands to fuzzy search");
-            foreach (var alias in commandHandler.AllCommands.SelectMany(commandInfo => commandInfo.Aliases).GroupBy(s => s)
-                                                .Select(grouping => grouping.First())) {
-                FuzzySearch.AddData(alias);
-            }
-
-            Patch.ApplyCommandPatch();
-
-            client.MessageReceived += message => Task.Run(() => commandHandler.HandleCommand(message));
-
-            return commandHandler;
+            _client.MessageReceived += HandleCommand;
+            return Task.CompletedTask;
         }
 
         private async Task HandleCommand(SocketMessage s) {
@@ -77,7 +62,7 @@ namespace Bot.DiscordRelated.Commands {
 
             var context = new CommandContext(_client, msg);
             var argPos = 0;
-            var guild = GuildConfig.Get(guildChannel.Guild.Id);
+            var guild = _guildConfigProvider.Get(guildChannel.Guild.Id);
             var loc = new GuildLocalizationProvider(guild);
 
             var hasStringPrefix = msg.HasStringPrefix(guild.Prefix, ref argPos);
@@ -114,11 +99,11 @@ namespace Bot.DiscordRelated.Commands {
                     switch (result.Error) {
                         case CommandError.ParseFailed:
                             await AddEmojiErrorHint(msg, loc, CommonEmoji.Help, new EntryLocalized("CommandHandler.ParseFailed"),
-                                HelpUtils.BuildHelpFields(command.Item1.Value.Key.Alias, guild.Prefix, loc));
+                                CommandService.BuildHelpFields(command.Item1.Value.Key.Alias, guild.Prefix, loc));
                             break;
                         case CommandError.BadArgCount:
                             await AddEmojiErrorHint(msg, loc, CommonEmoji.Help, new EntryLocalized("CommandHandler.BadArgCount"),
-                                HelpUtils.BuildHelpFields(command.Item1.Value.Key.Alias, guild.Prefix, loc));
+                                CommandService.BuildHelpFields(command.Item1.Value.Key.Alias, guild.Prefix, loc));
                             break;
                         case CommandError.ObjectNotFound:
                             await SendErrorMessage(msg, loc, result.ErrorReason);
@@ -130,7 +115,7 @@ namespace Bot.DiscordRelated.Commands {
                 }
             }
 
-            MessageHistoryManager.TryLogCreatedMessage(s, guild, isCommand);
+            _messageHistoryService.TryLogCreatedMessage(s, guild, isCommand);
         }
 
         private static async Task AddEmojiErrorHint(SocketUserMessage targetMessage, ILocalizationProvider loc, IEmote emote, IEntry description,
@@ -190,13 +175,13 @@ namespace Bot.DiscordRelated.Commands {
                                                   string authorId) {
             #pragma warning disable 618
             IResult result = CollectorsUtils.OnCommandExecute(pair, context, message)
-                ? await pair.Key.ExecuteAsync(context, pair.Value, EmptyServiceProvider.Instance)
+                ? await pair.Key.ExecuteAsync(context, pair.Value, new ServiceProviderAdapter(_serviceProvider))
                 : ExecuteResult.FromSuccess();
 
             if (result.Error != CommandError.UnknownCommand) {
                 var commandName = query.IndexOf(" ", StringComparison.Ordinal) > -1 ? query.Substring(0, query.IndexOf(" ", StringComparison.Ordinal)) : query;
-                RegisterUsage(commandName, authorId);
-                RegisterUsage(commandName, "Global");
+                _statisticsPartProvider.RegisterUsage(commandName, authorId);
+                _statisticsPartProvider.RegisterUsage(commandName, "Global");
             }
 
             return result;
@@ -207,8 +192,8 @@ namespace Bot.DiscordRelated.Commands {
             var result = await CommandService.ExecuteAsync(context, query, null);
             if (result.Error != CommandError.UnknownCommand) {
                 var commandName = query.IndexOf(" ", StringComparison.Ordinal) > -1 ? query.Substring(0, query.IndexOf(" ", StringComparison.Ordinal)) : query;
-                RegisterUsage(commandName, authorId);
-                RegisterUsage(commandName, "Global");
+                _statisticsPartProvider.RegisterUsage(commandName, authorId);
+                _statisticsPartProvider.RegisterUsage(commandName, "Global");
             }
 
             return result;
@@ -252,37 +237,8 @@ namespace Bot.DiscordRelated.Commands {
             return true;
         }
 
-        public static void RegisterUsage(string command, string userId) {
-            var userStatistics = StatisticsPart.Get(userId);
-            if (!userStatistics.UsagesList.TryGetValue(command, out var userUsageCount)) {
-                userUsageCount = 0;
-            }
-
-            userStatistics.UsagesList[command] = ++userUsageCount;
-            userStatistics.Save();
-        }
-
-        public static void RegisterMusicTime(TimeSpan span) {
-            var userStatistics = StatisticsPart.Get("Music");
-            if (!userStatistics.UsagesList.TryGetValue("PlaybackTime", out var userUsageCount)) {
-                userUsageCount = 0;
-            }
-
-            userStatistics.UsagesList["PlaybackTime"] = (int) (userUsageCount + span.TotalSeconds);
-            userStatistics.Save();
-        }
-
-        public static TimeSpan GetTotalMusicTime() {
-            var userStatistics = StatisticsPart.Get("Music");
-            if (!userStatistics.UsagesList.TryGetValue("PlaybackTime", out var userUsageCount)) {
-                userUsageCount = 0;
-            }
-
-            return TimeSpan.FromSeconds(userUsageCount);
-        }
-
         public CommandInfo GetCommandByName(string commandName) {
-            return CommandAliases[commandName].First();
+            return CommandService.Aliases[commandName].First();
         }
     }
 }

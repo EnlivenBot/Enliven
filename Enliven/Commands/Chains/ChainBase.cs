@@ -24,7 +24,7 @@ namespace Bot.Commands.Chains {
         protected ChainBase(string? uid, ILocalizationProvider loc) {
             Loc = loc.ToContainer();
             Uid = uid;
-            Loc.LanguageChanged += (sender, args) => Update();
+            Loc.LanguageChanged.Subscribe(provider => Update());
             if (uid != null) {
                 if (_runningChains.TryGetValue(uid, out var previousChain)) {
                     previousChain.OnEnd.Invoke(new EntryLocalized("ChainsCommon.ReasonStartedNew"));

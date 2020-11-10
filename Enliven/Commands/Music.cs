@@ -29,8 +29,6 @@ namespace Bot.Commands {
     [Grouping("music")]
     [RequireContext(ContextType.Guild)]
     public sealed class MusicCommands : MusicModuleBase {
-        public MusicCommands(IMusicController musicController) : base(musicController) { }
-
         [SummonToUser]
         [Command("play", RunMode = RunMode.Async)]
         [Alias("p")]
@@ -241,69 +239,6 @@ namespace Bot.Commands {
         //     // Player.PrintQueue(Context.Channel);
         // }
 
-        [Hidden]
-        [Command("saveplaylist", RunMode = RunMode.Async)]
-        [Alias("sp")]
-        [Summary("saveplaylist0s")]
-        public async Task SavePlaylist() {
-            if (!await IsPreconditionsValid) return;
-            if (Player == null || Player.Playlist.IsEmpty) {
-                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix))
-                                      .UpdateTimeout(Constants.StandardTimeSpan).Update();
-                return;
-            }
-
-            var playlist = Player.ExportPlaylist(ExportPlaylistOptions.IgnoreTrackIndex);
-            var storedPlaylist = new StoredPlaylist {
-                Tracks = playlist.Tracks, TrackIndex = playlist.TrackIndex, TrackPosition = playlist.TrackPosition,
-                Id = "u" + ObjectId.NewObjectId()
-            };
-            Database.Playlists.Insert(storedPlaylist);
-            ReplyFormattedAsync(Loc.Get("Music.PlaylistSaved")
-                                   .Format(storedPlaylist.Id.ToString(), GuildConfig.Prefix));
-        }
-
-        [SummonToUser]
-        [Command("loadplaylist", RunMode = RunMode.Async)]
-        [Alias("lp")]
-        [Summary("loadplaylist0s")]
-        public async Task LoadPlaylist([Summary("playlistId")] [Remainder] string id) {
-            await ExecutePlaylist(id, ImportPlaylistOptions.Replace);
-        }
-
-        [SummonToUser]
-        [Command("addplaylist", RunMode = RunMode.Async)]
-        [Alias("ap")]
-        [Summary("addplaylist0s")]
-        public async Task AddPlaylist([Summary("playlistId")] [Remainder] string id) {
-            await ExecutePlaylist(id, ImportPlaylistOptions.JustAdd);
-        }
-
-        [SummonToUser]
-        [Command("runplaylist", RunMode = RunMode.Async)]
-        [Alias("rp")]
-        [Summary("runplaylist0s")]
-        public async Task RunPlaylist([Summary("playlistId")] [Remainder] string id) {
-            await ExecutePlaylist(id, ImportPlaylistOptions.AddAndPlay);
-        }
-
-        private async Task ExecutePlaylist(string id, ImportPlaylistOptions options) {
-            if (!await IsPreconditionsValid) return;
-            var logMessage = await GetLogMessage();
-
-            var playlist = Database.Playlists.FindById(id);
-            if (playlist == null) {
-                ReplyFormattedAsync(Loc.Get("Music.PlaylistNotFound", id.SafeSubstring(100, "...") ?? ""), true,
-                    logMessage);
-                return;
-            }
-
-            Player.WriteToQueueHistory(Loc.Get("Music.LoadPlaylist", Context.User.Username,
-                id.SafeSubstring(100, "...") ?? ""));
-            Player.ImportPlaylist(playlist, options, Context.User.Username);
-            Context?.Message?.SafeDelete();
-        }
-
         [SummonToUser]
         [Command("youtube", RunMode = RunMode.Async)]
         [Alias("y", "yt")]
@@ -513,38 +448,6 @@ namespace Bot.Commands {
             await currentNode.MovePlayerAsync(Player, newNode);
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.NodeChanged").Format(Context.User.Username, newNode.Label));
             Player.NodeChanged(newNode);
-        }
-
-        [Command("fixspotify", RunMode = RunMode.Async)]
-        [Alias("spotify, fs")]
-        [Summary("fixspotify0s")]
-        public async Task FixSpotify() {
-            if (!await IsPreconditionsValid) return;
-            if (Player == null) {
-                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix))
-                                      .UpdateTimeout(Constants.StandardTimeSpan).Update();
-                return;
-            }
-
-            if (Player.CurrentTrack is AuthoredTrack authoredTrack &&
-                authoredTrack.Track is SpotifyLavalinkTrack spotifyLavalinkTrack) {
-                var fixSpotifyChain = FixSpotifyChain.CreateInstance(Context.User, Context.Channel, Loc,
-                    $"spotify:track:{spotifyLavalinkTrack.RelatedSpotifyTrack.Id}", MusicController);
-                await fixSpotifyChain.Start();
-            }
-            else {
-                ErrorMessageController.AddEntry(Loc.Get("Music.CurrentTrackNonSpotify"))
-                                      .UpdateTimeout(Constants.StandardTimeSpan).Update();
-            }
-        }
-
-        [Command("fixspotify", RunMode = RunMode.Async)]
-        [Alias("spotify, fs")]
-        [Summary("fixspotify0s")]
-        public async Task FixSpotify([Remainder] [Summary("fixspotify0_0s")]
-                                     string s) {
-            var fixSpotifyChain = FixSpotifyChain.CreateInstance(Context.User, Context.Channel, Loc, s, MusicController);
-            await fixSpotifyChain.Start();
         }
     }
 }

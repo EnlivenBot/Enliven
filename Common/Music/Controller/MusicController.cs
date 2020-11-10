@@ -2,13 +2,16 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Common.Config;
 using Common.History;
 using Common.Localization.Entries;
 using Common.Music.Players;
 using Common.Music.Resolvers;
 using Discord;
+using Discord.WebSocket;
 using Lavalink4NET;
 using Lavalink4NET.Cluster;
+using Lavalink4NET.DiscordNet;
 using Lavalink4NET.Events;
 using Lavalink4NET.Logging;
 using Lavalink4NET.Tracking;
@@ -19,8 +22,19 @@ namespace Common.Music.Controller {
         private static readonly List<FinalLavalinkPlayer> PlaybackPlayers = new List<FinalLavalinkPlayer>();
         private static EventLogger _lavalinkLogger = new EventLogger();
         private MusicResolverService _musicResolverService;
+        private IGuildConfigProvider _guildConfigProvider;
+        private IPlaylistProvider _playlistProvider;
+        private DiscordShardedClient _discordShardedClient;
+        private ILogger _logger;
+        private List<LavalinkNodeInfo> _lavalinkNodeInfos;
 
-        public MusicController(MusicResolverService musicResolverService) {
+        public MusicController(MusicResolverService musicResolverService, IGuildConfigProvider guildConfigProvider, IPlaylistProvider playlistProvider,
+                               DiscordShardedClient discordShardedClient, ILogger logger, List<LavalinkNodeInfo> lavalinkNodeInfos) {
+            _lavalinkNodeInfos = lavalinkNodeInfos;
+            _logger = logger;
+            _discordShardedClient = discordShardedClient;
+            _playlistProvider = playlistProvider;
+            _guildConfigProvider = guildConfigProvider;
             _musicResolverService = musicResolverService;
             AppDomain.CurrentDomain.ProcessExit += (sender, args) => { Dispose(); };
         }
@@ -33,14 +47,15 @@ namespace Common.Music.Controller {
 
         public LavalinkCluster Cluster { get; set; } = null!;
 
-        public async Task InitializeAsync(List<LavalinkNodeOptions> nodes, IDiscordClientWrapper wrapper, ILogger? logger) {
-            logger?.Info("Starting music module");
+        public async Task Initialize() {
+            var nodes = _lavalinkNodeInfos.Select(info => info.ToOptions()).ToList();
+            var wrapper = new DiscordClientWrapper(_discordShardedClient);
+            _logger.Info("Starting music module");
 
-            if (logger != null)
-                _lavalinkLogger.LogMessage += (sender, e) => LavalinkLoggerOnLogMessage(sender, e, logger);
-            
+            _lavalinkLogger.LogMessage += (sender, e) => LavalinkLoggerOnLogMessage(sender, e, _logger);
+
             if (nodes.Count != 0) {
-                logger?.Info("Start building music cluster");
+                _logger?.Info("Start building music cluster");
                 try {
                     var lavalinkClusterOptions = new LavalinkClusterOptions {
                         Nodes = nodes.ToArray(), StayOnline = true, LoadBalacingStrategy = LoadBalancingStrategy
@@ -48,11 +63,11 @@ namespace Common.Music.Controller {
                     Cluster = new LavalinkCluster(lavalinkClusterOptions, wrapper, _lavalinkLogger);
                     Cluster.PlayerMoved += ClusterOnPlayerMoved;
 
-                    logger?.Info("Trying to connect to nodes");
+                    _logger?.Info("Trying to connect to nodes");
                     await Cluster.InitializeAsync();
-                    logger?.Info("Cluster  initialized");
+                    _logger?.Info("Cluster  initialized");
 
-                    logger?.Info("Initializing InactivityTrackingService instance with default options");
+                    _logger?.Info("Initializing InactivityTrackingService instance with default options");
                     var inactivityTrackingService = new InactivityTrackingService(Cluster, wrapper,
                         new InactivityTrackingOptions {
                             TrackInactivity = true,
@@ -69,12 +84,12 @@ namespace Common.Music.Controller {
                     };
                 }
                 catch (Exception e) {
-                    logger?.Fatal(e, "Exception while initializing music cluster");
+                    _logger?.Fatal(e, "Exception while initializing music cluster");
                     Cluster = null!;
                 }
             }
             else {
-                logger?.Warn("Nodes not found, music disabled!");
+                _logger?.Warn("Nodes not found, music disabled!");
             }
         }
 
@@ -89,7 +104,7 @@ namespace Common.Music.Controller {
                 PlaybackPlayers.Remove(oldPlayer);
             }
 
-            var player = await Cluster.JoinAsync(() => new FinalLavalinkPlayer(this), guildId, voiceChannelId);
+            var player = await Cluster.JoinAsync(() => new FinalLavalinkPlayer(this, _guildConfigProvider, _playlistProvider), guildId, voiceChannelId);
             player.Shutdown.Subscribe(entry => { PlaybackPlayers.Remove(player); });
             await player.NodeChanged();
             PlaybackPlayers.Add(player);
@@ -101,7 +116,7 @@ namespace Common.Music.Controller {
             return embedPlaybackPlayer?.IsShutdowned == true ? null : embedPlaybackPlayer;
         }
 
-        public Task<IEnumerable<MusicResolverService.MusicResolver>> ResolveQueries(IEnumerable<string> queries) {
+        public Task<IEnumerable<MusicResolver>> ResolveQueries(IEnumerable<string> queries) {
             return Task.FromResult(queries.Select(s => _musicResolverService.GetResolver(s, Cluster)));
         }
 
@@ -144,14 +159,14 @@ namespace Common.Music.Controller {
 
             return Task.CompletedTask;
         }
-        
+
         public static string EscapeTrack(string track) {
             track = track.Replace("'", "");
             track = track.Replace("\"", "");
             track = track.Replace("#", "");
             return track;
         }
-        
+
         public static List<string> GetMusicQueries(IUserMessage message, string query) {
             return message.Attachments.Select(attachment => attachment.Url)
                           .Concat(query.Split('\n').Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s.Trim())).ToList();

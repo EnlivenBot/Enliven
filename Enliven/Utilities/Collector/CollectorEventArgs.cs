@@ -88,8 +88,8 @@ namespace Bot.Utilities.Collector {
             return Task.CompletedTask;
         }
 
-        public async Task<IResult> ExecuteCommand(ICommandContext? overrideContext = null) {
-            return await CommandInfo.ExecuteAsync(overrideContext ?? Context, ParseResult, EmptyServiceProvider.Instance).ConfigureAwait(false);
-        }
+        // public async Task<IResult> ExecuteCommand(ICommandContext? overrideContext = null) {
+        //     return await CommandInfo.ExecuteAsync(overrideContext ?? Context, ParseResult, EmptyServiceProvider.Instance).ConfigureAwait(false);
+        // }
     }
 }

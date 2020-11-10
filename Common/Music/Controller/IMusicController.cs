@@ -9,15 +9,13 @@ using Lavalink4NET.Cluster;
 using NLog;
 
 namespace Common.Music.Controller {
-    public interface IMusicController {
+    public interface IMusicController : IService {
         public LavalinkCluster Cluster { get; set; }
-        
-        Task InitializeAsync(List<LavalinkNodeOptions> nodes, IDiscordClientWrapper wrapper, ILogger? logger);
 
         public Task<FinalLavalinkPlayer> ProvidePlayer(ulong guildId, ulong voiceChannelId, bool recreate = false);
 
         public FinalLavalinkPlayer? GetPlayer(ulong guildId);
 
-        public Task<IEnumerable<MusicResolverService.MusicResolver>> ResolveQueries(IEnumerable<string> queries);
+        public Task<IEnumerable<MusicResolver>> ResolveQueries(IEnumerable<string> queries);
     }
 }

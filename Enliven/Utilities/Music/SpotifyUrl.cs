@@ -49,13 +49,13 @@ namespace Bot.Utilities.Music {
             return match.Success;
         }
 
-        public async Task<List<SpotifyTrack>> Resolve(SpotifyClient client) {
+        public async Task<List<SpotifyTrackWrapper>> Resolve(SpotifyClient client) {
             return (Type switch {
                 SpotifyUrlType.Album => (await client.PaginateAll(await client.Albums.GetTracks(Id)))
-                                       .Where(track => track != null).Select(track => new SpotifyTrack(track)),
+                                       .Where(track => track != null).Select(track => new SpotifyTrackWrapper(track)),
                 SpotifyUrlType.Playlist => (await client.PaginateAll((await client.Playlists.Get(Id)).Tracks!)).Select(track => track.Track as FullTrack)
-                   .Where(track => track != null).Select(track => new SpotifyTrack(track!.Id, track)),
-                SpotifyUrlType.Track   => new List<SpotifyTrack> {new SpotifyTrack(Id)},
+                   .Where(track => track != null).Select(track => new SpotifyTrackWrapper(track!.Id, track)),
+                SpotifyUrlType.Track   => new List<SpotifyTrackWrapper> {new SpotifyTrackWrapper(Id)},
                 SpotifyUrlType.Unknown => throw new ArgumentOutOfRangeException(),
                 _                      => throw new ArgumentOutOfRangeException()
             }).ToList();

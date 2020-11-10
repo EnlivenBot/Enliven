@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Common.Config;
 using Common.History;
 using Common.Localization.Entries;
 using Common.Music.Controller;
@@ -18,7 +19,9 @@ namespace Common.Music.Players {
         private int _currentTrackIndex;
 
         // ReSharper disable once UnusedParameter.Local
-        public PlaylistLavalinkPlayer(IMusicController musicController) : base(musicController) {
+        public PlaylistLavalinkPlayer(IMusicController musicController, IGuildConfigProvider guildConfigProvider, IPlaylistProvider playlistProvider) : base(
+            musicController, guildConfigProvider) {
+            _playlistProvider = playlistProvider;
             Playlist.Update += (sender, args) => { UpdateCurrentTrackIndex(); };
         }
 
@@ -43,7 +46,7 @@ namespace Common.Music.Players {
 
         public override async Task OnTrackEndAsync(TrackEndEventArgs eventArgs) {
             if (eventArgs.Reason == TrackEndReason.Replaced) return;
-            
+
             var oldTrackIndex = CurrentTrackIndex;
             // if (CurrentTrack != null) {
             //     CommandHandler.RegisterMusicTime(TrackPosition);
@@ -184,6 +187,7 @@ namespace Common.Music.Players {
         }
 
         private readonly SemaphoreSlim _enqueueLock = new SemaphoreSlim(1);
+        private IPlaylistProvider _playlistProvider;
 
         public virtual async Task TryEnqueue(IEnumerable<LavalinkTrack> tracks, string author, int index) {
             await _enqueueLock.WaitAsync();
@@ -228,7 +232,8 @@ namespace Common.Music.Players {
             base.GetPlayerShutdownParameters(parameters);
             parameters.Playlist = Playlist;
             if (parameters.NeedSave && parameters.StoredPlaylist == null) {
-                parameters.StoredPlaylist = ExportPlaylist(ExportPlaylistOptions.AllData).StorePlaylist("a" + ObjectId.NewObjectId(), 0);
+                parameters.StoredPlaylist = _playlistProvider.StorePlaylist(ExportPlaylist(ExportPlaylistOptions.AllData),
+                    "a" + ObjectId.NewObjectId(), UserLink.Current);
             }
         }
     }

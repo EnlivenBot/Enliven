@@ -119,10 +119,6 @@ namespace Common {
             }
         }
 
-        public static GuildConfig GetConfig(this IGuild guild) {
-            return GuildConfig.Get(guild.Id);
-        }
-
         public static LocalizationContainer ToContainer(this ILocalizationProvider provider) {
             if (provider is LocalizationContainer localizationContainer) return localizationContainer;
             return new LocalizationContainer(provider);
@@ -150,10 +146,6 @@ namespace Common {
             if ((int) span.TotalHours != 0)
                 s = s.Insert(0, $"{(int) span.TotalHours}:");
             return s;
-        }
-
-        public static UserData GetData(this IUser user) {
-            return UserData.FromUser(user);
         }
 
         public static UserLink ToLink(this IUser user) {

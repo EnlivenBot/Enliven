@@ -9,10 +9,11 @@ using Discord.Commands;
 
 namespace Bot.DiscordRelated.Commands.Modules {
     public class AdvancedModuleBase : PatchableModuleBase {
-        private Lazy<GuildLocalizationProvider> _loc = null!;
-
-        public GuildLocalizationProvider Loc => _loc.Value;
-        public GuildConfig GuildConfig { get; private set; } = null!;
+        private GuildLocalizationProvider? _loc;
+        [DontInject] public GuildLocalizationProvider Loc => _loc ??= new GuildLocalizationProvider(GuildConfig);
+        [DontInject] public GuildConfig GuildConfig { get; private set; } = null!;
+        
+        public IGuildConfigProvider GuildConfigProvider { get; set; } = null!;
 
         public async Task<IMessageChannel> GetResponseChannel(bool fileSupport = false) {
             var bot = (await Context.Guild.GetCurrentUserAsync()).GetPermissions((IGuildChannel) Context.Channel);
@@ -24,8 +25,7 @@ namespace Bot.DiscordRelated.Commands.Modules {
 
         protected override void BeforeExecute(CommandInfo command) {
             base.BeforeExecute(command);
-            GuildConfig = GuildConfig.Get(Context.Guild.Id);
-            _loc = new Lazy<GuildLocalizationProvider>(() => new GuildLocalizationProvider(GuildConfig));
+            GuildConfig = GuildConfigProvider.Get(Context.Guild.Id);
         }
 
         // ReSharper disable once InconsistentNaming

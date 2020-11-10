@@ -22,13 +22,9 @@ namespace Bot.DiscordRelated.Commands.Modules {
         // Actually it can be null but only if IsPreconditionsValid is false
         public FinalLavalinkPlayer? Player;
         public Task<bool> IsPreconditionsValid = null!;
-        public static Dictionary<ulong, NonSpamMessageController> ErrorsMessagesControllers { get; set; } = new Dictionary<ulong, NonSpamMessageController>();
+        public static Dictionary<ulong, NonSpamMessageController> ErrorsMessagesControllers = new Dictionary<ulong, NonSpamMessageController>();
         public NonSpamMessageController ErrorMessageController = null!;
-        private protected readonly IMusicController MusicController;
-
-        public MusicModuleBase(IMusicController musicController) {
-            MusicController = musicController;
-        }
+        public IMusicController MusicController { get; set; } = null!;
 
         protected override void BeforeExecute(CommandInfo command) {
             base.BeforeExecute(command);
@@ -49,7 +45,7 @@ namespace Bot.DiscordRelated.Commands.Modules {
             try {
                 Player = MusicController.GetPlayer(Context.Guild.Id)!;
                 // ReSharper disable once ConditionIsAlwaysTrueOrFalse
-                if (Player == null && MusicController.Cluster.Nodes.Any(node => node.IsConnected)) {
+                if (Player == null && !MusicController.Cluster.Nodes.Any(node => node.IsConnected)) {
                     throw new InvalidOperationException("No node available.");
                 }
             }

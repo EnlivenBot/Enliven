@@ -1,22 +1,64 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Reactive.Subjects;
 using LiteDB;
 
 namespace Common.Config {
-    public class StatisticsPart {
-        private static ConcurrentDictionary<string, StatisticsPart> _cache = new ConcurrentDictionary<string, StatisticsPart>();
+    public interface IStatisticsPartProvider {
+        StatisticsPart Get(string id);
+        int Count();
+        void RegisterUsage(string command, string id);
+        void RegisterMusicTime(TimeSpan timeSpan);
+    }
 
+    public class StatisticsPartProvider : IStatisticsPartProvider {
+        public StatisticsPartProvider(ILiteCollection<StatisticsPart> liteCollection) {
+            _liteCollection = liteCollection;
+        }
+        private static ConcurrentDictionary<string, StatisticsPart> _cache = new ConcurrentDictionary<string, StatisticsPart>();
+        private ILiteCollection<StatisticsPart> _liteCollection;
+
+        public StatisticsPart Get(string id) {
+            return _cache.GetOrAdd(id, s => {
+                var part = _liteCollection.FindById(id) ?? new StatisticsPart {Id = s};
+                part.SaveRequest.Subscribe(statisticsPart => _liteCollection.Upsert(part));
+                return part;
+            });
+        }
+
+        public int Count() {
+            return _liteCollection.Count();
+        }
+
+        public void RegisterUsage(string command, string id) {
+            var userStatistics = Get(id);
+            if (!userStatistics.UsagesList.TryGetValue(command, out var userUsageCount)) {
+                userUsageCount = 0;
+            }
+
+            userStatistics.UsagesList[command] = ++userUsageCount;
+            userStatistics.Save();
+        }
+
+        public void RegisterMusicTime(TimeSpan timeSpan) {
+            var userStatistics = Get("Music");
+            if (!userStatistics.UsagesList.TryGetValue("PlaybackTime", out var userUsageCount)) {
+                userUsageCount = 0;
+            }
+
+            userStatistics.UsagesList["PlaybackTime"] = (int) (userUsageCount + timeSpan.TotalSeconds);
+            userStatistics.Save();
+        }
+    }
+    public class StatisticsPart {
         [BsonId] public string Id { get; set; } = null!;
         public Dictionary<string, int> UsagesList { get; set; } = new Dictionary<string, int>();
 
-        public static StatisticsPart Get(string id) {
-            return _cache.GetOrAdd(id, s =>
-                Database.CommandStatistics.FindById(id) ?? new StatisticsPart {Id = s}
-            );
-        }
-
+        [BsonIgnore] public ISubject<StatisticsPart> SaveRequest { get; } = new Subject<StatisticsPart>();
         public void Save() {
-            Database.CommandStatistics.Upsert(this);
+            SaveRequest.OnNext(this);
         }
     }
 }

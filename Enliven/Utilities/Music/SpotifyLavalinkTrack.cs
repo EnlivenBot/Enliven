@@ -4,18 +4,18 @@ using Lavalink4NET.Util;
 
 namespace Bot.Utilities.Music {
     public class SpotifyLavalinkTrack : LavalinkTrack {
-        public SpotifyTrack RelatedSpotifyTrack;
+        public SpotifyTrackWrapper RelatedSpotifyTrackWrapper;
 
-        public SpotifyLavalinkTrack(SpotifyTrack relatedSpotifyTrack, LavalinkTrack track) : this(relatedSpotifyTrack, track.Identifier, track.Author,
+        public SpotifyLavalinkTrack(SpotifyTrackWrapper relatedSpotifyTrackWrapper, LavalinkTrack track) : this(relatedSpotifyTrackWrapper, track.Identifier, track.Author,
             track.Duration, track.IsLiveStream, track.IsSeekable, track.Source, track.Title, track.TrackIdentifier, track.Provider) { }
 
-        public SpotifyLavalinkTrack(SpotifyTrack relatedSpotifyTrack, string identifier, LavalinkTrackInfo info) : this(relatedSpotifyTrack, identifier, info.Author,
+        public SpotifyLavalinkTrack(SpotifyTrackWrapper relatedSpotifyTrackWrapper, string identifier, LavalinkTrackInfo info) : this(relatedSpotifyTrackWrapper, identifier, info.Author,
             info.Duration, info.IsLiveStream, info.IsSeekable, info.Source, info.Title, info.TrackIdentifier, StreamProviderUtil.GetStreamProvider(info.Source!)) { }
 
-        public SpotifyLavalinkTrack(SpotifyTrack relatedSpotifyTrack, string identifier, string author, TimeSpan duration, bool isLiveStream, bool isSeekable,
+        public SpotifyLavalinkTrack(SpotifyTrackWrapper relatedSpotifyTrackWrapper, string identifier, string author, TimeSpan duration, bool isLiveStream, bool isSeekable,
                                     string? source, string title, string trackIdentifier, StreamProvider provider) : base(identifier, author, duration,
             isLiveStream, isSeekable, source, title, trackIdentifier, provider) {
-            RelatedSpotifyTrack = relatedSpotifyTrack;
+            RelatedSpotifyTrackWrapper = relatedSpotifyTrackWrapper;
         }
     }
 }

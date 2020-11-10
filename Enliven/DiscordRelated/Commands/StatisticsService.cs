@@ -8,31 +8,44 @@ using Common.Config;
 using Common.Localization.Providers;
 using Discord;
 using Discord.Commands;
+using LiteDB;
 using NLog;
 using Tyrrrz.Extensions;
 
 namespace Bot.DiscordRelated.Commands {
-    public class StatsUtils {
-        private static Logger logger = LogManager.GetCurrentClassLogger();
+    public interface IStatisticsService {
+        EmbedBuilder BuildStats(IUser? user, ILocalizationProvider loc);
+    }
 
-        private static Temporary<int> _textChannelsCount =
+    public class StatisticsService : IStatisticsService {
+        private Temporary<int> _textChannelsCount =
             new Temporary<int>(() => Program.Client.Guilds.Sum(guild => guild.TextChannels.Count), Constants.LongTimeSpan);
 
-        private static Temporary<int> _voiceChannelsCount =
+        private Temporary<int> _voiceChannelsCount =
             new Temporary<int>(() => Program.Client.Guilds.Sum(guild => guild.VoiceChannels.Count), Constants.LongTimeSpan);
 
-        private static Temporary<int> _usersCount =
+        private Temporary<int> _usersCount =
             new Temporary<int>(() => Program.Client.Guilds.Sum(guild => guild.MemberCount), Constants.LongTimeSpan);
 
-        private static Temporary<int> _commandUsagesCount =
-            new Temporary<int>(() => StatisticsPart.Get("Global").UsagesList.Sum(pair => pair.Value), Constants.LongTimeSpan);
+        private Temporary<int> _commandUsagesCount;
 
-        private static Temporary<int> _commandUsersCount =
-            new Temporary<int>(() => Database.CommandStatistics.Count(), Constants.LongTimeSpan);
+        private Temporary<int> _commandUsersCount;
+
+        private ILogger logger;
+        private IStatisticsPartProvider _statisticPartProvider;
+        private CommandHandlerService _commandHandlerService;
+
+        public StatisticsService(ILogger logger, IStatisticsPartProvider statisticPartProvider, CommandHandlerService commandHandlerService) {
+            _commandHandlerService = commandHandlerService;
+            _statisticPartProvider = statisticPartProvider;
+            this.logger = logger;
+            _commandUsersCount = new Temporary<int>(() => _statisticPartProvider.Count(), Constants.LongTimeSpan);
+            _commandUsagesCount = new Temporary<int>(() => _statisticPartProvider.Get("Global").UsagesList.Sum(pair => pair.Value), Constants.LongTimeSpan);
+        }
 
         [SuppressMessage("ReSharper", "ConditionIsAlwaysTrueOrFalse")]
-        public static EmbedBuilder BuildStats(IUser? user, ILocalizationProvider loc) {
-            var stats = StatisticsPart.Get(user?.Id.ToString() ?? "Global");
+        public EmbedBuilder BuildStats(IUser? user, ILocalizationProvider loc) {
+            var stats = _statisticPartProvider.Get(user?.Id.ToString() ?? "Global");
             var embedBuilder = new EmbedBuilder().WithColor(Color.Gold)
                                                  .WithTitle(loc.Get("Statistics.Title"))
                                                  .WithDescription(user == null
@@ -47,7 +60,7 @@ namespace Bot.DiscordRelated.Commands {
             List<(CommandInfo Key, double)>? valueTuples = null;
             while (true) {
                 try {
-                    valueTuples = stats.UsagesList.GroupBy(pair => Program.Handler.CommandAliases[pair.Key].First())
+                    valueTuples = stats.UsagesList.GroupBy(pair => _commandHandlerService.CommandService.Aliases[pair.Key].First())
                                        .Where(pairs => !pairs.Key.IsHiddenCommand())
                                        .Select(pairs => (pairs.Key, pairs.Sum(pair => (double) pair.Value)))
                                        .OrderBy(tuple => tuple.Item1.GetGroup()?.GroupName).ToList();
@@ -60,7 +73,7 @@ namespace Bot.DiscordRelated.Commands {
                     }
 
                     // This exception appears that an element has appeared in ours that is not in the commands
-                    stats.UsagesList = stats.UsagesList.Where(pair => Program.Handler.CommandAliases.Contains(pair.Key))
+                    stats.UsagesList = stats.UsagesList.Where(pair => _commandHandlerService.CommandService.Aliases.Contains(pair.Key))
                                             .ToDictionary(pair => pair.Key, pair => pair.Value);
                     stats.Save();
                     // Assigning non null value to avoid endless cycle
@@ -74,13 +87,18 @@ namespace Bot.DiscordRelated.Commands {
             }
 
             if (user != null) return embedBuilder;
-            var messageStats = StatisticsPart.Get("Messages");
+            var messageStats = _statisticPartProvider.Get("Messages");
             if (messageStats != null && messageStats.UsagesList.Count != 0) {
                 embedBuilder.AddField(loc.Get("Statistics.ByMessages"),
                     messageStats.UsagesList.Select(pair => $"`{loc.Get("Statistics." + pair.Key)}` - {pair.Value}").JoinToString("\n"));
             }
 
-            var musicTime = CommandHandler.GetTotalMusicTime();
+            var musicStatistics = _statisticPartProvider.Get("Music");
+            if (!musicStatistics.UsagesList.TryGetValue("PlaybackTime", out var userUsageCount)) {
+                userUsageCount = 0;
+            }
+            var musicTime =  TimeSpan.FromSeconds(userUsageCount);
+            
             embedBuilder.AddField(loc.Get("Statistics.ByMusic"),
                 loc.Get("Statistics.ByMusicFormatted").Format((int) musicTime.TotalDays, musicTime.Hours, musicTime.Minutes));
 

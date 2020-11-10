@@ -1,63 +1,39 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Reactive.Subjects;
 using Discord;
 using LiteDB;
 
 namespace Common.Config {
-    public partial class UserData {
-        [BsonId]
-        public ulong UserId { get; set; }
-
-        public string? LastKnownUsername { get; set; }
-        
-        [BsonIgnore] public bool IsCurrentUser => UserId == 0;
+    public interface IUserDataProvider {
+        UserData Get(ulong userId);
+        void MatchWithUser(IUser user);
+        UserData FromUser(IUser user);
     }
 
-    public partial class UserData {
-        public string GetMention() => $"<@{UserId}>";
-        
-        public string GetMentionWithUsername() {
-            return GetMentionWithUsernameInternal(LastKnownUsername);
+    public class UserDataProvider : IUserDataProvider {
+        private  ConcurrentDictionary<ulong, UserData> _configCache = new ConcurrentDictionary<ulong, UserData>();
+        private ILiteCollection<UserData> _liteCollection;
+
+        public UserDataProvider(ILiteCollection<UserData> liteCollection) {
+            _liteCollection = liteCollection;
         }
 
-        public string GetMentionWithUsername(IUser? user) {
-            return user == null ? GetMentionWithUsername() : GetMentionWithUsernameInternal(user.Username);
-        }
-        
-        private string GetMentionWithUsernameInternal(string username) {
-            return username != null ? $"{GetMention()} ({username})" : GetMention();
-        }
-    }
-
-    public partial class UserData {
-        public static UserData Current => Get(0);
-        
-        private static ConcurrentDictionary<ulong, UserData> _configCache = new ConcurrentDictionary<ulong, UserData>();
-
-        public static UserData Get(ulong userId) {
+        public UserData Get(ulong userId) {
             return _configCache.GetOrAdd(userId, arg => {
-                var guildConfig = Database.Users.FindById((long) arg);
-                return guildConfig ?? TryCreate(userId);
+                var userData = _liteCollection.FindById((long) arg);
+                if (userData == null) {
+                    userData = new UserData {UserId = userId};
+                    _liteCollection.Upsert(userData);
+                }
+
+                userData.SaveRequest.Subscribe(data => _liteCollection.Upsert(userData));
+                
+                return userData;
             });
         }
-
-        public static UserData TryCreate(ulong userId) {
-            var guildConfig = Database.Users.FindById(userId);
-            if (guildConfig != null) {
-                return guildConfig;
-            }
-
-            guildConfig = new UserData {UserId = userId};
-            guildConfig.Save();
-
-            return guildConfig;
-        }
-
-        public void Save() {
-            Database.Users.Upsert(this);
-        }
-
-        public static void MatchWithUser(IUser user) {
+        
+        public void MatchWithUser(IUser user) {
             var data = Get(user.Id);
             try {
                 if (!string.IsNullOrWhiteSpace(user.Username)) {
@@ -71,11 +47,38 @@ namespace Common.Config {
             }
         }
 
-        public static UserData FromUser(IUser user) {
+        public UserData FromUser(IUser user) {
             var data = Get(user.Id);
             MatchWithUser(user);
-            
+
             return data;
+        }
+    }
+
+    public class UserData {
+        [BsonId] public ulong UserId { get; set; }
+
+        public string? LastKnownUsername { get; set; }
+
+        [BsonIgnore] public bool IsCurrentUser => UserId == 0;
+
+        public string GetMention() => $"<@{UserId}>";
+
+        public string GetMentionWithUsername() {
+            return GetMentionWithUsernameInternal(LastKnownUsername);
+        }
+
+        public string GetMentionWithUsername(IUser? user) {
+            return user == null ? GetMentionWithUsername() : GetMentionWithUsernameInternal(user.Username);
+        }
+
+        private string GetMentionWithUsernameInternal(string? username) {
+            return username != null ? $"{GetMention()} ({username})" : GetMention();
+        }
+
+        [BsonIgnore] public ISubject<UserData> SaveRequest { get; } = new Subject<UserData>();
+        public void Save() {
+            SaveRequest.OnNext(this);
         }
 
         public UserLink ToLink() {
@@ -85,17 +88,19 @@ namespace Common.Config {
 
     public class UserLink {
         [BsonIgnore] public static UserLink Current => new UserLink(0);
-        
-        [Obsolete("")]
+
+        [Obsolete("This is constructor for database engine")]
         public UserLink() { }
-        
+
         public UserLink(ulong userId) {
             UserId = userId;
         }
-        
+
         [BsonId] public ulong UserId { get; set; }
 
-        [BsonIgnore] public UserData Data => UserData.Get(UserId);
+        public UserData GetData(IUserDataProvider dataProvider) {
+            return dataProvider.Get(UserId);
+        }
 
         [BsonIgnore] public bool IsCurrentUser => UserId == 0;
     }

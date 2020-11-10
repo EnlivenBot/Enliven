@@ -1,21 +1,48 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
+using System.Reactive.Subjects;
 using Common.Config;
 using Lavalink4NET.Decoding;
 using Lavalink4NET.Player;
 using LiteDB;
-using SpotifyAPI.Web;
 
 namespace Bot.Utilities.Music {
-    public class SpotifyTrackAssociation {
-        private static readonly ILiteCollection<SpotifyTrackAssociation> SpotifyAssociations =
-            Database.LiteDatabase.GetCollection<SpotifyTrackAssociation>(@"SpotifyAssociations");
-        [Obsolete("This constructor for database engine")]
-        public SpotifyTrackAssociation() { }
+    public interface ISpotifyAssociationProvider {
+        SpotifyAssociation? Get(string id);
+        SpotifyAssociation Create(string spotifyTrackId, string defaultAssociationIdentifier);
+    }
 
-        public SpotifyTrackAssociation(string spotifyTrackId, string defaultAssociationIdentifier) {
+    public class SpotifyAssociationProvider : ISpotifyAssociationProvider {
+        private ConcurrentDictionary<string, SpotifyAssociation> _cache = new ConcurrentDictionary<string, SpotifyAssociation>();
+        private ILiteCollection<SpotifyAssociation> _associationCollection;
+        public SpotifyAssociationProvider(ILiteCollection<SpotifyAssociation> associationCollection) {
+            _associationCollection = associationCollection;
+        }
+
+        public SpotifyAssociation? Get(string id) {
+            return _cache.GetOrAdd(id, arg => {
+                var association = _associationCollection.FindById(id);
+                association.SaveRequest.Subscribe(data => _associationCollection.Upsert(association));
+                
+                return association;
+            });
+        }
+
+        public SpotifyAssociation Create(string spotifyTrackId, string defaultAssociationIdentifier) {
+            #pragma warning disable 618
+            return new SpotifyAssociation(spotifyTrackId, defaultAssociationIdentifier);
+            #pragma warning restore 618
+        }
+    }
+    
+    public class SpotifyAssociation {
+        [Obsolete("Use SpotifyAssociationProvider")]
+        public SpotifyAssociation() { }
+
+        [Obsolete("Use SpotifyAssociationProvider")]
+        public SpotifyAssociation(string spotifyTrackId, string defaultAssociationIdentifier) {
             SpotifyTrackId = spotifyTrackId;
             Associations.Add(new TrackAssociationData(defaultAssociationIdentifier, UserLink.Current));
         }
@@ -28,19 +55,9 @@ namespace Bot.Utilities.Music {
             return Associations.Select(data => (data.Score, data)).Max().data;
         }
 
+        [BsonIgnore] public ISubject<SpotifyAssociation> SaveRequest = new Subject<SpotifyAssociation>();
         public void Save() {
-            SpotifyAssociations.Upsert(this);
-        }
-
-        public static bool TryGet(string id, out SpotifyTrackAssociation association) {
-            association = default;
-            try {
-                association = SpotifyAssociations.FindById(id);
-                return association != null;
-            }
-            catch (Exception) {
-                return false;
-            }
+            SaveRequest.OnNext(this);
         }
 
         public class TrackAssociationData {
@@ -79,34 +96,6 @@ namespace Bot.Utilities.Music {
                         break;
                 }
             }
-        }
-    }
-
-    public class SpotifyTrack {
-        private FullTrack? _track;
-        private string? _trackInfo;
-
-        public SpotifyTrack(string id, FullTrack? track = null) {
-            _track = track;
-            Id = id;
-        }
-        
-        public SpotifyTrack(SimpleTrack track) {
-            _trackInfo = $"{track.Name} - {track.Artists[0].Name}";
-            Id = track.Id;
-        }
-
-        public string Id { get; private set; }
-
-        public async Task<FullTrack> GetFullTrack() {
-            return _track ??= await (await SpotifyMusicResolver.SpotifyClient)!.Tracks.Get(Id);
-        }
-        
-        public async Task<string> GetTrackInfo() {
-            if (_trackInfo != null)
-                return _trackInfo;
-            var fullTrack = await GetFullTrack();
-            return _trackInfo = $"{fullTrack.Name} - {fullTrack.Artists[0].Name}";
         }
     }
 }

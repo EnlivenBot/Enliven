@@ -20,12 +20,14 @@ namespace Common.Music.Players {
         private GuildConfig? _guildConfig;
         private ulong _lastVoiceChannelId;
         private protected IMusicController _musicController;
+        private IGuildConfigProvider _guildConfigProvider;
 
-        protected AdvancedLavalinkPlayer(IMusicController musicController) {
+        protected AdvancedLavalinkPlayer(IMusicController musicController, IGuildConfigProvider guildConfigProvider) {
+            _guildConfigProvider = guildConfigProvider;
             _musicController = musicController;
         }
 
-        protected GuildConfig GuildConfig => _guildConfig ??= GuildConfig.Get(GuildId);
+        protected GuildConfig GuildConfig => _guildConfig ??= _guildConfigProvider.Get(GuildId);
         protected BassBoostMode BassBoostMode { get; private set; } = BassBoostMode.Off;
         public bool IsShutdowned { get; private set; }
 
