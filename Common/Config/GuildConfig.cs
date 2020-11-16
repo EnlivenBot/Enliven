@@ -13,11 +13,11 @@ namespace Common.Config {
     public class GuildConfigProvider : IGuildConfigProvider {
         private ILiteCollection<GuildConfig> _collection;
 
+        private ConcurrentDictionary<ulong, GuildConfig> _configCache = new ConcurrentDictionary<ulong, GuildConfig>();
+
         public GuildConfigProvider(ILiteCollection<GuildConfig> collection) {
             _collection = collection;
         }
-
-        private ConcurrentDictionary<ulong, GuildConfig> _configCache = new ConcurrentDictionary<ulong, GuildConfig>();
 
         public GuildConfig Get(ulong guildId) {
             return _configCache.GetOrAdd(guildId, arg => {
@@ -35,6 +35,7 @@ namespace Common.Config {
 
     public partial class GuildConfig {
         private ILocalizationProvider? _loc;
+        private GuildPrefixProvider? _prefixProvider;
         [BsonId] public ulong GuildId { get; set; }
         public string Prefix { get; set; } = "&";
         public int Volume { get; set; } = 100;
@@ -49,9 +50,11 @@ namespace Common.Config {
         public LogExportTypes LogExportType { get; set; } = LogExportTypes.Html;
 
         public ConcurrentDictionary<ChannelFunction, ulong> FunctionalChannels { get; set; } = new ConcurrentDictionary<ChannelFunction, ulong>();
-        [BsonIgnore] public event EventHandler<ChannelFunction>? FunctionalChannelsChanged;
 
         [BsonIgnore] public ILocalizationProvider Loc => _loc ??= new GuildLocalizationProvider(this);
+
+        [BsonIgnore] public GuildPrefixProvider PrefixProvider => _prefixProvider ??= new GuildPrefixProvider(this);
+        [BsonIgnore] public event EventHandler<ChannelFunction>? FunctionalChannelsChanged;
     }
 
     public enum ChannelFunction {
@@ -67,6 +70,10 @@ namespace Common.Config {
     public partial class GuildConfig {
         [BsonIgnore] private readonly Subject<GuildConfig> _saveRequest = new Subject<GuildConfig>();
         [BsonIgnore] public ISubject<GuildConfig> SaveRequest => _saveRequest;
+
+        [BsonIgnore] public ISubject<GuildConfig> LocalizationChanged { get; } = new Subject<GuildConfig>();
+
+        public static Subject<ulong> ChannelLoggingDisabled { get; } = new Subject<ulong>();
 
         public void Save() {
             _saveRequest.OnNext(this);
@@ -97,15 +104,11 @@ namespace Common.Config {
             return GuildLanguage;
         }
 
-        [BsonIgnore] public ISubject<GuildConfig> LocalizationChanged { get; } = new Subject<GuildConfig>();
-
         public GuildConfig SetLanguage(string language) {
             GuildLanguage = language;
             LocalizationChanged.OnNext(this);
             return this;
         }
-
-        public static Subject<ulong> ChannelLoggingDisabled { get; } = new Subject<ulong>();
 
         public void ToggleChannelLogging(ulong channelId) {
             if (LoggedChannels.Contains(channelId)) {
