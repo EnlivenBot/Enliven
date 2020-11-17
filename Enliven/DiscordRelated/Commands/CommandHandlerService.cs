@@ -189,7 +189,7 @@ namespace Bot.DiscordRelated.Commands {
         }
 
         public async Task<IResult> ExecuteCommand(string query, ICommandContext context, string authorId) {
-            var result = await CommandService.ExecuteAsync(context, query, null);
+            var result = await CommandService.ExecuteAsync(context, query, new ServiceProviderAdapter(_serviceProvider));
             if (result.Error != CommandError.UnknownCommand) {
                 var commandName = query.IndexOf(" ", StringComparison.Ordinal) > -1 ? query.Substring(0, query.IndexOf(" ", StringComparison.Ordinal)) : query;
                 _statisticsPartProvider.RegisterUsage(commandName, authorId);

@@ -1,23 +1,17 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Bot.Commands.Chains;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
-using Bot.Utilities.Music;
 using Common;
-using Common.Config;
 using Common.History;
 using Common.Localization.Entries;
 using Common.Music;
-using Common.Music.Controller;
 using Common.Music.Players;
-using Common.Music.Tracks;
 using Discord.Commands;
 using Lavalink4NET.Player;
 using Lavalink4NET.Rest;
-using LiteDB;
 using Tyrrrz.Extensions;
 
 // ReSharper disable ConditionIsAlwaysTrueOrFalse
@@ -50,7 +44,6 @@ namespace Bot.Commands {
         }
 
         private async Task PlayInternal(string? query, int position) {
-            // Player.EnqueueControlMessageSend(ResponseChannel);
             var queries = Common.Music.Controller.MusicController.GetMusicQueries(Context.Message, query.IsBlank(""));
             if (queries.Count == 0) {
                 Context.Message?.SafeDelete();
@@ -69,7 +62,6 @@ namespace Bot.Commands {
             catch (TrackNotFoundException) {
                 ReplyFormattedAsync(Loc.Get("Music.NotFound").Format(query!.SafeSubstring(100, "...")), true)
                    .DelayedDelete(Constants.LongTimeSpan);
-                // if (Player.Playlist.Count == 0) Player.ControlMessage.SafeDelete();
             }
             finally {
                 historyEntry.Remove();
@@ -83,7 +75,7 @@ namespace Bot.Commands {
             if (!await IsPreconditionsValid) return;
 
             Player.ExecuteShutdown(Loc.Get("Music.UserStopPlayback").Format(Context.User.Username),
-                new PlayerShutdownParameters {NeedSave = false});
+                new PlayerShutdownParameters {NeedSave = false, CanBeResumed = false});
         }
 
         [Command("jump", RunMode = RunMode.Async)]

@@ -54,12 +54,11 @@ namespace Bot.Commands {
 
         private async Task ExecutePlaylist(string id, ImportPlaylistOptions options) {
             if (!await IsPreconditionsValid) return;
-            var logMessage = await GetLogMessage();
 
             var playlist = PlaylistProvider.Get(id);
             if (playlist == null) {
-                await ReplyFormattedAsync(Loc.Get("Music.PlaylistNotFound", id.SafeSubstring(100, "...") ?? ""), 
-                    true, logMessage);
+                await ErrorMessageController.AddEntry(Loc.Get("Music.PlaylistNotFound", id.SafeSubstring(100, "...") ?? ""))
+                                            .UpdateTimeout(Constants.StandardTimeSpan).Update();
                 return;
             }
 

@@ -90,7 +90,7 @@
       "Waiting": "Waiting...",
       "QueueEnd" : "End of queue reached",
       "OnlyOneNode": "Unfortunately, only the node you are using is available to the bot right now",
-      "ResumeViaPlaylists": "\nYou can try to replay through `{0}loadplaylist {1}`",
+      "ResumeViaPlaylists": "You can try to replay through `{0}loadplaylist {1}`",
       "Empty": "Empty",
       "Warning" : "**Warning**",
       "WarningEmojiRemoval" : "❗The bot can not remove reactions for users as intended. To do this, he needs permission `MANAGE_MESSAGES`",
