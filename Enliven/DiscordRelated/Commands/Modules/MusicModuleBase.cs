@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Bot.DiscordRelated.Music;
 using Bot.Utilities;
 using Bot.Utilities.Music;
 using Common;
@@ -25,6 +26,7 @@ namespace Bot.DiscordRelated.Commands.Modules {
         public static Dictionary<ulong, NonSpamMessageController> ErrorsMessagesControllers = new Dictionary<ulong, NonSpamMessageController>();
         public NonSpamMessageController ErrorMessageController = null!;
         public IMusicController MusicController { get; set; } = null!;
+        public EmbedPlayerDisplayProvider EmbedPlayerDisplayProvider { get; set; } = null!;
 
         protected override void BeforeExecute(CommandInfo command) {
             base.BeforeExecute(command);
@@ -87,6 +89,8 @@ namespace Bot.DiscordRelated.Commands.Modules {
                     }
 
                     Player = await MusicController.ProvidePlayer(Context.Guild.Id, user.VoiceChannel!.Id);
+                    EmbedPlayerDisplayProvider.Provide((ITextChannel) musicChannel, Player);
+                    
                     return true;
                 }
 
@@ -126,14 +130,9 @@ namespace Bot.DiscordRelated.Commands.Modules {
         public bool GetChannel(out IMessageChannel channel) {
             channel = Context.Channel;
             if (!GuildConfig.GetChannel(ChannelFunction.Music, out var musicChannelId) || musicChannelId == channel.Id) return true;
-            channel = (IMessageChannel) Context.Client.GetChannelAsync(musicChannelId).Result;
+            channel = Context.Guild.GetTextChannelAsync(musicChannelId).Result;
             return false;
         }
-
-        public Task<IUserMessage> GetLogMessage() {
-            return GetChannel(out var channel) ? ReplyAsync(Loc.Get("Music.Loading")) : channel.SendMessageAsync(Loc.Get("Music.Loading"));
-        }
-
         protected override void AfterExecute(CommandInfo command) {
             // By a lucky coincidence of circumstances, it is only necessary to clear the message-command when it does not require the player’s summon
             // That is, it is a command for ordering music

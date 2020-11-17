@@ -78,15 +78,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="DiscordRelated\Music\Tracks" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\Common\Common.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="DiscordRelated\Music" />
   </ItemGroup>
 
 </Project>

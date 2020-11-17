@@ -9,6 +9,7 @@ using Autofac.Extras.NLog;
 using Bot.DiscordRelated;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Logging;
+using Bot.DiscordRelated.Music;
 using Bot.Patches;
 using Bot.Utilities.Music;
 using Common;
@@ -130,6 +131,7 @@ namespace Bot {
             // Providers
             builder.RegisterType<SpotifyAssociationProvider>().As<ISpotifyAssociationProvider>().SingleInstance();
             builder.RegisterType<MessageHistoryProvider>().As<IMessageHistoryProvider>().SingleInstance();
+            builder.RegisterType<EmbedPlayerDisplayProvider>().SingleInstance();
 
             // Services
             builder.RegisterType<CustomCommandService>().As<IService>().AsSelf().SingleInstance();
