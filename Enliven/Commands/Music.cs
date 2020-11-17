@@ -391,33 +391,8 @@ namespace Bot.Commands {
                                       .UpdateTimeout(Constants.StandardTimeSpan).Update();
                 return;
             }
-
-            var bands = new List<EqualizerBand>();
-            switch (mode) {
-                case BassBoostMode.Off:
-                    bands.Add(new EqualizerBand(0, 0f));
-                    bands.Add(new EqualizerBand(1, 0f));
-                    break;
-                case BassBoostMode.Low:
-                    bands.Add(new EqualizerBand(0, 0.25f));
-                    bands.Add(new EqualizerBand(1, 0.15f));
-                    break;
-                case BassBoostMode.Medium:
-                    bands.Add(new EqualizerBand(0, 0.5f));
-                    bands.Add(new EqualizerBand(1, 0.25f));
-                    break;
-                case BassBoostMode.High:
-                    bands.Add(new EqualizerBand(0, 0.75f));
-                    bands.Add(new EqualizerBand(1, 0.5f));
-                    break;
-                case BassBoostMode.Extreme:
-                    bands.Add(new EqualizerBand(0, 1f));
-                    bands.Add(new EqualizerBand(1, 0.75f));
-                    break;
-            }
-
-            await Player.UpdateEqualizerAsync(bands, false);
-            Player.SetBassBoostMode(mode);
+            
+            Player.SetBassBoost(mode);
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.BassBoostUpdated").Format(Context.User.Username, mode));
         }
 

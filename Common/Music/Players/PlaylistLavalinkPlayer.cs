@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reactive.Subjects;
 using System.Threading;
 using System.Threading.Tasks;
 using Common.Config;
@@ -22,14 +23,14 @@ namespace Common.Music.Players {
         public PlaylistLavalinkPlayer(IMusicController musicController, IGuildConfigProvider guildConfigProvider, IPlaylistProvider playlistProvider) : base(
             musicController, guildConfigProvider) {
             _playlistProvider = playlistProvider;
-            Playlist.Update += (sender, args) => { UpdateCurrentTrackIndex(); };
+            Playlist.Changed.Subscribe(playlist => UpdateCurrentTrackIndex());
         }
 
         public LoopingState LoopingState { get; set; } = LoopingState.Off;
 
         public LavalinkPlaylist Playlist { get; } = new LavalinkPlaylist();
 
-        public event EventHandler<int>? CurrentTrackIndexChange;
+        public ISubject<int> CurrentTrackIndexChanged { get; set; } = new Subject<int>();
 
         public int CurrentTrackIndex {
             get => _currentTrackIndex;
@@ -37,7 +38,7 @@ namespace Common.Music.Players {
                 var notify = _currentTrackIndex != value;
                 _currentTrackIndex = value;
                 if (notify)
-                    CurrentTrackIndexChange?.Invoke(null, value);
+                    CurrentTrackIndexChanged.OnNext(value);
             }
         }
 
@@ -142,6 +143,8 @@ namespace Common.Music.Players {
 
         public virtual async Task ImportPlaylist(ExportPlaylist playlist, ImportPlaylistOptions options, string requester) {
             if (Playlist.Count + playlist.Tracks.Count > 10000) {
+                WriteToQueueHistory(new HistoryEntry(new EntryLocalized("MusicQueues.PlaylistLoadingLimit", requester, playlist.Tracks.Count,
+                    Constants.MaxTracksCount)));
                 return;
             }
 
@@ -150,6 +153,7 @@ namespace Common.Music.Players {
             if (options == ImportPlaylistOptions.Replace) {
                 try {
                     await StopAsync();
+                    WriteToQueueHistory(new HistoryEntry(new EntryLocalized("Music.ImportPlayerStop")));
                 }
                 catch (Exception) {
                     // ignored
@@ -157,10 +161,13 @@ namespace Common.Music.Players {
 
                 if (!Playlist.IsEmpty) {
                     Playlist.Clear();
+                    WriteToQueueHistory(new HistoryEntry(new EntryLocalized("Music.ClearPlaylist", requester)));
                 }
             }
 
             Playlist.AddRange(tracks);
+            WriteToQueueHistory(new HistoryEntry(new EntryLocalized("Music.AddTracks", requester, tracks.Count)));
+
             if (options != ImportPlaylistOptions.JustAdd) {
                 var track = playlist.TrackIndex == -1 ? tracks.First() : tracks[playlist.TrackIndex.Normalize(0, playlist.Tracks.Count - 1)];
                 var position = playlist.TrackPosition;
@@ -169,6 +176,8 @@ namespace Common.Music.Players {
                 }
 
                 await PlayAsync(track, false, position);
+                WriteToQueueHistory(new HistoryEntry(new EntryLocalized("MusicQueues.Jumped", requester, CurrentTrackIndex + 1,
+                    MusicController.EscapeTrack(CurrentTrack!.Title).SafeSubstring(100, "...")!)));
             }
             else if (State == PlayerState.NotPlaying) {
                 await PlayAsync(Playlist[0], false);
@@ -224,6 +233,16 @@ namespace Common.Music.Players {
                     if (State == PlayerState.NotPlaying) {
                         await PlayAsync(localTracks.First(), false, null, null, true);
                     }
+                }
+
+                if (tracks.Count == 1) {
+                    var track = tracks.First();
+                    WriteToQueueHistory(new HistoryEntry(new EntryLocalized("MusicQueues.Enqueued", track.GetRequester(),
+                        MusicController.EscapeTrack(track.Title))));
+                }
+                else if (tracks.Count > 1) {
+                    var author = tracks.First().GetRequester();
+                    WriteToQueueHistory(new HistoryEntry(new EntryLocalized("MusicQueues.EnqueuedMany", author, tracks.Count)));
                 }
             }
         }

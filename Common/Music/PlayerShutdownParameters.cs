@@ -7,8 +7,8 @@ namespace Common.Music {
         #region Parameters
 
         public bool NeedSave { get; set; } = true;
-        public bool LeaveMessageUnchanged { get; set; }
-        public bool AddResumeToMessage { get; set; } = true;
+        public bool ShutdownDisplays { get; set; } = true;
+        public bool CanBeResumed { get; set; } = true;
 
         #endregion
 

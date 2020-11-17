@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Reactive.Subjects;
 using System.Threading.Tasks;
 using Common.Config;
@@ -7,6 +9,7 @@ using Common.History;
 using Common.Localization.Entries;
 using Common.Music.Controller;
 using Lavalink4NET;
+using Lavalink4NET.Events;
 using Lavalink4NET.Player;
 using NLog;
 
@@ -17,10 +20,16 @@ namespace Common.Music.Players {
         public readonly HistoryCollection QueueHistory = new HistoryCollection(512, 1000, false);
 
         public readonly Subject<IEntry> Shutdown = new Subject<IEntry>();
+        public readonly Subject<int> VolumeChanged = new Subject<int>();
+        public readonly Subject<BassBoostMode> BassboostChanged = new Subject<BassBoostMode>();
+        public readonly Subject<LavalinkNode?> LavalinkNodeChanged = new Subject<LavalinkNode?>();
+        public readonly Subject<PlayerState> StateChanged = new Subject<PlayerState>();
         private GuildConfig? _guildConfig;
         private ulong _lastVoiceChannelId;
         private protected IMusicController _musicController;
         private IGuildConfigProvider _guildConfigProvider;
+        public IReadOnlyCollection<IPlayerDisplay> Displays => _displays;
+        private readonly List<IPlayerDisplay> _displays = new List<IPlayerDisplay>();
 
         protected AdvancedLavalinkPlayer(IMusicController musicController, IGuildConfigProvider guildConfigProvider) {
             _guildConfigProvider = guildConfigProvider;
@@ -28,7 +37,7 @@ namespace Common.Music.Players {
         }
 
         protected GuildConfig GuildConfig => _guildConfig ??= _guildConfigProvider.Get(GuildId);
-        protected BassBoostMode BassBoostMode { get; private set; } = BassBoostMode.Off;
+        public BassBoostMode BassBoostMode { get; private set; } = BassBoostMode.Off;
         public bool IsShutdowned { get; private set; }
 
         public override async Task OnConnectedAsync(VoiceServer voiceServer, VoiceState voiceState) {
@@ -38,9 +47,13 @@ namespace Common.Music.Players {
 
         public virtual async Task SetVolumeAsync(int volume = 100, bool force = false) {
             volume = volume.Normalize(0, 200);
-            await base.SetVolumeAsync((float) volume / 200, force);
-            GuildConfig.Volume = volume;
-            GuildConfig.Save();
+            // ReSharper disable once CompareOfFloatsByEqualityOperator
+            if (Volume != (float) volume / 200 || force) {
+                await base.SetVolumeAsync((float) volume / 200, force);
+                VolumeChanged.OnNext(volume);
+                GuildConfig.Volume = volume;
+                GuildConfig.Save();
+            }
         }
 
         [Obsolete]
@@ -48,8 +61,36 @@ namespace Common.Music.Players {
             await SetVolumeAsync((int) (volume * 100), force);
         }
 
-        public virtual void SetBassBoostMode(BassBoostMode mode) {
+        public virtual void SetBassBoost(BassBoostMode mode) {
             BassBoostMode = mode;
+            var bands = new List<EqualizerBand>();
+            switch (mode) {
+                case BassBoostMode.Off:
+                    bands.Add(new EqualizerBand(0, 0f));
+                    bands.Add(new EqualizerBand(1, 0f));
+                    break;
+                case BassBoostMode.Low:
+                    bands.Add(new EqualizerBand(0, 0.25f));
+                    bands.Add(new EqualizerBand(1, 0.15f));
+                    break;
+                case BassBoostMode.Medium:
+                    bands.Add(new EqualizerBand(0, 0.5f));
+                    bands.Add(new EqualizerBand(1, 0.25f));
+                    break;
+                case BassBoostMode.High:
+                    bands.Add(new EqualizerBand(0, 0.75f));
+                    bands.Add(new EqualizerBand(1, 0.5f));
+                    break;
+                case BassBoostMode.Extreme:
+                    bands.Add(new EqualizerBand(0, 1f));
+                    bands.Add(new EqualizerBand(1, 0.75f));
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(mode), mode, null);
+            }
+
+            UpdateEqualizerAsync(bands, false);
+            BassboostChanged.OnNext(mode);
         }
 
         public virtual Task ExecuteShutdown(IEntry reason, PlayerShutdownParameters parameters) {
@@ -57,6 +98,16 @@ namespace Common.Music.Players {
             IsShutdowned = true;
             Shutdown.OnNext(reason);
             Shutdown.Dispose();
+
+            if (parameters.ShutdownDisplays) {
+                foreach (var playerDisplay in _displays.ToList()) {
+                    var body = parameters.CanBeResumed && parameters.NeedSave
+                        ? new EntryString("{0}\n{1}", reason, new EntryLocalized("Music.ResumeViaPlaylists", GuildConfig.Prefix, parameters.StoredPlaylist!.Id))
+                        : reason;
+                    playerDisplay.Shutdown(new EntryLocalized("Music.PlaybackStopped"), body);
+                }
+            }
+
             base.Dispose();
             return Task.CompletedTask;
         }
@@ -74,8 +125,13 @@ namespace Common.Music.Players {
             return base.ConnectAsync(voiceChannelId, selfDeaf, selfMute);
         }
 
-        public virtual void WriteToQueueHistory(string entry) { }
-        public virtual void WriteToQueueHistory(HistoryEntry entry) { }
+        public virtual void WriteToQueueHistory(string entry) {
+            WriteToQueueHistory(new HistoryEntry(new EntryString(entry)));
+        }
+
+        public virtual void WriteToQueueHistory(HistoryEntry entry) {
+            QueueHistory.Add(entry);
+        }
 
         public virtual void GetPlayerShutdownParameters(PlayerShutdownParameters parameters) {
             parameters.LastVoiceChannelId = _lastVoiceChannelId;
@@ -89,10 +145,9 @@ namespace Common.Music.Players {
         /// </summary>
         [Obsolete]
         public override async void Dispose() {
-            logger.Error("Player disposed. Shutdowned: {Shutdowned} Stacktrace: \n{stacktrace}", IsShutdowned, new StackTrace().ToString());
             if (!IsShutdowned) {
                 try {
-                    var playerShutdownParameters = new PlayerShutdownParameters {AddResumeToMessage = false};
+                    var playerShutdownParameters = new PlayerShutdownParameters {CanBeResumed = false};
                     GetPlayerShutdownParameters(playerShutdownParameters);
                     await ExecuteShutdown(new EntryLocalized("Music.TryReconnectAfterDispose", GuildConfig.Prefix, playerShutdownParameters.StoredPlaylist!.Id),
                         playerShutdownParameters);
@@ -119,13 +174,46 @@ namespace Common.Music.Players {
                     logger.Error(e, "Error while resuming player");
                 }
             }
-            else {
-                base.Dispose();
-            }
         }
 
         public virtual Task NodeChanged(LavalinkNode? node = null) {
+            LavalinkNodeChanged.OnNext(node);
             return Task.CompletedTask;
+        }
+
+        public override async Task OnTrackEndAsync(TrackEndEventArgs eventArgs) {
+            await base.OnTrackEndAsync(eventArgs);
+            StateChanged.OnNext(State);
+        }
+
+        public override async Task OnTrackExceptionAsync(TrackExceptionEventArgs eventArgs) {
+            await base.OnTrackExceptionAsync(eventArgs);
+            StateChanged.OnNext(State);
+        }
+
+        public override async Task OnTrackStartedAsync(TrackStartedEventArgs eventArgs) {
+            await base.OnTrackStartedAsync(eventArgs);
+            StateChanged.OnNext(State);
+        }
+
+        public override async Task OnTrackStuckAsync(TrackStuckEventArgs eventArgs) {
+            await base.OnTrackStuckAsync(eventArgs);
+            StateChanged.OnNext(State);
+        }
+
+        public override async Task PauseAsync() {
+            await base.PauseAsync();
+            StateChanged.OnNext(State);
+        }
+
+        public override async Task ResumeAsync() {
+            await base.ResumeAsync();
+            StateChanged.OnNext(State);
+        }
+
+        public void AttachDisplay(IPlayerDisplay playerDisplay) {
+            _displays.Add(playerDisplay);
+            playerDisplay.Disposed.Subscribe(display => _displays.Remove(display));
         }
     }
 }
