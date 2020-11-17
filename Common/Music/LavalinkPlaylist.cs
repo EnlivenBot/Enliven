@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reactive.Subjects;
 using Lavalink4NET.Player;
 
 namespace Common.Music {
@@ -113,8 +114,6 @@ namespace Common.Music {
             }
         }
 
-        public event EventHandler? Update;
-
         public void AddRange(IEnumerable<LavalinkTrack> tracks) {
             if (tracks == null) throw new ArgumentNullException(nameof(tracks));
             lock (_syncRoot) {
@@ -218,9 +217,10 @@ namespace Common.Music {
             }
         }
 
+        public ISubject<LavalinkPlaylist> Changed = new Subject<LavalinkPlaylist>();
         private void OnUpdate() {
             _totalPlaylistLength = null;
-            Update?.Invoke(this, EventArgs.Empty);
+            Changed.OnNext(this);
         }
     }
 }
