@@ -14,8 +14,16 @@
 > Powerful music and logging bot for Discord  
 
 **Fully free** [Discord](https://discord.com/) bot with Embed music playback, emoji control, various music sources (including livestreams) and more.  
-The best opportunities for logging messages.  
-</td></tr></table>
+The best opportunities for logging messages.
+</td></tr>
+<tr><td align="center" width="9999">
+
+#### Join our support server:
+
+[![Discord support server](https://discordapp.com/api/guilds/706098979938500708/widget.png?style=banner3)](https://discord.gg/zfBffbBbCp)
+
+</td></tr>
+</table>
 
 ## Features
  * Music player
@@ -29,7 +37,6 @@ The best opportunities for logging messages.
    * Various music sources
      * Youtube, Twitch, SoundCloud and all [supported by youtube-dl sites](https://ytdl-org.github.io/youtube-dl/supportedsites.html)
      * Spotify
-     * Yandex Music
      * Live streams
    * Bass boost support
    * Custom playlists
@@ -52,7 +59,7 @@ The best opportunities for logging messages.
 ## Getting started
 
 1. You need to add the bot to your server using [this link](https://discordapp.com/oauth2/authorize?client_id=606760964183949314&scope=bot&permissions=1110764608)
-2. To find out all available commands use `&help`.  
+2. To find out all available commands use `&help`
 
 ### Initial Configuration
 
@@ -70,6 +77,7 @@ branch. Pull requests are warmly welcome.
 - [Project homepage](https://gitlab.com/skprochlab/nJMaLBot)
 - [Repository](https://gitlab.com/skprochlab/nJMaLBot)
 - [Issue tracker](https://gitlab.com/skprochlab/nJMaLBot/-/issues)
+- [Discord support server](https://discord.gg/zfBffbBbCp)  
 - Enliven on discord bots lists:
   - [top.gg](https://top.gg/bot/606760964183949314)
   - [discordbotlist.com](https://discordbotlist.com/bots/enliven)
@@ -78,6 +86,6 @@ branch. Pull requests are warmly welcome.
   
 ## Help us
 You can help by making a contributing or by voting on the following sites:
-- [Here](https://top.gg/bot/606760964183949314) (every 12 hours)
-- [Here](https://discordbotlist.com/bots/enliven) (every 24 hours)
-- [Here](https://bots.ondiscord.xyz/bots/606760964183949314) (write a review)
+- [top.gg](https://top.gg/bot/606760964183949314) (vote every 12 hours, write a review)
+- [discordbotlist.com](https://discordbotlist.com/bots/enliven) (vote every 12 hours)
+- [bots.ondiscord.xyz](https://bots.ondiscord.xyz/bots/606760964183949314) (write a review)
