@@ -7,8 +7,8 @@ namespace Common.Localization.Providers {
         private IDisposable? _languageChangedSubscriber;
 
         public LocalizationContainer(ILocalizationProvider provider) {
-            Provider = provider;
             LanguageChanged = new Subject<ILocalizationProvider>();
+            Provider = provider;
         }
 
         public ILocalizationProvider Provider {

@@ -68,6 +68,7 @@ namespace Bot.DiscordRelated.Logging {
                 },
                 Attachments = arg.Attachments.Select(attachment => attachment.Url).ToList()
             };
+            history.SaveRequest.Subscribe(messageHistory => _liteCollection.Upsert(messageHistory));
             return history;
         }
 
