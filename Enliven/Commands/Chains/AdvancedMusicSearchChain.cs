@@ -4,13 +4,14 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Bot.Config;
-using Bot.Config.Localization.Providers;
-using Bot.DiscordRelated.Music;
-using Bot.DiscordRelated.Music.Tracks;
-using Bot.Music;
-using Bot.Utilities;
 using Bot.Utilities.Collector;
+using Bot.Utilities.Music;
+using Common;
+using Common.Config;
+using Common.Localization.Providers;
+using Common.Music.Controller;
+using Common.Music.Players;
+using Common.Music.Tracks;
 using Discord;
 using Lavalink4NET.Player;
 using Lavalink4NET.Rest;
@@ -23,17 +24,20 @@ namespace Bot.Commands.Chains {
         private IUser _requester = null!;
         private SearchMode _searchMode;
         private IMessageChannel _targetChannel = null!;
-        private EmbedPlaybackPlayer _player = null!;
+        private FinalLavalinkPlayer _player = null!;
         private CollectorsGroup? _collectorGroup;
+        private IMusicController _controller;
 
         private AdvancedMusicSearchChain(string? uid, ILocalizationProvider loc) : base(uid, loc) { }
 
-        public static AdvancedMusicSearchChain CreateInstance(GuildConfig guildConfig, EmbedPlaybackPlayer player, IMessageChannel targetChannel,
+        public static AdvancedMusicSearchChain CreateInstance(GuildConfig guildConfig, FinalLavalinkPlayer player, IMessageChannel targetChannel,
                                                               IUser requester, SearchMode searchMode,
-                                                              string query) {
+                                                              string query, IMusicController controller) {
+            
             var advancedMusicSearchChain = new AdvancedMusicSearchChain(
                 $"{nameof(AdvancedMusicSearchChain)}_{guildConfig.GuildId}_{requester.Id}", guildConfig.Loc) {
-                _requester = requester, _query = query, _searchMode = searchMode, _targetChannel = targetChannel, _player = player
+                _requester = requester, _query = query, _searchMode = searchMode, _targetChannel = targetChannel, 
+                _player = player, _controller = controller
             };
             advancedMusicSearchChain.MainBuilder
                                     .WithColor(Color.Gold)
@@ -43,10 +47,10 @@ namespace Bot.Commands.Chains {
         }
 
         public async Task Start() {
-            var tracks = (await MusicUtils.Cluster.GetTracksAsync(_query, _searchMode)).ToList();
+            var tracks = (await _controller.Cluster.GetTracksAsync(_query, _searchMode)).ToList();
             // Repeat search, if fail
             if (!tracks.Any()) {
-                tracks = (await MusicUtils.Cluster.GetTracksAsync(_query, _searchMode)).ToList();
+                tracks = (await _controller.Cluster.GetTracksAsync(_query, _searchMode)).ToList();
             }
 
             MainBuilder.Description = Loc.Get("Music.SearchResultsDescription", _searchMode, _query.SafeSubstring(100, "...") ?? "");
@@ -135,14 +139,14 @@ namespace Bot.Commands.Chains {
                 case 0:
                     return false;
                 case 1:
-                    _player.WriteToQueueHistory(Loc.Get("MusicQueues.Enqueued", _requester.Username, MusicUtils.EscapeTrack(authoredLavalinkTracks[0].Title)));
+                    _player.WriteToQueueHistory(Loc.Get("MusicQueues.Enqueued", _requester.Username, MusicController.EscapeTrack(authoredLavalinkTracks[0].Title)));
                     break;
                 default:
                     _player.WriteToQueueHistory(Loc.Get("Music.AddTracks", _requester.Username, authoredLavalinkTracks.Count));
                     break;
             }
 
-            await _player.EnqueueControlMessageSend(_targetChannel);
+            // await _player.EnqueueControlMessageSend(_targetChannel);
             await _player.PlayAsync(authoredLavalinkTracks.First(), true);
             _player.Playlist.AddRange(authoredLavalinkTracks.Skip(1));
 

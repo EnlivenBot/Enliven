@@ -3,13 +3,13 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Bot.Config;
 using Bot.Config.Emoji;
-using Bot.Config.Localization.Entries;
-using Bot.Config.Localization.Providers;
 using Bot.DiscordRelated;
-using Bot.Utilities;
 using Bot.Utilities.Collector;
+using Common;
+using Common.Config;
+using Common.Localization.Entries;
+using Common.Localization.Providers;
 using Discord;
 
 namespace Bot.Commands.Chains {
@@ -112,16 +112,17 @@ namespace Bot.Commands.Chains {
                 }
             }
 
-            var historyChannelExists = _guildConfig.GetChannel(ChannelFunction.Log, out var logChannel);
+            var historyChannelExists = _guildConfig.GetChannel(ChannelFunction.Log, out var logChannelId);
             if (historyChannelExists && _guildConfig.IsLoggingEnabled) {
                 descriptionBuilder.AppendLine(_guildConfig.LogExportType == LogExportTypes.Image
                     ? Loc.Get("Logging.OutputToImage")
                     : Loc.Get("Logging.OutputToHtml"));
             }
 
-            descriptionBuilder.AppendLine(Loc.Get("Logging.LogChannel").Format(historyChannelExists
-                ? ((ITextChannel) logChannel)!.Mention
-                : Loc.Get("Logging.LogChannelMissing").Format(_guildConfig.Prefix)));
+            descriptionBuilder.AppendLine(Loc.Get("Logging.LogChannel").Format(
+                historyChannelExists
+                    ? $"<#{logChannelId}>"
+                    : Loc.Get("Logging.LogChannelMissing").Format(_guildConfig.Prefix)));
             MainBuilder.Description = descriptionBuilder.ToString();
 
             MainBuilder.GetOrAddField("info", s => new PriorityEmbedFieldBuilder().WithPriority(100))

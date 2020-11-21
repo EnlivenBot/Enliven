@@ -2,13 +2,14 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Bot.Commands.Chains;
-using Bot.Config;
-using Bot.Config.Localization;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
 using Bot.DiscordRelated.Logging;
 using Bot.Utilities;
 using Bot.Utilities.Collector;
+using Common;
+using Common.Config;
+using Common.Localization;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -17,19 +18,22 @@ namespace Bot.Commands {
     [Grouping("admin")]
     [RequireUserPermission(GuildPermission.Administrator)]
     public class AdminCommands : AdvancedModuleBase {
+        public MessageHistoryService MessageHistoryService { get; set; } = null!;
+        public GlobalBehaviorsService GlobalBehaviorsService { get; set; } = null!;
+        public CommandHandlerService CommandHandlerService { get; set; } = null!;
+
         [Hidden]
         [Command("printwelcome")]
         public async Task PrintWelcome() {
             Context.Message.SafeDelete();
-            (await GlobalBehaviors.PrintWelcomeMessage((SocketGuild) Context.Guild, Context.Channel)).DelayedDelete(Constants.LongTimeSpan);
+            (await GlobalBehaviorsService.PrintWelcomeMessage((SocketGuild) Context.Guild, Context.Channel)).DelayedDelete(Constants.LongTimeSpan);
         }
         
         [Command("setprefix")]
         [Summary("setprefix0s")]
         public async Task SetPrefix([Summary("setrefix0_0s")] string prefix) {
-            var guildConfig = GuildConfig.Get(Context.Guild.Id);
-            guildConfig.Prefix = prefix;
-            guildConfig.Save();
+            GuildConfig.Prefix = prefix;
+            GuildConfig.Save();
             await ReplyFormattedAsync(Loc.Get("Commands.Success"), Loc.Get("Commands.SetPrefixResponse").Format(prefix), Constants.LongTimeSpan);
             Context.Message.SafeDelete();
         }
@@ -52,7 +56,7 @@ namespace Bot.Commands {
                     var packName = pair.Key;
                     return CollectorsUtils.CollectReaction(message, reaction => reaction.Emote.Equals(pair.Value.LocalizationFlagEmoji), async args => {
                         await args.RemoveReason();
-                        var t = await Program.Handler.ExecuteCommand($"setlanguage {packName}", new ReactionCommandContext(Program.Client, args.Reaction),
+                        var t = await CommandHandlerService.ExecuteCommand($"setlanguage {packName}", new ReactionCommandContext(Program.Client, args.Reaction),
                             args.Reaction.UserId.ToString());
                         if (t.IsSuccess) {
                             message.SafeDelete();
@@ -79,7 +83,7 @@ namespace Bot.Commands {
             }
 
             if (LocalizationManager.Languages.ContainsKey(language)) {
-                GuildConfig.Get(Context.Guild.Id).SetLanguage(language).Save();
+                GuildConfig.SetLanguage(language).Save();
                 Context.Message.SafeDelete();
                 await ReplyFormattedAsync(Loc.Get("Commands.Success"), Loc.Get("Localization.Success").Format(language), TimeSpan.FromMinutes(1));
             }
@@ -93,7 +97,7 @@ namespace Bot.Commands {
         [Summary("setchannel0s")]
         public async Task SetChannel([Summary("setchannel0_0s")] ChannelFunction func,
                                      [Summary("setchannel0_1s")] IChannel channel) {
-            GuildConfig.Get(Context.Guild.Id).SetChannel(channel.Id.ToString(), func).Save();
+            GuildConfig.SetChannel(channel.Id.ToString(), func).Save();
             await ReplyFormattedAsync(Loc.Get("Commands.Success"), Loc.Get("Commands.SetChannelResponse").Format(channel.Id, func.ToString()));
             Context.Message.SafeDelete();
         }
@@ -108,7 +112,7 @@ namespace Bot.Commands {
         [Summary("clearhistories0s")]
         public async Task ClearHistories() {
             await ReplyAsync("Start clearing message histories");
-            await MessageHistoryManager.ClearGuildLogs((SocketGuild) Context.Guild);
+            await MessageHistoryService.ClearGuildLogs((SocketGuild) Context.Guild);
         }
 
         [Command("logging")]

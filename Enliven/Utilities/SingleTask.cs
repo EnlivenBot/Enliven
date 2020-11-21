@@ -9,7 +9,7 @@ namespace Bot.Utilities {
         public SingleTask(Func<Task> action) : base(action) { }
     }
 
-    public class SingleTask<T> {
+    public class SingleTask<T> : IDisposable {
         // ReSharper disable once StaticMemberInGenericType
         private static readonly object LockObject = new object();
 
@@ -35,13 +35,15 @@ namespace Bot.Utilities {
 
         public TimeSpan? BetweenExecutionsDelay { get; set; }
 
-        public bool IsDelayResetByExecute { get; set; } = false;
+        public bool IsDelayResetByExecute { get; set; }
 
         public bool IsExecuting { get; private set; }
 
-        public bool CanBeDirty { get; set; } = false;
+        public bool CanBeDirty { get; set; }
 
         public Task<T> Execute(bool makesDirty = true, TimeSpan? delayOverride = null) {
+            if (IsDisposed) throw new ObjectDisposedException(nameof(SingleTask));
+            
             _isDirtyNow = false;
             return InternalExecute(makesDirty, delayOverride);
         }
@@ -57,12 +59,12 @@ namespace Bot.Utilities {
                 }
 
                 _taskCompletionSource = new TaskCompletionSource<T>();
-                _ = Task.Run(async () => {
+                new Task(async () => {
                     IsExecuting = true;
                     await _betweenExecutionsDelayTask;
 
                     T result;
-                    if (!_isDirtyNow && NeedDirtyExecuteCriterion != null && await NeedDirtyExecuteCriterion.JudgeAsync()) {
+                    if (_isDirtyNow && NeedDirtyExecuteCriterion != null && await NeedDirtyExecuteCriterion.JudgeAsync() || IsDisposed) {
                         result = _lastResult;
                     }
                     else {
@@ -82,7 +84,7 @@ namespace Bot.Utilities {
                         UpdateDelay(true);
                         localTaskCompletionSource.SetResult(result);
                     }
-                });
+                }, TaskCreationOptions.LongRunning).Start();
                 return _taskCompletionSource.Task;
             }
         }
@@ -103,6 +105,16 @@ namespace Bot.Utilities {
             await first;
             _isDirtyNow = true;
             return await Execute(false);
+        }
+
+        public bool IsDisposed { get; private set; }
+        public void Dispose() {
+            try {
+                _betweenExecutionsDelayTask.Dispose();
+            }
+            finally {
+                IsDisposed = true;
+            }
         }
     }
 }

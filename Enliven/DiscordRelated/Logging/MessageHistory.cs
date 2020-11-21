@@ -1,15 +1,17 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Reactive.Subjects;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Bot.Config;
-using Bot.Config.Localization.Providers;
 using Bot.DiscordRelated.Logging.Rendering;
-using Bot.Utilities;
+using Common;
+using Common.Config;
+using Common.Localization.Providers;
 using DiffMatchPatch;
 using Discord;
 using Discord.WebSocket;
@@ -21,21 +23,76 @@ using Embed = DiscordChatExporter.Domain.Discord.Models.Embed;
 using MessageType = DiscordChatExporter.Domain.Discord.Models.MessageType;
 
 namespace Bot.DiscordRelated.Logging {
-    public class MessageHistory {
-        public static MessageHistory FromMessage(IMessage arg) {
+    public interface IMessageHistoryProvider {
+        MessageHistory Get(ulong channelId, ulong messageId, ulong authorId = default);
+        MessageHistory Get(IMessage message);
+        MessageHistory FromMessage(IMessage arg);
+        void Delete(MessageHistory messageHistory);
+        void Delete(ulong channelId, ulong messageId);
+        void Delete(string id);
+        int DeleteMany(Func<MessageHistory, bool> func);
+    }
+
+    public class MessageHistoryProvider : IMessageHistoryProvider {
+        #pragma warning disable 618
+        private ILiteCollection<MessageHistory> _liteCollection;
+
+        public MessageHistoryProvider(ILiteCollection<MessageHistory> liteCollection) {
+            _liteCollection = liteCollection;
+        }
+
+        private ConcurrentDictionary<string, MessageHistory> _cache = new ConcurrentDictionary<string, MessageHistory>();
+
+        public MessageHistory Get(ulong channelId, ulong messageId, ulong authorId = default) {
+            string id = $"{channelId}:{messageId}";
+            return _cache.GetOrAdd(id, s => {
+                var history = _liteCollection.FindById(id) ?? new MessageHistory {AuthorId = authorId, Id = id};
+                history.SaveRequest.Subscribe(messageHistory => _liteCollection.Upsert(messageHistory));
+                return history;
+            });
+        }
+
+        public MessageHistory Get(IMessage message) {
+            return Get(message.Channel.Id, message.Id, message.Author.Id);
+        }
+
+        public MessageHistory FromMessage(IMessage arg) {
             var history = new MessageHistory {
                 AuthorId = arg.Author.Id,
                 Id = $"{arg.Channel.Id}:{arg.Id}",
-                Edits = new List<MessageSnapshot> {
-                    new MessageSnapshot {
+                Edits = new List<MessageHistory.MessageSnapshot> {
+                    new MessageHistory.MessageSnapshot {
                         EditTimestamp = arg.CreatedAt,
-                        Value = DiffMatchPatch.DiffMatchPatch.patch_toText(MessageHistoryManager.DiffMatchPatch.patch_make("", arg.Content))
+                        Value = DiffMatchPatch.DiffMatchPatch.patch_toText(MessageHistoryService.DiffMatchPatch.patch_make("", arg.Content))
                     }
                 },
                 Attachments = arg.Attachments.Select(attachment => attachment.Url).ToList()
             };
+            history.SaveRequest.Subscribe(messageHistory => _liteCollection.Upsert(messageHistory));
             return history;
         }
+
+        public void Delete(MessageHistory messageHistory) {
+            Delete(messageHistory.Id);
+        }
+
+        public void Delete(ulong channelId, ulong messageId) {
+            Delete($"{channelId}:{messageId}");
+        }
+
+        public void Delete(string id) {
+            _liteCollection.Delete(id);
+        }
+
+        public int DeleteMany(Func<MessageHistory, bool> func) {
+            return _liteCollection.DeleteMany(history => func(history));
+        }
+        #pragma warning restore 618
+    }
+
+    public class MessageHistory {
+        [Obsolete("Use IMessageHistoryProvider")]
+        public MessageHistory() { }
 
         public class MessageSnapshot {
             public DateTimeOffset EditTimestamp { get; set; }
@@ -46,7 +103,7 @@ namespace Bot.DiscordRelated.Logging {
 
         [BsonField("U")] public bool IsHistoryUnavailable { get; set; }
 
-        [BsonId] public string Id { get; private set; } = null!;
+        [BsonId] public string Id { get; internal set; } = null!;
 
         [BsonField("A")] public ulong AuthorId { get; set; }
 
@@ -62,18 +119,10 @@ namespace Bot.DiscordRelated.Logging {
 
         [BsonIgnore] private static Regex AttachmentRegex = new Regex(@"(\d+)\/(\d+)\/(.+?)$");
 
+        [BsonIgnore] public ISubject<MessageHistory> SaveRequest = new Subject<MessageHistory>();
+
         public void Save() {
-            GlobalDB.Messages.Upsert(this);
-        }
-
-        public static MessageHistory Get(ulong channelId, ulong messageId, ulong authorId = default) {
-            return GlobalDB.Messages.FindById($"{channelId}:{messageId}") ?? new MessageHistory {
-                AuthorId = authorId, Id = $"{channelId}:{messageId}"
-            };
-        }
-
-        public static MessageHistory Get(IMessage message) {
-            return Get(message.Channel.Id, message.Id, message.Author.Id);
+            SaveRequest.OnNext(this);
         }
 
         public void AddSnapshot(IMessage message) {
@@ -84,7 +133,7 @@ namespace Bot.DiscordRelated.Logging {
             newContent ??= "";
             Edits.Add(new MessageSnapshot {
                 EditTimestamp = editTime,
-                Value = DiffMatchPatch.DiffMatchPatch.patch_toText(MessageHistoryManager.DiffMatchPatch.patch_make(GetLastContent(), newContent))
+                Value = DiffMatchPatch.DiffMatchPatch.patch_toText(MessageHistoryService.DiffMatchPatch.patch_make(GetLastContent(), newContent))
             });
         }
 
@@ -117,7 +166,7 @@ namespace Bot.DiscordRelated.Logging {
 
         public string GetLastContent() {
             try {
-                return MessageHistoryManager.DiffMatchPatch.patch_apply(
+                return MessageHistoryService.DiffMatchPatch.patch_apply(
                     Edits.SelectMany(s1 => DiffMatchPatch.DiffMatchPatch.patch_fromText(s1.Value)).ToList(), "")[0].ToString() ?? "";
             }
             catch (Exception) {
@@ -133,13 +182,13 @@ namespace Bot.DiscordRelated.Logging {
 
             foreach (var edit in Edits) {
                 var last = snapshots.Count == 0 ? "" : snapshots.Last().Value;
-                var snapshot = MessageHistoryManager.DiffMatchPatch.patch_apply(DiffMatchPatch.DiffMatchPatch.patch_fromText(edit.Value), last)[0].ToString() ??
+                var snapshot = MessageHistoryService.DiffMatchPatch.patch_apply(DiffMatchPatch.DiffMatchPatch.patch_fromText(edit.Value), last)[0].ToString() ??
                                "";
 
                 snapshots.Add(new MessageSnapshot {EditTimestamp = edit.EditTimestamp, Value = snapshot});
                 if (injectDiffsHighlight && snapshots.Count > 1) {
-                    var diffMain = MessageHistoryManager.DiffMatchPatch.diff_main(last, snapshot);
-                    MessageHistoryManager.DiffMatchPatch.diff_cleanupSemantic(diffMain);
+                    var diffMain = MessageHistoryService.DiffMatchPatch.diff_main(last, snapshot);
+                    MessageHistoryService.DiffMatchPatch.diff_cleanupSemantic(diffMain);
                     yield return new MessageSnapshot {EditTimestamp = edit.EditTimestamp, Value = DiffsToHtmlEncode(diffMain)};
                 }
                 else {

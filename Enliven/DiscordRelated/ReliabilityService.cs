@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Common;
 using Discord;
 using Discord.WebSocket;
 
@@ -15,7 +16,7 @@ namespace Bot.DiscordRelated {
     // Links to daemons:
     // [Powershell (Windows+Unix)] https://gitlab.com/snippets/21444
     // [Bash (Unix)] https://stackoverflow.com/a/697064
-    public class ReliabilityService {
+    public class ReliabilityService : IService {
         // --- Begin Configuration Section ---
         // How long should we wait on the client to reconnect before resetting?
         private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(30);
@@ -114,5 +115,9 @@ namespace Bot.DiscordRelated {
 
         private Task CriticalAsync(string message, Exception? error = null)
             => _logger.Invoke(new LogMessage(_critical, LogSource, message, error));
+
+        public Task Initialize() {
+            return Task.CompletedTask;
+        }
     }
 }

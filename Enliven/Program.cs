@@ -1,18 +1,27 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel.Design;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
-using Bot.Config;
-using Bot.Config.Localization;
+using Autofac;
+using Autofac.Extras.NLog;
 using Bot.DiscordRelated;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Logging;
-using Bot.Music;
-using Bot.Utilities;
+using Bot.DiscordRelated.Music;
+using Bot.Patches;
 using Bot.Utilities.Music;
+using Common;
+using Common.Config;
+using Common.Localization;
+using Common.Music.Controller;
+using Common.Music.Resolvers;
 using Discord;
 using Discord.WebSocket;
 using ICSharpCode.SharpZipLib.Core;
 using ICSharpCode.SharpZipLib.Zip;
+using Lavalink4NET.DiscordNet;
 using NLog;
 using NLog.Config;
 using NLog.Layouts;
@@ -20,34 +29,49 @@ using NLog.Targets;
 
 namespace Bot {
     internal class Program {
-        public static DiscordShardedClient Client = null!;
-        public static CommandHandler Handler = null!;
-
-        // ReSharper disable once InconsistentNaming
-        private static readonly Logger logger = LogManager.GetCurrentClassLogger();
-
-        // ReSharper disable once NotAccessedField.Local
-        private static ReliabilityService _reliabilityService = null!;
-
-        // ReSharper disable once InconsistentNaming
-        private static readonly TaskCompletionSource<bool> waitStartSource = new TaskCompletionSource<bool>();
-        public static Task WaitStartAsync = waitStartSource.Task;
-
-        // ReSharper disable once UnusedParameter.Local
-
-        private static bool _clientStarted;
-
-        // ReSharper disable once UnusedParameter.Local
         private static async Task Main(string[] args) {
             InstallLogger();
             #if !DEBUG
             InstallErrorHandlers();
             #endif
-            
+
+            var containerBuilder = new ContainerBuilder();
+            ConfigureServices(containerBuilder);
+            Startup.ConfigureServices(containerBuilder);
+            Container = containerBuilder.Build();
+
+            using (var scope = Container.BeginLifetimeScope()) {
+                var program = scope.Resolve<Program>();
+                await program.Run();
+            }
+
+            Console.WriteLine("Execution end");
+        }
+
+        public static DiscordShardedClient Client = null!;
+
+        // ReSharper disable once InconsistentNaming
+        private readonly ILogger logger;
+        private IEnumerable<IService> _services;
+        private IEnumerable<IPatch> _patches;
+        private IMusicController _musicController;
+
+        public Program(ILogger logger, IEnumerable<IService> services, IEnumerable<IPatch> patches, DiscordShardedClient discordShardedClient, 
+                       IMusicController musicController) {
+            _musicController = musicController;
+            _patches = patches;
+            _services = services;
+            this.logger = logger;
+            Client = discordShardedClient;
+        }
+
+        private static IContainer Container { get; set; } = null!;
+
+        async Task Run() {
             logger.Info("Start Initialising");
 
-            var config = new DiscordSocketConfig {MessageCacheSize = 100};
-            Client = new DiscordShardedClient(config);
+            Task.WaitAll(_patches.Select(patch => patch.Apply()).ToArray());
+
             Client.Log += OnClientLog;
 
             logger.Info("Start logining");
@@ -67,41 +91,64 @@ namespace Bot {
             }
 
             LocalizationManager.Initialize();
-            GlobalDB.Initialize();
 
             await StartClient();
-
-            Handler = await CommandHandler.Create(Client);
+            
+            Task.WaitAll(_services.Select(service => service.Initialize()).ToArray());
 
             AppDomain.CurrentDomain.ProcessExit += async (sender, eventArgs) => {
                 await Client.SetStatusAsync(UserStatus.AFK);
                 await Client.SetGameAsync("Reboot...");
             };
-
-            MessageHistoryManager.Initialize();
-            MusicUtils.Initialize();
-            SpotifyMusicProvider.Initialize();
-            Patch.ApplyUsersPatch();
+            
             await Task.Delay(-1);
         }
 
-        public static async Task StartClient() {
-            if (_clientStarted) return;
-            _clientStarted = true;
+        public static void ConfigureServices(ContainerBuilder builder) {
+            builder.RegisterType<MusicResolverService>().AsSelf().SingleInstance();
+            builder.RegisterType<MusicController>().As<IMusicController>().SingleInstance();
+            builder.RegisterType<ReliabilityService>().AsSelf();
+            builder.RegisterModule<NLogModule>();
+            builder.RegisterType<Program>().SingleInstance();
+            builder.Register(context => new DiscordShardedClient(new DiscordSocketConfig {MessageCacheSize = 100})).SingleInstance();
+
+            builder.Register(context => GlobalConfig.Instance.LavalinkNodes);
+
+            // Discord type readers
+            builder.RegisterType<ChannelFunctionTypeReader>().As<CustomTypeReader>();
+            builder.RegisterType<LoopingStateTypeReader>().As<CustomTypeReader>();
+            builder.RegisterType<BassBoostModeTypeReader>().As<CustomTypeReader>();
+
+            // Database types
+            builder.Register(context => context.Resolve<LiteDatabaseProvider>().ProvideDatabase().GetAwaiter().GetResult()
+                                               .GetCollection<SpotifyAssociation>(@"SpotifyAssociations")).SingleInstance();
+            builder.Register(context => context.Resolve<LiteDatabaseProvider>().ProvideDatabase().GetAwaiter().GetResult()
+                                               .GetCollection<MessageHistory>(@"MessageHistory")).SingleInstance();
+
+            // Music resolvers
+            builder.RegisterType<SpotifyMusicResolver>().AsImplementedInterfaces().SingleInstance();
+
+            // Providers
+            builder.RegisterType<SpotifyAssociationProvider>().As<ISpotifyAssociationProvider>().SingleInstance();
+            builder.RegisterType<MessageHistoryProvider>().As<IMessageHistoryProvider>().SingleInstance();
+            builder.RegisterType<EmbedPlayerDisplayProvider>().SingleInstance();
+
+            // Services
+            builder.RegisterType<CustomCommandService>().As<IService>().AsSelf().SingleInstance();
+            builder.RegisterType<MessageHistoryService>().As<IService>().AsSelf().SingleInstance();
+            builder.RegisterType<GlobalBehaviorsService>().As<IService>().AsSelf().SingleInstance();
+            builder.RegisterType<ReliabilityService>().As<IService>().AsSelf().SingleInstance();
+            builder.RegisterType<CommandHandlerService>().As<IService>().AsSelf().SingleInstance();
+            builder.RegisterType<StatisticsService>().As<IStatisticsService>().AsSelf().SingleInstance();
+        }
+
+        public async Task StartClient() {
             logger.Info("Starting client");
-            Client.ShardReady += ClientOnShardReady;
             await Client.StartAsync();
             await Client.SetGameAsync("mentions of itself to get started", null, ActivityType.Listening);
-            _reliabilityService = new ReliabilityService(Client, OnClientLog);
         }
 
-        private static Task ClientOnShardReady(DiscordSocketClient arg) {
-            waitStartSource.SetResult(true);
-            Client.ShardReady -= ClientOnShardReady;
-            return Task.CompletedTask;
-        }
-
-        private static Task OnClientLog(LogMessage message) {
+        private Task OnClientLog(LogMessage message) {
             logger.Log(message.Severity, message.Exception, "{message} from {source}", message.Message, message.Source);
             return Task.CompletedTask;
         }
@@ -158,7 +205,7 @@ namespace Bot {
         }
 
         // ReSharper disable once UnusedMember.Local
-        private static void InstallErrorHandlers() {
+        private void InstallErrorHandlers() {
             AppDomain.CurrentDomain.UnhandledException += (sender, args) => logger.Fatal(args.ExceptionObject as Exception, "Global uncaught exception");
             TaskScheduler.UnobservedTaskException += (sender, args) => logger.Fatal(args.Exception?.Flatten(), "Global uncaught task exception");
         }

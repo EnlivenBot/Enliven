@@ -5,10 +5,11 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Bot.Config.Emoji;
-using Bot.Config.Localization.Entries;
-using Bot.Config.Localization.Providers;
 using Bot.Utilities;
 using Bot.Utilities.Collector;
+using Common;
+using Common.Localization.Entries;
+using Common.Localization.Providers;
 using Discord;
 using Tyrrrz.Extensions;
 #pragma warning disable 4014

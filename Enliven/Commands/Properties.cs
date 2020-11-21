@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
-using Bot.Config;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
+using Common.Config;
 using Discord.Commands;
 
 namespace Bot.Commands {

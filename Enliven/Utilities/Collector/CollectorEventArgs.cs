@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Bot.DiscordRelated.Commands;
+using Common;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -87,8 +88,8 @@ namespace Bot.Utilities.Collector {
             return Task.CompletedTask;
         }
 
-        public async Task<IResult> ExecuteCommand(ICommandContext? overrideContext = null) {
-            return await CommandInfo.ExecuteAsync(overrideContext ?? Context, ParseResult, EmptyServiceProvider.Instance).ConfigureAwait(false);
-        }
+        // public async Task<IResult> ExecuteCommand(ICommandContext? overrideContext = null) {
+        //     return await CommandInfo.ExecuteAsync(overrideContext ?? Context, ParseResult, EmptyServiceProvider.Instance).ConfigureAwait(false);
+        // }
     }
 }
