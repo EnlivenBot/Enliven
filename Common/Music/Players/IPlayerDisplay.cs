@@ -8,15 +8,13 @@ namespace Common.Music.Players {
         public FinalLavalinkPlayer Player { get; set; }
 
         public Task Initialize(FinalLavalinkPlayer finalLavalinkPlayer);
-        
+
+        public Task ChangePlayer(FinalLavalinkPlayer newPlayer);
+
         public Task Shutdown(IEntry header, IEntry body);
 
         public Task LeaveNotification(IEntry header, IEntry body);
 
         public ISubject<IPlayerDisplay> Disposed { get; set; }
-
-        void IDisposable.Dispose() {
-            Disposed?.Subscribe();
-        }
     }
 }

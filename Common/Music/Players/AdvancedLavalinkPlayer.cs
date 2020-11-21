@@ -28,8 +28,7 @@ namespace Common.Music.Players {
         private ulong _lastVoiceChannelId;
         private protected IMusicController _musicController;
         private IGuildConfigProvider _guildConfigProvider;
-        public IReadOnlyCollection<IPlayerDisplay> Displays => _displays;
-        private readonly List<IPlayerDisplay> _displays = new List<IPlayerDisplay>();
+        public List<IPlayerDisplay> Displays { get; } = new List<IPlayerDisplay>();
 
         protected AdvancedLavalinkPlayer(IMusicController musicController, IGuildConfigProvider guildConfigProvider) {
             _guildConfigProvider = guildConfigProvider;
@@ -100,8 +99,8 @@ namespace Common.Music.Players {
             Shutdown.Dispose();
 
             if (parameters.ShutdownDisplays) {
-                foreach (var playerDisplay in _displays.ToList()) {
-                    var body = parameters.CanBeResumed && parameters.NeedSave
+                foreach (var playerDisplay in Displays.ToList()) {
+                    var body = parameters.NeedSave
                         ? new EntryString("{0}\n{1}", reason, new EntryLocalized("Music.ResumeViaPlaylists", GuildConfig.Prefix, parameters.StoredPlaylist!.Id))
                         : reason;
                     playerDisplay.Shutdown(new EntryLocalized("Music.PlaybackStopped"), body);
@@ -147,10 +146,11 @@ namespace Common.Music.Players {
         public override async void Dispose() {
             if (!IsShutdowned) {
                 try {
-                    var playerShutdownParameters = new PlayerShutdownParameters {CanBeResumed = false};
+                    var playerShutdownParameters = new PlayerShutdownParameters {ShutdownDisplays = false, NeedSave = true};
                     GetPlayerShutdownParameters(playerShutdownParameters);
-                    await ExecuteShutdown(new EntryLocalized("Music.TryReconnectAfterDispose", GuildConfig.Prefix, playerShutdownParameters.StoredPlaylist!.Id),
-                        playerShutdownParameters);
+                    var reason = new EntryLocalized("Music.TryReconnectAfterDispose", GuildConfig.Prefix, playerShutdownParameters.StoredPlaylist!.Id);
+                    await ExecuteShutdown(reason, playerShutdownParameters);
+                    foreach (var playerDisplay in Displays.ToList()) await playerDisplay.LeaveNotification(new EntryLocalized("Music.PlaybackStopped"), reason);
                     if (State != PlayerState.Destroyed) {
                         base.Dispose();
                     }
@@ -160,15 +160,13 @@ namespace Common.Music.Players {
                     var newPlayer = await _musicController.ProvidePlayer(GuildId, playerShutdownParameters.LastVoiceChannelId, true);
                     newPlayer.Playlist.AddRange(playerShutdownParameters.Playlist!);
                     await newPlayer.PlayAsync(playerShutdownParameters.LastTrack!, playerShutdownParameters.TrackPosition);
-                    if (playerShutdownParameters.PlayerState == PlayerState.Paused) {
-                        await newPlayer.PauseAsync();
-                    }
+                    if (playerShutdownParameters.PlayerState == PlayerState.Paused) await newPlayer.PauseAsync();
+                    newPlayer.LoopingState = playerShutdownParameters.LoopingState;
+                    foreach (var playerDisplay in Displays.ToList()) await playerDisplay.ChangePlayer(newPlayer);
 
                     newPlayer.UpdateCurrentTrackIndex();
                     newPlayer.WriteToQueueHistory(new HistoryEntry(
                         new EntryLocalized("Music.ReconnectedAfterDispose", GuildConfig.Prefix, playerShutdownParameters.StoredPlaylist!.Id)));
-                    logger.Info("New player state - {State}", newPlayer.State);
-                    logger.Info("Track - {Track}: {Position}", newPlayer.CurrentTrack, newPlayer.TrackPosition);
                 }
                 catch (Exception e) {
                     logger.Error(e, "Error while resuming player");
@@ -209,11 +207,6 @@ namespace Common.Music.Players {
         public override async Task ResumeAsync() {
             await base.ResumeAsync();
             StateChanged.OnNext(State);
-        }
-
-        public void AttachDisplay(IPlayerDisplay playerDisplay) {
-            _displays.Add(playerDisplay);
-            playerDisplay.Disposed.Subscribe(display => _displays.Remove(display));
         }
     }
 }

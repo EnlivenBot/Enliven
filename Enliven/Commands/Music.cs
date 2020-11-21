@@ -75,7 +75,7 @@ namespace Bot.Commands {
             if (!await IsPreconditionsValid) return;
 
             Player.ExecuteShutdown(Loc.Get("Music.UserStopPlayback").Format(Context.User.Username),
-                new PlayerShutdownParameters {NeedSave = false, CanBeResumed = false});
+                new PlayerShutdownParameters {NeedSave = false, ShutdownDisplays = true});
         }
 
         [Command("jump", RunMode = RunMode.Async)]

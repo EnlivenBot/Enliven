@@ -19,6 +19,7 @@ using Common.Music;
 using Common.Music.Controller;
 using Common.Music.Players;
 using Common.Music.Tracks;
+using Common.Utils;
 using Discord;
 using Discord.WebSocket;
 using Lavalink4NET;
@@ -28,7 +29,7 @@ using SpotifyAPI.Web;
 #pragma warning disable 4014
 
 namespace Bot.DiscordRelated.Music {
-    public class EmbedPlayerDisplay : IPlayerDisplay {
+    public class EmbedPlayerDisplay : PlayerDisplayBase {
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private CollectorsGroup _collectorsGroup = new CollectorsGroup();
         private CommandHandlerService _commandHandlerService;
@@ -45,13 +46,7 @@ namespace Bot.DiscordRelated.Music {
         private SingleTask _updateControlMessageTask;
         private SingleTask _controlMessageSendTask;
 
-        private IDisposable? _historyChangedSubscribe;
-        private IDisposable? _bassboostChangedSubscribe;
-        private IDisposable? _volumeChangedSubscribe;
-        private IDisposable? _nodeChangedSubscribe;
-        private IDisposable? _stateChangedSubscribe;
-        private IDisposable? _playlistUpdatedSubscribe;
-        private IDisposable? _currentIndexChangedSubscribe;
+        private Disposables? _playerSubscriptions;
 
         public EmbedPlayerDisplay(ITextChannel targetChannel, IDiscordClient discordClient, ILocalizationProvider loc,
                                   CommandHandlerService commandHandlerService, IPrefixProvider prefixProvider) :
@@ -102,31 +97,8 @@ namespace Bot.DiscordRelated.Music {
             EmbedBuilder.AddField("RequestHistory", loc.Get("Music.RequestHistory"), loc.Get("Music.Empty"));
             EmbedBuilder.AddField("Warnings", loc.Get("Music.Warning"), loc.Get("Music.Empty"), false, 100, false);
         }
-
-        public FinalLavalinkPlayer Player { get; set; } = null!;
-
-        public ISubject<IPlayerDisplay> Disposed { get; set; } = new Subject<IPlayerDisplay>();
-
-        public async Task Initialize(FinalLavalinkPlayer finalLavalinkPlayer) {
-            Player = finalLavalinkPlayer;
-            _historyChangedSubscribe = Player.QueueHistory.HistoryChanged.Subscribe(collection => {
-                EmbedBuilder.Fields["RequestHistory"].Value = collection.GetLastHistory(_loc, out var isChanged).IsBlank(_loc.Get("Music.Empty"));
-                if (isChanged) UpdateControlMessage();
-            });
-
-            _playlistUpdatedSubscribe = Player.Playlist.Changed.Subscribe(playlist => UpdateQueue());
-            _bassboostChangedSubscribe = Player.BassboostChanged.Subscribe(obj => UpdateParameters());
-            _volumeChangedSubscribe = Player.VolumeChanged.Subscribe(obj => UpdateParameters());
-            _nodeChangedSubscribe = Player.LavalinkNodeChanged.Subscribe(obj => UpdateNode(obj));
-            _stateChangedSubscribe = Player.StateChanged.Subscribe(obj => {
-                UpdateProgress();
-                UpdateTrackInfo();
-            });
-            _currentIndexChangedSubscribe = Player.CurrentTrackIndexChanged.Subscribe(i => UpdateQueue());
-            await ControlMessageResend();
-        }
-
-        public async Task LeaveNotification(IEntry header, IEntry body) {
+        
+        public override async Task LeaveNotification(IEntry header, IEntry body) {
             try {
                 await _targetChannel.SendMessageAsync(null, false,
                     new EmbedBuilder().WithColor(Color.Gold).WithTitle(header.Get(_loc)).WithDescription(body.Get(_loc)).Build());
@@ -136,7 +108,7 @@ namespace Bot.DiscordRelated.Music {
             }
         }
 
-        public async Task Shutdown(IEntry header, IEntry body) {
+        public override async Task Shutdown(IEntry header, IEntry body) {
             _cancellationTokenSource.Cancel();
             var message = _controlMessage;
             Dispose();
@@ -159,15 +131,29 @@ namespace Bot.DiscordRelated.Music {
             }
         }
 
-        public void Dispose() {
-            Disposed.OnNext(this);
-            _historyChangedSubscribe?.Dispose();
-            _bassboostChangedSubscribe?.Dispose();
-            _volumeChangedSubscribe?.Dispose();
-            _nodeChangedSubscribe?.Dispose();
-            _stateChangedSubscribe?.Dispose();
-            _playlistUpdatedSubscribe?.Dispose();
-            _currentIndexChangedSubscribe?.Dispose();
+        public override async Task ChangePlayer(FinalLavalinkPlayer newPlayer) {
+            _playerSubscriptions?.Dispose();
+            await base.ChangePlayer(newPlayer);
+            _playerSubscriptions = new Disposables(
+                Player.QueueHistory.HistoryChanged.Subscribe(collection => {
+                    EmbedBuilder.Fields["RequestHistory"].Value = collection.GetLastHistory(_loc, out var isChanged).IsBlank(_loc.Get("Music.Empty"));
+                    if (isChanged) UpdateControlMessage();
+                }),
+                Player.Playlist.Changed.Subscribe(playlist => UpdateQueue()),
+                Player.BassboostChanged.Subscribe(obj => UpdateParameters()),
+                Player.VolumeChanged.Subscribe(obj => UpdateParameters()),
+                Player.LavalinkNodeChanged.Subscribe(obj => UpdateNode(obj)),
+                Player.StateChanged.Subscribe(obj => {
+                    UpdateProgress();
+                    UpdateTrackInfo();
+                }),
+                Player.CurrentTrackIndexChanged.Subscribe(i => UpdateQueue())
+            );
+            await ControlMessageResend();
+        }
+
+        public override void Dispose() {
+            _playerSubscriptions?.Dispose();
 
             _cancellationTokenSource.Dispose();
             _controlMessageSendTask.Dispose();
@@ -221,7 +207,7 @@ namespace Bot.DiscordRelated.Music {
                     // ignored
                 }
 
-                _controlMessage.AddReactionAsync(CommonEmoji.LegacyArrowDown, new RequestOptions {CancelToken = _cancellationTokenSource.Token});
+                _controlMessage?.AddReactionAsync(CommonEmoji.LegacyArrowDown, new RequestOptions {CancelToken = _cancellationTokenSource.Token});
                 _collectorsGroup.Controllers.Add(CollectorsUtils.CollectReaction(_controlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyArrowDown), async emoteCollectorEventArgs => {
                         emoteCollectorEventArgs.RemoveReason();

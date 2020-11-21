@@ -6,9 +6,12 @@ using System.Threading.Tasks;
 using Bot.DiscordRelated.Commands;
 using Common;
 using Common.Config;
+using Common.Localization.Entries;
 using Common.Music.Players;
 using Discord;
 using Discord.WebSocket;
+using Newtonsoft.Json;
+using NLog;
 
 namespace Bot.DiscordRelated.Music {
     public class EmbedPlayerDisplayProvider {
@@ -16,11 +19,14 @@ namespace Bot.DiscordRelated.Music {
         private IGuildConfigProvider _guildConfigProvider;
         private DiscordShardedClient _client;
         private CommandHandlerService _commandHandlerService;
-        
+        private ILogger _logger;
+
         private readonly Thread UpdateThread;
 
-        public EmbedPlayerDisplayProvider(DiscordShardedClient client, IGuildConfigProvider guildConfigProvider, CommandHandlerService commandHandlerService) {
+        public EmbedPlayerDisplayProvider(DiscordShardedClient client, IGuildConfigProvider guildConfigProvider, CommandHandlerService commandHandlerService,
+                                          ILogger logger) {
             _commandHandlerService = commandHandlerService;
+            _logger = logger;
             _client = client;
             _guildConfigProvider = guildConfigProvider;
             UpdateThread = new Thread(UpdateCycle) {Priority = ThreadPriority.BelowNormal};
@@ -31,21 +37,26 @@ namespace Bot.DiscordRelated.Music {
             return ProvideInternal($"guild-{channel.GuildId}", channel, finalLavalinkPlayer);
         }
 
-        private EmbedPlayerDisplay ProvideInternal(string id, ITextChannel channel, FinalLavalinkPlayer finalLavalinkPlayer) {
+        private EmbedPlayerDisplay ProvideInternal(string id, ITextChannel channel, FinalLavalinkPlayer finalLavalinkPlayer, int recursiveCount = 0) {
             var embedPlayerDisplay = _cache.GetOrAdd(id, s => {
                 var guildConfig = _guildConfigProvider.Get(channel.GuildId);
                 var display = new EmbedPlayerDisplay(channel, _client, guildConfig.Loc, _commandHandlerService, guildConfig.PrefixProvider);
-                
+
                 display.Disposed.Subscribe(playerDisplay => _cache.TryRemove(id, out _));
-                finalLavalinkPlayer.AttachDisplay(display);
 
                 display.Initialize(finalLavalinkPlayer);
-                
+
                 return display;
             });
+            if (!embedPlayerDisplay.Player?.IsShutdowned != false) return embedPlayerDisplay;
+            _cache.TryRemove(id, out _);
+            if (recursiveCount <= 1) return ProvideInternal(id, channel, finalLavalinkPlayer, ++recursiveCount);
+            _logger.Fatal("Provider recursive call. Provider: {data}",
+                JsonConvert.SerializeObject(embedPlayerDisplay, Formatting.None,
+                    new JsonSerializerSettings() {ReferenceLoopHandling = ReferenceLoopHandling.Ignore}));
             return embedPlayerDisplay;
         }
-        
+
         private void UpdateCycle() {
             while (true) {
                 var waitCycle = Task.Delay(Constants.PlayerEmbedUpdateDelay);

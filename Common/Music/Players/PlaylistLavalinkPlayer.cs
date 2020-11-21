@@ -174,7 +174,7 @@ namespace Common.Music.Players {
                 if (position != null && position.Value > track.Duration) {
                     position = TimeSpan.Zero;
                 }
-
+                
                 await PlayAsync(track, false, position);
                 WriteToQueueHistory(new HistoryEntry(new EntryLocalized("MusicQueues.Jumped", requester, CurrentTrackIndex + 1,
                     MusicController.EscapeTrack(CurrentTrack!.Title).SafeSubstring(100, "...")!)));
@@ -249,6 +249,7 @@ namespace Common.Music.Players {
 
         public override void GetPlayerShutdownParameters(PlayerShutdownParameters parameters) {
             base.GetPlayerShutdownParameters(parameters);
+            parameters.LoopingState = LoopingState;
             parameters.Playlist = Playlist;
             if (parameters.NeedSave && parameters.StoredPlaylist == null) {
                 parameters.StoredPlaylist = _playlistProvider.StorePlaylist(ExportPlaylist(ExportPlaylistOptions.AllData),

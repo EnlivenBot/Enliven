@@ -1,4 +1,5 @@
 using System;
+using Common.Music.Players;
 using Discord;
 using Lavalink4NET.Player;
 
@@ -8,7 +9,6 @@ namespace Common.Music {
 
         public bool NeedSave { get; set; } = true;
         public bool ShutdownDisplays { get; set; } = true;
-        public bool CanBeResumed { get; set; } = true;
 
         #endregion
 
@@ -22,6 +22,7 @@ namespace Common.Music {
         public LavalinkPlaylist? Playlist { get; set; }
         public TimeSpan TrackPosition { get; set; }
         public PlayerState PlayerState { get; set; }
+        public LoopingState LoopingState { get; set; } 
 
         #endregion
     }
