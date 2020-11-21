@@ -90,7 +90,7 @@ namespace Bot.Utilities.Collector {
                                                           params (IEmote, T)[] selectors) {
             return CollectReactions(predicate, action, selectors.Select(tuple => (tuple.Item1, new Func<T>(() => tuple.Item2))).ToArray());
         }
-        
+
         public static CollectorsGroup CollectReactions<T>(Predicate<SocketReaction> predicate, Action<EmoteMultiCollectorEventArgs, T> action,
                                                           params (IEmote, Func<T>)[] selectors) {
             var collectorsGroup = new CollectorsGroup();
@@ -100,11 +100,12 @@ namespace Bot.Utilities.Collector {
                 var localPredicate = new Predicate<SocketReaction>(reaction => reaction.Emote.Equals(selector.Item1) && predicate(reaction));
                 var disposable = ReactionAdded.Subscribe(tuple => {
                     logger.Swallow(() => {
-                        if (localPredicate(tuple.Item3)) action(new EmoteMultiCollectorEventArgs(collectorController, collectorsGroup, tuple.Item3), selector.Item2());
+                        if (localPredicate(tuple.Item3))
+                            action(new EmoteMultiCollectorEventArgs(collectorController, collectorsGroup, tuple.Item3), selector.Item2());
                     });
                 });
                 collectorController.Stop += (sender, args) => disposable.Dispose();
-                
+
                 // ReSharper disable once PossiblyMistakenUseOfParamsMethod
                 collectorsGroup.Add(collectorController);
             }
@@ -171,10 +172,15 @@ namespace Bot.Utilities.Collector {
                 CollectorFilter.Off        => initial,
                 CollectorFilter.IgnoreSelf => (reaction => reaction.UserId != Program.Client.CurrentUser.Id && initial(reaction)),
                 CollectorFilter.IgnoreBots => reaction => {
-                    var user = reaction.User.GetValueOrDefault(Program.Client.GetUser(reaction.UserId));
-                    return !user.IsBot && !user.IsWebhook && initial(reaction);
+                    try {
+                        var user = reaction.User.GetValueOrDefault(Program.Client.GetUser(reaction.UserId));
+                        return !user.IsBot && !user.IsWebhook && initial(reaction);
+                    }
+                    catch (Exception) {
+                        return false;
+                    }
                 },
-                _                          => throw new ArgumentOutOfRangeException(nameof(filter), filter, null)
+                _ => throw new ArgumentOutOfRangeException(nameof(filter), filter, null)
             };
         }
     }
