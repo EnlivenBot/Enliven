@@ -217,7 +217,7 @@
       "AttachmentsTitle" : "Attachments",
       "EmptyMessage" : "```Message without text```",
       "IdFailedToParse": "We cannot recognize the message ID (and channel ID) in `{0}`. \nCorrect Input Example:\n> {1}history 276780134676037642-728591222217637918\n> {1}history 728591222217637918",
-      "DeletedMessagesPackDescription": "**Удаленные сообщения, история изменений которых не найдена:**"
+      "DeletedMessagesPackDescription": "**Deleted messages whose change history is not found:**"
     },
     "Statistics": {
       "Title": "Statistics",
