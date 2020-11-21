@@ -46,9 +46,8 @@ namespace Bot.DiscordRelated.Commands.Modules {
 
             try {
                 Player = MusicController.GetPlayer(Context.Guild.Id)!;
-                // ReSharper disable once ConditionIsAlwaysTrueOrFalse
-                if (Player == null && !MusicController.Cluster.Nodes.Any(node => node.IsConnected)) {
-                    throw new InvalidOperationException("No node available.");
+                if (Player == null) {
+                    var clusterPreferredNode = MusicController.Cluster.PreferredNode;
                 }
             }
             catch (NullReferenceException) {
