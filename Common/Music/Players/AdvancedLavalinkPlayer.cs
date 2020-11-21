@@ -128,6 +128,10 @@ namespace Common.Music.Players {
             WriteToQueueHistory(new HistoryEntry(new EntryString(entry)));
         }
 
+        public virtual void WriteToQueueHistory(IEntry entry) {
+            WriteToQueueHistory(entry is HistoryEntry historyEntry ? historyEntry : new HistoryEntry(entry));
+        }
+
         public virtual void WriteToQueueHistory(HistoryEntry entry) {
             QueueHistory.Add(entry);
         }

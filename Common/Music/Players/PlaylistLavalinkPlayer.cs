@@ -256,6 +256,18 @@ namespace Common.Music.Players {
                     "a" + ObjectId.NewObjectId(), UserLink.Current);
             }
         }
+        
+        public override async Task OnTrackExceptionAsync(TrackExceptionEventArgs eventArgs) {
+            WriteToQueueHistory(new EntryLocalized("Music.TrackException", eventArgs.Error));
+            await SkipAsync(1, true);
+            await base.OnTrackExceptionAsync(eventArgs);
+        }
+
+        public override async Task OnTrackStuckAsync(TrackStuckEventArgs eventArgs) {
+            WriteToQueueHistory(new EntryLocalized("Music.TrackStuck"));
+            await SkipAsync(1, true);
+            await base.OnTrackStuckAsync(eventArgs);
+        }
     }
 
     public enum LoopingState {
