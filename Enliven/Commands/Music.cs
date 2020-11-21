@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Bot.Commands.Chains;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
+using Bot.DiscordRelated.Music;
 using Common;
 using Common.History;
 using Common.Localization.Entries;
@@ -218,18 +219,18 @@ namespace Bot.Commands {
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.Shuffle").Format(Context.User.Username));
         }
 
-        // [Command("list", RunMode = RunMode.Async)]
-        // [Alias("l", "q", "queue")]
-        // [Summary("list0s")]
-        // public async Task List() {
-        //     if (!await IsPreconditionsValid) return;
-        //     if (Player == null || Player.Playlist.IsEmpty) {
-        //         ReplyFormattedAsync(Loc.Get("Music.QueueEmpty").Format(GuildConfig.Prefix), true);
-        //         return;
-        //     }
-        //
-        //     // Player.PrintQueue(Context.Channel);
-        // }
+        [Command("list", RunMode = RunMode.Async)]
+        [Alias("l", "q", "queue")]
+        [Summary("list0s")]
+        public async Task List() {
+            if (!await IsPreconditionsValid) return;
+            if (Player == null || Player.Playlist.IsEmpty) {
+                ReplyFormattedAsync(Loc.Get("Music.QueueEmpty").Format(GuildConfig.Prefix), true);
+                return;
+            }
+
+            await new EmbedPlayerQueueDisplay(Context.Channel, Loc).Initialize(Player);
+        }
 
         [SummonToUser]
         [Command("youtube", RunMode = RunMode.Async)]
