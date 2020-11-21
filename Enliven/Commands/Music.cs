@@ -80,7 +80,7 @@ namespace Bot.Commands {
         }
 
         [Command("jump", RunMode = RunMode.Async)]
-        [Alias("j", "skip", "next", "n", "s")]
+        [Alias("j", "skip", "next", "n", "s", "jmp")]
         [Summary("jump0s")]
         public async Task Jump([Summary("jump0_0s")] int index = 1) {
             if (!await IsPreconditionsValid) return;
