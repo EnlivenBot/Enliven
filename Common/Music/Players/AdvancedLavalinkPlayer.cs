@@ -88,7 +88,7 @@ namespace Common.Music.Players {
                     throw new ArgumentOutOfRangeException(nameof(mode), mode, null);
             }
 
-            UpdateEqualizerAsync(bands, false);
+            UpdateEqualizerAsync(bands, false, true);
             BassboostChanged.OnNext(mode);
         }
 
