@@ -10,6 +10,7 @@ using Common.Localization.Entries;
 using Common.Music.Players;
 using Discord;
 using Discord.WebSocket;
+using Lavalink4NET.Player;
 using Newtonsoft.Json;
 using NLog;
 
@@ -71,6 +72,7 @@ namespace Bot.DiscordRelated.Music {
                 var displays = _cache.Values.ToList();
                 foreach (var display in displays) {
                     try {
+                        if (display.Player.State != PlayerState.Playing) continue;
                         display.UpdateProgress();
                         display.UpdateControlMessage().Wait();
                     }

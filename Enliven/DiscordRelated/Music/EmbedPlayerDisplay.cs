@@ -151,6 +151,7 @@ namespace Bot.DiscordRelated.Music {
                 Player.StateChanged.Subscribe(obj => {
                     UpdateProgress();
                     UpdateTrackInfo();
+                    UpdateControlMessage();
                 }),
                 Player.CurrentTrackIndexChanged.Subscribe(i => UpdateQueue())
             );
