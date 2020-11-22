@@ -33,6 +33,14 @@ namespace Bot.DiscordRelated.Music {
             UpdateThread.Start();
         }
 
+        public EmbedPlayerDisplay? Get(string id) {
+            return _cache.TryGetValue(id, out var display) ? display : null;
+        }
+        
+        public EmbedPlayerDisplay? Get(ITextChannel channel) {
+            return Get($"guild-{channel.GuildId}");
+        }
+
         public EmbedPlayerDisplay Provide(ITextChannel channel, FinalLavalinkPlayer finalLavalinkPlayer) {
             return ProvideInternal($"guild-{channel.GuildId}", channel, finalLavalinkPlayer);
         }

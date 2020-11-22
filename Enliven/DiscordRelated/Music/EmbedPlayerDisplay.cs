@@ -34,19 +34,19 @@ namespace Bot.DiscordRelated.Music {
         private CollectorsGroup _collectorsGroup = new CollectorsGroup();
         private CommandHandlerService _commandHandlerService;
         private IUserMessage? _controlMessage;
+        private SingleTask _controlMessageSendTask;
         private IDiscordClient _discordClient;
         private bool _isExternalEmojiAllowed;
         private ILocalizationProvider _loc;
+
+        private Disposables? _playerSubscriptions;
         private IPrefixProvider _prefixProvider;
 
         private IMessageChannel _targetChannel;
         private IGuild? _targetGuild;
+        private SingleTask _updateControlMessageTask;
 
         private PriorityEmbedBuilderWrapper EmbedBuilder;
-        private SingleTask _updateControlMessageTask;
-        private SingleTask _controlMessageSendTask;
-
-        private Disposables? _playerSubscriptions;
 
         public EmbedPlayerDisplay(ITextChannel targetChannel, IDiscordClient discordClient, ILocalizationProvider loc,
                                   CommandHandlerService commandHandlerService, IPrefixProvider prefixProvider) :
@@ -74,20 +74,25 @@ namespace Bot.DiscordRelated.Music {
                             (await _targetChannel.GetMessageAsync(_controlMessage.Id)).SafeDelete();
                             _controlMessage = null;
                         }
+
                         ControlMessageResend(_targetChannel);
                     }
                 }
             }) {BetweenExecutionsDelay = TimeSpan.FromSeconds(1.5), CanBeDirty = true};
-            _controlMessageSendTask = new SingleTask(async () => {
+            _controlMessageSendTask = new SingleTask(async data => {
                 try {
-                    await SendControlMessageInternal();
+                    if (await new EnsureLastMessage(_targetChannel, _controlMessage?.Id ?? 0, 3) {IsNullableTrue = true}.Invert().JudgeAsync()) {
+                        await SendControlMessageInternal();
+                    }
+                    else {
+                        data.OverrideDelay = TimeSpan.FromSeconds(5);
+                    }
                 }
                 catch (Exception) {
                     // ignored
                 }
             }) {
-                BetweenExecutionsDelay = TimeSpan.FromSeconds(2), CanBeDirty = true, IsDelayResetByExecute = true,
-                NeedDirtyExecuteCriterion = new EnsureLastMessage(_targetChannel, _controlMessage?.Id ?? 0, 5) {IsNullableTrue = true}.Invert()
+                BetweenExecutionsDelay = TimeSpan.FromSeconds(30), CanBeDirty = false, IsDelayResetByExecute = false,
             };
 
             EmbedBuilder = new PriorityEmbedBuilderWrapper();
@@ -97,7 +102,7 @@ namespace Bot.DiscordRelated.Music {
             EmbedBuilder.AddField("RequestHistory", loc.Get("Music.RequestHistory"), loc.Get("Music.Empty"));
             EmbedBuilder.AddField("Warnings", loc.Get("Music.Warning"), loc.Get("Music.Empty"), false, 100, false);
         }
-        
+
         public override async Task LeaveNotification(IEntry header, IEntry body) {
             try {
                 await _targetChannel.SendMessageAsync(null, false,
@@ -365,7 +370,7 @@ namespace Bot.DiscordRelated.Music {
             }
         }
 
-        private async Task ControlMessageResend(IMessageChannel? channel = null) {
+        public async Task ControlMessageResend(IMessageChannel? channel = null) {
             if (_controlMessageSendTask.IsDisposed) return;
 
             if (channel != null) CheckRestrictions();
