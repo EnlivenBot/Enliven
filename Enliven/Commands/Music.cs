@@ -46,6 +46,7 @@ namespace Bot.Commands {
 
         private async Task PlayInternal(string? query, int position) {
             var queries = Common.Music.Controller.MusicController.GetMusicQueries(Context.Message, query.IsBlank(""));
+            MainDisplay?.ControlMessageResend();
             if (queries.Count == 0) {
                 Context.Message?.SafeDelete();
                 return;
@@ -384,7 +385,7 @@ namespace Bot.Commands {
                                       .UpdateTimeout(Constants.StandardTimeSpan).Update();
                 return;
             }
-            
+
             Player.SetBassBoost(mode);
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.BassBoostUpdated").Format(Context.User.Username, mode));
         }

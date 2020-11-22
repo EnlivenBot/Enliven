@@ -25,6 +25,7 @@ namespace Bot.DiscordRelated.Commands.Modules {
         public Task<bool> IsPreconditionsValid = null!;
         public static Dictionary<ulong, NonSpamMessageController> ErrorsMessagesControllers = new Dictionary<ulong, NonSpamMessageController>();
         public NonSpamMessageController ErrorMessageController = null!;
+        internal EmbedPlayerDisplay? MainDisplay;
         public IMusicController MusicController { get; set; } = null!;
         public EmbedPlayerDisplayProvider EmbedPlayerDisplayProvider { get; set; } = null!;
 
@@ -69,6 +70,7 @@ namespace Bot.DiscordRelated.Commands.Modules {
 
             if (GetChannel(out var musicChannel)) {
                 var user = Context.User as SocketGuildUser;
+                MainDisplay = EmbedPlayerDisplayProvider.Get((ITextChannel) musicChannel);
                 if (user?.VoiceChannel?.Id == Player?.VoiceChannelId && user?.VoiceChannel?.Id != null &&
                     Player!.State != PlayerState.NotConnected && Player.State != PlayerState.Destroyed) return true;
 
@@ -88,8 +90,8 @@ namespace Bot.DiscordRelated.Commands.Modules {
                     }
 
                     Player = await MusicController.ProvidePlayer(Context.Guild.Id, user.VoiceChannel!.Id);
-                    EmbedPlayerDisplayProvider.Provide((ITextChannel) musicChannel, Player);
-                    
+                    MainDisplay = EmbedPlayerDisplayProvider.Provide((ITextChannel) musicChannel, Player);
+
                     return true;
                 }
 
