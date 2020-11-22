@@ -16,7 +16,7 @@ namespace Bot.Utilities {
         [Obsolete("Use Execute method instead this")]
         public readonly Func<Task<T>> Action;
 
-        private Task _betweenExecutionsDelayTask = Task.CompletedTask;
+        private Task? _betweenExecutionsDelayTask;
         private bool _isDirtyNow;
         private DateTime _lastExecutionTime = DateTime.MinValue;
         private T _lastResult = default!;
@@ -43,7 +43,7 @@ namespace Bot.Utilities {
 
         public Task<T> Execute(bool makesDirty = true, TimeSpan? delayOverride = null) {
             if (IsDisposed) throw new ObjectDisposedException(nameof(SingleTask));
-            
+
             _isDirtyNow = false;
             return InternalExecute(makesDirty, delayOverride);
         }
@@ -61,7 +61,9 @@ namespace Bot.Utilities {
                 _taskCompletionSource = new TaskCompletionSource<T>();
                 new Task(async () => {
                     IsExecuting = true;
-                    await _betweenExecutionsDelayTask;
+                    if (_betweenExecutionsDelayTask != null) {
+                        await _betweenExecutionsDelayTask;
+                    }
 
                     T result;
                     if (_isDirtyNow && NeedDirtyExecuteCriterion != null && await NeedDirtyExecuteCriterion.JudgeAsync() || IsDisposed) {
@@ -93,7 +95,7 @@ namespace Bot.Utilities {
             var tempTime = _lastExecutionTime + (overrideDelay ?? BetweenExecutionsDelay ?? TimeSpan.Zero);
             if (!hardUpdate && tempTime >= _targetTime) return;
             _targetTime = tempTime;
-            var delay = DateTime.Now - _targetTime;
+            var delay = _targetTime - DateTime.Now;
             if (delay.TotalMilliseconds < 0) {
                 delay = TimeSpan.Zero;
             }
@@ -108,13 +110,9 @@ namespace Bot.Utilities {
         }
 
         public bool IsDisposed { get; private set; }
+
         public void Dispose() {
-            try {
-                _betweenExecutionsDelayTask.Dispose();
-            }
-            finally {
-                IsDisposed = true;
-            }
+            IsDisposed = true;
         }
     }
 }
