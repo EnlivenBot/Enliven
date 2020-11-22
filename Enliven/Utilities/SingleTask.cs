@@ -7,14 +7,19 @@ using Bot.DiscordRelated.Criteria;
 namespace Bot.Utilities {
     public class SingleTask : SingleTask<Task> {
         public SingleTask(Func<Task> action) : base(action) { }
+        public SingleTask(Func<SingleTaskExecutionData, Task> action) : base(action) { }
     }
 
     public class SingleTask<T> : IDisposable {
+        public class SingleTaskExecutionData {
+            public TimeSpan? OverrideDelay { get; set; }
+        }
+        
         // ReSharper disable once StaticMemberInGenericType
         private static readonly object LockObject = new object();
 
         [Obsolete("Use Execute method instead this")]
-        public readonly Func<Task<T>> Action;
+        public readonly Func<SingleTaskExecutionData, Task<T>> Action;
 
         private Task? _betweenExecutionsDelayTask;
         private bool _isDirtyNow;
@@ -22,13 +27,21 @@ namespace Bot.Utilities {
         private T _lastResult = default!;
         private DateTime _targetTime;
         private TaskCompletionSource<T>? _taskCompletionSource;
+        
+        public SingleTask(Func<SingleTaskExecutionData, T> action) {
+            Action = data => Task.FromResult(action(data));
+        }
+
+        public SingleTask(Func<SingleTaskExecutionData, Task<T>> action) {
+            Action = action;
+        }
 
         public SingleTask(Func<T> action) {
-            Action = () => Task.FromResult(action());
+            Action = data => Task.FromResult(action());
         }
 
         public SingleTask(Func<Task<T>> action) {
-            Action = action;
+            Action = data => action();
         }
 
         public ICriterion? NeedDirtyExecuteCriterion { get; set; }
@@ -66,11 +79,13 @@ namespace Bot.Utilities {
                     }
 
                     T result;
+                    SingleTaskExecutionData? singleTaskExecutionData = null;
                     if (_isDirtyNow && NeedDirtyExecuteCriterion != null && await NeedDirtyExecuteCriterion.JudgeAsync() || IsDisposed) {
                         result = _lastResult;
                     }
                     else {
-                        result = await Action();
+                        singleTaskExecutionData = new SingleTaskExecutionData();
+                        result = await Action(singleTaskExecutionData);
                         if (result is Task task) {
                             await task;
                         }
@@ -83,7 +98,7 @@ namespace Bot.Utilities {
                         _taskCompletionSource = null;
                         _lastExecutionTime = DateTime.Now;
                         _isDirtyNow = false;
-                        UpdateDelay(true);
+                        UpdateDelay(true, singleTaskExecutionData?.OverrideDelay);
                         localTaskCompletionSource.SetResult(result);
                     }
                 }, TaskCreationOptions.LongRunning).Start();
