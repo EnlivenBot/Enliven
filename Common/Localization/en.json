@@ -6,7 +6,7 @@
   "Authors": "SKProCH",
   "Data": {
     "Messages" : {
-      "WelcomeDescription" : "Greetings! 👋\n Thank you for adding me here!\n\n My prefix is ​​`{0}`, or you can just mention me - {1}.\n The list of commands can be viewed through `{0}help`.\n\n Here is a brief overview of my options:",
+      "WelcomeDescription" : "Greetings! 👋\n Thank you for adding me here!\n\n My prefix is ​​`{0}`, or you can just mention me - {1}.\n The list of commands can be viewed through `{0}help`.\n You also can get support on our [Discord server](https://discord.gg/zfBffbBbCp).\n\n Here is a brief overview of my options:",
       "WelcomeMusicTitle" : "***📻 Music***",
       "WelcomeMusic" : "You can order tracks from YouTube, SoundCloud, YaMusic and many other services.\n You can control playback through emojis and using commands. You can create and order your own playlists and much more. List of Music Commands - `{0}help music`",
       "WelcomeLoggingTitle" : ":book: ***Logging***",
@@ -111,7 +111,7 @@
       "utils": "Utilities"
     },
     "Help": {
-      "HelpPrefix" : "Current bot prefix `{0}` or ping ({1})",
+      "HelpPrefix" : "Current bot prefix `{0}` or ping ({1}).\nYou also can get support on our [Discord server](https://discord.gg/zfBffbBbCp).",
       "HelpTitle": "Available commands",
       "HelpDescription": "Help for all commands and categories",
       "NotFoundTitle": "Command not found",
