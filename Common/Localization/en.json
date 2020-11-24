@@ -14,7 +14,7 @@
       "WelcomeLocalizationTitle" : "🇺🇸 ***Localization***",
       "WelcomeLocalization": "You can change the bot response language with `{0}language`",
       "WelcomeInfoTitle" : "ℹ️ **Additional Information**",
-      "WelcomeInfo" : "`{0}help setchannel` - to assign a role to channels (without this, logging will not send reports when a message is deleted, for example)\n `{0}help setprefix` - to change the bot prefix\n `{0}stats` и `{0}userstats` - to view statistics\n `{0}invite` - to receive bot's invitation link",
+      "WelcomeInfo" : "`{0}help setchannel` - to assign a role to channels (without this, logging will not send reports when a message is deleted, for example)\n `{0}help setprefix` - to change the bot prefix\n `{0}stats` and `{0}userstats` - to view statistics\n `{0}invite` - to receive bot's invitation link",
       "WelcomeGithubTitle" : "🆘 **Help us**",
       "WelcomeGithub" : "If **you find an error**, you want to help with localizations or you **have an idea** - open [issue](https://gitlab.com/skprochlab/nJMaLBot/-/issues) or create [Merge Request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html) on [our GitLab](https://gitlab.com/skprochlab/nJMaLBot)!"
     },
@@ -37,7 +37,7 @@
       "Rewind": "**{0}** rewind the `{1}` track for `{2}` seconds",
       "Seek": "**{0}** moved playback position to `{1}`",
       "Remove": "**{0}** deletes the `{1}` track - `{2}`",
-      "RemoveRange": "**{0}** deletes the `{1}` tracks. From `{2}` to `{3}`",
+      "RemoveRange": "**{0}** deletes `{1}` tracks. From `{2}` to `{3}`",
       "TrackMoved": "**{0}** moves the `{1}` track to `{1=2}` position",
       "BassBoostUpdated": "**{0}** set the bass boost mode: `{1}`",
       "NodeChanged": "**{0}** moves playback to a new node: `{1}`",
@@ -94,7 +94,7 @@
       "Empty": "Empty",
       "Warning" : "**Warning**",
       "WarningEmojiRemoval" : "❗The bot can not remove reactions for users as intended. To do this, he needs permission `MANAGE_MESSAGES`",
-      "WarningEmojiAdding" : "‼️Management through reactions is not available - the bot cannot add them to the message. To do this, he needs разрешение `ADD_REACTIONS`",
+      "WarningEmojiAdding" : "‼️Management through reactions is not available - the bot cannot add them to the message. To do this, he needs permission `ADD_REACTIONS`",
       "WarningCustomEmoji" : "‼️Custom reactions for a beautiful display of the player are not available for the bot. To do this, he needs permission `USE_EXTERNAL_EMOJIS`",
       "TrackNotSeekable" : "{0}, unfortunately this track is not seek-able",
       "TryReconnectAfterDispose" : "We are trying to revive the player automatically.\n If we didn't succeed, use `{0}loadplaylist {1}`",
@@ -278,7 +278,7 @@
       "LogChannelMissing": "**not selected**. To select, send a message of the form ```{0}setchannel Log [here is the mention of the desired channel]```",
       "LoggedChannelsTitle": "📟 Logging enabled channels",
       "LoggedChannelsEmpty": "*There's nothing here*",
-      "InfoTitle": "Contols",
+      "InfoTitle": "Controls",
       "Info": "📝 To add or remove a channel to the logging, just write a message that contains its mention.\n For example:\n> {0}\n***Warning:*** enable logging only for really important channels. Each message is a place in the bot storage. The more economical we all will use it, the later I will have to introduce a clear history of old messages. Treat this with understanding"
     }
   }
