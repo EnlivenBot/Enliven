@@ -256,7 +256,6 @@
       "FixSpotifyTitle" : "Fix Spotify!",
       "FixSpotifyQueryNotRecognised": "We cannot recognize the playlist or track in `{0}`",
       "FixSpotifyAssociationCreationError": "Something went wrong while creating the default association. Try later",
-      "FixSpotifyTrackDescription" : "Track: **{0}**\nBy: **{1}**",
       "FixSpotifyNotFound" : "We cannot find anything for this request: `{0}`",
       "FixSpotifyPlaylistChooseName" : "Choose track",
       "FixSpotifyPlaylistChooseValue" : "To choose a track - write index in the next message. For example: \n> 1",

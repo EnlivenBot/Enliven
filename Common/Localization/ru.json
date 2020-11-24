@@ -256,7 +256,6 @@
       "FixSpotifyTitle" : "Исправим Spotify!",
       "FixSpotifyQueryNotRecognised": "Мы не можем распознать плейлист или трек в `{0}`",
       "FixSpotifyAssociationCreationError": "Что-то пошло не так при создании ассоциации по умолчанию. Попробуйте позже",
-      "FixSpotifyTrackDescription" : "Трек: **{0}**\nОт: **{1}**",
       "FixSpotifyNotFound" : "Мы не может найти что-либо по этому запросу: `{0}`",
       "FixSpotifyPlaylistChooseName" : "Выбрать трек",
       "FixSpotifyPlaylistChooseValue" : "Что бы выбрать трек - напишите его номер в следующем сообщении. Например: \n> 1",
