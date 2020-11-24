@@ -35,7 +35,7 @@ namespace Bot.Commands {
             var eb = this.GetAuthorEmbedBuilder().WithColor(Color.Gold);
             if (CustomCommandService.CommandsGroups.Value.TryGetValue(message, out var commandGroup)) {
                 eb.WithTitle(Loc.Get("Help.CommandsOfGroup").Format(message))
-                  .WithFields(commandGroup.Commands.GroupBy(info => info.Summary).Select(infos => infos.First()).Select(info => new EmbedFieldBuilder {
+                  .WithFields(commandGroup.Commands.GroupBy(info => info.Name).Select(infos => infos.First()).Select(info => new EmbedFieldBuilder {
                        Name = $"`{GuildConfig.Prefix}{info.Name}` {CustomCommandService.GetAliasesString(info.Aliases, Loc)}",
                        Value = Loc.Get($"Help.{info.Summary}")
                    }));
