@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace Bot.DiscordRelated.Criteria {
+namespace Common.Criteria {
     public class Criteria : ICriterion {
         private readonly List<ICriterion> _criteria = new List<ICriterion>();
 

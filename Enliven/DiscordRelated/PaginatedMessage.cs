@@ -10,6 +10,7 @@ using Bot.Utilities.Collector;
 using Common;
 using Common.Localization.Entries;
 using Common.Localization.Providers;
+using Common.Utils;
 using Discord;
 using Tyrrrz.Extensions;
 #pragma warning disable 4014

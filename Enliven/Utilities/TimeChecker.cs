@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Bot.DiscordRelated.Criteria;
+using Common.Criteria;
 
 namespace Bot.Utilities {
     public class TimeChecker {

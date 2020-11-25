@@ -1,52 +1,42 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Bot.DiscordRelated.Criteria;
+using Common.Criteria;
 
 #pragma warning disable 618
 
-namespace Bot.Utilities {
+namespace Common.Utils {
     public class SingleTask : SingleTask<Task> {
         public SingleTask(Func<Task> action) : base(action) { }
         public SingleTask(Func<SingleTaskExecutionData, Task> action) : base(action) { }
     }
 
     public class SingleTask<T> : IDisposable {
-        public class SingleTaskExecutionData {
-            public TimeSpan? OverrideDelay { get; set; }
-        }
-        
         // ReSharper disable once StaticMemberInGenericType
         private static readonly object LockObject = new object();
 
         [Obsolete("Use Execute method instead this")]
         public readonly Func<SingleTaskExecutionData, Task<T>> Action;
 
-        private Task? _betweenExecutionsDelayTask;
+        private HandyTimer _betweenExecutionsDelay = new HandyTimer();
         private bool _isDirtyNow;
         private DateTime _lastExecutionTime = DateTime.MinValue;
         private T _lastResult = default!;
         private DateTime _targetTime;
         private TaskCompletionSource<T>? _taskCompletionSource;
-        
-        public SingleTask(Func<SingleTaskExecutionData, T> action) {
-            Action = data => Task.FromResult(action(data));
-        }
+
+        public SingleTask(Func<SingleTaskExecutionData, T> action) : this(data => Task.FromResult(action(data))) { }
+
+        public SingleTask(Func<T> action) : this(data => Task.FromResult(action())) { }
+
+        public SingleTask(Func<Task<T>> action) : this(data => action()) { }
 
         public SingleTask(Func<SingleTaskExecutionData, Task<T>> action) {
             Action = action;
         }
 
-        public SingleTask(Func<T> action) {
-            Action = data => Task.FromResult(action());
-        }
-
-        public SingleTask(Func<Task<T>> action) {
-            Action = data => action();
-        }
+        public TimeSpan? BetweenExecutionsDelay { get; set; }
 
         public ICriterion? NeedDirtyExecuteCriterion { get; set; }
-
-        public TimeSpan? BetweenExecutionsDelay { get; set; }
 
         public bool IsDelayResetByExecute { get; set; }
 
@@ -63,20 +53,19 @@ namespace Bot.Utilities {
 
         private Task<T> InternalExecute(bool makesDirty, TimeSpan? delayOverride) {
             lock (LockObject) {
-                if (_taskCompletionSource != null) {
-                    UpdateDelay(IsDelayResetByExecute, delayOverride);
+                var localTaskCompletionSource = _taskCompletionSource;
+                UpdateDelay(IsDelayResetByExecute, delayOverride);
+                if (localTaskCompletionSource != null) {
                     if (!makesDirty || !CanBeDirty)
-                        return _taskCompletionSource.Task;
+                        return localTaskCompletionSource.Task;
 
-                    return QueueExecuteDirty(_taskCompletionSource.Task);
+                    return QueueExecuteDirty(localTaskCompletionSource.Task);
                 }
 
                 _taskCompletionSource = new TaskCompletionSource<T>();
                 new Task(async () => {
                     IsExecuting = true;
-                    if (_betweenExecutionsDelayTask != null) {
-                        await _betweenExecutionsDelayTask;
-                    }
+                    await _betweenExecutionsDelay.TimerElapsed;
 
                     T result;
                     SingleTaskExecutionData? singleTaskExecutionData = null;
@@ -110,12 +99,7 @@ namespace Bot.Utilities {
             var tempTime = _lastExecutionTime + (overrideDelay ?? BetweenExecutionsDelay ?? TimeSpan.Zero);
             if (!hardUpdate && tempTime >= _targetTime) return;
             _targetTime = tempTime;
-            var delay = _targetTime - DateTime.Now;
-            if (delay.TotalMilliseconds < 0) {
-                delay = TimeSpan.Zero;
-            }
-
-            _betweenExecutionsDelayTask = Task.Delay(delay < TimeSpan.FromDays(10) ? delay : TimeSpan.FromMilliseconds(-1));
+            _betweenExecutionsDelay.SetTargetTime(_targetTime);
         }
 
         private async Task<T> QueueExecuteDirty(Task first) {
@@ -129,5 +113,9 @@ namespace Bot.Utilities {
         public void Dispose() {
             IsDisposed = true;
         }
+    }
+
+    public class SingleTaskExecutionData {
+        public TimeSpan? OverrideDelay { get; set; }
     }
 }
