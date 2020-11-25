@@ -46,12 +46,13 @@ namespace Bot.Commands {
 
         private async Task PlayInternal(string? query, int position) {
             var queries = Common.Music.Controller.MusicController.GetMusicQueries(Context.Message, query.IsBlank(""));
-            MainDisplay?.ControlMessageResend();
             if (queries.Count == 0) {
                 Context.Message?.SafeDelete();
+                if (MainDisplay != null) MainDisplay.NextResendForced = true;
                 return;
             }
 
+            MainDisplay?.ControlMessageResend();
             var historyEntry = new HistoryEntry(new EntryLocalized("Music.ResolvingTracks", queries.Count));
             Player.WriteToQueueHistory(historyEntry);
 

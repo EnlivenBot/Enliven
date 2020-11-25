@@ -48,6 +48,8 @@ namespace Bot.DiscordRelated.Music {
 
         private PriorityEmbedBuilderWrapper EmbedBuilder;
 
+        public bool NextResendForced;
+
         public EmbedPlayerDisplay(ITextChannel targetChannel, IDiscordClient discordClient, ILocalizationProvider loc,
                                   CommandHandlerService commandHandlerService, IPrefixProvider prefixProvider) :
             this((IMessageChannel) targetChannel, discordClient, loc, commandHandlerService, prefixProvider) {
@@ -81,7 +83,8 @@ namespace Bot.DiscordRelated.Music {
             }) {BetweenExecutionsDelay = TimeSpan.FromSeconds(1.5), CanBeDirty = true};
             _controlMessageSendTask = new SingleTask(async data => {
                 try {
-                    if (await new EnsureLastMessage(_targetChannel, _controlMessage?.Id ?? 0, 3) {IsNullableTrue = true}.Invert().JudgeAsync()) {
+                    if (NextResendForced || await new EnsureLastMessage(_targetChannel, _controlMessage?.Id ?? 0, 3) {IsNullableTrue = true}.Invert().JudgeAsync()) {
+                        NextResendForced = false;
                         await SendControlMessageInternal();
                     }
                     else {
@@ -221,7 +224,8 @@ namespace Bot.DiscordRelated.Music {
                             return;
                         }
 
-                        ControlMessageResend();
+                        NextResendForced = true;
+                        await _controlMessageSendTask.Execute(false, TimeSpan.Zero);
                     }, CollectorFilter.IgnoreSelf));
             }));
         }
