@@ -12,6 +12,7 @@ namespace Bot.Commands {
     [Grouping("utils")]
     public class UtilsCommand : AdvancedModuleBase {
         [Command("invite", RunMode = RunMode.Async)]
+        [Alias("link")]
         [Summary("invite0s")]
         public async Task Invite([Summary("invite0_0s")] bool emptyPermissions = false) {
             Context.Message.SafeDelete();
