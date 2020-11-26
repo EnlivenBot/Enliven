@@ -41,7 +41,7 @@
       "TrackMoved": "**{0}** ha movido la pista `{1}` a la posición `{1=2}`",
       "BassBoostUpdated": "**{0}** ha cambiado el modo BassBoost a `{1}`",
       "NodeChanged": "**{0}** ha movido la reproducción a un nodo nuevo: `{1}`",
-      "LimitExceed": "**{0}** no ha podido añadir `{1}` pistas. La cola ya contiene {2} pistas",
+      "LimitExceed": "**{0}** ha hecho `{1}` solicitudes que no se han podido procesar. La cola ya contiene {2} pistas",
       "PlaylistLoadingLimit": "**{0}** no puede cargar una playlist con `{1}` pistas. La cola no puede tener más de {2} pistas",
       "QueueTitle": "Cola",
       "QueuePage": "Página `{0}` de `{1}`",
@@ -99,7 +99,7 @@
       "TrackNotSeekable" : "{0}, lo siento, pero no puedo mover la posición de reproducción en esta pista",
       "TryReconnectAfterDispose" : "Estoy intentando reconectar el reproductor automáticamente.\n Si no lo consigo, escribe `{0}loadplaylist {1}`",
       "ReconnectedAfterDispose" : "He reiniciado el reproductor, todo listo. Si aún falla algo, usa `{0}stop` y `{0}loadplaylist {1}`",
-      "ResolvingTracks" : "Resolviendo pistas de `{0}` solicitudes",
+      "ResolvingTracks" : "**{0}** ha hecho `{1}` solicitudes. He procesado `{2}` de ellas y he añadido `{3}` pistas.",
       "CurrentTrackNonSpotify" : "La pista actual no es recibida de Spotify. Cambia a una pista de Spotify o proporcióname el track ID como argumento a este comando",
       "TrackStuck" : "La pista actual está bloqueada. La voy a saltar.",
       "TrackException" : "Error de reproducción de pista: `{0}`. La voy a saltar."
