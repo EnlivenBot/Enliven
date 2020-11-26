@@ -31,7 +31,7 @@ namespace Bot.Commands {
         public async Task Play([Remainder] [Summary("play0_0s")] string? query = null) {
             if (!await IsPreconditionsValid)
                 return;
-            await PlayInternal(query, -1);
+            await PlayInternal(query);
         }
 
         [SummonToUser]
@@ -44,7 +44,7 @@ namespace Bot.Commands {
             await PlayInternal(query, Player.Playlist.Count == 0 ? -1 : Player.CurrentTrackIndex + 1);
         }
 
-        private async Task PlayInternal(string? query, int position) {
+        private async Task PlayInternal(string? query, int position = -1) {
             var queries = Common.Music.Controller.MusicController.GetMusicQueries(Context.Message, query.IsBlank(""));
             if (queries.Count == 0) {
                 Context.Message?.SafeDelete();

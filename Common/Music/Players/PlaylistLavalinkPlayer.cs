@@ -199,7 +199,7 @@ namespace Common.Music.Players {
         private readonly SemaphoreSlim _enqueueLock = new SemaphoreSlim(1);
         private IPlaylistProvider _playlistProvider;
 
-        public virtual async Task TryEnqueue(IEnumerable<MusicResolver> resolvers, string author, int index) {
+        public virtual async Task TryEnqueue(IEnumerable<MusicResolver> resolvers, string author, int index = -1) {
             var musicResolvers = resolvers.ToList();
             var currentResolverIndex = 0;
             var addedTracks = new List<AuthoredTrack>();
@@ -221,7 +221,7 @@ namespace Common.Music.Players {
                     historyEntry.Update();
                     var tracks = await musicResolver.GetTracks();
                     var authoredTracks = tracks.Take(availableNumberOfTracks).Select(track => new AuthoredTrack(track, author)).ToList();
-                    await Enqueue(authoredTracks, index);
+                    await Enqueue(authoredTracks, index == -1 ? index : Math.Min(Playlist.Count, index + addedTracks.Count));
                     addedTracks.AddRange(authoredTracks);
 
                     if (tracks.Count - authoredTracks.Count == 0) continue;
