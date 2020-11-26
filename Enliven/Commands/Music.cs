@@ -53,21 +53,12 @@ namespace Bot.Commands {
             }
 
             MainDisplay?.ControlMessageResend();
-            var historyEntry = new HistoryEntry(new EntryLocalized("Music.ResolvingTracks", queries.Count));
-            Player.WriteToQueueHistory(historyEntry);
-
             try {
-                var lavalinkTracks =
-                    (await Task.WhenAll((await MusicController.ResolveQueries(queries))
-                       .Select(resolver => resolver.GetTracks()))).SelectMany(list => list);
-                Player.TryEnqueue(lavalinkTracks, Context.Message?.Author?.Username ?? "Unknown", position);
+                await Player.TryEnqueue(await MusicController.ResolveQueries(queries), Context.Message?.Author?.Username ?? "Unknown", position);
             }
             catch (TrackNotFoundException) {
-                ReplyFormattedAsync(Loc.Get("Music.NotFound").Format(query!.SafeSubstring(100, "...")), true)
-                   .DelayedDelete(Constants.LongTimeSpan);
-            }
-            finally {
-                historyEntry.Remove();
+                ErrorMessageController.AddEntry(Loc.Get("Music.NotFound", query!.SafeSubstring(100, "...")!))
+                                                   .UpdateTimeout(Constants.StandardTimeSpan).Update();
             }
         }
 

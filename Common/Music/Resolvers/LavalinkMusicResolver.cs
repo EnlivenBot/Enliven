@@ -24,15 +24,13 @@ namespace Common.Music.Resolvers {
                 // Search two times
                 var preferredNode = cluster.GetPreferredNode(NodeRequestType.LoadTrack);
                 var lavalinkTrack = await preferredNode.GetTrackAsync(query, SearchMode.YouTube) ??
-                                    await (cluster.Nodes.Where(node => node != preferredNode).RandomOrDefault() ?? preferredNode)
+                                    await (cluster.Nodes.Where(node => node != preferredNode && node.IsConnected).RandomOrDefault() ?? preferredNode)
                                        .GetTrackAsync(query, SearchMode.YouTube);
 
                 // Add to cache only if request successful
-                if (lavalinkTrack != null) {
-                    _lavalinkCache.AddItem(query, lavalinkTrack, DateTimeOffset.Now + TimeSpan.FromMinutes(180));
-                }
-
-                return new List<LavalinkTrack> {lavalinkTrack!};
+                if (lavalinkTrack == null) return new List<LavalinkTrack>();
+                _lavalinkCache.AddItem(query, lavalinkTrack, DateTimeOffset.Now + TimeSpan.FromMinutes(180));
+                return new List<LavalinkTrack> {lavalinkTrack};
             }));
         }
     }
