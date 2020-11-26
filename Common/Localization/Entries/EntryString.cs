@@ -42,7 +42,7 @@ namespace Common.Localization.Entries {
         private string _cache = null!;
 
         public string Get(ILocalizationProvider provider, params object[] additionalArgs) {
-            if (_isCalculated || _lastProvider != provider || additionalArgs.Length != 0) {
+            if (!_isCalculated || _lastProvider != provider || additionalArgs.Length != 0) {
                 var formatArgs = FormatArgs.ToList().Concat(additionalArgs.Select(o => new Func<object>(() => o)))
                                         .Select(func => {
                                              var result = func();
