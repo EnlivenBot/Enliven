@@ -2,7 +2,7 @@
   "LanguageName": "Russian",
   "LocalizedName": "Русский",
   "LocalizationFlagEmoji": "🇷🇺",
-  "FallbackLanguage": null,
+  "FallbackLanguage": "en",
   "Authors": "SKProCH",
   "Data": {
     "Messages": {
