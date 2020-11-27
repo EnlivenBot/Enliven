@@ -15,25 +15,31 @@ namespace Bot.Utilities.Music {
     }
 
     public class SpotifyAssociationProvider : ISpotifyAssociationProvider {
-        private ConcurrentDictionary<string, SpotifyAssociation> _cache = new ConcurrentDictionary<string, SpotifyAssociation>();
+        private ConcurrentDictionary<string, SpotifyAssociation?> _cache = new ConcurrentDictionary<string, SpotifyAssociation>();
         private ILiteCollection<SpotifyAssociation> _associationCollection;
         public SpotifyAssociationProvider(ILiteCollection<SpotifyAssociation> associationCollection) {
             _associationCollection = associationCollection;
         }
 
         public SpotifyAssociation? Get(string id) {
-            return _cache.GetOrAdd(id, arg => {
-                var association = _associationCollection.FindById(id);
-                association.SaveRequest.Subscribe(data => _associationCollection.Upsert(association));
-                
-                return association;
-            });
+            if (_cache.TryGetValue(id, out var association)) return association;
+            
+            association = _associationCollection.FindById(id);
+            if (association == null) return association;
+            
+            _cache.TryAdd(id, association);
+            association.SaveRequest.Subscribe(data => _associationCollection.Upsert(association));
+            return association;
         }
 
         public SpotifyAssociation Create(string spotifyTrackId, string defaultAssociationIdentifier) {
             #pragma warning disable 618
-            return new SpotifyAssociation(spotifyTrackId, defaultAssociationIdentifier);
+            var spotifyAssociation = new SpotifyAssociation(spotifyTrackId, defaultAssociationIdentifier);
             #pragma warning restore 618
+            
+            _cache.TryAdd(spotifyTrackId, spotifyAssociation);
+            spotifyAssociation.SaveRequest.Subscribe(data => _associationCollection.Upsert(data));
+            return spotifyAssociation;
         }
     }
     
@@ -52,7 +58,7 @@ namespace Bot.Utilities.Music {
         public List<TrackAssociationData> Associations { get; set; } = new List<TrackAssociationData>();
 
         public TrackAssociationData GetBestAssociation() {
-            return Associations.Select(data => (data.Score, data)).Max().data;
+            return Associations.Max();
         }
 
         [BsonIgnore] public ISubject<SpotifyAssociation> SaveRequest = new Subject<SpotifyAssociation>();
@@ -60,7 +66,7 @@ namespace Bot.Utilities.Music {
             SaveRequest.OnNext(this);
         }
 
-        public class TrackAssociationData {
+        public class TrackAssociationData : IComparable<TrackAssociationData> {
             [Obsolete("This constructor for database engine")]
             public TrackAssociationData() { }
 
@@ -95,6 +101,13 @@ namespace Bot.Utilities.Music {
                         DownvotedUsers.Add(userId);
                         break;
                 }
+            }
+
+            public int CompareTo(TrackAssociationData? other) {
+                if (other == null) {
+                    return 1;
+                }
+                return Score - other.Score;
             }
         }
     }

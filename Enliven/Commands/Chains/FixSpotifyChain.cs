@@ -131,7 +131,7 @@ namespace Bot.Commands.Chains {
                 return;
             }
 
-            var onPaginatedMessageStop = new EventHandler((sender, args) => End());
+            IDisposable? paginatedMessageDispose = null;
             // ReSharper disable once RedundantAssignment
             var fullTrack = await spotifyTrackWrapper.GetFullTrack();
 
@@ -146,7 +146,7 @@ namespace Bot.Commands.Chains {
                         association.Save();
 
                         await args.RemoveReason();
-                        _paginatedMessage!.Stop -= onPaginatedMessageStop;
+                        paginatedMessageDispose?.Dispose();
 
                         UpdateMessage();
                     }
@@ -159,8 +159,8 @@ namespace Bot.Commands.Chains {
 
                 if (int.TryParse(args.Message.Content, out var index) && index >= 0 && index <= association.Associations.Count) {
                     args.StopCollect();
-                    _paginatedMessage!.Stop -= onPaginatedMessageStop;
-                    _paginatedMessage.StopAndClear();
+                    paginatedMessageDispose?.Dispose();
+                    _paginatedMessage.Dispose();
 
                     await StartWithAssociation(association, spotifyTrackWrapper, association.Associations[index.Normalize(1, association.Associations.Count) - 1]);
                     SetTimeout(Constants.StandardTimeSpan);
@@ -188,7 +188,7 @@ namespace Bot.Commands.Chains {
 
                         association.Save();
                         await args.RemoveReason();
-                        _paginatedMessage!.Stop -= onPaginatedMessageStop;
+                        paginatedMessageDispose?.Dispose();
                         UpdateMessage();
                     }
                     catch (Exception) {
@@ -213,7 +213,7 @@ namespace Bot.Commands.Chains {
                 _paginatedMessage ??= new PaginatedMessage(PaginatedAppearanceOptions.Default, _controlMessage!, Loc);
                 _paginatedMessage.SetPages(Loc.Get("Chains.FixSpotifyAssociationChoose", $"***{fullTrack.Name}*** - **{fullTrack.Artists.First().Name}**"),
                     fields, Int32.MaxValue);
-                _paginatedMessage.Stop += onPaginatedMessageStop;
+                _paginatedMessage.Disposed.Subscribe(base1 => End());
             }
         }
 

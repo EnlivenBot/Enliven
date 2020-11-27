@@ -6,7 +6,7 @@
   "Authors": "SKProCH",
   "Data": {
     "Messages" : {
-      "WelcomeDescription" : "Greetings! 👋\n Thank you for adding me here!\n\n My prefix is ​​`{0}`, or you can just mention me - {1}.\n The list of commands can be viewed through `{0}help`.\n\n Here is a brief overview of my options:",
+      "WelcomeDescription" : "Greetings! 👋\n Thank you for adding me here!\n\n My prefix is ​​`{0}`, or you can just mention me - {1}.\n The list of commands can be viewed through `{0}help`.\n You also can get support on our [Discord server](https://discord.gg/zfBffbBbCp).\n\n Here is a brief overview of my options:",
       "WelcomeMusicTitle" : "***📻 Music***",
       "WelcomeMusic" : "You can order tracks from YouTube, SoundCloud, YaMusic and many other services.\n You can control playback through emojis and using commands. You can create and order your own playlists and much more. List of Music Commands - `{0}help music`",
       "WelcomeLoggingTitle" : ":book: ***Logging***",
@@ -14,7 +14,7 @@
       "WelcomeLocalizationTitle" : "🇺🇸 ***Localization***",
       "WelcomeLocalization": "You can change the bot response language with `{0}language`",
       "WelcomeInfoTitle" : "ℹ️ **Additional Information**",
-      "WelcomeInfo" : "`{0}help setchannel` - to assign a role to channels (without this, logging will not send reports when a message is deleted, for example)\n `{0}help setprefix` - to change the bot prefix\n `{0}stats` и `{0}userstats` - to view statistics\n `{0}invite` - to receive bot's invitation link",
+      "WelcomeInfo" : "`{0}help setchannel` - to assign a role to channels (without this, logging will not send reports when a message is deleted, for example)\n `{0}help setprefix` - to change the bot prefix\n `{0}stats` and `{0}userstats` - to view statistics\n `{0}invite` - to receive bot's invitation link",
       "WelcomeGithubTitle" : "🆘 **Help us**",
       "WelcomeGithub" : "If **you find an error**, you want to help with localizations or you **have an idea** - open [issue](https://gitlab.com/skprochlab/nJMaLBot/-/issues) or create [Merge Request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html) on [our GitLab](https://gitlab.com/skprochlab/nJMaLBot)!"
     },
@@ -37,11 +37,11 @@
       "Rewind": "**{0}** rewind the `{1}` track for `{2}` seconds",
       "Seek": "**{0}** moved playback position to `{1}`",
       "Remove": "**{0}** deletes the `{1}` track - `{2}`",
-      "RemoveRange": "**{0}** deletes the `{1}` tracks. From `{2}` to `{3}`",
+      "RemoveRange": "**{0}** deletes `{1}` tracks. From `{2}` to `{3}`",
       "TrackMoved": "**{0}** moves the `{1}` track to `{1=2}` position",
       "BassBoostUpdated": "**{0}** set the bass boost mode: `{1}`",
       "NodeChanged": "**{0}** moves playback to a new node: `{1}`",
-      "LimitExceed": "**{0}** cannot add `{1}` tracks. Queue already contains {2} tracks",
+      "LimitExceed": "**{0}** made `{1}` requests that were not fully processed. The queue already contains {2} tracks",
       "PlaylistLoadingLimit": "**{0}** cannot load playlist with `{1}` tracks inside. Queue cannot contains more than {2} tracks",
       "QueueTitle": "Queue",
       "QueuePage": "Page `{0}` of `{1}`",
@@ -94,13 +94,15 @@
       "Empty": "Empty",
       "Warning" : "**Warning**",
       "WarningEmojiRemoval" : "❗The bot can not remove reactions for users as intended. To do this, he needs permission `MANAGE_MESSAGES`",
-      "WarningEmojiAdding" : "‼️Management through reactions is not available - the bot cannot add them to the message. To do this, he needs разрешение `ADD_REACTIONS`",
+      "WarningEmojiAdding" : "‼️Management through reactions is not available - the bot cannot add them to the message. To do this, he needs permission `ADD_REACTIONS`",
       "WarningCustomEmoji" : "‼️Custom reactions for a beautiful display of the player are not available for the bot. To do this, he needs permission `USE_EXTERNAL_EMOJIS`",
       "TrackNotSeekable" : "{0}, unfortunately this track is not seek-able",
       "TryReconnectAfterDispose" : "We are trying to revive the player automatically.\n If we didn't succeed, use `{0}loadplaylist {1}`",
       "ReconnectedAfterDispose" : "The player has been restarted. We fixed everything. If not, use `{0}stop` and `{0}loadplaylist {1}`",
-      "ResolvingTracks" : "Resolving tracks from `{0}` queries",
-      "CurrentTrackNonSpotify" : "The current track is not received from Spotify. Switch to a track from Spotify or provide the track ID as an argument to this command"
+      "ResolvingTracks" : "**{0}** made `{1}` requests. Processed `{2}` of them, added `{3}` tracks.",
+      "CurrentTrackNonSpotify" : "The current track is not received from Spotify. Switch to a track from Spotify or provide the track ID as an argument to this command",
+      "TrackStuck" : "The current track is stuck. Let's skip.",
+      "TrackException" : "Track playback error: `{0}`. Let's skip."
     },
     "Groups": {
       "" : "Other",
@@ -109,7 +111,7 @@
       "utils": "Utilities"
     },
     "Help": {
-      "HelpPrefix" : "Current bot prefix `{0}` or ping ({1})",
+      "HelpPrefix" : "Current bot prefix `{0}` or ping ({1}).\nYou also can get support on our [Discord server](https://discord.gg/zfBffbBbCp).",
       "HelpTitle": "Available commands",
       "HelpDescription": "Help for all commands and categories",
       "NotFoundTitle": "Command not found",
@@ -133,9 +135,8 @@
       "history0_0s": "ID of the message whose history needs to be displayed. You can also use a pair of `channel ID`-`ID messages`",
       "setprefix0s": "Assigns a prefix for bot commands",
       "setprefix0_0s": "New prefix",
-      "language0s": "Display list of available languages",
-      "setlanguage0s": "Assigns bot response language",
-      "setlanguage0_0s": "Language",
+      "language0s": "Allows you to select the language of the bot's responses",
+      "language0_0s": "Language",
       "setchannel0s": "Specifies the channel that the bot will use for a specific type of message.",
       "setchannel0_0s": "Channel Function Name (`music`, `log`)",
       "setchannel0_1s": "Channel Link",
@@ -276,7 +277,7 @@
       "LogChannelMissing": "**not selected**. To select, send a message of the form ```{0}setchannel Log [here is the mention of the desired channel]```",
       "LoggedChannelsTitle": "📟 Logging enabled channels",
       "LoggedChannelsEmpty": "*There's nothing here*",
-      "InfoTitle": "Contols",
+      "InfoTitle": "Controls",
       "Info": "📝 To add or remove a channel to the logging, just write a message that contains its mention.\n For example:\n> {0}\n***Warning:*** enable logging only for really important channels. Each message is a place in the bot storage. The more economical we all will use it, the later I will have to introduce a clear history of old messages. Treat this with understanding"
     }
   }

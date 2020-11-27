@@ -37,11 +37,8 @@ namespace Bot.Commands {
             await ReplyFormattedAsync(Loc.Get("Commands.Success"), Loc.Get("Commands.SetPrefixResponse").Format(prefix), Constants.LongTimeSpan);
             Context.Message.SafeDelete();
         }
-
-        [Command("language")]
-        [Alias("languages")]
-        [Summary("language0s")]
-        public async Task ListLanguages() {
+        
+        private async Task ListLanguages() {
             var embedBuilder = this.GetAuthorEmbedBuilder().WithColor(Color.Gold).WithTitle(Loc.Get("Localization.LanguagesList"));
             foreach (var (key, pack) in LocalizationManager.Languages) {
                 embedBuilder.AddField($"{pack.LocalizationFlagEmojiText} **{pack.LocalizedName}** ({pack.LanguageName})",
@@ -74,9 +71,10 @@ namespace Bot.Commands {
             message.DelayedDelete(Constants.StandardTimeSpan);
         }
 
-        [Command("setlanguage")]
-        [Summary("setlanguage0s")]
-        public async Task SetLanguage([Summary("setlanguage0_0s")] string? language = null) {
+        [Command("language")]
+        [Alias("languages")]
+        [Summary("language0s")]
+        public async Task SetLanguage([Summary("language0_0s")] string? language = null) {
             if (language == null) {
                 await ListLanguages();
                 return;

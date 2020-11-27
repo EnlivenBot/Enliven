@@ -10,6 +10,7 @@ using Common.Localization.Entries;
 using Common.Music.Players;
 using Discord;
 using Discord.WebSocket;
+using Lavalink4NET.Player;
 using Newtonsoft.Json;
 using NLog;
 
@@ -31,6 +32,14 @@ namespace Bot.DiscordRelated.Music {
             _guildConfigProvider = guildConfigProvider;
             UpdateThread = new Thread(UpdateCycle) {Priority = ThreadPriority.BelowNormal};
             UpdateThread.Start();
+        }
+
+        public EmbedPlayerDisplay? Get(string id) {
+            return _cache.TryGetValue(id, out var display) ? display : null;
+        }
+        
+        public EmbedPlayerDisplay? Get(ITextChannel channel) {
+            return Get($"guild-{channel.GuildId}");
         }
 
         public EmbedPlayerDisplay Provide(ITextChannel channel, FinalLavalinkPlayer finalLavalinkPlayer) {
@@ -63,6 +72,7 @@ namespace Bot.DiscordRelated.Music {
                 var displays = _cache.Values.ToList();
                 foreach (var display in displays) {
                     try {
+                        if (display.Player.State != PlayerState.Playing) continue;
                         display.UpdateProgress();
                         display.UpdateControlMessage().Wait();
                     }

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 
-namespace Bot.DiscordRelated.Criteria {
+namespace Common.Criteria {
     public static class CriterionUtils {
         public static CustomCriterion ToCustom<T>(this T criterion, Func<T, Task<bool>>? transform = null) where T : ICriterion{
             return new CustomCriterion(async () => {

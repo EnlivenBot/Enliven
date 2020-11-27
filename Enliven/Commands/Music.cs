@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Bot.Commands.Chains;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
+using Bot.DiscordRelated.Music;
 using Common;
 using Common.History;
 using Common.Localization.Entries;
@@ -30,7 +31,7 @@ namespace Bot.Commands {
         public async Task Play([Remainder] [Summary("play0_0s")] string? query = null) {
             if (!await IsPreconditionsValid)
                 return;
-            await PlayInternal(query, -1);
+            await PlayInternal(query);
         }
 
         [SummonToUser]
@@ -43,28 +44,21 @@ namespace Bot.Commands {
             await PlayInternal(query, Player.Playlist.Count == 0 ? -1 : Player.CurrentTrackIndex + 1);
         }
 
-        private async Task PlayInternal(string? query, int position) {
+        private async Task PlayInternal(string? query, int position = -1) {
             var queries = Common.Music.Controller.MusicController.GetMusicQueries(Context.Message, query.IsBlank(""));
             if (queries.Count == 0) {
                 Context.Message?.SafeDelete();
+                if (MainDisplay != null) MainDisplay.NextResendForced = true;
                 return;
             }
 
-            var historyEntry = new HistoryEntry(new EntryLocalized("Music.ResolvingTracks", queries.Count));
-            Player.WriteToQueueHistory(historyEntry);
-
+            MainDisplay?.ControlMessageResend();
             try {
-                var lavalinkTracks =
-                    (await Task.WhenAll((await MusicController.ResolveQueries(queries))
-                       .Select(resolver => resolver.GetTracks()))).SelectMany(list => list);
-                Player.TryEnqueue(lavalinkTracks, Context.Message?.Author?.Username ?? "Unknown", position);
+                await Player.TryEnqueue(await MusicController.ResolveQueries(queries), Context.Message?.Author?.Username ?? "Unknown", position);
             }
             catch (TrackNotFoundException) {
-                ReplyFormattedAsync(Loc.Get("Music.NotFound").Format(query!.SafeSubstring(100, "...")), true)
-                   .DelayedDelete(Constants.LongTimeSpan);
-            }
-            finally {
-                historyEntry.Remove();
+                ErrorMessageController.AddEntry(Loc.Get("Music.NotFound", query!.SafeSubstring(100, "...")!))
+                                                   .UpdateTimeout(Constants.StandardTimeSpan).Update();
             }
         }
 
@@ -79,7 +73,7 @@ namespace Bot.Commands {
         }
 
         [Command("jump", RunMode = RunMode.Async)]
-        [Alias("j", "skip", "next", "n", "s")]
+        [Alias("j", "skip", "next", "n", "s", "jmp")]
         [Summary("jump0s")]
         public async Task Jump([Summary("jump0_0s")] int index = 1) {
             if (!await IsPreconditionsValid) return;
@@ -218,18 +212,18 @@ namespace Bot.Commands {
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.Shuffle").Format(Context.User.Username));
         }
 
-        // [Command("list", RunMode = RunMode.Async)]
-        // [Alias("l", "q", "queue")]
-        // [Summary("list0s")]
-        // public async Task List() {
-        //     if (!await IsPreconditionsValid) return;
-        //     if (Player == null || Player.Playlist.IsEmpty) {
-        //         ReplyFormattedAsync(Loc.Get("Music.QueueEmpty").Format(GuildConfig.Prefix), true);
-        //         return;
-        //     }
-        //
-        //     // Player.PrintQueue(Context.Channel);
-        // }
+        [Command("list", RunMode = RunMode.Async)]
+        [Alias("l", "q", "queue")]
+        [Summary("list0s")]
+        public async Task List() {
+            if (!await IsPreconditionsValid) return;
+            if (Player == null || Player.Playlist.IsEmpty) {
+                ReplyFormattedAsync(Loc.Get("Music.QueueEmpty").Format(GuildConfig.Prefix), true);
+                return;
+            }
+
+            await new EmbedPlayerQueueDisplay(Context.Channel, Loc).Initialize(Player);
+        }
 
         [SummonToUser]
         [Command("youtube", RunMode = RunMode.Async)]
@@ -383,7 +377,7 @@ namespace Bot.Commands {
                                       .UpdateTimeout(Constants.StandardTimeSpan).Update();
                 return;
             }
-            
+
             Player.SetBassBoost(mode);
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.BassBoostUpdated").Format(Context.User.Username, mode));
         }

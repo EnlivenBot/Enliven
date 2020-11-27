@@ -88,7 +88,7 @@ namespace Common.Music.Players {
                     throw new ArgumentOutOfRangeException(nameof(mode), mode, null);
             }
 
-            UpdateEqualizerAsync(bands, false);
+            UpdateEqualizerAsync(bands, false, true);
             BassboostChanged.OnNext(mode);
         }
 
@@ -126,6 +126,10 @@ namespace Common.Music.Players {
 
         public virtual void WriteToQueueHistory(string entry) {
             WriteToQueueHistory(new HistoryEntry(new EntryString(entry)));
+        }
+
+        public virtual void WriteToQueueHistory(IEntry entry) {
+            WriteToQueueHistory(entry is HistoryEntry historyEntry ? historyEntry : new HistoryEntry(entry));
         }
 
         public virtual void WriteToQueueHistory(HistoryEntry entry) {

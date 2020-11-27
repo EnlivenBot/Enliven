@@ -8,6 +8,7 @@ using Common.Config;
 using Common.History;
 using Common.Localization.Entries;
 using Common.Music.Controller;
+using Common.Music.Resolvers;
 using Common.Music.Tracks;
 using Lavalink4NET.Decoding;
 using Lavalink4NET.Events;
@@ -174,7 +175,7 @@ namespace Common.Music.Players {
                 if (position != null && position.Value > track.Duration) {
                     position = TimeSpan.Zero;
                 }
-                
+
                 await PlayAsync(track, false, position);
                 WriteToQueueHistory(new HistoryEntry(new EntryLocalized("MusicQueues.Jumped", requester, CurrentTrackIndex + 1,
                     MusicController.EscapeTrack(CurrentTrack!.Title).SafeSubstring(100, "...")!)));
@@ -198,22 +199,55 @@ namespace Common.Music.Players {
         private readonly SemaphoreSlim _enqueueLock = new SemaphoreSlim(1);
         private IPlaylistProvider _playlistProvider;
 
-        public virtual async Task TryEnqueue(IEnumerable<LavalinkTrack> tracks, string author, int index) {
+        public virtual async Task TryEnqueue(IEnumerable<MusicResolver> resolvers, string author, int index = -1) {
+            var musicResolvers = resolvers.ToList();
+            var currentResolverIndex = 0;
+            var addedTracks = new List<AuthoredTrack>();
+            var historyEntry = new HistoryEntry(new EntryLocalized("Music.ResolvingTracks",
+                () => author, () => musicResolvers.Count, () => currentResolverIndex, () => addedTracks.Count));
+            WriteToQueueHistory(historyEntry);
             await _enqueueLock.WaitAsync();
+
             try {
-                var lavalinkTracks = tracks.ToList();
-                var authoredTracks = lavalinkTracks.Take(Constants.MaxTracksCount - Playlist.Tracks.Count)
-                                                   .Select(track => new AuthoredTrack(track, author)).ToList();
+                var isLimitHit = false;
+                for (; currentResolverIndex < musicResolvers.Count; currentResolverIndex++) {
+                    var musicResolver = musicResolvers[currentResolverIndex];
+                    var availableNumberOfTracks = Constants.MaxTracksCount - Playlist.Tracks.Count;
+                    if (availableNumberOfTracks <= 0) {
+                        isLimitHit = true;
+                        break;
+                    }
 
-                await Enqueue(authoredTracks, index);
+                    historyEntry.Update();
+                    var tracks = await musicResolver.GetTracks();
+                    var authoredTracks = tracks.Take(availableNumberOfTracks).Select(track => new AuthoredTrack(track, author)).ToList();
+                    await Enqueue(authoredTracks, index == -1 ? index : Math.Min(Playlist.Count, index + addedTracks.Count));
+                    addedTracks.AddRange(authoredTracks);
 
-                var ignoredTracksCount = lavalinkTracks.Count - authoredTracks.Count;
-                if (ignoredTracksCount != 0) {
-                    WriteToQueueHistory(new HistoryEntry(new EntryLocalized("MusicQueues.LimitExceed", author, ignoredTracksCount, Constants.MaxTracksCount)));
+                    if (tracks.Count - authoredTracks.Count == 0) continue;
+                    isLimitHit = true;
+                    break;
+                }
+
+                if (addedTracks.Count == 1) {
+                    WriteToQueueHistory(new HistoryEntry(new EntryLocalized("MusicQueues.Enqueued", author,
+                        MusicController.EscapeTrack(addedTracks[0].Title))));
+                }
+                else if (addedTracks.Count > 1) {
+                    WriteToQueueHistory(new HistoryEntry(new EntryLocalized("MusicQueues.EnqueuedMany", author, addedTracks.Count)));
+                }
+
+                if (isLimitHit) {
+                    WriteToQueueHistory(new HistoryEntry(new EntryLocalized("MusicQueues.LimitExceed", author, musicResolvers.Count - currentResolverIndex,
+                        Constants.MaxTracksCount)));
+                }
+                else if (addedTracks.Count == 0) {
+                    throw new TrackNotFoundException();
                 }
             }
             finally {
                 _enqueueLock.Release();
+                historyEntry.Remove();
             }
         }
 
@@ -234,16 +268,6 @@ namespace Common.Music.Players {
                         await PlayAsync(localTracks.First(), false, null, null, true);
                     }
                 }
-
-                if (tracks.Count == 1) {
-                    var track = tracks.First();
-                    WriteToQueueHistory(new HistoryEntry(new EntryLocalized("MusicQueues.Enqueued", track.GetRequester(),
-                        MusicController.EscapeTrack(track.Title))));
-                }
-                else if (tracks.Count > 1) {
-                    var author = tracks.First().GetRequester();
-                    WriteToQueueHistory(new HistoryEntry(new EntryLocalized("MusicQueues.EnqueuedMany", author, tracks.Count)));
-                }
             }
         }
 
@@ -255,6 +279,18 @@ namespace Common.Music.Players {
                 parameters.StoredPlaylist = _playlistProvider.StorePlaylist(ExportPlaylist(ExportPlaylistOptions.AllData),
                     "a" + ObjectId.NewObjectId(), UserLink.Current);
             }
+        }
+
+        public override async Task OnTrackExceptionAsync(TrackExceptionEventArgs eventArgs) {
+            WriteToQueueHistory(new EntryLocalized("Music.TrackException", eventArgs.Error));
+            await SkipAsync(1, true);
+            await base.OnTrackExceptionAsync(eventArgs);
+        }
+
+        public override async Task OnTrackStuckAsync(TrackStuckEventArgs eventArgs) {
+            WriteToQueueHistory(new EntryLocalized("Music.TrackStuck"));
+            await SkipAsync(1, true);
+            await base.OnTrackStuckAsync(eventArgs);
         }
     }
 

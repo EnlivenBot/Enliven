@@ -10,19 +10,20 @@ using Bot.Utilities.Collector;
 using Common;
 using Common.Localization.Entries;
 using Common.Localization.Providers;
+using Common.Utils;
 using Discord;
 using Tyrrrz.Extensions;
+
 #pragma warning disable 4014
 
 namespace Bot.DiscordRelated {
-    public class PaginatedMessage : IDisposable {
+    public class PaginatedMessage : DisposableBase {
         private readonly EmbedBuilder _embedBuilder = new EmbedBuilder();
         private readonly SingleTask<IUserMessage?> _resendTask;
         private readonly SingleTask _updateTask;
         public readonly PaginatedAppearanceOptions Options;
         private CollectorController? _collectorController;
         private bool _jumpEnabled;
-        private TaskCompletionSource<bool> _stopTask = new TaskCompletionSource<bool>();
         private bool _isCollectionUpdating;
 
         private readonly Timer _timeoutTimer;
@@ -48,11 +49,11 @@ namespace Bot.DiscordRelated {
             Pages.CollectionChanged += (sender, args) => Update();
 
             _timeoutTimer = new Timer(state => {
-                _timeoutTimer.Change(-1, -1);
-                StopAndClear();
+                Dispose();
             });
 
             _updateTask = new SingleTask(async () => {
+                if (IsDisposed) return;
                 UpdateTimeout(true);
                 try {
                     if (Message == null) {
@@ -151,7 +152,7 @@ namespace Bot.DiscordRelated {
                     PageNumber = Pages.Count - 1;
                 }
                 else if (args.Reaction.Emote.Equals(Options.Stop)) {
-                    StopAndClear();
+                    Dispose();
                     return;
                 }
                 else if (Options.DisplayInformationIcon && args.Reaction.Emote.Equals(Options.Info)) {
@@ -252,17 +253,6 @@ namespace Bot.DiscordRelated {
                 TimeSpan.FromMilliseconds(-1));
         }
 
-        public event EventHandler? Stop;
-
-        public Task Wait() {
-            return _stopTask.Task;
-        }
-
-        public void StopAndClear() {
-            Dispose();
-            Message?.DeleteAsync();
-        }
-
         public void CoercePageNumber() {
             PageNumber = PageNumber.Normalize(0, Pages.Count - 1);
         }
@@ -285,6 +275,7 @@ namespace Bot.DiscordRelated {
                 if (fieldsList != null) {
                     pageContentLength -= fieldsList.Sum(builder => builder.Name.Length + builder.Value.ToString()!.Length);
                 }
+
                 var lines = content.Split("\n");
                 var page = new MessagePage {Fields = fieldsList?.ToList() ?? new List<EmbedFieldBuilder>()};
                 var currentLinesCount = 0;
@@ -360,12 +351,6 @@ namespace Bot.DiscordRelated {
             return _resendTask.Execute();
         }
 
-        protected virtual void OnStop() {
-            Stop?.Invoke(this, EventArgs.Empty);
-            var oldTaskCompletionSource = _stopTask;
-            _stopTask = new TaskCompletionSource<bool>();
-            oldTaskCompletionSource.SetResult(true);
-        }
 
         public class MessagePage {
             public MessagePage() { }
@@ -383,10 +368,13 @@ namespace Bot.DiscordRelated {
             public List<EmbedFieldBuilder> Fields { get; set; } = new List<EmbedFieldBuilder>();
         }
 
-        public void Dispose() {
+        protected override void DisposeInternal() {
+            base.DisposeInternal();
             _timeoutTimer.Dispose();
             _collectorController?.Dispose();
-            OnStop();
+            _resendTask.Dispose();
+            _updateTask.Dispose();
+            Message?.SafeDelete();
         }
     }
 

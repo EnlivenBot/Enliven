@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 
-namespace Bot.DiscordRelated.Criteria {
+namespace Common.Criteria {
     public interface INullableCriterion : ICriterion {
         bool IsNullableTrue { get; set; }
 

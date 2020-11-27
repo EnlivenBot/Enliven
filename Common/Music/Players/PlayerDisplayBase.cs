@@ -21,7 +21,12 @@ namespace Common.Music.Players {
             return Task.CompletedTask;
         }
 
-        public abstract Task Shutdown(IEntry header, IEntry body);
+        public virtual Task Shutdown(IEntry header, IEntry body) {
+            Player?.Displays.Remove(this);
+            
+            return Task.CompletedTask;
+        }
+        
         public abstract Task LeaveNotification(IEntry header, IEntry body);
 
         public ISubject<IPlayerDisplay> Disposed { get; set; } = new Subject<IPlayerDisplay>();

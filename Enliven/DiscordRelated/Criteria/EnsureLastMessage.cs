@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Common.Criteria;
 using Discord;
 
 namespace Bot.DiscordRelated.Criteria {

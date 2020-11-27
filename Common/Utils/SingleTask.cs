@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Bot.DiscordRelated.Criteria;
+using Common.Criteria;
 
 #pragma warning disable 618
 
-namespace Bot.Utilities {
+namespace Common.Utils {
     public class SingleTask : SingleTask<Task> {
         public SingleTask(Func<Task> action) : base(action) { }
+        public SingleTask(Func<SingleTaskExecutionData, Task> action) : base(action) { }
     }
 
     public class SingleTask<T> : IDisposable {
@@ -14,26 +15,28 @@ namespace Bot.Utilities {
         private static readonly object LockObject = new object();
 
         [Obsolete("Use Execute method instead this")]
-        public readonly Func<Task<T>> Action;
+        public readonly Func<SingleTaskExecutionData, Task<T>> Action;
 
-        private Task _betweenExecutionsDelayTask = Task.CompletedTask;
+        private HandyTimer _betweenExecutionsDelay = new HandyTimer();
         private bool _isDirtyNow;
         private DateTime _lastExecutionTime = DateTime.MinValue;
         private T _lastResult = default!;
         private DateTime _targetTime;
         private TaskCompletionSource<T>? _taskCompletionSource;
 
-        public SingleTask(Func<T> action) {
-            Action = () => Task.FromResult(action());
-        }
+        public SingleTask(Func<SingleTaskExecutionData, T> action) : this(data => Task.FromResult(action(data))) { }
 
-        public SingleTask(Func<Task<T>> action) {
+        public SingleTask(Func<T> action) : this(data => Task.FromResult(action())) { }
+
+        public SingleTask(Func<Task<T>> action) : this(data => action()) { }
+
+        public SingleTask(Func<SingleTaskExecutionData, Task<T>> action) {
             Action = action;
         }
 
-        public ICriterion? NeedDirtyExecuteCriterion { get; set; }
-
         public TimeSpan? BetweenExecutionsDelay { get; set; }
+
+        public ICriterion? NeedDirtyExecuteCriterion { get; set; }
 
         public bool IsDelayResetByExecute { get; set; }
 
@@ -43,32 +46,35 @@ namespace Bot.Utilities {
 
         public Task<T> Execute(bool makesDirty = true, TimeSpan? delayOverride = null) {
             if (IsDisposed) throw new ObjectDisposedException(nameof(SingleTask));
-            
+
             _isDirtyNow = false;
             return InternalExecute(makesDirty, delayOverride);
         }
 
         private Task<T> InternalExecute(bool makesDirty, TimeSpan? delayOverride) {
             lock (LockObject) {
-                if (_taskCompletionSource != null) {
-                    UpdateDelay(IsDelayResetByExecute, delayOverride);
+                var localTaskCompletionSource = _taskCompletionSource;
+                UpdateDelay(IsDelayResetByExecute, delayOverride);
+                if (localTaskCompletionSource != null) {
                     if (!makesDirty || !CanBeDirty)
-                        return _taskCompletionSource.Task;
+                        return localTaskCompletionSource.Task;
 
-                    return QueueExecuteDirty(_taskCompletionSource.Task);
+                    return QueueExecuteDirty(localTaskCompletionSource.Task);
                 }
 
                 _taskCompletionSource = new TaskCompletionSource<T>();
                 new Task(async () => {
                     IsExecuting = true;
-                    await _betweenExecutionsDelayTask;
+                    await _betweenExecutionsDelay.TimerElapsed;
 
                     T result;
+                    SingleTaskExecutionData? singleTaskExecutionData = null;
                     if (_isDirtyNow && NeedDirtyExecuteCriterion != null && await NeedDirtyExecuteCriterion.JudgeAsync() || IsDisposed) {
                         result = _lastResult;
                     }
                     else {
-                        result = await Action();
+                        singleTaskExecutionData = new SingleTaskExecutionData();
+                        result = await Action(singleTaskExecutionData);
                         if (result is Task task) {
                             await task;
                         }
@@ -81,7 +87,7 @@ namespace Bot.Utilities {
                         _taskCompletionSource = null;
                         _lastExecutionTime = DateTime.Now;
                         _isDirtyNow = false;
-                        UpdateDelay(true);
+                        UpdateDelay(true, singleTaskExecutionData?.OverrideDelay);
                         localTaskCompletionSource.SetResult(result);
                     }
                 }, TaskCreationOptions.LongRunning).Start();
@@ -93,12 +99,7 @@ namespace Bot.Utilities {
             var tempTime = _lastExecutionTime + (overrideDelay ?? BetweenExecutionsDelay ?? TimeSpan.Zero);
             if (!hardUpdate && tempTime >= _targetTime) return;
             _targetTime = tempTime;
-            var delay = DateTime.Now - _targetTime;
-            if (delay.TotalMilliseconds < 0) {
-                delay = TimeSpan.Zero;
-            }
-
-            _betweenExecutionsDelayTask = Task.Delay(delay < TimeSpan.FromDays(10) ? delay : TimeSpan.FromMilliseconds(-1));
+            _betweenExecutionsDelay.SetTargetTime(_targetTime);
         }
 
         private async Task<T> QueueExecuteDirty(Task first) {
@@ -108,13 +109,13 @@ namespace Bot.Utilities {
         }
 
         public bool IsDisposed { get; private set; }
+
         public void Dispose() {
-            try {
-                _betweenExecutionsDelayTask.Dispose();
-            }
-            finally {
-                IsDisposed = true;
-            }
+            IsDisposed = true;
         }
+    }
+
+    public class SingleTaskExecutionData {
+        public TimeSpan? OverrideDelay { get; set; }
     }
 }
