@@ -38,7 +38,7 @@
       "Seek": "**{0}** moved playback position to `{1}`",
       "Remove": "**{0}** deletes the `{1}` track - `{2}`",
       "RemoveRange": "**{0}** deletes `{1}` tracks. From `{2}` to `{3}`",
-      "TrackMoved": "**{0}** moves the `{1}` track to `{1=2}` position",
+      "TrackMoved": "**{0}** moves the `{1}` track to `{2}` position",
       "BassBoostUpdated": "**{0}** set the bass boost mode: `{1}`",
       "NodeChanged": "**{0}** moves playback to a new node: `{1}`",
       "LimitExceed": "**{0}** made `{1}` requests that were not fully processed. The queue already contains {2} tracks",
@@ -46,7 +46,7 @@
       "QueueTitle": "Queue",
       "QueuePage": "Page `{0}` of `{1}`",
       "QueuePageDescription": "⏮️⏭️ to move to the beginning or end \n◀️▶️ to move to the next or previous page \n🗃️ to export to a file",
-      "QueueDeprecated": "The queue has changed, this queue message is not relevant. To view the queue again, use the `{0} queue`"
+      "QueueDeprecated": "The queue has changed, this queue message is not relevant. To view the queue again, use the `{0}queue`"
     },
     "Music": {
       "RequestHistory": "Request history",
@@ -93,9 +93,9 @@
       "ResumeViaPlaylists": "You can try to replay through `{0}loadplaylist {1}`",
       "Empty": "Empty",
       "Warning": "**Warning**",
-      "WarningEmojiRemoval": "❗The bot can not remove reactions for users as intended. To do this, he needs permission `MANAGE_MESSAGES`",
-      "WarningEmojiAdding": "‼️Management through reactions is not available - the bot cannot add them to the message. To do this, he needs permission `ADD_REACTIONS`",
-      "WarningCustomEmoji": "‼️Custom reactions for a beautiful display of the player are not available for the bot. To do this, he needs permission `USE_EXTERNAL_EMOJIS`",
+      "WarningEmojiRemoval": "❗The bot can not remove reactions for users as intended. To do this, he needs permission `MANAGE_MESSAGES`.",
+      "WarningEmojiAdding": "‼️Management through reactions is not available - the bot cannot add them to the message. To do this, he needs permission `ADD_REACTIONS`.",
+      "WarningCustomEmoji": "‼️Custom reactions for a beautiful display of the player are not available for the bot. To do this, he needs permission `USE_EXTERNAL_EMOJIS`.",
       "TrackNotSeekable": "{0}, unfortunately this track is not seek-able",
       "TryReconnectAfterDispose": "We are trying to revive the player automatically.\n If we didn't succeed, use `{0}loadplaylist {1}`",
       "ReconnectedAfterDispose": "The player has been restarted. We fixed everything. If not, use `{0}stop` and `{0}loadplaylist {1}`",
@@ -245,7 +245,7 @@
     },
     "ChainsCommon": {
       "Ended": "Completed",
-      "Thanks": "The current command chain is complete.\n Thanks for using.\n Support us by using the command `{0} vote`",
+      "Thanks": "The current command chain is complete.\n Thanks for using.\n Support us by using the command `{0}vote`",
       "ReasonStartedNew": "The current chain of commands is completed, as the new one is launched.",
       "ReasonTimeout": "The current command chain has ended because the timeout reached",
       "CantSend": "We cannot complete this action in {0} because we do not have the necessary permissions"
