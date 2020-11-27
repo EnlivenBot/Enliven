@@ -118,6 +118,7 @@ namespace Bot.DiscordRelated.Music {
         }
 
         public override async Task Shutdown(IEntry header, IEntry body) {
+            base.Shutdown(header, body);
             _cancellationTokenSource.Cancel();
             var message = _controlMessage;
             Dispose();

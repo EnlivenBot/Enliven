@@ -52,6 +52,7 @@ namespace Bot.DiscordRelated.Music {
         }
 
         public override Task Shutdown(IEntry? header, IEntry? body) {
+            base.Shutdown(header!, body!);
             _subscribers?.Dispose();
             _paginatedMessage.StopAndClear();
             return Task.CompletedTask;
