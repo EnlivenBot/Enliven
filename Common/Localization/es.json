@@ -2,7 +2,7 @@
   "LanguageName": "Spanish",
   "LocalizedName": "Español",
   "LocalizationFlagEmoji": "🇪🇸",
-  "FallbackLanguage": "en",
+  "FallbackLanguage": null,
   "Authors": "sergio-faraldo",
   "Data": {
     "Messages": {
@@ -182,7 +182,7 @@
     },
     "CommandHandler": {
       "FailedTitle": "Error al ejecutar un comando",
-      "UnmetPrecondition": "No tienes permsos para ejecutar este comando!",
+      "UnmetPrecondition": "No tienes permisos para ejecutar este comando!",
       "BadArgCount": "Error - número incorrecto de argumentos. Info del comando:",
       "ParseFailed": "Error al leer el comando. Info del comando:",
       "UnknownCommand": "¡Comando `{0}` no encontrado!\nQuizá quieras usar uno de estos: {1}\n Usa el comando `{2}help` para ver la lista de comandos."
