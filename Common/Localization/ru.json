@@ -22,7 +22,7 @@
       "Success": "Успешно изменен язык бота на `{0}`",
       "Fail": "Не существует языка `{0}`.\n Доступны: {1}",
       "LanguagesList": "Выбор языка",
-      "LanguageDescription": "```{0}setlanguage {1}```\n Авторы - {2}\n Полнота перевода - {3}%"
+      "LanguageDescription": "```{0}language {1}```\n Авторы - {2}\n Полнота перевода - {3}%"
     },
     "MusicQueues": {
       "Enqueued": "**{0}** заказал `{1}`",

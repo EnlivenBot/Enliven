@@ -22,7 +22,7 @@
       "Success": "Idioma cambiado a `{0}`",
       "Fail": "No existe el idioma {0}.\nIdiomas disponibles: {1}",
       "LanguagesList": "Selección de idioma",
-      "LanguageDescription": "```{0}setlanguage {1}```\n Autores - {2}\n Progreso de la traducción - {3}%"
+      "LanguageDescription": "```{0}language {1}```\n Autores - {2}\n Progreso de la traducción - {3}%"
     },
     "MusicQueues": {
       "Enqueued": "**{0}** ha añadido en la cola: `{1}`",

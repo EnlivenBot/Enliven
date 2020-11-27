@@ -22,7 +22,7 @@
       "Success": "Successfully changed the bot language to `{0}`",
       "Fail": "There is no language {0}.\nAvailable: {1}",
       "LanguagesList": "Language selection",
-      "LanguageDescription": "```{0}setlanguage {1}```\n Authors - {2}\n Completeness of translation - {3}%"
+      "LanguageDescription": "```{0}language {1}```\n Authors - {2}\n Completeness of translation - {3}%"
     },
     "MusicQueues": {
       "Enqueued": "**{0}** enqueue `{1}`",
