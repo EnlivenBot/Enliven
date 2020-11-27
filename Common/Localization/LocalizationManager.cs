@@ -74,7 +74,7 @@ namespace Common.Localization {
                 return reqText;
             }
 
-            if (pack?.FallbackLanguage == null) {
+            if (string.IsNullOrWhiteSpace(pack?.FallbackLanguage)) {
                 logger.Error(new Exception($"Failed to load {group}.{id} in en localization"),
                     "Failed to load {group}.{id} in {lang} localization", group, id, "en");
                 return $"{group}.{id}";
