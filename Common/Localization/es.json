@@ -2,7 +2,7 @@
   "LanguageName": "Spanish",
   "LocalizedName": "Español",
   "LocalizationFlagEmoji": "🇪🇸",
-  "FallbackLanguage": null,
+  "FallbackLanguage": "en",
   "Authors": "sergio-faraldo",
   "Data": {
     "Messages": {
