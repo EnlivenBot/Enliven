@@ -53,7 +53,7 @@ namespace Bot.Commands {
                     var packName = pair.Key;
                     return CollectorsUtils.CollectReaction(message, reaction => reaction.Emote.Equals(pair.Value.LocalizationFlagEmoji), async args => {
                         await args.RemoveReason();
-                        var t = await CommandHandlerService.ExecuteCommand($"setlanguage {packName}", new ReactionCommandContext(Program.Client, args.Reaction),
+                        var t = await CommandHandlerService.ExecuteCommand($"language {packName}", new ReactionCommandContext(Program.Client, args.Reaction),
                             args.Reaction.UserId.ToString());
                         if (t.IsSuccess) {
                             message.SafeDelete();
