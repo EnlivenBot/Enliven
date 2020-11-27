@@ -26,6 +26,7 @@ namespace Bot.DiscordRelated.Music {
             _paginatedMessage = new PaginatedMessage(paginatedAppearanceOptions, _targetChannel, _loc) {
                 Title = _loc.Get("MusicQueues.QueueTitle"), Color = Color.Gold
             };
+            _paginatedMessage.Disposed.Subscribe(base2 => Shutdown(null, null));
             await base.Initialize(finalLavalinkPlayer);
             await _paginatedMessage.Resend();
         }
@@ -54,7 +55,7 @@ namespace Bot.DiscordRelated.Music {
         public override Task Shutdown(IEntry? header, IEntry? body) {
             base.Shutdown(header!, body!);
             _subscribers?.Dispose();
-            _paginatedMessage.StopAndClear();
+            _paginatedMessage.Dispose();
             return Task.CompletedTask;
         }
 
