@@ -16,12 +16,14 @@ using Lavalink4NET.Cluster;
 using Lavalink4NET.DiscordNet;
 using Lavalink4NET.Events;
 using Lavalink4NET.Logging;
+using Lavalink4NET.Player;
 using Lavalink4NET.Tracking;
 using ILogger = NLog.ILogger;
 
 namespace Common.Music.Controller {
     public class MusicController : IMusicController, IDisposable {
         private static readonly List<FinalLavalinkPlayer> PlaybackPlayers = new List<FinalLavalinkPlayer>();
+        private static readonly Dictionary<ulong, PlayerShutdownParameters> PlayerShutdownParametersMap = new Dictionary<ulong, PlayerShutdownParameters>();
         private static EventLogger _lavalinkLogger = new EventLogger();
         private MusicResolverService _musicResolverService;
         private IGuildConfigProvider _guildConfigProvider;
@@ -111,6 +113,28 @@ namespace Common.Music.Controller {
             await player.NodeChanged();
             PlaybackPlayers.Add(player);
             return player;
+        }
+
+        public async Task<FinalLavalinkPlayer> CreatePlayer(PlayerShutdownParameters parameters) {
+            var newPlayer = await ProvidePlayer(parameters.GuildId, parameters.LastVoiceChannelId, true);
+            newPlayer.Playlist.AddRange(parameters.Playlist!);
+            await newPlayer.PlayAsync(parameters.LastTrack!, parameters.TrackPosition);
+            if (parameters.PlayerState == PlayerState.Paused) await newPlayer.PauseAsync();
+            newPlayer.LoopingState = parameters.LoopingState;
+            newPlayer.UpdateCurrentTrackIndex();
+
+            return newPlayer;
+        }
+
+        public void StoreShutdownParameters(PlayerShutdownParameters parameters) {
+            PlayerShutdownParametersMap[parameters.GuildId] = parameters;
+        }
+
+        public async Task<FinalLavalinkPlayer?> RestoreLastPlayer(ulong guildId) {
+            var finalLavalinkPlayer = GetPlayer(guildId);
+            if (finalLavalinkPlayer != null) return finalLavalinkPlayer;
+            if (!PlayerShutdownParametersMap.ContainsKey(guildId)) return null;
+            return await CreatePlayer(PlayerShutdownParametersMap[guildId]);
         }
 
         public FinalLavalinkPlayer? GetPlayer(ulong guildId) {
