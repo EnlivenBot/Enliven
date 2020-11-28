@@ -38,7 +38,7 @@
       "Seek": "**{0}** ha movido la reproducción a `{1}`",
       "Remove": "**{0}** ha eliminado la pista `{1}` - `{2}`",
       "RemoveRange": "**{0}** ha eliminado `{1}` pistas. From `{2}` to `{3}`",
-      "TrackMoved": "**{0}** ha movido la pista `{1}` a la posición `{1=2}`",
+      "TrackMoved": "**{0}** ha movido la pista `{1}` a la posición `{2}`",
       "BassBoostUpdated": "**{0}** ha cambiado el modo BassBoost a `{1}`",
       "NodeChanged": "**{0}** ha movido la reproducción a un nodo nuevo: `{1}`",
       "LimitExceed": "**{0}** ha hecho `{1}` solicitudes que no se han podido procesar. La cola ya contiene {2} pistas",
@@ -46,7 +46,7 @@
       "QueueTitle": "Cola",
       "QueuePage": "Página `{0}` de `{1}`",
       "QueuePageDescription": "⏮️⏭️ Para moverse al principio o al final \n◀️▶️ para cambiar a la siguiente o anterior página \n🗃️ para exportar a archivo",
-      "QueueDeprecated": "La cola ha cambiado, este mensaje de cola no es relevante. Para ver la cola otra vez, escribe `{0} queue`"
+      "QueueDeprecated": "La cola ha cambiado, este mensaje de cola no es relevante. Para ver la cola otra vez, escribe `{0}queue`"
     },
     "Music": {
       "RequestHistory": "Historial de peticiones",
@@ -93,9 +93,9 @@
       "ResumeViaPlaylists": "Puedes intentar volver a reproducir usando: `{0}loadplaylist {1}`",
       "Empty": "Vacío",
       "Warning": "**Alerta**",
-      "WarningEmojiRemoval": "❗No puedo eliminar las reacciones de los usuarios, como debería. Para hacerlo, necesito el permiso `MANAGE_MESSAGES`",
-      "WarningEmojiAdding": "‼️No puedo añadir reacciones a mis mensajes, los controles visuales quedan deshabilitados - the bot cannot add them to the message. Para hacerlo, necesito el permiso `ADD_REACTIONS`",
-      "WarningCustomEmoji": "‼️No puedo añadir los emojis personalizados que necesito para el reproductor. Para hacerlo, necesito el permiso `USE_EXTERNAL_EMOJIS`",
+      "WarningEmojiRemoval": "❗No puedo eliminar las reacciones de los usuarios, como debería. Para hacerlo, necesito el permiso `MANAGE_MESSAGES`.",
+      "WarningEmojiAdding": "‼️No puedo añadir reacciones a mis mensajes, los controles visuales quedan deshabilitados - the bot cannot add them to the message. Para hacerlo, necesito el permiso `ADD_REACTIONS`.",
+      "WarningCustomEmoji": "‼️No puedo añadir los emojis personalizados que necesito para el reproductor. Para hacerlo, necesito el permiso `USE_EXTERNAL_EMOJIS`.",
       "TrackNotSeekable": "{0}, lo siento, pero no puedo mover la posición de reproducción en esta pista",
       "TryReconnectAfterDispose": "Estoy intentando reconectar el reproductor automáticamente.\n Si no lo consigo, escribe `{0}loadplaylist {1}`",
       "ReconnectedAfterDispose": "He reiniciado el reproductor, todo listo. Si aún falla algo, usa `{0}stop` y `{0}loadplaylist {1}`",
@@ -245,7 +245,7 @@
     },
     "ChainsCommon": {
       "Ended": "Completado",
-      "Thanks": "La cadena de comandos actual ha sido completada.\n Gracias por usar este bot.\n Ayúdanos usando el comando `{0} vote`",
+      "Thanks": "La cadena de comandos actual ha sido completada.\n Gracias por usar este bot.\n Ayúdanos usando el comando `{0}vote`",
       "ReasonStartedNew": "La cadena de comandos actual ha sido completada, lanzando una nueva.",
       "ReasonTimeout": "La cadena de comandos actual ha sido detenida debido a un timeout",
       "CantSend": "No puedo completar la acción en {0} porque no tengo los permisos necesarios"
