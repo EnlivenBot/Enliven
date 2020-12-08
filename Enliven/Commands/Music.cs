@@ -58,7 +58,7 @@ namespace Bot.Commands {
             }
             catch (TrackNotFoundException) {
                 ErrorMessageController.AddEntry(Loc.Get("Music.NotFound", query!.SafeSubstring(100, "...")!))
-                                                   .UpdateTimeout(Constants.StandardTimeSpan).Update();
+                                      .UpdateTimeout(Constants.StandardTimeSpan).Update();
             }
         }
 
@@ -326,9 +326,18 @@ namespace Bot.Commands {
 
             start = start.Normalize(1, Player.Playlist.Count);
             end = end.Normalize(start, Player.Playlist.Count);
-            Player.Playlist.RemoveRange(start - 1, end - start + 1);
-            Player.WriteToQueueHistory(Loc.Get("MusicQueues.Remove")
-                                          .Format(Context.User.Username, end - start + 1, start, end));
+            var countToRemove = end - start + 1;
+            if (countToRemove == 1) {
+                var deletedTrack = Player.Playlist[start - 1];
+                Player.Playlist.RemoveRange(start - 1, countToRemove);
+                Player.WriteToQueueHistory(Loc.Get("MusicQueues.Remove", Context.User.Username, start,
+                    Common.Music.Controller.MusicController.EscapeTrack(deletedTrack.Title.SafeSubstring(30))));
+            }
+            else {
+                Player.Playlist.RemoveRange(start - 1, countToRemove);
+                Player.WriteToQueueHistory(Loc.Get("MusicQueues.RemoveRange", Context.User.Username, countToRemove, start, end));
+            }
+
             if (Player.CurrentTrackIndex == -1 && Player.Playlist.Count != 0) {
                 var track = Player.Playlist[Math.Min(start - 1, Player.Playlist.Count)];
                 Player.PlayAsync(track, false);
