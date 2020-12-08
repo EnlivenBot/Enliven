@@ -326,12 +326,12 @@ namespace Bot.Commands {
 
             start = start.Normalize(1, Player.Playlist.Count);
             end = end.Normalize(start, Player.Playlist.Count);
-            var removesCurrent = Player.CurrentTrackIndex + 1 >= start && Player.CurrentTrackIndex + 1 <= end;
             Player.Playlist.RemoveRange(start - 1, end - start + 1);
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.Remove")
                                           .Format(Context.User.Username, end - start + 1, start, end));
-            if (removesCurrent) {
-                Jump();
+            if (Player.CurrentTrackIndex == -1 && Player.Playlist.Count != 0) {
+                var track = Player.Playlist[Math.Min(start - 1, Player.Playlist.Count)];
+                Player.PlayAsync(track, false);
             }
         }
 
