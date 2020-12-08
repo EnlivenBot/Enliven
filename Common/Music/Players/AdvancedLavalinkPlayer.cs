@@ -57,7 +57,7 @@ namespace Common.Music.Players {
 
         [Obsolete]
         public override async Task SetVolumeAsync(float volume = 1, bool normalize = false, bool force = false) {
-            await SetVolumeAsync((int) (volume * 100), force);
+            await SetVolumeAsync((int) (volume * 200), force);
         }
 
         public virtual void SetBassBoost(BassBoostMode mode) {
