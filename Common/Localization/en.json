@@ -179,7 +179,8 @@
       "logging0s": "Shows a message logging control panel",
       "fixspotify0s": "Wrong tracks when ordering from Spotify? We need to put an end to this. Together.",
       "fixspotify0_0s": "Spotify URL of the desired track",
-      "playnext0s": "Same as `play`, but adds tracks immediately after the current one, not to the end of the queue"
+      "playnext0s": "Same as `play`, but adds tracks immediately after the current one, not to the end of the queue",
+      "playerrestart0s": "Allows you to completely restart the player. Beware: experimental feature"
     },
     "CommandHandler": {
       "FailedTitle": "Error executing command",
