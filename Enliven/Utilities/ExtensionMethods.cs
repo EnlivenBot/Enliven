@@ -25,5 +25,9 @@ namespace Bot.Utilities {
         public static EmbedBuilder GetAuthorEmbedBuilder(this AdvancedModuleBase moduleBase) {
             return DiscordUtils.GetAuthorEmbedBuilder(moduleBase.Context.User, moduleBase.Loc);
         }
+
+        public static CommandCooldownAttribute? GetCooldown(this CommandInfo info) {
+            return (CommandCooldownAttribute?) info.Attributes.FirstOrDefault(attribute => attribute is CommandCooldownAttribute);
+        }
     }
 }

@@ -186,7 +186,8 @@
       "UnmetPrecondition": "You do not have permission to execute this command!",
       "BadArgCount": "Error - the wrong number of arguments for the command. Here's a hint for using the command:",
       "ParseFailed": "An error occurred while trying to parse the command. Here's a hint for using the command:",
-      "UnknownCommand": "Command `{0}` not found!\nPerhaps you wanted to use one of them: {1}\n Use the command `{2}help` for a list of commands."
+      "UnknownCommand": "Command `{0}` not found!\nPerhaps you wanted to use one of them: {1}\n Use the command `{2}help` for a list of commands.",
+      "CommandOnCooldown": "The command you were trying to execute is now on cooldown. Wait a bit."
     },
     "Commands": {
       "RequestedBy": "Requested by {0} | Help us by voting",
