@@ -195,6 +195,7 @@ namespace Bot.Commands {
                 else {
                     GetChannel(out var musicChannel);
                     MainDisplay = EmbedPlayerDisplayProvider.Provide((ITextChannel) musicChannel, newPlayer);
+                    newPlayer.WriteToQueueHistory(new EntryLocalized("Music.PlayerRestored", Context.User.Username));
                 }
 
                 return;
