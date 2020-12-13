@@ -187,16 +187,7 @@ namespace Bot.Commands {
         public async Task Resume() {
             if (!await IsPreconditionsValid) return;
             if (Player == null) {
-                var newPlayer = await MusicController.RestoreLastPlayer(Context.Guild.Id);
-                if (newPlayer == null) {
-                    ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix))
-                                          .UpdateTimeout(Constants.StandardTimeSpan).Update();
-                }
-                else {
-                    GetChannel(out var musicChannel);
-                    MainDisplay = EmbedPlayerDisplayProvider.Provide((ITextChannel) musicChannel, newPlayer);
-                    newPlayer.WriteToQueueHistory(new EntryLocalized("Music.PlayerRestored", Context.User.Username));
-                }
+                await RestorePlayer();
 
                 return;
             }
@@ -205,6 +196,19 @@ namespace Bot.Commands {
 
             Player.ResumeAsync();
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.Resume").Format(Context.User.Username));
+        }
+
+        private async Task RestorePlayer() {
+            var newPlayer = await MusicController.RestoreLastPlayer(Context.Guild.Id);
+            if (newPlayer == null) {
+                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix))
+                                      .UpdateTimeout(Constants.StandardTimeSpan).Update();
+            }
+            else {
+                GetChannel(out var musicChannel);
+                MainDisplay = EmbedPlayerDisplayProvider.Provide((ITextChannel) musicChannel, newPlayer);
+                newPlayer.WriteToQueueHistory(new EntryLocalized("Music.PlayerRestored", Context.User.Username));
+            }
         }
 
         [Command("shuffle", RunMode = RunMode.Async)]
@@ -404,6 +408,7 @@ namespace Bot.Commands {
         [Command("changenode", RunMode = RunMode.Async)]
         [Alias("newnode", "switchnode")]
         [Summary("changenode0s")]
+        [CommandCooldown(GuildDelayMilliseconds = 5000)]
         public async Task ChangeNode() {
             if (!await IsPreconditionsValid) return;
             if (Player == null) {
@@ -428,6 +433,24 @@ namespace Bot.Commands {
             await currentNode.MovePlayerAsync(Player, newNode);
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.NodeChanged").Format(Context.User.Username, newNode.Label));
             Player.NodeChanged(newNode);
+        }
+
+        [Command("playerrestart", RunMode = RunMode.Async)]
+        [Summary("playerrestart0s")]
+        [CommandCooldown(GuildDelayMilliseconds = 60000)]
+        public async Task RestartPlayer() {
+            if (!await IsPreconditionsValid) return;
+            if (Player == null) {
+                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix))
+                                      .UpdateTimeout(Constants.StandardTimeSpan).Update();
+                return;
+            }
+
+            var playerShutdownParameters = new PlayerShutdownParameters() {ShutdownDisplays = true, NeedSave = false};
+            Player.ExecuteShutdown(playerShutdownParameters);
+            Player = null;
+            await Task.Delay(1000);
+            await RestorePlayer();
         }
     }
 }

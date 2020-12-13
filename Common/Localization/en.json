@@ -179,14 +179,16 @@
       "logging0s": "Shows a message logging control panel",
       "fixspotify0s": "Wrong tracks when ordering from Spotify? We need to put an end to this. Together.",
       "fixspotify0_0s": "Spotify URL of the desired track",
-      "playnext0s": "Same as `play`, but adds tracks immediately after the current one, not to the end of the queue"
+      "playnext0s": "Same as `play`, but adds tracks immediately after the current one, not to the end of the queue",
+      "playerrestart0s": "Allows you to completely restart the player. Beware: experimental feature"
     },
     "CommandHandler": {
       "FailedTitle": "Error executing command",
       "UnmetPrecondition": "You do not have permission to execute this command!",
       "BadArgCount": "Error - the wrong number of arguments for the command. Here's a hint for using the command:",
       "ParseFailed": "An error occurred while trying to parse the command. Here's a hint for using the command:",
-      "UnknownCommand": "Command `{0}` not found!\nPerhaps you wanted to use one of them: {1}\n Use the command `{2}help` for a list of commands."
+      "UnknownCommand": "Command `{0}` not found!\nPerhaps you wanted to use one of them: {1}\n Use the command `{2}help` for a list of commands.",
+      "CommandOnCooldown": "The command you were trying to execute is now on cooldown. Wait a bit."
     },
     "Commands": {
       "RequestedBy": "Requested by {0} | Help us by voting",
