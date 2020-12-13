@@ -404,6 +404,7 @@ namespace Bot.Commands {
         [Command("changenode", RunMode = RunMode.Async)]
         [Alias("newnode", "switchnode")]
         [Summary("changenode0s")]
+        [CommandCooldown(GuildDelayMilliseconds = 5000)]
         public async Task ChangeNode() {
             if (!await IsPreconditionsValid) return;
             if (Player == null) {
