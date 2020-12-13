@@ -92,7 +92,7 @@ namespace Common.Music.Players {
             BassboostChanged.OnNext(mode);
         }
 
-        public virtual Task ExecuteShutdown(IEntry reason, PlayerShutdownParameters parameters) {
+        public virtual async Task ExecuteShutdown(IEntry reason, PlayerShutdownParameters parameters) {
             GetPlayerShutdownParameters(parameters);
             IsShutdowned = true;
             Shutdown.OnNext(reason);
@@ -104,12 +104,11 @@ namespace Common.Music.Players {
                     var body = parameters.NeedSave
                         ? new EntryString("{0}\n{1}", reason, new EntryLocalized("Music.ResumeViaPlaylists", GuildConfig.Prefix, parameters.StoredPlaylist!.Id))
                         : reason;
-                    playerDisplay.Shutdown(new EntryLocalized("Music.PlaybackStopped"), body);
+                    await playerDisplay.Shutdown(new EntryLocalized("Music.PlaybackStopped"), body);
                 }
             }
 
             base.Dispose();
-            return Task.CompletedTask;
         }
 
         public Task ExecuteShutdown(string reason, PlayerShutdownParameters parameters) {

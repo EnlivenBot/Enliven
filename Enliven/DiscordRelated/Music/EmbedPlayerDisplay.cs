@@ -137,7 +137,7 @@ namespace Bot.DiscordRelated.Music {
                 });
             }
             else {
-                LeaveNotification(header, body);
+                await LeaveNotification(header, body);
             }
         }
 
