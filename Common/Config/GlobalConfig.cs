@@ -20,9 +20,12 @@ namespace Common.Config {
             }
 
             if (File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "Config", "config.json"))) {
-                var config = JsonConvert.DeserializeObject<GlobalConfig>(File.ReadAllText(Path.Combine(Directory.GetCurrentDirectory(), "Config", "config.json")));
-                File.WriteAllText(Path.Combine(Directory.GetCurrentDirectory(), "Config", "config.json"),
-                    JsonConvert.SerializeObject(config, Formatting.Indented));
+                var configText = File.ReadAllText(Path.Combine(Directory.GetCurrentDirectory(), "Config", "config.json"));
+                var config = JsonConvert.DeserializeObject<GlobalConfig>(configText);
+                
+                var newConfigText = JsonConvert.SerializeObject(config, Formatting.Indented);
+                if (configText != newConfigText) File.WriteAllText(Path.Combine(Directory.GetCurrentDirectory(), "Config", "config.json"), newConfigText);
+
                 return config;
             }
                 
