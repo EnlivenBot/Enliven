@@ -1,6 +1,5 @@
 using System;
 using Common.Music.Players;
-using Discord;
 using Lavalink4NET.Player;
 
 namespace Common.Music {
@@ -14,9 +13,9 @@ namespace Common.Music {
 
         #region Storage
 
-        public IUserMessage? LastControlMessage { get; set; }
         public StoredPlaylist? StoredPlaylist { get; set; }
         
+        public ulong GuildId { get; set; }
         public ulong LastVoiceChannelId { get; set; }
         public LavalinkTrack? LastTrack { get; set; }
         public LavalinkPlaylist? Playlist { get; set; }

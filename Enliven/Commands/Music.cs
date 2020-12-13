@@ -10,6 +10,7 @@ using Common.History;
 using Common.Localization.Entries;
 using Common.Music;
 using Common.Music.Players;
+using Discord;
 using Discord.Commands;
 using Lavalink4NET.Player;
 using Lavalink4NET.Rest;
@@ -186,8 +187,17 @@ namespace Bot.Commands {
         public async Task Resume() {
             if (!await IsPreconditionsValid) return;
             if (Player == null) {
-                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix))
-                                      .UpdateTimeout(Constants.StandardTimeSpan).Update();
+                var newPlayer = await MusicController.RestoreLastPlayer(Context.Guild.Id);
+                if (newPlayer == null) {
+                    ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix))
+                                          .UpdateTimeout(Constants.StandardTimeSpan).Update();
+                }
+                else {
+                    GetChannel(out var musicChannel);
+                    MainDisplay = EmbedPlayerDisplayProvider.Provide((ITextChannel) musicChannel, newPlayer);
+                    newPlayer.WriteToQueueHistory(new EntryLocalized("Music.PlayerRestored", Context.User.Username));
+                }
+
                 return;
             }
 

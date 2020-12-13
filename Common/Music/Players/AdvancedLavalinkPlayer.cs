@@ -97,6 +97,7 @@ namespace Common.Music.Players {
             IsShutdowned = true;
             Shutdown.OnNext(reason);
             Shutdown.Dispose();
+            _musicController.StoreShutdownParameters(parameters);
 
             if (parameters.ShutdownDisplays) {
                 foreach (var playerDisplay in Displays.ToList()) {
@@ -137,6 +138,7 @@ namespace Common.Music.Players {
         }
 
         public virtual void GetPlayerShutdownParameters(PlayerShutdownParameters parameters) {
+            parameters.GuildId = GuildId;
             parameters.LastVoiceChannelId = _lastVoiceChannelId;
             parameters.LastTrack = CurrentTrack;
             parameters.TrackPosition = TrackPosition;
@@ -158,17 +160,10 @@ namespace Common.Music.Players {
                     if (State != PlayerState.Destroyed) {
                         base.Dispose();
                     }
-
-                    logger.Info("Old player state - {State}", State);
-                    await Task.Delay(3000);
-                    var newPlayer = await _musicController.ProvidePlayer(GuildId, playerShutdownParameters.LastVoiceChannelId, true);
-                    newPlayer.Playlist.AddRange(playerShutdownParameters.Playlist!);
-                    await newPlayer.PlayAsync(playerShutdownParameters.LastTrack!, playerShutdownParameters.TrackPosition);
-                    if (playerShutdownParameters.PlayerState == PlayerState.Paused) await newPlayer.PauseAsync();
-                    newPlayer.LoopingState = playerShutdownParameters.LoopingState;
+                    
+                    await Task.Delay(2000);
+                    var newPlayer = (await _musicController.RestoreLastPlayer(GuildId))!;
                     foreach (var playerDisplay in Displays.ToList()) await playerDisplay.ChangePlayer(newPlayer);
-
-                    newPlayer.UpdateCurrentTrackIndex();
                     newPlayer.WriteToQueueHistory(new HistoryEntry(
                         new EntryLocalized("Music.ReconnectedAfterDispose", GuildConfig.Prefix, playerShutdownParameters.StoredPlaylist!.Id)));
                 }

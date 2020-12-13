@@ -102,7 +102,8 @@
       "ResolvingTracks": "**{0}** made `{1}` requests. Processed `{2}` of them, added `{3}` tracks.",
       "CurrentTrackNonSpotify": "The current track is not received from Spotify. Switch to a track from Spotify or provide the track ID as an argument to this command",
       "TrackStuck": "The current track is stuck. Let's skip.",
-      "TrackException": "Track playback error: `{0}`. Let's skip."
+      "TrackException": "Track playback error: `{0}`. Let's skip.",
+      "PlayerRestored": "**{0}** restored the last player."
     },
     "Groups": {
       "": "Other",
