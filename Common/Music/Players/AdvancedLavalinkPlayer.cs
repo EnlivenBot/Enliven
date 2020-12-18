@@ -28,6 +28,7 @@ namespace Common.Music.Players {
         private ulong _lastVoiceChannelId;
         private protected IMusicController _musicController;
         private IGuildConfigProvider _guildConfigProvider;
+        public LavalinkNode? CurrentNode;
         public List<IPlayerDisplay> Displays { get; } = new List<IPlayerDisplay>();
 
         protected AdvancedLavalinkPlayer(IMusicController musicController, IGuildConfigProvider guildConfigProvider) {
@@ -173,7 +174,8 @@ namespace Common.Music.Players {
         }
 
         public virtual Task NodeChanged(LavalinkNode? node = null) {
-            LavalinkNodeChanged.OnNext(node);
+            CurrentNode = node;
+            LavalinkNodeChanged.OnNext(CurrentNode);
             return Task.CompletedTask;
         }
 

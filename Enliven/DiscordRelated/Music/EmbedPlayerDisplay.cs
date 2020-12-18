@@ -160,6 +160,7 @@ namespace Bot.DiscordRelated.Music {
                 }),
                 Player.CurrentTrackIndexChanged.Subscribe(i => UpdateQueue())
             );
+            UpdateNode(newPlayer.CurrentNode);
             await ControlMessageResend();
         }
 
@@ -363,7 +364,7 @@ namespace Bot.DiscordRelated.Music {
         }
 
         private Task UpdateNode(LavalinkNode? node) {
-            EmbedBuilder.WithFooter($"Powered by {Program.Client.CurrentUser.Username} | {node?.Label}");
+            EmbedBuilder.WithFooter($"Powered by {Program.Client.CurrentUser.Username} | {Player.CurrentNode}");
             return Task.CompletedTask;
         }
 
