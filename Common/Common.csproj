@@ -8,7 +8,6 @@
     <ItemGroup>
       <PackageReference Include="Autofac" Version="6.0.0" />
       <PackageReference Include="Discord.Net" Version="2.3.0-dev-20201119.4" />
-      <PackageReference Include="Lavalink4NET" Version="1.6.1" />
       <PackageReference Include="Lavalink4NET.Discord.NET" Version="1.6.1" />
       <PackageReference Include="Lavalink4NET.MemoryCache" Version="1.6.1" />
       <PackageReference Include="Lib.Harmony" Version="2.0.4" />
@@ -28,6 +27,10 @@
       <None Update="Localization\es.json">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Lavalink4NET\src\Lavalink4NET\Lavalink4NET.csproj" />
     </ItemGroup>
 
 </Project>

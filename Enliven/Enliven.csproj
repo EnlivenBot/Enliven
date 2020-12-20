@@ -24,7 +24,6 @@
     <PackageReference Include="GrapeCity.Documents.Html.Mac.X64" Version="3.2.0.556" />
     <PackageReference Include="GrapeCity.Documents.Html.Windows.X64" Version="3.2.0.556" />
     <PackageReference Include="GrapeCity.Documents.Imaging" Version="3.2.0.556" />
-    <PackageReference Include="Lavalink4NET" Version="1.6.1" />
     <PackageReference Include="Lavalink4NET.Discord.NET" Version="1.6.1" />
     <PackageReference Include="Lavalink4NET.MemoryCache" Version="1.6.1" />
     <PackageReference Include="Lib.Harmony" Version="2.0.4" />
@@ -80,6 +79,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Common\Common.csproj" />
+    <ProjectReference Include="..\Lavalink4NET\src\Lavalink4NET\Lavalink4NET.csproj" />
   </ItemGroup>
 
 </Project>
