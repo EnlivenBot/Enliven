@@ -61,10 +61,12 @@ namespace Common.Music.Controller {
             if (nodes.Count != 0) {
                 _logger?.Info("Start building music cluster");
                 try {
-                    var lavalinkClusterOptions = new LavalinkClusterOptions {
+                    var lavalinkClusterOptions = new CustomLavalinkClusterOptions<EnlivenLavalinkClusterNode>(
+                        (options, clientWrapper, arg3, arg4) => new EnlivenLavalinkClusterNode(options, clientWrapper, arg3, arg4)
+                        ) {
                         Nodes = nodes.ToArray(), StayOnline = true, LoadBalacingStrategy = LoadBalancingStrategy
                     };
-                    Cluster = new LavalinkCluster(lavalinkClusterOptions, wrapper, _lavalinkLogger);
+                    Cluster = new EnlivenLavalinkCluster(lavalinkClusterOptions, wrapper, _lavalinkLogger);
                     Cluster.PlayerMoved += ClusterOnPlayerMoved;
 
                     _logger?.Info("Trying to connect to nodes");
@@ -158,18 +160,18 @@ namespace Common.Music.Controller {
             logger.Log(logLevel, e.Message);
         }
 
-        private static LavalinkClusterNode
-            LoadBalancingStrategy(LavalinkCluster cluster, IReadOnlyCollection<LavalinkClusterNode> nodes, NodeRequestType type) {
+        private static EnlivenLavalinkClusterNode
+            LoadBalancingStrategy(LavalinkCluster cluster, IReadOnlyCollection<EnlivenLavalinkClusterNode> enlivenLavalinkClusterNodes, NodeRequestType type) {
             switch (type) {
                 case NodeRequestType.Backup:
-                    return LoadBalancingStrategies.LoadStrategy(cluster, nodes, type);
+                    return (EnlivenLavalinkClusterNode) LoadBalancingStrategies.LoadStrategy(cluster, enlivenLavalinkClusterNodes, type);
                 case NodeRequestType.LoadTrack:
-                    var targetNode = nodes.Where(node => node.IsConnected).FirstOrDefault(node => node.Label!.Contains("[RU]"));
+                    var targetNode = enlivenLavalinkClusterNodes.FirstOrDefault(node => node.IsConnected);
                     if (targetNode != null)
                         return targetNode;
                     goto default;
                 default:
-                    return LoadBalancingStrategies.RoundRobinStrategy(cluster, nodes, type);
+                    return (EnlivenLavalinkClusterNode) LoadBalancingStrategies.RoundRobinStrategy(cluster, enlivenLavalinkClusterNodes, type);
             }
         }
 
