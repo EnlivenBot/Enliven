@@ -43,10 +43,10 @@ namespace Common.Music.Controller {
             AppDomain.CurrentDomain.ProcessExit += (sender, args) => { Dispose(); };
         }
 
-        public void Dispose() {
-            foreach (var player in PlaybackPlayers.ToList()) {
-                player.ExecuteShutdown(new PlayerShutdownParameters());
-            }
+        public void Dispose()
+        {
+            Task.WaitAll(PlaybackPlayers.ToList()
+                .Select(player => player.ExecuteShutdown(new PlayerShutdownParameters())).ToArray());
         }
 
         public LavalinkCluster Cluster { get; set; } = null!;
