@@ -112,7 +112,6 @@ namespace Common.Music.Controller {
 
             var player = await Cluster.JoinAsync(() => new FinalLavalinkPlayer(this, _guildConfigProvider, _playlistProvider), guildId, voiceChannelId);
             player.Shutdown.Subscribe(entry => { PlaybackPlayers.Remove(player); });
-            await player.NodeChanged();
             PlaybackPlayers.Add(player);
             return player;
         }
@@ -179,7 +178,6 @@ namespace Common.Music.Controller {
             var player = args.Player as AdvancedLavalinkPlayer;
             if (args.CouldBeMoved) {
                 player?.WriteToQueueHistory(new HistoryEntry(new EntryLocalized("Music.PlayerMoved")));
-                player?.NodeChanged(args.TargetNode);
             }
             else {
                 player?.ExecuteShutdown(new EntryLocalized("Music.PlayerDropped"), new PlayerShutdownParameters());

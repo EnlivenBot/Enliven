@@ -23,7 +23,6 @@ using Common.Music.Tracks;
 using Common.Utils;
 using Discord;
 using Discord.WebSocket;
-using Lavalink4NET;
 using Lavalink4NET.Player;
 using SpotifyAPI.Web;
 
@@ -152,7 +151,7 @@ namespace Bot.DiscordRelated.Music {
                 Player.Playlist.Changed.Subscribe(playlist => UpdateQueue()),
                 Player.BassboostChanged.Subscribe(obj => UpdateParameters()),
                 Player.VolumeChanged.Subscribe(obj => UpdateParameters()),
-                Player.LavalinkNodeChanged.Subscribe(obj => UpdateNode(obj)),
+                Player.SocketChanged.Subscribe(obj => UpdateNode()),
                 Player.StateChanged.Subscribe(obj => {
                     UpdateProgress();
                     UpdateTrackInfo();
@@ -160,7 +159,7 @@ namespace Bot.DiscordRelated.Music {
                 }),
                 Player.CurrentTrackIndexChanged.Subscribe(i => UpdateQueue())
             );
-            UpdateNode(newPlayer.CurrentNode);
+            UpdateNode();
             await ControlMessageResend();
         }
 
@@ -363,8 +362,8 @@ namespace Bot.DiscordRelated.Music {
             }
         }
 
-        private Task UpdateNode(LavalinkNode? node) {
-            EmbedBuilder.WithFooter($"Powered by {Program.Client.CurrentUser.Username} | {Player.CurrentNode}");
+        private Task UpdateNode() {
+            EmbedBuilder.WithFooter($"Powered by {Program.Client.CurrentUser.Username} | {(Player.LavalinkSocket as EnlivenLavalinkClusterNode)?.Label}");
             return Task.CompletedTask;
         }
 

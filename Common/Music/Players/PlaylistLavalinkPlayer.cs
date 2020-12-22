@@ -76,7 +76,6 @@ namespace Common.Music.Players {
                     if (newNode != null) {
                         await currentNode.MovePlayerAsync(this, newNode);
                         WriteToQueueHistory(new HistoryEntry(new EntryLocalized("MusicQueues.NodeChanged", "SYSTEM", newNode.Label ?? "")));
-                        await NodeChanged(newNode);
                     }
                 }
                 finally {
