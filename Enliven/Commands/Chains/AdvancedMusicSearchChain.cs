@@ -131,10 +131,10 @@ namespace Bot.Commands.Chains {
         }
 
         private async Task<bool> ProcessAdd(int i, List<LavalinkTrack> tracks, IUserMessage msg) {
-            var authoredLavalinkTracks = new List<AuthoredTrack>();
+            var authoredLavalinkTracks = new List<LavalinkTrack>();
             if (i == -2)
-                authoredLavalinkTracks.AddRange(tracks.Take(10).Select(track => new AuthoredTrack(track, _requester.Username)));
-            if (i >= 0 && i <= tracks.Count - 1) authoredLavalinkTracks.Add(new AuthoredTrack(tracks[i], _requester.Username));
+                authoredLavalinkTracks.AddRange(tracks.Take(10).Select(track => track.AddAuthor(_requester.Username)));
+            if (i >= 0 && i <= tracks.Count - 1) authoredLavalinkTracks.Add(tracks[i].AddAuthor(_requester.Username));
             switch (authoredLavalinkTracks.Count) {
                 case 0:
                     return false;

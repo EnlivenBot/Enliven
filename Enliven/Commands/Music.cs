@@ -432,7 +432,6 @@ namespace Bot.Commands {
 
             await currentNode.MovePlayerAsync(Player, newNode);
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.NodeChanged").Format(Context.User.Username, newNode.Label));
-            Player.NodeChanged(newNode);
         }
 
         [Command("playerrestart", RunMode = RunMode.Async)]

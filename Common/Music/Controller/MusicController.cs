@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Text;
 using System.Threading.Tasks;
 using Common.Config;
 using Common.History;
@@ -11,7 +10,6 @@ using Common.Music.Players;
 using Common.Music.Resolvers;
 using Discord;
 using Discord.WebSocket;
-using Lavalink4NET;
 using Lavalink4NET.Cluster;
 using Lavalink4NET.DiscordNet;
 using Lavalink4NET.Events;
@@ -43,13 +41,14 @@ namespace Common.Music.Controller {
             AppDomain.CurrentDomain.ProcessExit += (sender, args) => { Dispose(); };
         }
 
-        public void Dispose() {
-            foreach (var player in PlaybackPlayers.ToList()) {
-                player.ExecuteShutdown(new PlayerShutdownParameters());
-            }
+        public void Dispose()
+        {
+            Task.WaitAll(PlaybackPlayers.ToList()
+                .Select(player => player.ExecuteShutdown(new PlayerShutdownParameters())).ToArray());
         }
 
-        public LavalinkCluster Cluster { get; set; } = null!;
+        public bool IsMusicEnabled { get; set; }
+        public EnlivenLavalinkCluster Cluster { get; set; } = null!;
 
         public async Task Initialize() {
             var nodes = _lavalinkNodeInfos.Select(info => info.ToOptions()).ToList();
@@ -58,13 +57,16 @@ namespace Common.Music.Controller {
 
             _lavalinkLogger.LogMessage += (sender, e) => LavalinkLoggerOnLogMessage(sender, e, _logger);
 
-            if (nodes.Count != 0) {
+            IsMusicEnabled = nodes.Count != 0;
+            if (IsMusicEnabled) {
                 _logger?.Info("Start building music cluster");
                 try {
-                    var lavalinkClusterOptions = new LavalinkClusterOptions {
+                    var lavalinkClusterOptions = new CustomLavalinkClusterOptions<EnlivenLavalinkClusterNode>(
+                        (options, clientWrapper, arg3, arg4) => new EnlivenLavalinkClusterNode(options, clientWrapper, arg3, arg4)
+                        ) {
                         Nodes = nodes.ToArray(), StayOnline = true, LoadBalacingStrategy = LoadBalancingStrategy
                     };
-                    Cluster = new LavalinkCluster(lavalinkClusterOptions, wrapper, _lavalinkLogger);
+                    Cluster = new EnlivenLavalinkCluster(lavalinkClusterOptions, wrapper, _lavalinkLogger);
                     Cluster.PlayerMoved += ClusterOnPlayerMoved;
 
                     _logger?.Info("Trying to connect to nodes");
@@ -110,7 +112,6 @@ namespace Common.Music.Controller {
 
             var player = await Cluster.JoinAsync(() => new FinalLavalinkPlayer(this, _guildConfigProvider, _playlistProvider), guildId, voiceChannelId);
             player.Shutdown.Subscribe(entry => { PlaybackPlayers.Remove(player); });
-            await player.NodeChanged();
             PlaybackPlayers.Add(player);
             return player;
         }
@@ -158,18 +159,18 @@ namespace Common.Music.Controller {
             logger.Log(logLevel, e.Message);
         }
 
-        private static LavalinkClusterNode
-            LoadBalancingStrategy(LavalinkCluster cluster, IReadOnlyCollection<LavalinkClusterNode> nodes, NodeRequestType type) {
+        public static EnlivenLavalinkClusterNode LoadBalancingStrategy(LavalinkCluster cluster, 
+            IReadOnlyCollection<EnlivenLavalinkClusterNode> enlivenLavalinkClusterNodes, NodeRequestType type) {
             switch (type) {
                 case NodeRequestType.Backup:
-                    return LoadBalancingStrategies.LoadStrategy(cluster, nodes, type);
+                    return (EnlivenLavalinkClusterNode) LoadBalancingStrategies.LoadStrategy(cluster, enlivenLavalinkClusterNodes, type);
                 case NodeRequestType.LoadTrack:
-                    var targetNode = nodes.Where(node => node.IsConnected).FirstOrDefault(node => node.Label!.Contains("[RU]"));
+                    var targetNode = enlivenLavalinkClusterNodes.FirstOrDefault(node => node.IsConnected);
                     if (targetNode != null)
                         return targetNode;
                     goto default;
                 default:
-                    return LoadBalancingStrategies.RoundRobinStrategy(cluster, nodes, type);
+                    return (EnlivenLavalinkClusterNode) LoadBalancingStrategies.RoundRobinStrategy(cluster, enlivenLavalinkClusterNodes, type);
             }
         }
 
@@ -177,7 +178,6 @@ namespace Common.Music.Controller {
             var player = args.Player as AdvancedLavalinkPlayer;
             if (args.CouldBeMoved) {
                 player?.WriteToQueueHistory(new HistoryEntry(new EntryLocalized("Music.PlayerMoved")));
-                player?.NodeChanged(args.TargetNode);
             }
             else {
                 player?.ExecuteShutdown(new EntryLocalized("Music.PlayerDropped"), new PlayerShutdownParameters());

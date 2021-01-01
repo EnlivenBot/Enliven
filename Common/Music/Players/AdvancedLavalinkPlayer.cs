@@ -22,13 +22,12 @@ namespace Common.Music.Players {
         public readonly Subject<IEntry> Shutdown = new Subject<IEntry>();
         public readonly Subject<int> VolumeChanged = new Subject<int>();
         public readonly Subject<BassBoostMode> BassboostChanged = new Subject<BassBoostMode>();
-        public readonly Subject<LavalinkNode?> LavalinkNodeChanged = new Subject<LavalinkNode?>();
+        public readonly Subject<EnlivenLavalinkClusterNode?> SocketChanged = new Subject<EnlivenLavalinkClusterNode?>();
         public readonly Subject<PlayerState> StateChanged = new Subject<PlayerState>();
         private GuildConfig? _guildConfig;
         private ulong _lastVoiceChannelId;
         private protected IMusicController _musicController;
         private IGuildConfigProvider _guildConfigProvider;
-        public LavalinkNode? CurrentNode;
         public List<IPlayerDisplay> Displays { get; } = new List<IPlayerDisplay>();
 
         protected AdvancedLavalinkPlayer(IMusicController musicController, IGuildConfigProvider guildConfigProvider) {
@@ -173,10 +172,10 @@ namespace Common.Music.Players {
             }
         }
 
-        public virtual Task NodeChanged(LavalinkNode? node = null) {
-            CurrentNode = node;
-            LavalinkNodeChanged.OnNext(CurrentNode);
-            return Task.CompletedTask;
+        public override Task OnSocketChanged(SocketChangedEventArgs eventArgs)
+        {
+            SocketChanged.OnNext(eventArgs.NewSocket as EnlivenLavalinkClusterNode);
+            return base.OnSocketChanged(eventArgs);
         }
 
         public override async Task OnTrackEndAsync(TrackEndEventArgs eventArgs) {

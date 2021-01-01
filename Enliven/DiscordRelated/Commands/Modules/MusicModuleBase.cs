@@ -46,25 +46,22 @@ namespace Bot.DiscordRelated.Commands.Modules {
             ErrorMessageController = nonSpamMessageController;
 
             try {
-                Player = MusicController.GetPlayer(Context.Guild.Id)!;
-                if (Player == null) {
-                    var clusterPreferredNode = MusicController.Cluster.PreferredNode;
+                if (!MusicController.Cluster.IsInitialized)
+                {
+                    nonSpamMessageController.AddEntry(Loc.Get("Music.ClusterInitializing")).Update();
+                    return false;
                 }
+                
+                if (!MusicController.Cluster.Nodes.Any(node => node.IsConnected))
+                {
+                    nonSpamMessageController.AddEntry(Loc.Get("Music.NoNodesAvailable")).Update();
+                    return false;
+                }
+                
+                Player = MusicController.GetPlayer(Context.Guild.Id)!;
             }
             catch (NullReferenceException) {
                 nonSpamMessageController.AddEntry(Loc.Get("Music.MusicDisabled")).Update();
-                return false;
-            }
-            catch (InvalidOperationException e) {
-                switch (e.Message) {
-                    case "The cluster has not been initialized.":
-                        nonSpamMessageController.AddEntry(Loc.Get("Music.ClusterInitializing")).Update();
-                        break;
-                    case "No node available.":
-                        nonSpamMessageController.AddEntry(Loc.Get("Music.NoNodesAvailable")).Update();
-                        break;
-                }
-
                 return false;
             }
 
