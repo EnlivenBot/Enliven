@@ -156,9 +156,5 @@ namespace Common {
         {
             return new TimeSpan(source.Sum(item => func(item).Ticks));
         }
-
-        public static string GetRequester(this LavalinkTrack track) {
-            return track is AuthoredTrack authoredTrack ? authoredTrack.GetRequester() : "Unknown";
-        }
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Subjects;
@@ -149,7 +150,7 @@ namespace Common.Music.Players {
             }
 
             var tracks = playlist.Tracks.Select(s => TrackDecoder.DecodeTrack(s))
-                                 .Select(track => new AuthoredTrack(track, requester)).ToList();
+                                 .Select(track => track.AddAuthor(requester)).ToList();
             if (options == ImportPlaylistOptions.Replace) {
                 try {
                     await StopAsync();
@@ -201,7 +202,7 @@ namespace Common.Music.Players {
         public virtual async Task TryEnqueue(IEnumerable<MusicResolver> resolvers, string author, int index = -1) {
             var musicResolvers = resolvers.ToList();
             var currentResolverIndex = 0;
-            var addedTracks = new List<AuthoredTrack>();
+            var addedTracks = new List<LavalinkTrack>();
             var historyEntry = new HistoryEntry(new EntryLocalized("Music.ResolvingTracks",
                 () => author, () => musicResolvers.Count, () => currentResolverIndex, () => addedTracks.Count));
             WriteToQueueHistory(historyEntry);
@@ -219,7 +220,7 @@ namespace Common.Music.Players {
 
                     historyEntry.Update();
                     var tracks = await musicResolver.GetTracks();
-                    var authoredTracks = tracks.Take(availableNumberOfTracks).Select(track => new AuthoredTrack(track, author)).ToList();
+                    var authoredTracks = tracks.Take(availableNumberOfTracks).Select(track => track.AddAuthor(author)).ToList();
                     await Enqueue(authoredTracks, index == -1 ? index : Math.Min(Playlist.Count, index + addedTracks.Count));
                     addedTracks.AddRange(authoredTracks);
 
@@ -250,7 +251,7 @@ namespace Common.Music.Players {
             }
         }
 
-        public virtual async Task Enqueue(List<AuthoredTrack> tracks, int position = -1) {
+        public virtual async Task Enqueue(List<LavalinkTrack> tracks, int position = -1) {
             var localTracks = tracks.ToList();
             if (localTracks.Any()) {
                 if (position == -1) {

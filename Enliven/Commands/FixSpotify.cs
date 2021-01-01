@@ -25,8 +25,7 @@ namespace Bot.Commands {
                 return;
             }
 
-            if (Player.CurrentTrack is AuthoredTrack authoredTrack &&
-                authoredTrack.Track is SpotifyLavalinkTrack spotifyLavalinkTrack) {
+            if (Player.CurrentTrack is SpotifyLavalinkTrack spotifyLavalinkTrack) {
                 var fixSpotifyChain = FixSpotifyChain.CreateInstance(Context.User, Context.Channel, Loc,
                     $"spotify:track:{spotifyLavalinkTrack.RelatedSpotifyTrackWrapper.Id}", MusicController, UserDataProvider,
                     SpotifyAssociationProvider, SpotifyAssociationCreator);
