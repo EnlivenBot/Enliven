@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Text;
 using System.Threading.Tasks;
 using Common.Config;
 using Common.History;
@@ -11,7 +10,6 @@ using Common.Music.Players;
 using Common.Music.Resolvers;
 using Discord;
 using Discord.WebSocket;
-using Lavalink4NET;
 using Lavalink4NET.Cluster;
 using Lavalink4NET.DiscordNet;
 using Lavalink4NET.Events;
@@ -49,7 +47,8 @@ namespace Common.Music.Controller {
                 .Select(player => player.ExecuteShutdown(new PlayerShutdownParameters())).ToArray());
         }
 
-        public LavalinkCluster Cluster { get; set; } = null!;
+        public bool IsMusicEnabled { get; set; }
+        public EnlivenLavalinkCluster Cluster { get; set; } = null!;
 
         public async Task Initialize() {
             var nodes = _lavalinkNodeInfos.Select(info => info.ToOptions()).ToList();
@@ -58,7 +57,8 @@ namespace Common.Music.Controller {
 
             _lavalinkLogger.LogMessage += (sender, e) => LavalinkLoggerOnLogMessage(sender, e, _logger);
 
-            if (nodes.Count != 0) {
+            IsMusicEnabled = nodes.Count != 0;
+            if (IsMusicEnabled) {
                 _logger?.Info("Start building music cluster");
                 try {
                     var lavalinkClusterOptions = new CustomLavalinkClusterOptions<EnlivenLavalinkClusterNode>(
@@ -159,8 +159,8 @@ namespace Common.Music.Controller {
             logger.Log(logLevel, e.Message);
         }
 
-        private static EnlivenLavalinkClusterNode
-            LoadBalancingStrategy(LavalinkCluster cluster, IReadOnlyCollection<EnlivenLavalinkClusterNode> enlivenLavalinkClusterNodes, NodeRequestType type) {
+        public static EnlivenLavalinkClusterNode LoadBalancingStrategy(LavalinkCluster cluster, 
+            IReadOnlyCollection<EnlivenLavalinkClusterNode> enlivenLavalinkClusterNodes, NodeRequestType type) {
             switch (type) {
                 case NodeRequestType.Backup:
                     return (EnlivenLavalinkClusterNode) LoadBalancingStrategies.LoadStrategy(cluster, enlivenLavalinkClusterNodes, type);
