@@ -102,7 +102,8 @@
       "ResolvingTracks": "**{0}** ha hecho `{1}` solicitudes. He procesado `{2}` de ellas y he añadido `{3}` pistas.",
       "CurrentTrackNonSpotify": "La pista actual no es recibida de Spotify. Cambia a una pista de Spotify o proporcióname el track ID como argumento a este comando",
       "TrackStuck": "La pista actual está bloqueada. La voy a saltar.",
-      "TrackException": "Error de reproducción de pista: `{0}`. La voy a saltar."
+      "TrackException": "Error de reproducción de pista: `{0}`. La voy a saltar.",
+      "PlayerRestored": "**{0}** ha restaurado la última reproducción."
     },
     "Groups": {
       "": "Otro",
@@ -178,14 +179,16 @@
       "logging0s": "Muestra el panel de control del logging",
       "fixspotify0s": "¿Orden incorrecto para las pistas de Spotify? Hay que poner un fin a esto. Juntos.",
       "fixspotify0_0s": "URL de la canción deseada",
-      "playnext0s": "Igual a `play`, pero añade la pista inmediatamente después de la actual, no al final de la cola"
+      "playnext0s": "Igual a `play`, pero añade la pista inmediatamente después de la actual, no al final de la cola",
+      "playerrestart0s": "Te permite reiniciar completamente el reproductor. Atención: característica experimental"
     },
     "CommandHandler": {
       "FailedTitle": "Error al ejecutar un comando",
       "UnmetPrecondition": "No tienes permisos para ejecutar este comando!",
       "BadArgCount": "Error - número incorrecto de argumentos. Info del comando:",
       "ParseFailed": "Error al leer el comando. Info del comando:",
-      "UnknownCommand": "¡Comando `{0}` no encontrado!\nQuizá quieras usar uno de estos: {1}\n Usa el comando `{2}help` para ver la lista de comandos."
+      "UnknownCommand": "¡Comando `{0}` no encontrado!\nQuizá quieras usar uno de estos: {1}\n Usa el comando `{2}help` para ver la lista de comandos.",
+      "CommandOnCooldown": "El comando que intentabas ejecutar está en tiempo de enfriamiento ahora mismo. Espera un poco."
     },
     "Commands": {
       "RequestedBy": "Solicitado por {0} | Ayúdanos votando",
