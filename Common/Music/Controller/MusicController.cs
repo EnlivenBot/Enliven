@@ -26,12 +26,12 @@ namespace Common.Music.Controller {
         private MusicResolverService _musicResolverService;
         private IGuildConfigProvider _guildConfigProvider;
         private IPlaylistProvider _playlistProvider;
-        private DiscordShardedClient _discordShardedClient;
+        private EnlivenShardedClient _discordShardedClient;
         private ILogger _logger;
         private List<LavalinkNodeInfo> _lavalinkNodeInfos;
 
         public MusicController(MusicResolverService musicResolverService, IGuildConfigProvider guildConfigProvider, IPlaylistProvider playlistProvider,
-                               DiscordShardedClient discordShardedClient, ILogger logger, List<LavalinkNodeInfo> lavalinkNodeInfos) {
+                               EnlivenShardedClient discordShardedClient, ILogger logger, List<LavalinkNodeInfo> lavalinkNodeInfos) {
             _lavalinkNodeInfos = lavalinkNodeInfos;
             _logger = logger;
             _discordShardedClient = discordShardedClient;
@@ -69,6 +69,7 @@ namespace Common.Music.Controller {
                     Cluster = new EnlivenLavalinkCluster(lavalinkClusterOptions, wrapper, _lavalinkLogger);
                     Cluster.PlayerMoved += ClusterOnPlayerMoved;
 
+                    await _discordShardedClient.Ready;
                     _logger?.Info("Trying to connect to nodes");
                     await Cluster.InitializeAsync();
                     _logger?.Info("Cluster  initialized");
