@@ -41,10 +41,9 @@ namespace Common.Music.Controller {
             AppDomain.CurrentDomain.ProcessExit += (sender, args) => { Dispose(); };
         }
 
-        public void Dispose()
-        {
+        public void Dispose() {
             Task.WaitAll(PlaybackPlayers.ToList()
-                .Select(player => player.ExecuteShutdown(new PlayerShutdownParameters())).ToArray());
+                                        .Select(player => player.ExecuteShutdown(new PlayerShutdownParameters())).ToArray());
         }
 
         public bool IsMusicEnabled { get; set; }
@@ -59,17 +58,17 @@ namespace Common.Music.Controller {
 
             IsMusicEnabled = nodes.Count != 0;
             if (IsMusicEnabled) {
+                await _discordShardedClient.Ready;
                 _logger?.Info("Start building music cluster");
                 try {
                     var lavalinkClusterOptions = new CustomLavalinkClusterOptions<EnlivenLavalinkClusterNode>(
                         (options, clientWrapper, arg3, arg4) => new EnlivenLavalinkClusterNode(options, clientWrapper, arg3, arg4)
-                        ) {
+                    ) {
                         Nodes = nodes.ToArray(), StayOnline = true, LoadBalacingStrategy = LoadBalancingStrategy
                     };
                     Cluster = new EnlivenLavalinkCluster(lavalinkClusterOptions, wrapper, _lavalinkLogger);
                     Cluster.PlayerMoved += ClusterOnPlayerMoved;
 
-                    await _discordShardedClient.Ready;
                     _logger?.Info("Trying to connect to nodes");
                     await Cluster.InitializeAsync();
                     _logger?.Info("Cluster  initialized");
@@ -81,13 +80,11 @@ namespace Common.Music.Controller {
                             DisconnectDelay = TimeSpan.FromSeconds(60),
                             PollInterval = TimeSpan.FromSeconds(4)
                         }, _lavalinkLogger);
-                    inactivityTrackingService.InactivePlayer += (sender, args) => {
+                    inactivityTrackingService.InactivePlayer += async (sender, args) => {
                         if (args.Player is AdvancedLavalinkPlayer embedPlaybackPlayer) {
-                            embedPlaybackPlayer.ExecuteShutdown(new EntryLocalized("Music.NoListenersLeft"),
+                            await embedPlaybackPlayer.ExecuteShutdown(new EntryLocalized("Music.NoListenersLeft"),
                                 new PlayerShutdownParameters {NeedSave = false});
                         }
-
-                        return Task.CompletedTask;
                     };
                 }
                 catch (Exception e) {
@@ -160,8 +157,9 @@ namespace Common.Music.Controller {
             logger.Log(logLevel, e.Message);
         }
 
-        public static EnlivenLavalinkClusterNode LoadBalancingStrategy(LavalinkCluster cluster, 
-            IReadOnlyCollection<EnlivenLavalinkClusterNode> enlivenLavalinkClusterNodes, NodeRequestType type) {
+        public static EnlivenLavalinkClusterNode LoadBalancingStrategy(LavalinkCluster cluster,
+                                                                       IReadOnlyCollection<EnlivenLavalinkClusterNode> enlivenLavalinkClusterNodes,
+                                                                       NodeRequestType type) {
             switch (type) {
                 case NodeRequestType.Backup:
                     return (EnlivenLavalinkClusterNode) LoadBalancingStrategies.LoadStrategy(cluster, enlivenLavalinkClusterNodes, type);
@@ -206,6 +204,7 @@ namespace Common.Music.Controller {
             }
 
             return list;
+
             IEnumerable<string> ParseByLines(string query1) {
                 return query1.Split('\n').Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s.Trim());
             }
