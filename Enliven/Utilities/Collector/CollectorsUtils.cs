@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reactive.Subjects;
 using System.Threading.Tasks;
+using Common;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -63,28 +64,40 @@ namespace Bot.Utilities.Collector {
         }
 
         public static CollectorController CollectReaction(IChannel channel, Predicate<SocketReaction> predicate,
-                                                          Action<EmoteCollectorEventArgs> action, CollectorFilter filter = CollectorFilter.Off)
-            => CollectReaction(reaction => channel.Id == reaction.Channel.Id && predicate(reaction), action, filter);
+                                                          Action<EmoteCollectorEventArgs> action, CollectorFilter filter = CollectorFilter.Off) {
+            Assert.NotNull(channel);
+            return CollectReaction(reaction => channel.Id == reaction.Channel.Id && predicate(reaction), action, filter);
+        }
 
         public static CollectorController CollectReaction(IEmote emote, Predicate<SocketReaction> predicate,
-                                                          Action<EmoteCollectorEventArgs> action, CollectorFilter filter = CollectorFilter.Off)
-            => CollectReaction(reaction => emote.Equals(reaction.Emote) && predicate(reaction), action, filter);
+                                                          Action<EmoteCollectorEventArgs> action, CollectorFilter filter = CollectorFilter.Off) {
+            Assert.NotNull(emote);
+            return CollectReaction(reaction => emote.Equals(reaction.Emote) && predicate(reaction), action, filter);
+        }
 
         public static CollectorController CollectReaction(IMessage message, Predicate<SocketReaction> predicate,
-                                                          Action<EmoteCollectorEventArgs> action, CollectorFilter filter = CollectorFilter.Off)
-            => CollectReaction(reaction => message.Id == reaction.MessageId && predicate(reaction), action, filter);
+                                                          Action<EmoteCollectorEventArgs> action, CollectorFilter filter = CollectorFilter.Off) {
+            Assert.NotNull(message);
+            return CollectReaction(reaction => message.Id == reaction.MessageId && predicate(reaction), action, filter);
+        }
 
         public static CollectorController CollectReaction(IUser user, Predicate<SocketReaction> predicate,
-                                                          Action<EmoteCollectorEventArgs> action, CollectorFilter filter = CollectorFilter.Off)
-            => CollectReaction(reaction => user.Id == reaction.UserId && predicate(reaction), action, filter);
+                                                          Action<EmoteCollectorEventArgs> action, CollectorFilter filter = CollectorFilter.Off) {
+            Assert.NotNull(user);
+            return CollectReaction(reaction => user.Id == reaction.UserId && predicate(reaction), action, filter);
+        }
 
         public static CollectorController CollectMessage(IUser user, Predicate<IMessage> predicate,
-                                                         Action<MessageCollectorEventArgs> action, CollectorFilter filter = CollectorFilter.Off)
-            => CollectMessage(message => user.Id == message.Author.Id && predicate(message), action, filter);
+                                                         Action<MessageCollectorEventArgs> action, CollectorFilter filter = CollectorFilter.Off) {
+            Assert.NotNull(user);
+            return CollectMessage(message => user.Id == message.Author.Id && predicate(message), action, filter);
+        }
 
         public static CollectorController CollectMessage(IChannel channel, Predicate<IMessage> predicate,
-                                                         Action<MessageCollectorEventArgs> action, CollectorFilter filter = CollectorFilter.Off)
-            => CollectMessage(message => channel.Id == message.Channel.Id && predicate(message), action, filter);
+                                                         Action<MessageCollectorEventArgs> action, CollectorFilter filter = CollectorFilter.Off) {
+            Assert.NotNull(channel);
+            return CollectMessage(message => channel.Id == message.Channel.Id && predicate(message), action, filter);
+        }
 
         public static CollectorsGroup CollectReactions<T>(Predicate<SocketReaction> predicate, Action<EmoteMultiCollectorEventArgs, T> action,
                                                           params (IEmote, T)[] selectors) {
