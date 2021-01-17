@@ -218,7 +218,8 @@ namespace Bot.DiscordRelated.Music {
                     // ignored
                 }
 
-                _controlMessage?.AddReactionAsync(CommonEmoji.LegacyArrowDown, new RequestOptions {CancelToken = _cancellationTokenSource.Token});
+                if (_controlMessage == null) return;
+                _controlMessage.AddReactionAsync(CommonEmoji.LegacyArrowDown, new RequestOptions {CancelToken = _cancellationTokenSource.Token});
                 _collectorsGroup.Controllers.Add(CollectorsUtils.CollectReaction(_controlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyArrowDown), async emoteCollectorEventArgs => {
                         emoteCollectorEventArgs.RemoveReason();

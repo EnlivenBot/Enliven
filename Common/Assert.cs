@@ -9,7 +9,7 @@ namespace Common {
             if (o != null) return;
             var exception = new NullReferenceException();
             _logger.Error("Object is null in assert", exception);
-            throw exception;
+            //throw exception;
         }
     }
 }
