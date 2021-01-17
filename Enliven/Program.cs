@@ -149,6 +149,9 @@ namespace Bot {
         }
 
         private Task OnClientLog(LogMessage message) {
+            if (message.Message.StartsWith("Unknown Dispatch")) {
+                return Task.CompletedTask;
+            }
             logger.Log(message.Severity, message.Exception, "{message} from {source}", message.Message, message.Source);
             return Task.CompletedTask;
         }
