@@ -13,6 +13,7 @@ using Common.Music.Players;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using Lavalink4NET.Lyrics;
 using Lavalink4NET.Player;
 
 #pragma warning disable 4014
@@ -28,6 +29,7 @@ namespace Bot.DiscordRelated.Commands.Modules {
         internal EmbedPlayerDisplay? MainDisplay;
         public IMusicController MusicController { get; set; } = null!;
         public EmbedPlayerDisplayProvider EmbedPlayerDisplayProvider { get; set; } = null!;
+        public LyricsService LyricsService { get; set; } = null!;
 
         protected override void BeforeExecute(CommandInfo command) {
             base.BeforeExecute(command);

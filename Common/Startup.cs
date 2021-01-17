@@ -4,6 +4,7 @@ using Common.Music;
 using Common.Music.Controller;
 using Common.Music.Players;
 using Common.Music.Resolvers;
+using Lavalink4NET.Lyrics;
 
 namespace Common
 {
@@ -34,6 +35,8 @@ namespace Common
             // Music
             builder.RegisterType<MusicResolverService>().SingleInstance();
             builder.RegisterType<MusicController>().As<IMusicController>().As<IService>().SingleInstance();
+            builder.RegisterType<LyricsOptions>().SingleInstance();
+            builder.RegisterType<LyricsService>().SingleInstance();
             
             // Data providers
             builder.RegisterType<UserDataProvider>().As<IUserDataProvider>().SingleInstance();

@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Bot.Commands.Chains;
 using Bot.DiscordRelated.Commands;
@@ -450,6 +451,38 @@ namespace Bot.Commands {
             Player = null;
             await Task.Delay(1000);
             await RestorePlayer();
+        }
+
+        private static Regex _lyricsRegex = new Regex(@"([\p{L} ]+) - ([\p{L} ]+)");
+
+        [Command("lyrics", RunMode = RunMode.Async)]
+        [Summary("lyrics0s")]
+        public async Task DisplayLyrics() {
+            if (!await IsPreconditionsValid) return;
+            if (Player == null || Player.Playlist.IsEmpty || Player.CurrentTrack == null) {
+                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix))
+                                      .UpdateTimeout(Constants.StandardTimeSpan).Update();
+                return;
+            }
+
+            var match = _lyricsRegex.Match(Player.CurrentTrack.Title);
+            string? lyrics = null;
+            string artist = "";
+            string title = "";
+            if (match.Success) {
+                artist = match.Groups[1].Value.Trim();
+                title = match.Groups[2].Value.Trim();
+                lyrics = await LyricsService.GetLyricsAsync(artist, title);
+            }
+
+            if (string.IsNullOrWhiteSpace(lyrics)) {
+                artist = Player.CurrentTrack.Author;
+                title = Player.CurrentTrack.Title;
+                lyrics = await LyricsService.GetLyricsAsync(artist, title);
+            }
+
+            var isFail = string.IsNullOrWhiteSpace(lyrics);
+            await ReplyFormattedAsync((isFail ? Loc.Get("Music.LyricsNotFound", artist, title) : lyrics)!, isFail);
         }
     }
 }

@@ -103,7 +103,8 @@
       "CurrentTrackNonSpotify": "The current track is not received from Spotify. Switch to a track from Spotify or provide the track ID as an argument to this command",
       "TrackStuck": "The current track is stuck. Let's skip.",
       "TrackException": "Track playback error: `{0}`. Let's skip.",
-      "PlayerRestored": "**{0}** restored the last player."
+      "PlayerRestored": "**{0}** restored the last player.",
+      "LyricsNotFound": "Lyrics for current song not found.\nQuery: {0} - {1}\nThis is experimental feature don't blame if it don't work"
     },
     "Groups": {
       "": "Other",
@@ -180,7 +181,8 @@
       "fixspotify0s": "Wrong tracks when ordering from Spotify? We need to put an end to this. Together.",
       "fixspotify0_0s": "Spotify URL of the desired track",
       "playnext0s": "Same as `play`, but adds tracks immediately after the current one, not to the end of the queue",
-      "playerrestart0s": "Allows you to completely restart the player. Beware: experimental feature"
+      "playerrestart0s": "Allows you to completely restart the player. Beware: experimental feature",
+      "lyrics0s": "Get song lyrics (if available)"
     },
     "CommandHandler": {
       "FailedTitle": "Error executing command",
