@@ -1,3 +1,11 @@
+<table align="center" bgcolor="brown"><tr><td align="center" width="9999">
+
+## Old bot owner account is hacked now. 
+Please kick old bot user and,  if you want to continue using the bot, [add a new bot](https://discord.com/oauth2/authorize?client_id=801159808929497208&scope=bot&permissions=1110764608). (Enliven#5499)  
+
+All your data will be kept and transfer to new bot
+</td></tr>
+</table>
 <table align="center"><tr><td align="center" width="9999">
 <img src="https://cdn.discordapp.com/avatars/606760964183949314/e87c138f296e53e63fd55114eff36dcf.png" align="center" alt="Project icon">
 

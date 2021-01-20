@@ -48,15 +48,15 @@ namespace Bot {
             Console.WriteLine("Execution end");
         }
 
-        public static DiscordShardedClient Client = null!;
-
+        public static EnlivenShardedClient Client;
+        
         // ReSharper disable once InconsistentNaming
         private readonly ILogger logger;
         private IEnumerable<IService> _services;
         private IEnumerable<IPatch> _patches;
         private IMusicController _musicController;
 
-        public Program(ILogger logger, IEnumerable<IService> services, IEnumerable<IPatch> patches, DiscordShardedClient discordShardedClient, 
+        public Program(ILogger logger, IEnumerable<IService> services, IEnumerable<IPatch> patches, EnlivenShardedClient discordShardedClient, 
                        IMusicController musicController) {
             _musicController = musicController;
             _patches = patches;
@@ -110,7 +110,7 @@ namespace Bot {
             builder.RegisterType<ReliabilityService>().AsSelf();
             builder.RegisterModule<NLogModule>();
             builder.RegisterType<Program>().SingleInstance();
-            builder.Register(context => new DiscordShardedClient(new DiscordSocketConfig {MessageCacheSize = 100})).SingleInstance();
+            builder.Register(context => new EnlivenShardedClient(new DiscordSocketConfig {MessageCacheSize = 100})).AsSelf().As<DiscordShardedClient>().SingleInstance();
 
             builder.Register(context => GlobalConfig.Instance.LavalinkNodes);
 
@@ -149,6 +149,9 @@ namespace Bot {
         }
 
         private Task OnClientLog(LogMessage message) {
+            if (message.Message.StartsWith("Unknown Dispatch")) {
+                return Task.CompletedTask;
+            }
             logger.Log(message.Severity, message.Exception, "{message} from {source}", message.Message, message.Source);
             return Task.CompletedTask;
         }

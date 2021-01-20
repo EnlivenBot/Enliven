@@ -23,7 +23,6 @@ using Common.Music.Tracks;
 using Common.Utils;
 using Discord;
 using Discord.WebSocket;
-using Lavalink4NET;
 using Lavalink4NET.Player;
 using SpotifyAPI.Web;
 
@@ -137,7 +136,7 @@ namespace Bot.DiscordRelated.Music {
                 });
             }
             else {
-                LeaveNotification(header, body);
+                await LeaveNotification(header, body);
             }
         }
 
@@ -152,7 +151,7 @@ namespace Bot.DiscordRelated.Music {
                 Player.Playlist.Changed.Subscribe(playlist => UpdateQueue()),
                 Player.BassboostChanged.Subscribe(obj => UpdateParameters()),
                 Player.VolumeChanged.Subscribe(obj => UpdateParameters()),
-                Player.LavalinkNodeChanged.Subscribe(obj => UpdateNode(obj)),
+                Player.SocketChanged.Subscribe(obj => UpdateNode()),
                 Player.StateChanged.Subscribe(obj => {
                     UpdateProgress();
                     UpdateTrackInfo();
@@ -160,6 +159,7 @@ namespace Bot.DiscordRelated.Music {
                 }),
                 Player.CurrentTrackIndexChanged.Subscribe(i => UpdateQueue())
             );
+            UpdateNode();
             await ControlMessageResend();
         }
 
@@ -218,7 +218,8 @@ namespace Bot.DiscordRelated.Music {
                     // ignored
                 }
 
-                _controlMessage?.AddReactionAsync(CommonEmoji.LegacyArrowDown, new RequestOptions {CancelToken = _cancellationTokenSource.Token});
+                if (_controlMessage == null) return;
+                _controlMessage.AddReactionAsync(CommonEmoji.LegacyArrowDown, new RequestOptions {CancelToken = _cancellationTokenSource.Token});
                 _collectorsGroup.Controllers.Add(CollectorsUtils.CollectReaction(_controlMessage,
                     reaction => reaction.Emote.Equals(CommonEmoji.LegacyArrowDown), async emoteCollectorEventArgs => {
                         emoteCollectorEventArgs.RemoveReason();
@@ -266,7 +267,7 @@ namespace Bot.DiscordRelated.Music {
                     LoopingState.Off => _isExternalEmojiAllowed ? CommonEmojiStrings.Instance.RepeatOff : "❌",
                     _                => throw new InvalidEnumArgumentException()
                 };
-                var spotifyId = (Player.CurrentTrack is AuthoredTrack authoredTrack && authoredTrack.Track is SpotifyLavalinkTrack spotifyLavalinkTrack)
+                var spotifyId = (Player.CurrentTrack is SpotifyLavalinkTrack spotifyLavalinkTrack)
                     ? spotifyLavalinkTrack.RelatedSpotifyTrackWrapper.Id
                     : null;
                 var spotifyEmojiExists = spotifyId != null && _isExternalEmojiAllowed;
@@ -334,7 +335,7 @@ namespace Bot.DiscordRelated.Music {
                 var authorStringBuilder = new StringBuilder();
                 for (var i = Math.Max(Player.CurrentTrackIndex - 1, 0); i < Player.CurrentTrackIndex + 5; i++) {
                     if (!Player.Playlist.TryGetValue(i, out var track)) continue;
-                    var author = track is AuthoredTrack authoredLavalinkTrack ? authoredLavalinkTrack.GetRequester() : "Unknown";
+                    var author = track.GetRequester();
                     if (author != lastAuthor && lastAuthor != null) FinalizeBlock();
                     authorStringBuilder.Replace("└", "├").Replace("▬", "│");
                     authorStringBuilder.Append(GetTrackString(MusicController.EscapeTrack(track!.Title),
@@ -362,8 +363,8 @@ namespace Bot.DiscordRelated.Music {
             }
         }
 
-        private Task UpdateNode(LavalinkNode? node) {
-            EmbedBuilder.WithFooter($"Powered by {Program.Client.CurrentUser.Username} | {node?.Label}");
+        private Task UpdateNode() {
+            EmbedBuilder.WithFooter($"Powered by {Program.Client.CurrentUser.Username} | {(Player.LavalinkSocket as EnlivenLavalinkClusterNode)?.Label}");
             return Task.CompletedTask;
         }
 

@@ -22,7 +22,7 @@ namespace Common.Music.Players {
         public readonly Subject<IEntry> Shutdown = new Subject<IEntry>();
         public readonly Subject<int> VolumeChanged = new Subject<int>();
         public readonly Subject<BassBoostMode> BassboostChanged = new Subject<BassBoostMode>();
-        public readonly Subject<LavalinkNode?> LavalinkNodeChanged = new Subject<LavalinkNode?>();
+        public readonly Subject<EnlivenLavalinkClusterNode?> SocketChanged = new Subject<EnlivenLavalinkClusterNode?>();
         public readonly Subject<PlayerState> StateChanged = new Subject<PlayerState>();
         private GuildConfig? _guildConfig;
         private ulong _lastVoiceChannelId;
@@ -57,7 +57,7 @@ namespace Common.Music.Players {
 
         [Obsolete]
         public override async Task SetVolumeAsync(float volume = 1, bool normalize = false, bool force = false) {
-            await SetVolumeAsync((int) (volume * 100), force);
+            await SetVolumeAsync((int) (volume * 200), force);
         }
 
         public virtual void SetBassBoost(BassBoostMode mode) {
@@ -92,23 +92,23 @@ namespace Common.Music.Players {
             BassboostChanged.OnNext(mode);
         }
 
-        public virtual Task ExecuteShutdown(IEntry reason, PlayerShutdownParameters parameters) {
+        public virtual async Task ExecuteShutdown(IEntry reason, PlayerShutdownParameters parameters) {
             GetPlayerShutdownParameters(parameters);
             IsShutdowned = true;
             Shutdown.OnNext(reason);
             Shutdown.Dispose();
+            _musicController.StoreShutdownParameters(parameters);
 
             if (parameters.ShutdownDisplays) {
                 foreach (var playerDisplay in Displays.ToList()) {
                     var body = parameters.NeedSave
                         ? new EntryString("{0}\n{1}", reason, new EntryLocalized("Music.ResumeViaPlaylists", GuildConfig.Prefix, parameters.StoredPlaylist!.Id))
                         : reason;
-                    playerDisplay.Shutdown(new EntryLocalized("Music.PlaybackStopped"), body);
+                    await playerDisplay.Shutdown(new EntryLocalized("Music.PlaybackStopped"), body);
                 }
             }
 
             base.Dispose();
-            return Task.CompletedTask;
         }
 
         public Task ExecuteShutdown(string reason, PlayerShutdownParameters parameters) {
@@ -137,6 +137,7 @@ namespace Common.Music.Players {
         }
 
         public virtual void GetPlayerShutdownParameters(PlayerShutdownParameters parameters) {
+            parameters.GuildId = GuildId;
             parameters.LastVoiceChannelId = _lastVoiceChannelId;
             parameters.LastTrack = CurrentTrack;
             parameters.TrackPosition = TrackPosition;
@@ -158,17 +159,10 @@ namespace Common.Music.Players {
                     if (State != PlayerState.Destroyed) {
                         base.Dispose();
                     }
-
-                    logger.Info("Old player state - {State}", State);
-                    await Task.Delay(3000);
-                    var newPlayer = await _musicController.ProvidePlayer(GuildId, playerShutdownParameters.LastVoiceChannelId, true);
-                    newPlayer.Playlist.AddRange(playerShutdownParameters.Playlist!);
-                    await newPlayer.PlayAsync(playerShutdownParameters.LastTrack!, playerShutdownParameters.TrackPosition);
-                    if (playerShutdownParameters.PlayerState == PlayerState.Paused) await newPlayer.PauseAsync();
-                    newPlayer.LoopingState = playerShutdownParameters.LoopingState;
+                    
+                    await Task.Delay(2000);
+                    var newPlayer = (await _musicController.RestoreLastPlayer(GuildId))!;
                     foreach (var playerDisplay in Displays.ToList()) await playerDisplay.ChangePlayer(newPlayer);
-
-                    newPlayer.UpdateCurrentTrackIndex();
                     newPlayer.WriteToQueueHistory(new HistoryEntry(
                         new EntryLocalized("Music.ReconnectedAfterDispose", GuildConfig.Prefix, playerShutdownParameters.StoredPlaylist!.Id)));
                 }
@@ -178,9 +172,10 @@ namespace Common.Music.Players {
             }
         }
 
-        public virtual Task NodeChanged(LavalinkNode? node = null) {
-            LavalinkNodeChanged.OnNext(node);
-            return Task.CompletedTask;
+        public override Task OnSocketChanged(SocketChangedEventArgs eventArgs)
+        {
+            SocketChanged.OnNext(eventArgs.NewSocket as EnlivenLavalinkClusterNode);
+            return base.OnSocketChanged(eventArgs);
         }
 
         public override async Task OnTrackEndAsync(TrackEndEventArgs eventArgs) {

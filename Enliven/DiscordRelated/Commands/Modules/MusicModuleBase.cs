@@ -13,6 +13,7 @@ using Common.Music.Players;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using Lavalink4NET.Lyrics;
 using Lavalink4NET.Player;
 
 #pragma warning disable 4014
@@ -28,6 +29,7 @@ namespace Bot.DiscordRelated.Commands.Modules {
         internal EmbedPlayerDisplay? MainDisplay;
         public IMusicController MusicController { get; set; } = null!;
         public EmbedPlayerDisplayProvider EmbedPlayerDisplayProvider { get; set; } = null!;
+        public LyricsService LyricsService { get; set; } = null!;
 
         protected override void BeforeExecute(CommandInfo command) {
             base.BeforeExecute(command);
@@ -46,25 +48,22 @@ namespace Bot.DiscordRelated.Commands.Modules {
             ErrorMessageController = nonSpamMessageController;
 
             try {
-                Player = MusicController.GetPlayer(Context.Guild.Id)!;
-                if (Player == null) {
-                    var clusterPreferredNode = MusicController.Cluster.PreferredNode;
+                if (!MusicController.Cluster.IsInitialized)
+                {
+                    nonSpamMessageController.AddEntry(Loc.Get("Music.ClusterInitializing")).Update();
+                    return false;
                 }
+                
+                if (!MusicController.Cluster.Nodes.Any(node => node.IsConnected))
+                {
+                    nonSpamMessageController.AddEntry(Loc.Get("Music.NoNodesAvailable")).Update();
+                    return false;
+                }
+                
+                Player = MusicController.GetPlayer(Context.Guild.Id)!;
             }
             catch (NullReferenceException) {
                 nonSpamMessageController.AddEntry(Loc.Get("Music.MusicDisabled")).Update();
-                return false;
-            }
-            catch (InvalidOperationException e) {
-                switch (e.Message) {
-                    case "The cluster has not been initialized.":
-                        nonSpamMessageController.AddEntry(Loc.Get("Music.ClusterInitializing")).Update();
-                        break;
-                    case "No node available.":
-                        nonSpamMessageController.AddEntry(Loc.Get("Music.NoNodesAvailable")).Update();
-                        break;
-                }
-
                 return false;
             }
 
@@ -109,7 +108,7 @@ namespace Bot.DiscordRelated.Commands.Modules {
         }
 
         // ReSharper disable once InconsistentNaming
-        protected override async Task<IUserMessage> ReplyAsync(string? message = null, bool isTTS = false, Embed? embed = null, RequestOptions? options = null, AllowedMentions allowedMentions = null) {
+        protected override async Task<IUserMessage> ReplyAsync(string? message = null, bool isTTS = false, Embed? embed = null, RequestOptions? options = null, AllowedMentions? allowedMentions = null, MessageReference? messageReference = null) {
             return await ResponseChannel.SendMessageAsync(message, isTTS, embed, options).ConfigureAwait(false);
         }
 

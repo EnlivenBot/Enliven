@@ -22,7 +22,7 @@
       "Success": "Idioma cambiado a `{0}`",
       "Fail": "No existe el idioma {0}.\nIdiomas disponibles: {1}",
       "LanguagesList": "Selección de idioma",
-      "LanguageDescription": "```{0}setlanguage {1}```\n Autores - {2}\n Progreso de la traducción - {3}%"
+      "LanguageDescription": "```{0}language {1}```\n Autores - {2}\n Progreso de la traducción - {3}%"
     },
     "MusicQueues": {
       "Enqueued": "**{0}** ha añadido en la cola: `{1}`",
@@ -38,7 +38,7 @@
       "Seek": "**{0}** ha movido la reproducción a `{1}`",
       "Remove": "**{0}** ha eliminado la pista `{1}` - `{2}`",
       "RemoveRange": "**{0}** ha eliminado `{1}` pistas. From `{2}` to `{3}`",
-      "TrackMoved": "**{0}** ha movido la pista `{1}` a la posición `{1=2}`",
+      "TrackMoved": "**{0}** ha movido la pista `{1}` a la posición `{2}`",
       "BassBoostUpdated": "**{0}** ha cambiado el modo BassBoost a `{1}`",
       "NodeChanged": "**{0}** ha movido la reproducción a un nodo nuevo: `{1}`",
       "LimitExceed": "**{0}** ha hecho `{1}` solicitudes que no se han podido procesar. La cola ya contiene {2} pistas",
@@ -46,7 +46,7 @@
       "QueueTitle": "Cola",
       "QueuePage": "Página `{0}` de `{1}`",
       "QueuePageDescription": "⏮️⏭️ Para moverse al principio o al final \n◀️▶️ para cambiar a la siguiente o anterior página \n🗃️ para exportar a archivo",
-      "QueueDeprecated": "La cola ha cambiado, este mensaje de cola no es relevante. Para ver la cola otra vez, escribe `{0} queue`"
+      "QueueDeprecated": "La cola ha cambiado, este mensaje de cola no es relevante. Para ver la cola otra vez, escribe `{0}queue`"
     },
     "Music": {
       "RequestHistory": "Historial de peticiones",
@@ -93,16 +93,18 @@
       "ResumeViaPlaylists": "Puedes intentar volver a reproducir usando: `{0}loadplaylist {1}`",
       "Empty": "Vacío",
       "Warning": "**Alerta**",
-      "WarningEmojiRemoval": "❗No puedo eliminar las reacciones de los usuarios, como debería. Para hacerlo, necesito el permiso `MANAGE_MESSAGES`",
-      "WarningEmojiAdding": "‼️No puedo añadir reacciones a mis mensajes, los controles visuales quedan deshabilitados - the bot cannot add them to the message. Para hacerlo, necesito el permiso `ADD_REACTIONS`",
-      "WarningCustomEmoji": "‼️No puedo añadir los emojis personalizados que necesito para el reproductor. Para hacerlo, necesito el permiso `USE_EXTERNAL_EMOJIS`",
+      "WarningEmojiRemoval": "❗No puedo eliminar las reacciones de los usuarios, como debería. Para hacerlo, necesito el permiso `MANAGE_MESSAGES`.",
+      "WarningEmojiAdding": "‼️No puedo añadir reacciones a mis mensajes, los controles visuales quedan deshabilitados - the bot cannot add them to the message. Para hacerlo, necesito el permiso `ADD_REACTIONS`.",
+      "WarningCustomEmoji": "‼️No puedo añadir los emojis personalizados que necesito para el reproductor. Para hacerlo, necesito el permiso `USE_EXTERNAL_EMOJIS`.",
       "TrackNotSeekable": "{0}, lo siento, pero no puedo mover la posición de reproducción en esta pista",
       "TryReconnectAfterDispose": "Estoy intentando reconectar el reproductor automáticamente.\n Si no lo consigo, escribe `{0}loadplaylist {1}`",
       "ReconnectedAfterDispose": "He reiniciado el reproductor, todo listo. Si aún falla algo, usa `{0}stop` y `{0}loadplaylist {1}`",
       "ResolvingTracks": "**{0}** ha hecho `{1}` solicitudes. He procesado `{2}` de ellas y he añadido `{3}` pistas.",
       "CurrentTrackNonSpotify": "La pista actual no es recibida de Spotify. Cambia a una pista de Spotify o proporcióname el track ID como argumento a este comando",
       "TrackStuck": "La pista actual está bloqueada. La voy a saltar.",
-      "TrackException": "Error de reproducción de pista: `{0}`. La voy a saltar."
+      "TrackException": "Error de reproducción de pista: `{0}`. La voy a saltar.",
+      "PlayerRestored": "**{0}** ha restaurado la última reproducción.",
+      "LyricsNotFound": "No he encontrado la letra de la canción actual.\nSolicitud: {0} - {1}\n-Característica experimental, no te quejes si no funciona"
     },
     "Groups": {
       "": "Otro",
@@ -178,14 +180,17 @@
       "logging0s": "Muestra el panel de control del logging",
       "fixspotify0s": "¿Orden incorrecto para las pistas de Spotify? Hay que poner un fin a esto. Juntos.",
       "fixspotify0_0s": "URL de la canción deseada",
-      "playnext0s": "Igual a `play`, pero añade la pista inmediatamente después de la actual, no al final de la cola"
+      "playnext0s": "Igual a `play`, pero añade la pista inmediatamente después de la actual, no al final de la cola",
+      "playerrestart0s": "Te permite reiniciar completamente el reproductor. Atención: característica experimental",
+      "lyrics0s": "Letra de la canción (si está disponible)"
     },
     "CommandHandler": {
       "FailedTitle": "Error al ejecutar un comando",
-      "UnmetPrecondition": "No tienes permsos para ejecutar este comando!",
+      "UnmetPrecondition": "No tienes permisos para ejecutar este comando!",
       "BadArgCount": "Error - número incorrecto de argumentos. Info del comando:",
       "ParseFailed": "Error al leer el comando. Info del comando:",
-      "UnknownCommand": "¡Comando `{0}` no encontrado!\nQuizá quieras usar uno de estos: {1}\n Usa el comando `{2}help` para ver la lista de comandos."
+      "UnknownCommand": "¡Comando `{0}` no encontrado!\nQuizá quieras usar uno de estos: {1}\n Usa el comando `{2}help` para ver la lista de comandos.",
+      "CommandOnCooldown": "El comando que intentabas ejecutar está en tiempo de enfriamiento ahora mismo. Espera un poco."
     },
     "Commands": {
       "RequestedBy": "Solicitado por {0} | Ayúdanos votando",
@@ -245,7 +250,7 @@
     },
     "ChainsCommon": {
       "Ended": "Completado",
-      "Thanks": "La cadena de comandos actual ha sido completada.\n Gracias por usar este bot.\n Ayúdanos usando el comando `{0} vote`",
+      "Thanks": "La cadena de comandos actual ha sido completada.\n Gracias por usar este bot.\n Ayúdanos usando el comando `{0}vote`",
       "ReasonStartedNew": "La cadena de comandos actual ha sido completada, lanzando una nueva.",
       "ReasonTimeout": "La cadena de comandos actual ha sido detenida debido a un timeout",
       "CantSend": "No puedo completar la acción en {0} porque no tengo los permisos necesarios"

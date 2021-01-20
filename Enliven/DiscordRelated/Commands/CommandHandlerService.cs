@@ -29,6 +29,7 @@ namespace Bot.DiscordRelated.Commands {
         private ILogger _logger;
         private MessageHistoryService _messageHistoryService;
         private ILifetimeScope _serviceProvider;
+        private CommandCooldownHandler _commandCooldownHandler = new CommandCooldownHandler();
 
         public CommandHandlerService(DiscordShardedClient client, CustomCommandService commandService, IGuildConfigProvider guildConfigProvider,
                                      IStatisticsPartProvider statisticsPartProvider, ILogger logger, MessageHistoryService messageHistoryService,
@@ -62,10 +63,9 @@ namespace Bot.DiscordRelated.Commands {
 
             var context = new CommandContext(_client, msg);
             var argPos = 0;
-            var guild = _guildConfigProvider.Get(guildChannel.Guild.Id);
-            var loc = new GuildLocalizationProvider(guild);
+            var guildConfig = _guildConfigProvider.Get(guildChannel.Guild.Id);
 
-            var hasStringPrefix = msg.HasStringPrefix(guild.Prefix, ref argPos);
+            var hasStringPrefix = msg.HasStringPrefix(guildConfig.Prefix, ref argPos);
             var hasMentionPrefix = HasMentionPrefix(msg, _client.CurrentUser, ref argPos);
 
             bool isCommand = false;
@@ -79,13 +79,13 @@ namespace Bot.DiscordRelated.Commands {
 
                 if (command.Item1 == null) {
                     if (command.Item2.Error == CommandError.UnmetPrecondition) {
-                        await SendErrorMessage(msg, loc, loc.Get("CommandHandler.UnmetPrecondition"));
+                        await SendErrorMessage(msg, guildConfig.Loc, guildConfig.Loc.Get("CommandHandler.UnmetPrecondition"));
                     }
                     else {
-                        await AddEmojiErrorHint(msg, loc, CommonEmoji.Help,
+                        await AddEmojiErrorHint(msg, guildConfig.Loc, CommonEmoji.Help,
                             new EntryLocalized("CommandHandler.UnknownCommand").Add(query.SafeSubstring(40, "...")!,
                                 FuzzySearch.Search(query).GetBestMatches(3).Select(match => $"`{match.SimilarTo}`").JoinToString(", "),
-                                guild.Prefix));
+                                guildConfig.Prefix));
                     }
 
                     return;
@@ -98,24 +98,24 @@ namespace Bot.DiscordRelated.Commands {
                 if (!result.IsSuccess) {
                     switch (result.Error) {
                         case CommandError.ParseFailed:
-                            await AddEmojiErrorHint(msg, loc, CommonEmoji.Help, new EntryLocalized("CommandHandler.ParseFailed"),
-                                CommandService.BuildHelpFields(command.Item1.Value.Key.Alias, guild.Prefix, loc));
+                            await AddEmojiErrorHint(msg, guildConfig.Loc, CommonEmoji.Help, new EntryLocalized("CommandHandler.ParseFailed"),
+                                CommandService.BuildHelpFields(command.Item1.Value.Key.Alias, guildConfig.Prefix, guildConfig.Loc));
                             break;
                         case CommandError.BadArgCount:
-                            await AddEmojiErrorHint(msg, loc, CommonEmoji.Help, new EntryLocalized("CommandHandler.BadArgCount"),
-                                CommandService.BuildHelpFields(command.Item1.Value.Key.Alias, guild.Prefix, loc));
+                            await AddEmojiErrorHint(msg, guildConfig.Loc, CommonEmoji.Help, new EntryLocalized("CommandHandler.BadArgCount"),
+                                CommandService.BuildHelpFields(command.Item1.Value.Key.Alias, guildConfig.Prefix, guildConfig.Loc));
                             break;
                         case CommandError.ObjectNotFound:
-                            await SendErrorMessage(msg, loc, result.ErrorReason);
+                            await SendErrorMessage(msg, guildConfig.Loc, result.ErrorReason);
                             break;
                         case CommandError.MultipleMatches:
-                            await SendErrorMessage(msg, loc, result.ErrorReason);
+                            await SendErrorMessage(msg, guildConfig.Loc, result.ErrorReason);
                             break;
                     }
                 }
             }
 
-            _messageHistoryService.TryLogCreatedMessage(s, guild, isCommand);
+            _messageHistoryService.TryLogCreatedMessage(s, guildConfig, isCommand);
         }
 
         private static async Task AddEmojiErrorHint(SocketUserMessage targetMessage, ILocalizationProvider loc, IEmote emote, IEntry description,
@@ -173,6 +173,12 @@ namespace Bot.DiscordRelated.Commands {
 
         public async Task<IResult> ExecuteCommand(IMessage message, string query, ICommandContext context, KeyValuePair<CommandMatch, ParseResult> pair,
                                                   string authorId) {
+            if (_commandCooldownHandler.IsCommandOnCooldown(pair.Key.Command, context)) {
+                var localizationProvider = _guildConfigProvider.Get(context.Guild.Id).Loc;
+                await SendErrorMessage(message, localizationProvider, new EntryLocalized("CommandHandler.CommandOnCooldown").Get(localizationProvider));
+                return ExecuteResult.FromSuccess();
+            }
+            
             #pragma warning disable 618
             IResult result = CollectorsUtils.OnCommandExecute(pair, context, message)
                 ? await pair.Key.ExecuteAsync(context, pair.Value, new ServiceProviderAdapter(_serviceProvider))
@@ -199,7 +205,7 @@ namespace Bot.DiscordRelated.Commands {
             return result;
         }
 
-        private static async Task SendErrorMessage(SocketUserMessage message, ILocalizationProvider loc, string description,
+        private static async Task SendErrorMessage(IMessage message, ILocalizationProvider loc, string description,
                                                    IEnumerable<EmbedFieldBuilder>? fieldBuilders) {
             if (fieldBuilders == null) {
                 await SendErrorMessage(message, loc, description);
@@ -211,7 +217,7 @@ namespace Bot.DiscordRelated.Commands {
                     Constants.LongTimeSpan);
         }
 
-        private static async Task SendErrorMessage(SocketUserMessage message, ILocalizationProvider loc, string description) {
+        private static async Task SendErrorMessage(IMessage message, ILocalizationProvider loc, string description) {
             (await message.Channel.SendMessageAsync(null, false, GetErrorEmbed(message.Author, loc, description).Build()))
                .DelayedDelete(Constants.LongTimeSpan);
         }

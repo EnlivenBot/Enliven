@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Bot.Commands.Chains;
 using Bot.DiscordRelated.Commands;
@@ -10,6 +11,7 @@ using Common.History;
 using Common.Localization.Entries;
 using Common.Music;
 using Common.Music.Players;
+using Discord;
 using Discord.Commands;
 using Lavalink4NET.Player;
 using Lavalink4NET.Rest;
@@ -58,7 +60,7 @@ namespace Bot.Commands {
             }
             catch (TrackNotFoundException) {
                 ErrorMessageController.AddEntry(Loc.Get("Music.NotFound", query!.SafeSubstring(100, "...")!))
-                                                   .UpdateTimeout(Constants.StandardTimeSpan).Update();
+                                      .UpdateTimeout(Constants.StandardTimeSpan).Update();
             }
         }
 
@@ -186,8 +188,8 @@ namespace Bot.Commands {
         public async Task Resume() {
             if (!await IsPreconditionsValid) return;
             if (Player == null) {
-                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix))
-                                      .UpdateTimeout(Constants.StandardTimeSpan).Update();
+                await RestorePlayer();
+
                 return;
             }
 
@@ -195,6 +197,19 @@ namespace Bot.Commands {
 
             Player.ResumeAsync();
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.Resume").Format(Context.User.Username));
+        }
+
+        private async Task RestorePlayer() {
+            var newPlayer = await MusicController.RestoreLastPlayer(Context.Guild.Id);
+            if (newPlayer == null) {
+                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix))
+                                      .UpdateTimeout(Constants.StandardTimeSpan).Update();
+            }
+            else {
+                GetChannel(out var musicChannel);
+                MainDisplay = EmbedPlayerDisplayProvider.Provide((ITextChannel) musicChannel, newPlayer);
+                newPlayer.WriteToQueueHistory(new EntryLocalized("Music.PlayerRestored", Context.User.Username));
+            }
         }
 
         [Command("shuffle", RunMode = RunMode.Async)]
@@ -326,12 +341,21 @@ namespace Bot.Commands {
 
             start = start.Normalize(1, Player.Playlist.Count);
             end = end.Normalize(start, Player.Playlist.Count);
-            var removesCurrent = Player.CurrentTrackIndex + 1 >= start && Player.CurrentTrackIndex + 1 <= end;
-            Player.Playlist.RemoveRange(start - 1, end - start + 1);
-            Player.WriteToQueueHistory(Loc.Get("MusicQueues.Remove")
-                                          .Format(Context.User.Username, end - start + 1, start, end));
-            if (removesCurrent) {
-                Jump();
+            var countToRemove = end - start + 1;
+            if (countToRemove == 1) {
+                var deletedTrack = Player.Playlist[start - 1];
+                Player.Playlist.RemoveRange(start - 1, countToRemove);
+                Player.WriteToQueueHistory(Loc.Get("MusicQueues.Remove", Context.User.Username, start,
+                    Common.Music.Controller.MusicController.EscapeTrack(deletedTrack.Title.SafeSubstring(30))));
+            }
+            else {
+                Player.Playlist.RemoveRange(start - 1, countToRemove);
+                Player.WriteToQueueHistory(Loc.Get("MusicQueues.RemoveRange", Context.User.Username, countToRemove, start, end));
+            }
+
+            if (Player.CurrentTrackIndex == -1 && Player.Playlist.Count != 0) {
+                var track = Player.Playlist[Math.Min(start - 1, Player.Playlist.Count)];
+                Player.PlayAsync(track, false);
             }
         }
 
@@ -385,6 +409,7 @@ namespace Bot.Commands {
         [Command("changenode", RunMode = RunMode.Async)]
         [Alias("newnode", "switchnode")]
         [Summary("changenode0s")]
+        [CommandCooldown(GuildDelayMilliseconds = 5000)]
         public async Task ChangeNode() {
             if (!await IsPreconditionsValid) return;
             if (Player == null) {
@@ -408,7 +433,56 @@ namespace Bot.Commands {
 
             await currentNode.MovePlayerAsync(Player, newNode);
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.NodeChanged").Format(Context.User.Username, newNode.Label));
-            Player.NodeChanged(newNode);
+        }
+
+        [Command("playerrestart", RunMode = RunMode.Async)]
+        [Summary("playerrestart0s")]
+        [CommandCooldown(GuildDelayMilliseconds = 60000)]
+        public async Task RestartPlayer() {
+            if (!await IsPreconditionsValid) return;
+            if (Player == null) {
+                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix))
+                                      .UpdateTimeout(Constants.StandardTimeSpan).Update();
+                return;
+            }
+
+            var playerShutdownParameters = new PlayerShutdownParameters() {ShutdownDisplays = true, NeedSave = false};
+            Player.ExecuteShutdown(playerShutdownParameters);
+            Player = null;
+            await Task.Delay(1000);
+            await RestorePlayer();
+        }
+
+        private static Regex _lyricsRegex = new Regex(@"([\p{L} ]+) - ([\p{L} ]+)");
+
+        [Command("lyrics", RunMode = RunMode.Async)]
+        [Summary("lyrics0s")]
+        public async Task DisplayLyrics() {
+            if (!await IsPreconditionsValid) return;
+            if (Player == null || Player.Playlist.IsEmpty || Player.CurrentTrack == null) {
+                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix))
+                                      .UpdateTimeout(Constants.StandardTimeSpan).Update();
+                return;
+            }
+
+            var match = _lyricsRegex.Match(Player.CurrentTrack.Title);
+            string? lyrics = null;
+            string artist = "";
+            string title = "";
+            if (match.Success) {
+                artist = match.Groups[1].Value.Trim();
+                title = match.Groups[2].Value.Trim();
+                lyrics = await LyricsService.GetLyricsAsync(artist, title);
+            }
+
+            if (string.IsNullOrWhiteSpace(lyrics)) {
+                artist = Player.CurrentTrack.Author;
+                title = Player.CurrentTrack.Title;
+                lyrics = await LyricsService.GetLyricsAsync(artist, title);
+            }
+
+            var isFail = string.IsNullOrWhiteSpace(lyrics);
+            await ReplyFormattedAsync((isFail ? Loc.Get("Music.LyricsNotFound", artist, title) : lyrics)!, isFail);
         }
     }
 }
