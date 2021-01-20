@@ -66,7 +66,7 @@ The best opportunities for logging messages.
 
 ## Getting started
 
-1. You need to add the bot to your server using [this link](https://discordapp.com/oauth2/authorize?client_id=606760964183949314&scope=bot&permissions=1110764608)
+1. You need to add the bot to your server using [this link](https://discord.com/oauth2/authorize?client_id=801159808929497208&scope=bot&permissions=1110764608)
 2. To find out all available commands use `&help`
 
 ### Initial Configuration
@@ -87,13 +87,22 @@ branch. Pull requests are warmly welcome.
 - [Issue tracker](https://gitlab.com/skprochlab/nJMaLBot/-/issues)
 - [Discord support server](https://discord.gg/zfBffbBbCp)  
 - Enliven on discord bots lists:
-  - [top.gg](https://top.gg/bot/606760964183949314)
-  - [discordbotlist.com](https://discordbotlist.com/bots/enliven)
-  - [bots.ondiscord.xyz](https://bots.ondiscord.xyz/bots/606760964183949314)
-  - [discord.bots.gg](https://discord.bots.gg/bots/606760964183949314)
+  - Links will appear here as soon as I regain access to my account. The official source of information is this gitlab.
+  
+[comment]: <> (  - [top.gg]&#40;https://top.gg/bot/606760964183949314&#41;)
+
+[comment]: <> (  - [discordbotlist.com]&#40;https://discordbotlist.com/bots/enliven&#41;)
+
+[comment]: <> (  - [bots.ondiscord.xyz]&#40;https://bots.ondiscord.xyz/bots/606760964183949314&#41;)
+
+[comment]: <> (  - [discord.bots.gg]&#40;https://discord.bots.gg/bots/606760964183949314&#41;)
   
 ## Help us
 You can help by making a contributing or by voting on the following sites:
-- [top.gg](https://top.gg/bot/606760964183949314) (vote every 12 hours, write a review)
-- [discordbotlist.com](https://discordbotlist.com/bots/enliven) (vote every 12 hours)
-- [bots.ondiscord.xyz](https://bots.ondiscord.xyz/bots/606760964183949314) (write a review)
+- Links will appear here as soon as I regain access to my account. The official source of information is this gitlab.
+
+[comment]: <> (- [top.gg]&#40;https://top.gg/bot/606760964183949314&#41; &#40;vote every 12 hours, write a review&#41;)
+
+[comment]: <> (- [discordbotlist.com]&#40;https://discordbotlist.com/bots/enliven&#41; &#40;vote every 12 hours&#41;)
+
+[comment]: <> (- [bots.ondiscord.xyz]&#40;https://bots.ondiscord.xyz/bots/606760964183949314&#41; &#40;write a review&#41;)
