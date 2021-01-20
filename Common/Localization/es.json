@@ -103,7 +103,8 @@
       "CurrentTrackNonSpotify": "La pista actual no es recibida de Spotify. Cambia a una pista de Spotify o proporcióname el track ID como argumento a este comando",
       "TrackStuck": "La pista actual está bloqueada. La voy a saltar.",
       "TrackException": "Error de reproducción de pista: `{0}`. La voy a saltar.",
-      "PlayerRestored": "**{0}** ha restaurado la última reproducción."
+      "PlayerRestored": "**{0}** ha restaurado la última reproducción.",
+      "LyricsNotFound": "No he encontrado la letra de la canción actual.\nSolicitud: {0} - {1}\n-Característica experimental, no te quejes si no funciona"
     },
     "Groups": {
       "": "Otro",
@@ -180,7 +181,8 @@
       "fixspotify0s": "¿Orden incorrecto para las pistas de Spotify? Hay que poner un fin a esto. Juntos.",
       "fixspotify0_0s": "URL de la canción deseada",
       "playnext0s": "Igual a `play`, pero añade la pista inmediatamente después de la actual, no al final de la cola",
-      "playerrestart0s": "Te permite reiniciar completamente el reproductor. Atención: característica experimental"
+      "playerrestart0s": "Te permite reiniciar completamente el reproductor. Atención: característica experimental",
+      "lyrics0s": "Letra de la canción (si está disponible)"
     },
     "CommandHandler": {
       "FailedTitle": "Error al ejecutar un comando",
