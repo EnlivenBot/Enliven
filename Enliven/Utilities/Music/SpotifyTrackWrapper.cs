@@ -18,14 +18,14 @@ namespace Bot.Utilities.Music {
 
         public string Id { get; private set; }
 
-        public async Task<FullTrack> GetFullTrack() {
-            return _track ??= await (await SpotifyMusicResolver.SpotifyClient)!.Tracks.Get(Id);
+        public async Task<FullTrack> GetFullTrack(SpotifyClient client) {
+            return _track ??= await client.Tracks.Get(Id);
         }
         
-        public async Task<string> GetTrackInfo() {
+        public async Task<string> GetTrackInfo(SpotifyClient client) {
             if (_trackInfo != null)
                 return _trackInfo;
-            var fullTrack = await GetFullTrack();
+            var fullTrack = await GetFullTrack(client);
             return _trackInfo = $"{fullTrack.Name} - {fullTrack.Artists[0].Name}";
         }
     }

@@ -21,7 +21,9 @@ using Discord;
 using Discord.WebSocket;
 using ICSharpCode.SharpZipLib.Core;
 using ICSharpCode.SharpZipLib.Zip;
+using Lavalink4NET.Decoding;
 using Lavalink4NET.DiscordNet;
+using Lavalink4NET.Player;
 using NLog;
 using NLog.Config;
 using NLog.Layouts;
@@ -55,9 +57,15 @@ namespace Bot {
         private IEnumerable<IService> _services;
         private IEnumerable<IPatch> _patches;
         private IMusicController _musicController;
+        private EnlivenConfig _config;
 
-        public Program(ILogger logger, IEnumerable<IService> services, IEnumerable<IPatch> patches, EnlivenShardedClient discordShardedClient, 
-                       IMusicController musicController) {
+        public Program(ILogger logger, IEnumerable<IService> services, IEnumerable<IPatch> patches,
+            EnlivenShardedClient discordShardedClient,
+            IMusicController musicController, EnlivenConfig config)
+        {
+            _config = config;
+            config.Load();
+
             _musicController = musicController;
             _patches = patches;
             _services = services;
@@ -67,7 +75,8 @@ namespace Bot {
 
         private static IContainer Container { get; set; } = null!;
 
-        async Task Run() {
+        async Task Run()
+        {
             logger.Info("Start Initialising");
 
             Task.WaitAll(_patches.Select(patch => patch.Apply()).ToArray());
@@ -76,14 +85,17 @@ namespace Bot {
 
             logger.Info("Start logining");
             var connectDelay = 30;
-            while (true) {
-                try {
-                    await Client.LoginAsync(TokenType.Bot, GlobalConfig.Instance.BotToken);
+            while (true)
+            {
+                try
+                {
+                    await Client.LoginAsync(TokenType.Bot, _config.BotToken);
                     logger.Info("Successefully logged in");
                     break;
                 }
-                catch (Exception e) {
-                    logger.Fatal(e, "Failed to login. Probably token is incorrect - {token}", GlobalConfig.Instance.BotToken);
+                catch (Exception e)
+                {
+                    logger.Fatal(e, "Failed to login. Probably token is incorrect - {token}", _config.BotToken);
                     logger.Info("Waiting before next attempt - {delay}s", connectDelay);
                     await Task.Delay(TimeSpan.FromSeconds(connectDelay));
                     connectDelay += 10;
@@ -93,26 +105,31 @@ namespace Bot {
             LocalizationManager.Initialize();
 
             await StartClient();
-            
+
             Task.WaitAll(_services.Select(service => service.Initialize()).ToArray());
 
-            AppDomain.CurrentDomain.ProcessExit += async (sender, eventArgs) => {
+            AppDomain.CurrentDomain.ProcessExit += async (sender, eventArgs) =>
+            {
                 await Client.SetStatusAsync(UserStatus.AFK);
                 await Client.SetGameAsync("Reboot...");
             };
-            
+
             await Task.Delay(-1);
         }
 
-        public static void ConfigureServices(ContainerBuilder builder) {
+        public static void ConfigureServices(ContainerBuilder builder)
+        {
+            builder.Register(context => new EnlivenConfig("Config/config.json")).AsSelf().SingleInstance();
             builder.RegisterType<MusicResolverService>().AsSelf().SingleInstance();
             builder.RegisterType<MusicController>().As<IMusicController>().SingleInstance();
             builder.RegisterType<ReliabilityService>().AsSelf();
             builder.RegisterModule<NLogModule>();
             builder.RegisterType<Program>().SingleInstance();
-            builder.Register(context => new EnlivenShardedClient(new DiscordSocketConfig {MessageCacheSize = 100})).AsSelf().As<DiscordShardedClient>().SingleInstance();
+            builder.Register(context => new EnlivenShardedClient(new DiscordSocketConfig {MessageCacheSize = 100}))
+                .AsSelf().As<DiscordShardedClient>().SingleInstance();
+            builder.RegisterType<SpotifyClientResolver>();
 
-            builder.Register(context => GlobalConfig.Instance.LavalinkNodes);
+            builder.Register(context => context.Resolve<EnlivenConfig>().LavalinkNodes);
 
             // Discord type readers
             builder.RegisterType<ChannelFunctionTypeReader>().As<CustomTypeReader>();
@@ -120,10 +137,12 @@ namespace Bot {
             builder.RegisterType<BassBoostModeTypeReader>().As<CustomTypeReader>();
 
             // Database types
-            builder.Register(context => context.Resolve<LiteDatabaseProvider>().ProvideDatabase().GetAwaiter().GetResult()
-                                               .GetCollection<SpotifyAssociation>(@"SpotifyAssociations")).SingleInstance();
-            builder.Register(context => context.Resolve<LiteDatabaseProvider>().ProvideDatabase().GetAwaiter().GetResult()
-                                               .GetCollection<MessageHistory>(@"MessageHistory")).SingleInstance();
+            builder.Register(context => context.Resolve<LiteDatabaseProvider>().ProvideDatabase().GetAwaiter()
+                .GetResult()
+                .GetCollection<SpotifyAssociation>(@"SpotifyAssociations")).SingleInstance();
+            builder.Register(context => context.Resolve<LiteDatabaseProvider>().ProvideDatabase().GetAwaiter()
+                .GetResult()
+                .GetCollection<MessageHistory>(@"MessageHistory")).SingleInstance();
 
             // Music resolvers
             builder.RegisterType<SpotifyMusicResolver>().AsImplementedInterfaces().SingleInstance();
@@ -142,26 +161,33 @@ namespace Bot {
             builder.RegisterType<StatisticsService>().As<IStatisticsService>().AsSelf().SingleInstance();
         }
 
-        public async Task StartClient() {
+        public async Task StartClient()
+        {
             logger.Info("Starting client");
             await Client.StartAsync();
             await Client.SetGameAsync("mentions of itself to get started", null, ActivityType.Listening);
         }
 
-        private Task OnClientLog(LogMessage message) {
-            if (message.Message.StartsWith("Unknown Dispatch")) {
+        private Task OnClientLog(LogMessage message)
+        {
+            if (message.Message.StartsWith("Unknown Dispatch"))
+            {
                 return Task.CompletedTask;
             }
+
             logger.Log(message.Severity, message.Exception, "{message} from {source}", message.Message, message.Source);
             return Task.CompletedTask;
         }
 
-        private static void InstallLogger() {
+        private static void InstallLogger()
+        {
             var logsFolder = Path.Combine(Directory.GetCurrentDirectory(), "Logs");
             Directory.CreateDirectory(logsFolder);
 
-            foreach (var file in Directory.GetFiles(logsFolder, "*.log")) {
-                try {
+            foreach (var file in Directory.GetFiles(logsFolder, "*.log"))
+            {
+                try
+                {
                     using var fs = File.Create(Path.ChangeExtension(file, ".zip"));
                     using var zip = new ZipOutputStream(fs);
                     zip.SetLevel(9);
@@ -171,46 +197,55 @@ namespace Bot {
                     zipEntry.DateTime = fileInfo.LastWriteTime;
                     zip.PutNextEntry(zipEntry);
                     var buffer = new byte[4096];
-                    using (var fsInput = File.OpenRead(file)) {
+                    using (var fsInput = File.OpenRead(file))
+                    {
                         StreamUtils.Copy(fsInput, zip, buffer);
                     }
 
                     zip.CloseEntry();
                     File.Delete(file);
                 }
-                catch (Exception) {
+                catch (Exception)
+                {
                     // ignored
                 }
             }
 
             var config = new LoggingConfiguration();
 
-            var layout = Layout.FromString("${longdate}|${level:uppercase=true}|${logger}|${message}${onexception:${newline}${exception:format=tostring}}");
+            var layout =
+                Layout.FromString(
+                    "${longdate}|${level:uppercase=true}|${logger}|${message}${onexception:${newline}${exception:format=tostring}}");
             // Targets where to log to: File and Console
-            var logfile = new FileTarget("logfile") {
-                FileName = Path.Combine(Directory.GetCurrentDirectory(), "Logs", DateTime.Now.ToString("yyyyMMddTHHmmss") + ".log"),
+            var logfile = new FileTarget("logfile")
+            {
+                FileName = Path.Combine(Directory.GetCurrentDirectory(), "Logs",
+                    DateTime.Now.ToString("yyyyMMddTHHmmss") + ".log"),
                 Layout = layout
             };
             var logconsole = new ColoredConsoleTarget("logconsole") {Layout = layout};
 
             // Rules for mapping loggers to targets
-            #if DEBUG
+#if DEBUG
             config.AddRule(LogLevel.Debug, LogLevel.Fatal, logconsole);
             config.AddRule(LogLevel.Debug, LogLevel.Fatal, logfile);
-            #endif
-            #if !DEBUG
+#endif
+#if !DEBUG
             config.AddRule(LogLevel.Debug, LogLevel.Fatal, logconsole);
             config.AddRule(LogLevel.Debug, LogLevel.Fatal, logfile);
-            #endif
+#endif
 
             // Apply config           
             LogManager.Configuration = config;
         }
 
-        private static void InstallErrorHandlers() {
+        private static void InstallErrorHandlers()
+        {
             var logger = LogManager.GetLogger("Global");
-            AppDomain.CurrentDomain.UnhandledException += (sender, args) => logger.Fatal(args.ExceptionObject as Exception, "Global uncaught exception");
-            TaskScheduler.UnobservedTaskException += (sender, args) => logger.Fatal(args.Exception?.Flatten(), "Global uncaught task exception");
+            AppDomain.CurrentDomain.UnhandledException += (sender, args) =>
+                logger.Fatal(args.ExceptionObject as Exception, "Global uncaught exception");
+            TaskScheduler.UnobservedTaskException += (sender, args) =>
+                logger.Fatal(args.Exception?.Flatten(), "Global uncaught task exception");
         }
     }
 }

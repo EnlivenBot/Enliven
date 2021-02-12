@@ -24,33 +24,13 @@ namespace Bot.Utilities.Music {
         private static Logger logger = LogManager.GetCurrentClassLogger();
         private ISpotifyAssociationProvider _spotifyAssociationProvider;
 
-        static SpotifyMusicResolver() {
-            SpotifyClient = Task.Run(async () => {
-                try {
-                    var config = SpotifyClientConfig.CreateDefault();
-
-                    var request = new ClientCredentialsRequest(GlobalConfig.Instance.SpotifyClientID, GlobalConfig.Instance.SpotifyClientSecret);
-                    // If credentials wrong, this \/ line will throw the exception
-                    await new OAuthClient(config).RequestToken(request);
-
-                    var actualConfig = SpotifyClientConfig
-                                      .CreateDefault()
-                                      .WithAuthenticator(new ClientCredentialsAuthenticator(GlobalConfig.Instance.SpotifyClientID,
-                                           GlobalConfig.Instance.SpotifyClientSecret));
-                    return new SpotifyClient(actualConfig);
-                }
-                catch (Exception e) {
-                    logger.Error(e, "Wrong Spotify credentials. Check config file");
-                    return null;
-                }
-            });
-        }
-
-        public SpotifyMusicResolver(ISpotifyAssociationProvider spotifyAssociationProvider) {
+        public SpotifyMusicResolver(ISpotifyAssociationProvider spotifyAssociationProvider, SpotifyClientResolver client)
+        {
+            SpotifyClient = client.GetSpotify();
             _spotifyAssociationProvider = spotifyAssociationProvider;
         }
 
-        public static Task<SpotifyClient?> SpotifyClient { get; }
+        public Task<SpotifyClient?> SpotifyClient { get; }
 
         public async Task<MusicResolveResult> Resolve(LavalinkCluster cluster, string query) {
             var url = new SpotifyUrl(query);
@@ -65,7 +45,7 @@ namespace Bot.Utilities.Music {
             if (cachedTrack != null) return cachedTrack;
 
             try {
-                var lavalinkTracks = await (await new LavalinkMusicResolver().Resolve(lavalinkCluster, await spotifyTrackWrapper.GetTrackInfo())).Resolve();
+                var lavalinkTracks = await (await new LavalinkMusicResolver().Resolve(lavalinkCluster, await spotifyTrackWrapper.GetTrackInfo(await SpotifyClient))).Resolve();
                 var spotifyTrackAssociation = _spotifyAssociationProvider.Create(spotifyTrackWrapper.Id, lavalinkTracks[0].Identifier);
                 spotifyTrackAssociation.Save();
                 return spotifyTrackAssociation;
