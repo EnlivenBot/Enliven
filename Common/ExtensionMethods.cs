@@ -6,9 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Common.Config;
 using Common.Localization.Providers;
-using Common.Music.Tracks;
 using Discord;
-using Lavalink4NET.Player;
 using NLog;
 
 namespace Common {

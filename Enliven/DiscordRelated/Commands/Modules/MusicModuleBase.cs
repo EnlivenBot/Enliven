@@ -4,10 +4,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using Bot.DiscordRelated.Music;
 using Bot.Utilities;
-using Bot.Utilities.Music;
 using Common;
 using Common.Config;
-using Common.Music;
 using Common.Music.Controller;
 using Common.Music.Players;
 using Discord;
@@ -144,7 +142,4 @@ namespace Bot.DiscordRelated.Commands.Modules {
             base.AfterExecute(command);
         }
     }
-
-    [AttributeUsage(AttributeTargets.Method, Inherited = false, AllowMultiple = true)]
-    sealed class SummonToUserAttribute : Attribute { }
 }

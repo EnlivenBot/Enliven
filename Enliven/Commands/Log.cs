@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using Bot.DiscordRelated.Commands.Modules;
 using Bot.DiscordRelated.Logging;
 using Common;
-using Common.Config;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;

@@ -2,7 +2,7 @@
 using Lavalink4NET.Player;
 using Lavalink4NET.Util;
 
-namespace Bot.Utilities.Music {
+namespace Bot.Music.Spotify {
     public class SpotifyLavalinkTrack : LavalinkTrack {
         public SpotifyTrackWrapper RelatedSpotifyTrackWrapper;
 

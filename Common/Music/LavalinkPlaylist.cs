@@ -136,7 +136,7 @@ namespace Common.Music {
                 track = null;
                 try {
                     track = _list[index];
-                    return track != null;
+                    return true;
                 }
                 catch (Exception) {
                     return false;

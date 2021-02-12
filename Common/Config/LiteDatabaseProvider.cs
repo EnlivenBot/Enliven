@@ -4,7 +4,6 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Common.Music;
 using HarmonyLib;
 using LiteDB;
 using NLog;
@@ -38,6 +37,7 @@ namespace Common.Config {
             BsonMapper.Global.RegisterType
             (
                 timeSpan => BsonMapper.Global.Serialize(timeSpan?.Ticks),
+                // ReSharper disable once RedundantCast
                 bson => bson == null ? (TimeSpan?) null : TimeSpan.FromTicks((long) bson.RawValue)
             );
             logger.Info("Loading database");

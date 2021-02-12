@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
 using SpotifyAPI.Web;
 
-namespace Bot.Utilities.Music {
+namespace Bot.Music.Spotify {
     public class SpotifyTrackWrapper {
         private FullTrack? _track;
         private string? _trackInfo;

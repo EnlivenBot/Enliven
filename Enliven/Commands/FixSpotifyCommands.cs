@@ -2,10 +2,9 @@
 using System.Threading.Tasks;
 using Bot.Commands.Chains;
 using Bot.DiscordRelated.Commands.Modules;
-using Bot.Utilities.Music;
+using Bot.Music.Spotify;
 using Common;
 using Common.Config;
-using Common.Music.Tracks;
 using Discord.Commands;
 
 namespace Bot.Commands {

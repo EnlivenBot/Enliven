@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.Design;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -10,8 +9,8 @@ using Bot.DiscordRelated;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Logging;
 using Bot.DiscordRelated.Music;
+using Bot.Music.Spotify;
 using Bot.Patches;
-using Bot.Utilities.Music;
 using Common;
 using Common.Config;
 using Common.Localization;
@@ -21,9 +20,6 @@ using Discord;
 using Discord.WebSocket;
 using ICSharpCode.SharpZipLib.Core;
 using ICSharpCode.SharpZipLib.Zip;
-using Lavalink4NET.Decoding;
-using Lavalink4NET.DiscordNet;
-using Lavalink4NET.Player;
 using NLog;
 using NLog.Config;
 using NLog.Layouts;
@@ -50,23 +46,20 @@ namespace Bot {
             Console.WriteLine("Execution end");
         }
 
-        public static EnlivenShardedClient Client;
+        public static EnlivenShardedClient Client = null!;
         
         // ReSharper disable once InconsistentNaming
         private readonly ILogger logger;
         private IEnumerable<IService> _services;
         private IEnumerable<IPatch> _patches;
-        private IMusicController _musicController;
         private EnlivenConfig _config;
 
         public Program(ILogger logger, IEnumerable<IService> services, IEnumerable<IPatch> patches,
-            EnlivenShardedClient discordShardedClient,
-            IMusicController musicController, EnlivenConfig config)
+            EnlivenShardedClient discordShardedClient, EnlivenConfig config)
         {
             _config = config;
             config.Load();
 
-            _musicController = musicController;
             _patches = patches;
             _services = services;
             this.logger = logger;
@@ -239,6 +232,7 @@ namespace Bot {
             LogManager.Configuration = config;
         }
 
+        // ReSharper disable once UnusedMember.Local
         private static void InstallErrorHandlers()
         {
             var logger = LogManager.GetLogger("Global");

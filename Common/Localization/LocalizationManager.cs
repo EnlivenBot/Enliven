@@ -31,7 +31,7 @@ namespace Common.Localization {
                     pack.Value.TranslationCompleteness = (int) (entriesNotLocalizedCount / (double) localizationEntries.Count * 100);
                 }
 
-                Languages = localizationPacks;
+                Languages = localizationPacks!;
                 logger.Info("Loaded languages: {lang}.", string.Join(", ", Languages.Select(pair => $"{pair.Key} - {pair.Value.TranslationCompleteness}%")));
             }
             catch (Exception e) {

@@ -44,7 +44,7 @@ namespace Common.Music {
     public class StoredPlaylist : ExportPlaylist {
         [BsonId] public string Id { get; set; } = null!;
         public DateTime CreationTime { get; set; }
-        public UserLink Author { get; set; }
+        public UserLink Author { get; set; } = null!;
     }
 
     public enum ExportPlaylistOptions {

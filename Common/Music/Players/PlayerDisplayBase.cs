@@ -5,7 +5,8 @@ using Common.Localization.Entries;
 
 namespace Common.Music.Players {
     public abstract class PlayerDisplayBase : IPlayerDisplay {
-        public FinalLavalinkPlayer Player { get; set; }
+        public FinalLavalinkPlayer? Player { get; set; }
+
         public virtual Task Initialize(FinalLavalinkPlayer finalLavalinkPlayer) {
             ChangePlayer(finalLavalinkPlayer);
             

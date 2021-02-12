@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Subjects;
@@ -72,8 +71,8 @@ namespace Common.Music.Players {
 
             if (LoadFailedRemoves > 2) {
                 try {
-                    var currentNode = _musicController.Cluster.GetServingNode(GuildId);
-                    var newNode = _musicController.Cluster.Nodes.Where(node => node.IsConnected).Where(node => node != currentNode).RandomOrDefault();
+                    var currentNode = MusicController.Cluster.GetServingNode(GuildId);
+                    var newNode = MusicController.Cluster.Nodes.Where(node => node.IsConnected).Where(node => node != currentNode).RandomOrDefault();
                     if (newNode != null) {
                         await currentNode.MovePlayerAsync(this, newNode);
                         WriteToQueueHistory(new HistoryEntry(new EntryLocalized("MusicQueues.NodeChanged", "SYSTEM", newNode.Label ?? "")));
@@ -178,7 +177,7 @@ namespace Common.Music.Players {
 
                 await PlayAsync(track, false, position);
                 WriteToQueueHistory(new HistoryEntry(new EntryLocalized("MusicQueues.Jumped", requester, CurrentTrackIndex + 1,
-                    MusicController.EscapeTrack(CurrentTrack!.Title).SafeSubstring(100, "...")!)));
+                    Controller.MusicController.EscapeTrack(CurrentTrack!.Title).SafeSubstring(100, "...")!)));
             }
             else if (State == PlayerState.NotPlaying) {
                 await PlayAsync(Playlist[0], false);
@@ -231,7 +230,7 @@ namespace Common.Music.Players {
 
                 if (addedTracks.Count == 1) {
                     WriteToQueueHistory(new HistoryEntry(new EntryLocalized("MusicQueues.Enqueued", author,
-                        MusicController.EscapeTrack(addedTracks[0].Title))));
+                        Controller.MusicController.EscapeTrack(addedTracks[0].Title))));
                 }
                 else if (addedTracks.Count > 1) {
                     WriteToQueueHistory(new HistoryEntry(new EntryLocalized("MusicQueues.EnqueuedMany", author, addedTracks.Count)));

@@ -4,7 +4,7 @@ using Common.Config;
 using NLog;
 using SpotifyAPI.Web;
 
-namespace Bot.Utilities.Music
+namespace Bot.Music.Spotify
 {
     public class SpotifyClientResolver
     {

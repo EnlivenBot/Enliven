@@ -2,7 +2,6 @@
 using Common.Config;
 using Common.Music;
 using Common.Music.Controller;
-using Common.Music.Players;
 using Common.Music.Resolvers;
 using Lavalink4NET.Lyrics;
 

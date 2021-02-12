@@ -4,7 +4,6 @@ using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
 using Common;
 using Common.Music;
-using Common.Music.Controller;
 using Discord.Commands;
 using LiteDB;
 

@@ -15,7 +15,7 @@ namespace Common.Localization {
             set {
                 _localizationFlagEmojiText = value;
                 try {
-                     LocalizationFlagEmoji = new Discord.Emoji(value);
+                     LocalizationFlagEmoji = new Emoji(value);
                 }
                 catch (Exception) {
                     // ignored

@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Bot.Utilities.Collector;
-using Bot.Utilities.Music;
 using Common;
 using Common.Config;
 using Common.Localization.Providers;

@@ -1,5 +1,4 @@
 ﻿using System;
-using Discord;
 using NLog;
 
 namespace Common {

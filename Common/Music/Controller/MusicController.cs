@@ -9,7 +9,6 @@ using Common.Localization.Entries;
 using Common.Music.Players;
 using Common.Music.Resolvers;
 using Discord;
-using Discord.WebSocket;
 using Lavalink4NET.Cluster;
 using Lavalink4NET.DiscordNet;
 using Lavalink4NET.Events;
@@ -54,12 +53,12 @@ namespace Common.Music.Controller {
             var wrapper = new DiscordClientWrapper(_discordShardedClient);
             _logger.Info("Starting music module");
 
-            _lavalinkLogger.LogMessage += (sender, e) => LavalinkLoggerOnLogMessage(sender, e, _logger);
+            _lavalinkLogger.LogMessage += (sender, e) => LavalinkLoggerOnLogMessage(e, _logger);
 
             IsMusicEnabled = nodes.Count != 0;
             if (IsMusicEnabled) {
                 await _discordShardedClient.Ready;
-                _logger?.Info("Start building music cluster");
+                _logger.Info("Start building music cluster");
                 try {
                     var lavalinkClusterOptions = new CustomLavalinkClusterOptions<EnlivenLavalinkClusterNode>(
                         (options, clientWrapper, arg3, arg4) => new EnlivenLavalinkClusterNode(options, clientWrapper, arg3, arg4)
@@ -69,11 +68,11 @@ namespace Common.Music.Controller {
                     Cluster = new EnlivenLavalinkCluster(lavalinkClusterOptions, wrapper, _lavalinkLogger);
                     Cluster.PlayerMoved += ClusterOnPlayerMoved;
 
-                    _logger?.Info("Trying to connect to nodes");
+                    _logger.Info("Trying to connect to nodes");
                     await Cluster.InitializeAsync();
-                    _logger?.Info("Cluster  initialized");
+                    _logger.Info("Cluster  initialized");
 
-                    _logger?.Info("Initializing InactivityTrackingService instance with default options");
+                    _logger.Info("Initializing InactivityTrackingService instance with default options");
                     var inactivityTrackingService = new InactivityTrackingService(Cluster, wrapper,
                         new InactivityTrackingOptions {
                             TrackInactivity = true,
@@ -88,12 +87,12 @@ namespace Common.Music.Controller {
                     };
                 }
                 catch (Exception e) {
-                    _logger?.Fatal(e, "Exception while initializing music cluster");
+                    _logger.Fatal(e, "Exception while initializing music cluster");
                     Cluster = null!;
                 }
             }
             else {
-                _logger?.Warn("Nodes not found, music disabled!");
+                _logger.Warn("Nodes not found, music disabled!");
             }
         }
 
@@ -145,7 +144,7 @@ namespace Common.Music.Controller {
             return Task.FromResult(queries.Select(s => _musicResolverService.GetResolver(s, Cluster)));
         }
 
-        private static void LavalinkLoggerOnLogMessage(object? sender, LogMessageEventArgs e, ILogger logger) {
+        private static void LavalinkLoggerOnLogMessage(LogMessageEventArgs e, ILogger logger) {
             var logLevel = e.Level switch {
                 LogLevel.Information => NLog.LogLevel.Info,
                 LogLevel.Error       => NLog.LogLevel.Error,

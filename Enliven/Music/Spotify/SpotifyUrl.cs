@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using SpotifyAPI.Web;
 
-namespace Bot.Utilities.Music {
+namespace Bot.Music.Spotify {
     public class SpotifyUrl {
         public enum SpotifyUrlType {
             Unknown,

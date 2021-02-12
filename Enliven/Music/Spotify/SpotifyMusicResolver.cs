@@ -2,12 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Common.Config;
 using Common.Music;
 using Common.Music.Resolvers;
 using Lavalink4NET.Cluster;
 using Lavalink4NET.Player;
-using NLog;
 using SpotifyAPI.Web;
 
 #pragma warning disable 1998
@@ -15,13 +13,8 @@ using SpotifyAPI.Web;
 #pragma warning disable 8604
 #pragma warning disable 8602
 
-namespace Bot.Utilities.Music {
-    public interface ISpotifyAssociationCreator {
-        Task<SpotifyAssociation?> ResolveAssociation(SpotifyTrackWrapper spotifyTrackWrapper, LavalinkCluster lavalinkCluster);
-    }
-
+namespace Bot.Music.Spotify {
     public class SpotifyMusicResolver : IMusicResolver, ISpotifyAssociationCreator {
-        private static Logger logger = LogManager.GetCurrentClassLogger();
         private ISpotifyAssociationProvider _spotifyAssociationProvider;
 
         public SpotifyMusicResolver(ISpotifyAssociationProvider spotifyAssociationProvider, SpotifyClientResolver client)
