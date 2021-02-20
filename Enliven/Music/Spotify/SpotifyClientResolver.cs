@@ -16,6 +16,7 @@ namespace Bot.Music.Spotify
         {
             _logger = logger;
             _config = config;
+            _config.Load();
         }
         
         public Task<SpotifyClient?> GetSpotify()

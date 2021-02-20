@@ -24,6 +24,7 @@ using NLog;
 using NLog.Config;
 using NLog.Layouts;
 using NLog.Targets;
+using YandexMusicResolver;
 
 namespace Bot {
     internal class Program {
@@ -112,7 +113,7 @@ namespace Bot {
 
         public static void ConfigureServices(ContainerBuilder builder)
         {
-            builder.Register(context => new EnlivenConfig("Config/config.json")).AsSelf().SingleInstance();
+            builder.AddEnlivenConfig();
             builder.RegisterType<MusicResolverService>().AsSelf().SingleInstance();
             builder.RegisterType<MusicController>().As<IMusicController>().SingleInstance();
             builder.RegisterType<ReliabilityService>().AsSelf();
@@ -120,7 +121,9 @@ namespace Bot {
             builder.RegisterType<Program>().SingleInstance();
             builder.Register(context => new EnlivenShardedClient(new DiscordSocketConfig {MessageCacheSize = 100}))
                 .AsSelf().As<DiscordShardedClient>().SingleInstance();
-            builder.RegisterType<SpotifyClientResolver>();
+            builder.RegisterType<SpotifyClientResolver>().SingleInstance();
+            builder.RegisterType<YandexMusicMainResolver>().SingleInstance();
+            builder.RegisterType<Music.Yandex.YandexMusicResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
 
             builder.Register(context => context.Resolve<EnlivenConfig>().LavalinkNodes);
 
@@ -130,15 +133,13 @@ namespace Bot {
             builder.RegisterType<BassBoostModeTypeReader>().As<CustomTypeReader>();
 
             // Database types
-            builder.Register(context => context.Resolve<LiteDatabaseProvider>().ProvideDatabase().GetAwaiter()
-                .GetResult()
+            builder.Register(context => context.Resolve<LiteDatabaseProvider>().ProvideDatabase().GetAwaiter().GetResult()
                 .GetCollection<SpotifyAssociation>(@"SpotifyAssociations")).SingleInstance();
-            builder.Register(context => context.Resolve<LiteDatabaseProvider>().ProvideDatabase().GetAwaiter()
-                .GetResult()
+            builder.Register(context => context.Resolve<LiteDatabaseProvider>().ProvideDatabase().GetAwaiter().GetResult()
                 .GetCollection<MessageHistory>(@"MessageHistory")).SingleInstance();
 
             // Music resolvers
-            builder.RegisterType<SpotifyMusicResolver>().AsImplementedInterfaces().SingleInstance();
+            builder.RegisterType<SpotifyMusicResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
 
             // Providers
             builder.RegisterType<SpotifyAssociationProvider>().As<ISpotifyAssociationProvider>().SingleInstance();
