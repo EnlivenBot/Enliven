@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Common;
 using Common.Music.Resolvers;
@@ -60,6 +62,18 @@ namespace Bot.Music.Yandex
                     return tracks;
                 }
             );
+        }
+
+        public Task OnException(LavalinkCluster cluster, string query, Exception e)
+        {
+            // Most likely this is an YandexMusic problem
+            // TODO: Make proper way to sort and handle YandexMusic exceptions
+            if (e is HttpRequestException httpRequestException)
+            {
+                _resolver.SetAuthFailed();
+            }
+            
+            return Task.CompletedTask;
         }
     }
 }

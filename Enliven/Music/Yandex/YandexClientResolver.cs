@@ -67,5 +67,10 @@ namespace Bot.Music.Yandex {
         {
             return Initialize();
         }
+
+        public void SetAuthFailed()
+        {
+            _isAuthFailed = true;
+        }
     }
 }

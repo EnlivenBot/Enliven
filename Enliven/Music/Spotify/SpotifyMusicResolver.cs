@@ -33,6 +33,11 @@ namespace Bot.Music.Spotify {
             );
         }
 
+        public Task OnException(LavalinkCluster cluster, string query, Exception e)
+        {
+            return Task.CompletedTask;
+        }
+
         public async Task<SpotifyAssociation?> ResolveAssociation(SpotifyTrackWrapper spotifyTrackWrapper, LavalinkCluster lavalinkCluster) {
             var cachedTrack = _spotifyAssociationProvider.Get(spotifyTrackWrapper.Id);
             if (cachedTrack != null) return cachedTrack;
