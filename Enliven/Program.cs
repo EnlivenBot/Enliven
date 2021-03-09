@@ -10,6 +10,7 @@ using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Logging;
 using Bot.DiscordRelated.Music;
 using Bot.Music.Spotify;
+using Bot.Music.Yandex;
 using Bot.Patches;
 using Common;
 using Common.Config;
@@ -122,7 +123,7 @@ namespace Bot {
             builder.Register(context => new EnlivenShardedClient(new DiscordSocketConfig {MessageCacheSize = 100}))
                 .AsSelf().As<DiscordShardedClient>().SingleInstance();
             builder.RegisterType<SpotifyClientResolver>().SingleInstance();
-            builder.RegisterType<YandexMusicMainResolver>().SingleInstance();
+            builder.RegisterType<YandexClientResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<Music.Yandex.YandexMusicResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
 
             builder.Register(context => context.Resolve<EnlivenConfig>().LavalinkNodes);
