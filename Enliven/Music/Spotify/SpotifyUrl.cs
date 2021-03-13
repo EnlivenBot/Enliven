@@ -38,6 +38,12 @@ namespace Bot.Music.Spotify {
             Id = id;
         }
 
+        public SpotifyUrl(string id, SpotifyUrlType type) {
+            Id = id;
+            Request = id;
+            Type = type;
+        }
+
         public string Id { get; private set; }
         public string Request { get; private set; }
         public SpotifyUrlType Type { get; private set; }

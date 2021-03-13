@@ -25,8 +25,12 @@ namespace Bot.Music.Spotify {
 
         public Task<SpotifyClient?> SpotifyClient { get; }
 
-        public async Task<MusicResolveResult> Resolve(LavalinkCluster cluster, string query) {
+        public Task<MusicResolveResult> Resolve(LavalinkCluster cluster, string query) {
             var url = new SpotifyUrl(query);
+            return Resolve(cluster, url);
+        }
+
+        public async Task<MusicResolveResult> Resolve(LavalinkCluster cluster, SpotifyUrl url) {
             return new MusicResolveResult(
                 async () => await SpotifyClient != null && url.IsValid,
                 () => Resolve(url, cluster)

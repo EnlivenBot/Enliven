@@ -10,16 +10,16 @@ using YandexMusicResolver.Loaders;
 namespace Bot.Music.Yandex {
     public class YandexLavalinkTrack : LavalinkTrack {
         private YandexMusicDirectUrlLoader _directUrlLoader;
-        private YandexMusicTrack _track;
+        public YandexMusicTrack RelatedYandexTrack;
 
-        public YandexLavalinkTrack(YandexMusicTrack track, YandexMusicDirectUrlLoader directUrlLoader)
-            : base(TrackDecoder.EncodeTrack(track.ToTrackInfo()), track.ToTrackInfo()) {
-            _track = track;
+        public YandexLavalinkTrack(YandexMusicTrack relatedYandexTrack, YandexMusicDirectUrlLoader directUrlLoader)
+            : base(TrackDecoder.EncodeTrack(relatedYandexTrack.ToTrackInfo()), relatedYandexTrack.ToTrackInfo()) {
+            RelatedYandexTrack = relatedYandexTrack;
             _directUrlLoader = directUrlLoader;
         }
 
         public override async Task<LavalinkTrack> GetPlayableTrack() {
-            var directUrl = await GetDirectUrl(_track.Id);
+            var directUrl = await GetDirectUrl(RelatedYandexTrack.Id);
             var newTrackInfo = new LavalinkTrackInfo(Author, Duration, IsLiveStream, IsSeekable, Position, directUrl, Title, directUrl);
             return new LavalinkTrack(TrackDecoder.EncodeTrack(newTrackInfo, StreamProvider.Http, writer => {
                 writer.WriteString("mp3");
