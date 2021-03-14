@@ -152,7 +152,7 @@ namespace Common.Music.Players {
                 return;
             }
 
-            var tracks = (await Task.WhenAll(playlist.Tracks.Select(async s => (await _trackEncoder.Decode(s)).AddAuthor(requester)))).ToList();
+            var tracks = (await _trackEncoder.BatchDecode(playlist.Tracks)).Select(track => track.AddAuthor(requester)).ToList();
             if (options == ImportPlaylistOptions.Replace) {
                 try {
                     await StopAsync();
