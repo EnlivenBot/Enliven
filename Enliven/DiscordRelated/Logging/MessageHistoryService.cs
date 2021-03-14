@@ -8,7 +8,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Bot.Config.Emoji;
-using Bot.DiscordRelated.Commands;
 using Bot.Utilities.Collector;
 using Common;
 using Common.Config;
@@ -17,13 +16,11 @@ using Discord;
 using Discord.WebSocket;
 using GrapeCity.Documents.Html;
 using HarmonyLib;
-using LiteDB;
 using NLog;
-using NLog.Fluent;
 
 namespace Bot.DiscordRelated.Logging {
     public class MessageHistoryService : IService {
-        public static readonly DiffMatchPatch.DiffMatchPatch DiffMatchPatch = new DiffMatchPatch.DiffMatchPatch();
+        public static readonly Utilities.DiffMatchPatch.DiffMatchPatch DiffMatchPatch = new Utilities.DiffMatchPatch.DiffMatchPatch();
         public MessageHistoryService(ILogger logger, IMessageHistoryProvider messageHistoryProvider, IGuildConfigProvider guildConfigProvider, 
                                      IStatisticsPartProvider statisticsPartProvider) {
             _statisticsPartProvider = statisticsPartProvider;

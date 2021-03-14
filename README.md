@@ -106,3 +106,64 @@ You can help by making a contributing or by voting on the following sites:
 [comment]: <> (- [discordbotlist.com]&#40;https://discordbotlist.com/bots/enliven&#41; &#40;vote every 12 hours&#41;)
 
 [comment]: <> (- [bots.ondiscord.xyz]&#40;https://bots.ondiscord.xyz/bots/606760964183949314&#41; &#40;write a review&#41;)
+
+## Compiling sources
+1. Clone this repo:
+```
+git clone https://github.com/AvaloniaUtils/ShowMeTheXaml.Avalonia.git
+```
+2. Navigate to repo folder
+3. Fetch all submodules:
+```
+git submodule update --init --recursive
+```
+4. Install .NetCore 3.1
+5. Compile project:
+```
+dotnet build
+```
+
+## Self-hosting
+⚠️ **Are you sure you want to self-host your bot?** ⚠️  
+The version we host has no restrictions. Consider using it.
+
+If you still want to continue - please ***use the self-hosted version for personal use only***. Don't promote it. Be understanding.
+
+Also, we are not responsible for the code and its operability, updatability, backward compatibility, etc. For all questions - write to our support server.
+
+1. Compile the sources using the guide above.
+2. Install, launch and configure [lavalink](https://github.com/Frederikam/Lavalink#server-configuration)
+3. Navigate to binaries folder (typically `Enliven/bin/Release/dotnetcore3.1/`) and launch the bot (`./Enliven` for linux or `Enliven.exe` for Windows)
+4. After first launch bot would generate config file (`Config/config.json`). Edit it.
+### Self-hosting FAQ
+#### How to add lavalink nodes to bot
+Edit `LavalinkNodes` variable in `Config/config.json` file:
+```json
+"LavalinkNodes": [
+    {
+    "RestUri": "http://localhost:8081",
+    "WebSocketUri": "ws://localhost:8081",
+    "Password": "mypass",
+    "Name": "Name will be displayed in player embed"
+    },
+    {
+    "RestUri": "http://localhost:8082",
+    "WebSocketUri": "ws://localhost:8083",
+    "Password": "mypass",
+    "Name": null
+    }
+]
+```
+#### How to change text on the embeds
+1. Edit localization files in `Common/Localization/`. (Consider using document search to find what you want to change)
+2. Build project: `dotnet build` (need to be executed in repository root)
+#### How to update bot
+1. Update repo:
+```
+git pull
+git submodule update --recursive
+```
+2. Build project:
+```
+   dotnet build
+```

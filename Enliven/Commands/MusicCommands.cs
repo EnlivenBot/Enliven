@@ -43,7 +43,7 @@ namespace Bot.Commands {
         public async Task PlayNext([Remainder] [Summary("play0_0s")] string? query = null) {
             if (!await IsPreconditionsValid)
                 return;
-            await PlayInternal(query, Player.Playlist.Count == 0 ? -1 : Player.CurrentTrackIndex + 1);
+            await PlayInternal(query, Player!.Playlist.Count == 0 ? -1 : Player.CurrentTrackIndex + 1);
         }
 
         private async Task PlayInternal(string? query, int position = -1) {
@@ -56,7 +56,7 @@ namespace Bot.Commands {
 
             MainDisplay?.ControlMessageResend();
             try {
-                await Player.TryEnqueue(await MusicController.ResolveQueries(queries), Context.Message?.Author?.Username ?? "Unknown", position);
+                await Player!.TryEnqueue(await MusicController.ResolveQueries(queries), Context.Message?.Author?.Username ?? "Unknown", position);
             }
             catch (TrackNotFoundException) {
                 ErrorMessageController.AddEntry(Loc.Get("Music.NotFound", query!.SafeSubstring(100, "...")!))
@@ -163,7 +163,7 @@ namespace Bot.Commands {
         [Alias("r", "loop", "l")]
         [Summary("repeat0s")]
         public async Task Repeat() {
-            await Repeat(Player.LoopingState.Next());
+            await Repeat(Player!.LoopingState.Next());
         }
 
         [Command("pause", RunMode = RunMode.Async)]
@@ -246,7 +246,7 @@ namespace Bot.Commands {
         [Summary("youtube0s")]
         public async Task SearchYoutube([Summary("play0_0s")] [Remainder] string query) {
             if (!await IsPreconditionsValid) return;
-            AdvancedMusicSearchChain.CreateInstance(GuildConfig, Player, Context.Channel, Context.User, SearchMode.YouTube, query, MusicController).Start();
+            AdvancedMusicSearchChain.CreateInstance(GuildConfig, Player!, Context.Channel, Context.User, SearchMode.YouTube, query, MusicController).Start();
         }
 
         [SummonToUser]
@@ -256,7 +256,7 @@ namespace Bot.Commands {
         public async Task SearchSoundCloud([Summary("play0_0s")] [Remainder] string query) {
             if (!await IsPreconditionsValid) return;
             AdvancedMusicSearchChain
-               .CreateInstance(GuildConfig, Player, Context.Channel, Context.User, SearchMode.SoundCloud, query, MusicController)
+               .CreateInstance(GuildConfig, Player!, Context.Channel, Context.User, SearchMode.SoundCloud, query, MusicController)
                .Start();
         }
 
@@ -346,7 +346,7 @@ namespace Bot.Commands {
                 var deletedTrack = Player.Playlist[start - 1];
                 Player.Playlist.RemoveRange(start - 1, countToRemove);
                 Player.WriteToQueueHistory(Loc.Get("MusicQueues.Remove", Context.User.Username, start,
-                    Common.Music.Controller.MusicController.EscapeTrack(deletedTrack.Title.SafeSubstring(30))));
+                    Common.Music.Controller.MusicController.EscapeTrack(deletedTrack.Title.SafeSubstring(30)!)));
             }
             else {
                 Player.Playlist.RemoveRange(start - 1, countToRemove);

@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Bot.Utilities.Collector;
-using Bot.Utilities.Music;
 using Common;
 using Common.Config;
 using Common.Localization.Providers;
@@ -26,7 +25,7 @@ namespace Bot.Commands.Chains {
         private IMessageChannel _targetChannel = null!;
         private FinalLavalinkPlayer _player = null!;
         private CollectorsGroup? _collectorGroup;
-        private IMusicController _controller;
+        private IMusicController _controller = null!;
 
         private AdvancedMusicSearchChain(string? uid, ILocalizationProvider loc) : base(uid, loc) { }
 

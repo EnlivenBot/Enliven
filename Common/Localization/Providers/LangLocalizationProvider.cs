@@ -1,5 +1,4 @@
-﻿using System;
-using System.Reactive.Subjects;
+﻿using System.Reactive.Subjects;
 
 namespace Common.Localization.Providers {
     public class LangLocalizationProvider : ILocalizationProvider {
@@ -12,6 +11,6 @@ namespace Common.Localization.Providers {
             return LocalizationManager.Get(_lang, id, formatArgs);
         }
 
-        public ISubject<ILocalizationProvider>? LanguageChanged { get; }
+        public ISubject<ILocalizationProvider>? LanguageChanged { get; } = null;
     }
 }

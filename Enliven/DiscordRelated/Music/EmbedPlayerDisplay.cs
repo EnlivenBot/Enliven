@@ -1,16 +1,14 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Linq;
-using System.Reactive.Subjects;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Bot.Config.Emoji;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Criteria;
-using Bot.Utilities;
+using Bot.Music.Spotify;
 using Bot.Utilities.Collector;
-using Bot.Utilities.Music;
 using Common;
 using Common.Config;
 using Common.Criteria;
@@ -22,9 +20,7 @@ using Common.Music.Players;
 using Common.Music.Tracks;
 using Common.Utils;
 using Discord;
-using Discord.WebSocket;
 using Lavalink4NET.Player;
-using SpotifyAPI.Web;
 
 #pragma warning disable 4014
 
@@ -335,7 +331,7 @@ namespace Bot.DiscordRelated.Music {
                 var authorStringBuilder = new StringBuilder();
                 for (var i = Math.Max(Player.CurrentTrackIndex - 1, 0); i < Player.CurrentTrackIndex + 5; i++) {
                     if (!Player.Playlist.TryGetValue(i, out var track)) continue;
-                    var author = track.GetRequester();
+                    var author = track!.GetRequester();
                     if (author != lastAuthor && lastAuthor != null) FinalizeBlock();
                     authorStringBuilder.Replace("└", "├").Replace("▬", "│");
                     authorStringBuilder.Append(GetTrackString(MusicController.EscapeTrack(track!.Title),

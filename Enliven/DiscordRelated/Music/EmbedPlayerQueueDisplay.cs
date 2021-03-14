@@ -33,7 +33,7 @@ namespace Bot.DiscordRelated.Music {
 
         private void UpdatePages() {
             _paginatedMessage?.SetPages(string.Join("\n",
-                    Player.Playlist.Select((track, i) =>
+                    Player!.Playlist.Select((track, i) =>
                         (Player.CurrentTrackIndex == i ? "@" : " ")
                       + $"{i + 1}: {MusicController.EscapeTrack(Player.Playlist[i].Title)}")),
                 "```py\n{0}```", 50);

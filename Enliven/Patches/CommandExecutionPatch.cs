@@ -6,6 +6,8 @@ using Bot.DiscordRelated.Commands.Modules;
 using Discord.Commands;
 using HarmonyLib;
 using NLog;
+// ReSharper disable InconsistentNaming
+// ReSharper disable UnusedMember.Local
 
 namespace Bot.Patches {
     public class CommandExecutionPatch : IPatch {

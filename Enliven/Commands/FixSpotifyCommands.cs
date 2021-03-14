@@ -2,10 +2,9 @@
 using System.Threading.Tasks;
 using Bot.Commands.Chains;
 using Bot.DiscordRelated.Commands.Modules;
-using Bot.Utilities.Music;
+using Bot.Music.Spotify;
 using Common;
 using Common.Config;
-using Common.Music.Tracks;
 using Discord.Commands;
 
 namespace Bot.Commands {
@@ -13,6 +12,7 @@ namespace Bot.Commands {
         public IUserDataProvider UserDataProvider { get; set; } = null!;
         public ISpotifyAssociationProvider SpotifyAssociationProvider { get; set; } = null!;
         public ISpotifyAssociationCreator SpotifyAssociationCreator { get; set; } = null!;
+        public SpotifyMusicResolver Resolver { get; set; } = null!;
 
         [Command("fixspotify", RunMode = RunMode.Async)]
         [Alias("spotify, fs")]
@@ -28,7 +28,7 @@ namespace Bot.Commands {
             if (Player.CurrentTrack is SpotifyLavalinkTrack spotifyLavalinkTrack) {
                 var fixSpotifyChain = FixSpotifyChain.CreateInstance(Context.User, Context.Channel, Loc,
                     $"spotify:track:{spotifyLavalinkTrack.RelatedSpotifyTrackWrapper.Id}", MusicController, UserDataProvider,
-                    SpotifyAssociationProvider, SpotifyAssociationCreator);
+                    SpotifyAssociationProvider, SpotifyAssociationCreator, Resolver);
                 await fixSpotifyChain.Start();
             }
             else {
@@ -43,7 +43,7 @@ namespace Bot.Commands {
         public async Task FixSpotify([Remainder] [Summary("fixspotify0_0s")]
                                      string s) {
             var fixSpotifyChain = FixSpotifyChain.CreateInstance(Context.User, Context.Channel, Loc, s, MusicController, 
-                UserDataProvider, SpotifyAssociationProvider, SpotifyAssociationCreator);
+                UserDataProvider, SpotifyAssociationProvider, SpotifyAssociationCreator, Resolver);
             await fixSpotifyChain.Start();
         }
     }

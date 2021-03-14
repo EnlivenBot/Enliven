@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Reactive.Subjects;
 using System.Threading.Tasks;
@@ -15,7 +14,7 @@ using NLog;
 
 namespace Common.Music.Players {
     public class AdvancedLavalinkPlayer : LavalinkPlayer {
-        private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
         public readonly HistoryCollection QueueHistory = new HistoryCollection(512, 1000, false);
 
@@ -26,13 +25,13 @@ namespace Common.Music.Players {
         public readonly Subject<PlayerState> StateChanged = new Subject<PlayerState>();
         private GuildConfig? _guildConfig;
         private ulong _lastVoiceChannelId;
-        private protected IMusicController _musicController;
+        private protected IMusicController MusicController;
         private IGuildConfigProvider _guildConfigProvider;
         public List<IPlayerDisplay> Displays { get; } = new List<IPlayerDisplay>();
 
         protected AdvancedLavalinkPlayer(IMusicController musicController, IGuildConfigProvider guildConfigProvider) {
             _guildConfigProvider = guildConfigProvider;
-            _musicController = musicController;
+            MusicController = musicController;
         }
 
         protected GuildConfig GuildConfig => _guildConfig ??= _guildConfigProvider.Get(GuildId);
@@ -97,7 +96,7 @@ namespace Common.Music.Players {
             IsShutdowned = true;
             Shutdown.OnNext(reason);
             Shutdown.Dispose();
-            _musicController.StoreShutdownParameters(parameters);
+            MusicController.StoreShutdownParameters(parameters);
 
             if (parameters.ShutdownDisplays) {
                 foreach (var playerDisplay in Displays.ToList()) {
@@ -136,12 +135,13 @@ namespace Common.Music.Players {
             QueueHistory.Add(entry);
         }
 
-        public virtual void GetPlayerShutdownParameters(PlayerShutdownParameters parameters) {
+        public virtual Task GetPlayerShutdownParameters(PlayerShutdownParameters parameters) {
             parameters.GuildId = GuildId;
             parameters.LastVoiceChannelId = _lastVoiceChannelId;
             parameters.LastTrack = CurrentTrack;
             parameters.TrackPosition = TrackPosition;
             parameters.PlayerState = State;
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -161,13 +161,13 @@ namespace Common.Music.Players {
                     }
                     
                     await Task.Delay(2000);
-                    var newPlayer = (await _musicController.RestoreLastPlayer(GuildId))!;
+                    var newPlayer = (await MusicController.RestoreLastPlayer(GuildId))!;
                     foreach (var playerDisplay in Displays.ToList()) await playerDisplay.ChangePlayer(newPlayer);
                     newPlayer.WriteToQueueHistory(new HistoryEntry(
                         new EntryLocalized("Music.ReconnectedAfterDispose", GuildConfig.Prefix, playerShutdownParameters.StoredPlaylist!.Id)));
                 }
                 catch (Exception e) {
-                    logger.Error(e, "Error while resuming player");
+                    Logger.Error(e, "Error while resuming player");
                 }
             }
         }

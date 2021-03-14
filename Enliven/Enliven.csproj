@@ -5,9 +5,7 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <RootNamespace>Bot</RootNamespace>
     <AssemblyName>Enliven</AssemblyName>
-    <AssemblyVersion>12.1</AssemblyVersion>
-    <FileVersion>12.1</FileVersion>
-    <Version>12.1</Version>
+    <Version>14.0</Version>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
@@ -35,6 +33,7 @@
     <PackageReference Include="SpotifyAPI.Web" Version="6.0.0" />
     <PackageReference Include="System.Reactive" Version="5.0.0" />
     <PackageReference Include="Tyrrrz.Extensions" Version="1.6.5" />
+    <PackageReference Include="YandexMusicResolver" Version="4.0.0" />
   </ItemGroup>
 
   <ItemGroup>
