@@ -9,10 +9,10 @@ using YandexMusicResolver.Loaders;
 
 namespace Bot.Music.Yandex {
     public class YandexLavalinkTrack : LavalinkTrack {
-        private YandexMusicDirectUrlLoader _directUrlLoader;
+        private IYandexMusicDirectUrlLoader _directUrlLoader;
         public YandexMusicTrack RelatedYandexTrack;
 
-        public YandexLavalinkTrack(YandexMusicTrack relatedYandexTrack, YandexMusicDirectUrlLoader directUrlLoader)
+        public YandexLavalinkTrack(YandexMusicTrack relatedYandexTrack, IYandexMusicDirectUrlLoader directUrlLoader)
             : base(TrackDecoder.EncodeTrack(relatedYandexTrack.ToTrackInfo()), relatedYandexTrack.ToTrackInfo()) {
             RelatedYandexTrack = relatedYandexTrack;
             _directUrlLoader = directUrlLoader;
