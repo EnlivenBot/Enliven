@@ -5,9 +5,7 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <RootNamespace>Bot</RootNamespace>
     <AssemblyName>Enliven</AssemblyName>
-    <AssemblyVersion>12.1</AssemblyVersion>
-    <FileVersion>12.1</FileVersion>
-    <Version>12.1</Version>
+    <Version>14.0</Version>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
