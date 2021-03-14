@@ -3,7 +3,7 @@ using Discord.WebSocket;
 
 namespace Common {
     public class EnlivenShardedClient : DiscordShardedClient {
-        public bool IsReady { get; private set; }
+        public bool IsReady => Ready.IsCompleted;
         public Task Ready => _readyTaskCompletionSource.Task;
         private TaskCompletionSource<object> _readyTaskCompletionSource = new TaskCompletionSource<object>();
 

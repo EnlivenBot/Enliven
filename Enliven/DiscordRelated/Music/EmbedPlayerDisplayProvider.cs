@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Bot.DiscordRelated.Commands;
 using Common;
 using Common.Config;
-using Common.Localization.Entries;
 using Common.Music.Players;
 using Discord;
 using Discord.WebSocket;

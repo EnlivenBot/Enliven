@@ -2,7 +2,7 @@
 using Common.Config;
 using Common.Music;
 using Common.Music.Controller;
-using Common.Music.Players;
+using Common.Music.Encoders;
 using Common.Music.Resolvers;
 using Lavalink4NET.Lyrics;
 
@@ -37,6 +37,8 @@ namespace Common
             builder.RegisterType<MusicController>().As<IMusicController>().As<IService>().SingleInstance();
             builder.RegisterType<LyricsOptions>().SingleInstance();
             builder.RegisterType<LyricsService>().SingleInstance();
+            builder.RegisterType<TrackEncoder>().SingleInstance();
+            builder.RegisterType<LavalinkTrackEncoder>().AsSelf().AsImplementedInterfaces().SingleInstance();
             
             // Data providers
             builder.RegisterType<UserDataProvider>().As<IUserDataProvider>().SingleInstance();

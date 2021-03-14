@@ -1,5 +1,4 @@
-﻿using System;
-using System.Reactive.Subjects;
+﻿using System.Reactive.Subjects;
 
 namespace Common.Localization.Providers {
     public interface ILocalizationProvider {

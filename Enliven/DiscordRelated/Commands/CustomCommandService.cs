@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.ComponentModel.Design;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -9,13 +8,9 @@ using System.Threading.Tasks;
 using Autofac;
 using Bot.Utilities;
 using Common;
-using Common.Config;
 using Common.Localization.Providers;
-using Common.Music;
-using Common.Music.Players;
 using Discord;
 using Discord.Commands;
-using MonoMod.Utils;
 
 namespace Bot.DiscordRelated.Commands {
     public class CustomCommandService : CommandService, IService {

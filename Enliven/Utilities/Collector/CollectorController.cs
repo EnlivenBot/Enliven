@@ -33,10 +33,4 @@ namespace Bot.Utilities.Collector {
             return result;
         }
     }
-
-    public enum CollectorFilter {
-        Off,
-        IgnoreSelf,
-        IgnoreBots
-    }
 }

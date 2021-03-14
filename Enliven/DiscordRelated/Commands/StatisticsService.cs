@@ -8,15 +8,10 @@ using Common.Config;
 using Common.Localization.Providers;
 using Discord;
 using Discord.Commands;
-using LiteDB;
 using NLog;
 using Tyrrrz.Extensions;
 
 namespace Bot.DiscordRelated.Commands {
-    public interface IStatisticsService {
-        EmbedBuilder BuildStats(IUser? user, ILocalizationProvider loc);
-    }
-
     public class StatisticsService : IStatisticsService {
         private Temporary<int> _textChannelsCount =
             new Temporary<int>(() => Program.Client.Guilds.Sum(guild => guild.TextChannels.Count), Constants.LongTimeSpan);
