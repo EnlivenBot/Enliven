@@ -2,6 +2,9 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+// ReSharper disable ConditionIsAlwaysTrueOrFalse
+#pragma warning disable 8601
+#pragma warning disable 8625
 #pragma warning disable 8714
 
 namespace Bot.Utilities.ObservableDictionaryUtils {
@@ -9,7 +12,7 @@ namespace Bot.Utilities.ObservableDictionaryUtils {
     /// Binary Tree data structure
     /// </summary>
     public class BinaryTree<TKey, TValue> : IDictionary<TKey, TValue>, ICollection<KeyValuePair<TKey, TValue>> {
-        private BinaryTreeNode<KeyValuePair<TKey, TValue>> _head;
+        private BinaryTreeNode<KeyValuePair<TKey, TValue>> _head = null!;
         protected readonly IComparer<TKey> Comparer;
         private TraversalMode _traversalMode = TraversalMode.InOrder;
 
@@ -123,7 +126,7 @@ namespace Bot.Utilities.ObservableDictionaryUtils {
                 }
             }
 
-            return null;
+            return null!;
         }
 
         /// <summary>

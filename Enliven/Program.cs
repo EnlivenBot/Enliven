@@ -172,7 +172,7 @@ namespace Bot {
                 return Task.CompletedTask;
             }
 
-            logger.Log(message.Severity, message.Exception, "{message} from {source}", message.Message, message.Source);
+            logger.Log(message.Severity, message.Exception, "{message} from {source}", message.Message!, message.Source);
             return Task.CompletedTask;
         }
 

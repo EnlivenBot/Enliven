@@ -331,7 +331,7 @@ namespace Bot.DiscordRelated.Music {
                 var authorStringBuilder = new StringBuilder();
                 for (var i = Math.Max(Player.CurrentTrackIndex - 1, 0); i < Player.CurrentTrackIndex + 5; i++) {
                     if (!Player.Playlist.TryGetValue(i, out var track)) continue;
-                    var author = track.GetRequester();
+                    var author = track!.GetRequester();
                     if (author != lastAuthor && lastAuthor != null) FinalizeBlock();
                     authorStringBuilder.Replace("└", "├").Replace("▬", "│");
                     authorStringBuilder.Append(GetTrackString(MusicController.EscapeTrack(track!.Title),

@@ -12,7 +12,7 @@ namespace Bot.Commands {
         public IUserDataProvider UserDataProvider { get; set; } = null!;
         public ISpotifyAssociationProvider SpotifyAssociationProvider { get; set; } = null!;
         public ISpotifyAssociationCreator SpotifyAssociationCreator { get; set; } = null!;
-        public SpotifyMusicResolver Resolver { get; set; }
+        public SpotifyMusicResolver Resolver { get; set; } = null!;
 
         [Command("fixspotify", RunMode = RunMode.Async)]
         [Alias("spotify, fs")]

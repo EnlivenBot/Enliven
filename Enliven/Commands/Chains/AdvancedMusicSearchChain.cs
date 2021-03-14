@@ -25,7 +25,7 @@ namespace Bot.Commands.Chains {
         private IMessageChannel _targetChannel = null!;
         private FinalLavalinkPlayer _player = null!;
         private CollectorsGroup? _collectorGroup;
-        private IMusicController _controller;
+        private IMusicController _controller = null!;
 
         private AdvancedMusicSearchChain(string? uid, ILocalizationProvider loc) : base(uid, loc) { }
 

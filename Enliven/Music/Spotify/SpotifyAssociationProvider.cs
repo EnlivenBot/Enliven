@@ -4,7 +4,7 @@ using LiteDB;
 
 namespace Bot.Music.Spotify {
     public class SpotifyAssociationProvider : ISpotifyAssociationProvider {
-        private ConcurrentDictionary<string, SpotifyAssociation?> _cache = new ConcurrentDictionary<string, SpotifyAssociation>();
+        private ConcurrentDictionary<string, SpotifyAssociation> _cache = new ConcurrentDictionary<string, SpotifyAssociation>();
         private ILiteCollection<SpotifyAssociation> _associationCollection;
         public SpotifyAssociationProvider(ILiteCollection<SpotifyAssociation> associationCollection) {
             _associationCollection = associationCollection;

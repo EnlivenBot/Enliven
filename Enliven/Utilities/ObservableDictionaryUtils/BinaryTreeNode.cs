@@ -8,7 +8,7 @@
         /// </summary>
         public T Value { get; set; }
 
-        private BinaryTreeNode<T> _leftChild;
+        private BinaryTreeNode<T> _leftChild = null!;
 
         /// <summary>
         /// Gets or sets the left child node
@@ -21,7 +21,7 @@
             }
         }
 
-        private BinaryTreeNode<T> _rightChild;
+        private BinaryTreeNode<T> _rightChild = null!;
 
         /// <summary>
         /// Gets or sets the right child node
@@ -37,7 +37,7 @@
         /// <summary>
         /// Gets or sets the parent node
         /// </summary>
-        public virtual BinaryTreeNode<T> Parent { get; set; }
+        public virtual BinaryTreeNode<T> Parent { get; set; } = null!;
 
         public virtual int Size { get; set; }
 

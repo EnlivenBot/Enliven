@@ -27,22 +27,21 @@ namespace Bot.Commands.Chains {
         private IUserMessage? _controlMessage;
         private PaginatedMessage? _paginatedMessage;
         private CollectorsGroup? _collectorController;
-        private IMusicController _musicController;
-        private IUserDataProvider _userDataProvider;
-        private ISpotifyAssociationProvider _spotifyAssociationProvider;
-        private ISpotifyAssociationCreator _spotifyAssociationCreator;
-        private static SpotifyMusicResolver _resolver;
+        private IMusicController _musicController = null!;
+        private IUserDataProvider _userDataProvider = null!;
+        private ISpotifyAssociationProvider _spotifyAssociationProvider = null!;
+        private ISpotifyAssociationCreator _spotifyAssociationCreator = null!;
+        private SpotifyMusicResolver _resolver = null!;
 
         private FixSpotifyChain(string? uid, ILocalizationProvider loc) : base(uid, loc) { }
 
         public static FixSpotifyChain CreateInstance(IUser requester, IMessageChannel channel, ILocalizationProvider loc, string request,
                                                      IMusicController musicController, IUserDataProvider userDataProvider, 
                                                      ISpotifyAssociationProvider spotifyAssociationProvider, ISpotifyAssociationCreator spotifyAssociationCreator, SpotifyMusicResolver resolver) {
-            _resolver = resolver;
             var fixSpotifyChain = new FixSpotifyChain($"{nameof(FixSpotifyChain)}_{requester.Id}", loc) {
                 _request = new SpotifyUrl(request), _requester = requester, _channel = channel,
                 _musicController = musicController, _userDataProvider = userDataProvider, 
-                _spotifyAssociationProvider = spotifyAssociationProvider, _spotifyAssociationCreator = spotifyAssociationCreator
+                _spotifyAssociationProvider = spotifyAssociationProvider, _spotifyAssociationCreator = spotifyAssociationCreator, _resolver = resolver
             };
 
             return fixSpotifyChain;
@@ -162,7 +161,7 @@ namespace Bot.Commands.Chains {
                 if (int.TryParse(args.Message.Content, out var index) && index >= 0 && index <= association.Associations.Count) {
                     args.StopCollect();
                     paginatedMessageDispose?.Dispose();
-                    _paginatedMessage.Dispose();
+                    _paginatedMessage?.Dispose();
 
                     await StartWithAssociation(association, spotifyTrackWrapper, association.Associations[index.Normalize(1, association.Associations.Count) - 1]);
                     SetTimeout(Constants.StandardTimeSpan);
