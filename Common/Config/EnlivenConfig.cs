@@ -71,6 +71,7 @@ namespace Common.Config {
         }
 
         public void Save() {
+            Directory.CreateDirectory("Config");
             File.WriteAllText(Path.GetFullPath(FilePath), JsonConvert.SerializeObject(this, Formatting.Indented));
         }
 
