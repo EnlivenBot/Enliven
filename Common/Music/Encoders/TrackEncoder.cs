@@ -10,7 +10,7 @@ namespace Common.Music.Encoders {
         private Dictionary<int, ITrackEncoder> _trackEncoders;
 
         public TrackEncoder(IEnumerable<ITrackEncoder> encoders) {
-            _trackEncoders = encoders.OrderBy(encoder => encoder.Priority).ToDictionary(encoder => encoder.EncoderId);
+            _trackEncoders = encoders.OrderByDescending(encoder => encoder.Priority).ToDictionary(encoder => encoder.EncoderId);
         }
 
         public async Task<EncodedTrack> Encode(LavalinkTrack track) {

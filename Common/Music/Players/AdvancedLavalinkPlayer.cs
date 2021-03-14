@@ -135,12 +135,13 @@ namespace Common.Music.Players {
             QueueHistory.Add(entry);
         }
 
-        public virtual void GetPlayerShutdownParameters(PlayerShutdownParameters parameters) {
+        public virtual Task GetPlayerShutdownParameters(PlayerShutdownParameters parameters) {
             parameters.GuildId = GuildId;
             parameters.LastVoiceChannelId = _lastVoiceChannelId;
             parameters.LastTrack = CurrentTrack;
             parameters.TrackPosition = TrackPosition;
             parameters.PlayerState = State;
+            return Task.CompletedTask;
         }
 
         /// <summary>

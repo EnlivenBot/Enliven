@@ -22,7 +22,7 @@ namespace Bot.Commands {
                 return;
             }
 
-            var playlist = Player.ExportPlaylist(ExportPlaylistOptions.IgnoreTrackIndex);
+            var playlist = await Player.ExportPlaylist(ExportPlaylistOptions.IgnoreTrackIndex);
             var storedPlaylist = PlaylistProvider.StorePlaylist(playlist, "u" + ObjectId.NewObjectId(), Context.User.ToLink());
             await ReplyFormattedAsync(Loc.Get("Music.PlaylistSaved", storedPlaylist.Id, GuildConfig.Prefix));
         }

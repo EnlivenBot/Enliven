@@ -8,6 +8,7 @@ using Common.Config;
 using Common.History;
 using Common.Localization.Entries;
 using Common.Music.Controller;
+using Common.Music.Encoders;
 using Common.Music.Resolvers;
 using Common.Music.Tracks;
 using Lavalink4NET.Decoding;
@@ -21,8 +22,10 @@ namespace Common.Music.Players {
         private int _currentTrackIndex;
 
         // ReSharper disable once UnusedParameter.Local
-        public PlaylistLavalinkPlayer(IMusicController musicController, IGuildConfigProvider guildConfigProvider, IPlaylistProvider playlistProvider) : base(
+        public PlaylistLavalinkPlayer(IMusicController musicController, IGuildConfigProvider guildConfigProvider, IPlaylistProvider playlistProvider,
+                                      TrackEncoder trackEncoder) : base(
             musicController, guildConfigProvider) {
+            _trackEncoder = trackEncoder;
             _playlistProvider = playlistProvider;
             Playlist.Changed.Subscribe(playlist => UpdateCurrentTrackIndex());
         }
@@ -128,8 +131,9 @@ namespace Common.Music.Players {
             await base.DisconnectAsync();
         }
 
-        public virtual ExportPlaylist ExportPlaylist(ExportPlaylistOptions options) {
-            var exportPlaylist = new ExportPlaylist {Tracks = Playlist.Select(track => track.Identifier).ToList()};
+        public virtual async Task<ExportPlaylist> ExportPlaylist(ExportPlaylistOptions options) {
+            var encodedTracks = await Task.WhenAll(Playlist.Select(track => _trackEncoder.Encode(track)));
+            var exportPlaylist = new ExportPlaylist {Tracks = encodedTracks.ToList()};
             if (options != ExportPlaylistOptions.IgnoreTrackIndex) {
                 exportPlaylist.TrackIndex = CurrentTrackIndex.Normalize(0, Playlist.Count - 1);
             }
@@ -148,8 +152,7 @@ namespace Common.Music.Players {
                 return;
             }
 
-            var tracks = playlist.Tracks.Select(s => TrackDecoder.DecodeTrack(s))
-                                 .Select(track => track.AddAuthor(requester)).ToList();
+            var tracks = (await Task.WhenAll(playlist.Tracks.Select(async s => (await _trackEncoder.Decode(s)).AddAuthor(requester)))).ToList();
             if (options == ImportPlaylistOptions.Replace) {
                 try {
                     await StopAsync();
@@ -197,6 +200,7 @@ namespace Common.Music.Players {
 
         private readonly SemaphoreSlim _enqueueLock = new SemaphoreSlim(1);
         private IPlaylistProvider _playlistProvider;
+        private TrackEncoder _trackEncoder;
 
         public virtual async Task TryEnqueue(IEnumerable<MusicResolver> resolvers, string author, int index = -1) {
             var musicResolvers = resolvers.ToList();
@@ -270,12 +274,13 @@ namespace Common.Music.Players {
             }
         }
 
-        public override void GetPlayerShutdownParameters(PlayerShutdownParameters parameters) {
-            base.GetPlayerShutdownParameters(parameters);
+        public override async Task GetPlayerShutdownParameters(PlayerShutdownParameters parameters) {
+            await base.GetPlayerShutdownParameters(parameters);
             parameters.LoopingState = LoopingState;
             parameters.Playlist = Playlist;
             if (parameters.NeedSave && parameters.StoredPlaylist == null) {
-                parameters.StoredPlaylist = _playlistProvider.StorePlaylist(ExportPlaylist(ExportPlaylistOptions.AllData),
+                parameters.StoredPlaylist = _playlistProvider.StorePlaylist(
+                    await ExportPlaylist(ExportPlaylistOptions.AllData),
                     "a" + ObjectId.NewObjectId(), UserLink.Current);
             }
         }

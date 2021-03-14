@@ -122,9 +122,6 @@ namespace Bot {
             builder.RegisterType<Program>().SingleInstance();
             builder.Register(context => new EnlivenShardedClient(new DiscordSocketConfig {MessageCacheSize = 100}))
                 .AsSelf().As<DiscordShardedClient>().SingleInstance();
-            builder.RegisterType<SpotifyClientResolver>().SingleInstance();
-            builder.RegisterType<YandexClientResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
-            builder.RegisterType<Music.Yandex.YandexMusicResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
 
             builder.Register(context => context.Resolve<EnlivenConfig>().LavalinkNodes);
 
@@ -141,6 +138,13 @@ namespace Bot {
 
             // Music resolvers
             builder.RegisterType<SpotifyMusicResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
+            builder.RegisterType<SpotifyClientResolver>().SingleInstance();
+            
+            builder.RegisterType<YandexClientResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
+            builder.RegisterType<Music.Yandex.YandexMusicResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
+            
+            builder.RegisterType<SpotifyTrackEncoder>().AsSelf().AsImplementedInterfaces().PropertiesAutowired(PropertyWiringOptions.AllowCircularDependencies).SingleInstance();
+            builder.RegisterType<YandexTrackEncoder>().AsSelf().AsImplementedInterfaces().SingleInstance();
 
             // Providers
             builder.RegisterType<SpotifyAssociationProvider>().As<ISpotifyAssociationProvider>().SingleInstance();

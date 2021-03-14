@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Common.Config;
+using Common.Music.Encoders;
 using LiteDB;
 
 namespace Common.Music {
@@ -36,7 +37,7 @@ namespace Common.Music {
         }
     }
     public class ExportPlaylist {
-        public List<string> Tracks { get; set; } = new List<string>();
+        public List<EncodedTrack> Tracks { get; set; } = new List<EncodedTrack>();
         public int TrackIndex { get; set; } = -1;
         public TimeSpan? TrackPosition { get; set; }
     }

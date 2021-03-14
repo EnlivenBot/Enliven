@@ -171,7 +171,7 @@ namespace Common.Config {
         }
 
         [AttributeUsage(AttributeTargets.Method, Inherited = false, AllowMultiple = true)]
-        private sealed class DbUpgradeAttribute : Attribute {
+        public sealed class DbUpgradeAttribute : Attribute {
             // See the attribute guidelines at 
             //  http://go.microsoft.com/fwlink/?LinkId=85236
             public DbUpgradeAttribute(int version, bool transactionsFriendly = true) {

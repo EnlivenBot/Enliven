@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Common.Config;
 using Common.History;
 using Common.Localization.Entries;
+using Common.Music.Encoders;
 using Common.Music.Players;
 using Common.Music.Resolvers;
 using Discord;
@@ -28,9 +29,12 @@ namespace Common.Music.Controller {
         private EnlivenShardedClient _discordShardedClient;
         private ILogger _logger;
         private List<LavalinkNodeInfo> _lavalinkNodeInfos;
+        private TrackEncoder _trackEncoder;
 
-        public MusicController(MusicResolverService musicResolverService, IGuildConfigProvider guildConfigProvider, IPlaylistProvider playlistProvider,
+        public MusicController(MusicResolverService musicResolverService, IGuildConfigProvider guildConfigProvider, 
+                               IPlaylistProvider playlistProvider, TrackEncoder trackEncoder,
                                EnlivenShardedClient discordShardedClient, ILogger logger, List<LavalinkNodeInfo> lavalinkNodeInfos) {
+            _trackEncoder = trackEncoder;
             _lavalinkNodeInfos = lavalinkNodeInfos;
             _logger = logger;
             _discordShardedClient = discordShardedClient;
@@ -107,7 +111,7 @@ namespace Common.Music.Controller {
                 PlaybackPlayers.Remove(oldPlayer);
             }
 
-            var player = await Cluster.JoinAsync(() => new FinalLavalinkPlayer(this, _guildConfigProvider, _playlistProvider), guildId, voiceChannelId);
+            var player = await Cluster.JoinAsync(() => new FinalLavalinkPlayer(this, _guildConfigProvider, _playlistProvider, _trackEncoder), guildId, voiceChannelId);
             player.Shutdown.Subscribe(entry => { PlaybackPlayers.Remove(player); });
             PlaybackPlayers.Add(player);
             return player;

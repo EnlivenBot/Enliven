@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Common.Music.Controller;
 using Common.Music.Encoders;
 using Lavalink4NET.Cluster;
 using Lavalink4NET.Player;
@@ -8,10 +9,9 @@ using Lavalink4NET.Player;
 namespace Bot.Music.Spotify {
     public class SpotifyTrackEncoder : ITrackEncoder {
         private SpotifyMusicResolver _resolver;
-        private LavalinkCluster _lavalinkCluster;
+        public IMusicController MusicController { get; set; } = null!;
 
-        public SpotifyTrackEncoder(SpotifyMusicResolver resolver, LavalinkCluster lavalinkCluster) {
-            _lavalinkCluster = lavalinkCluster;
+        public SpotifyTrackEncoder(SpotifyMusicResolver resolver) {
             _resolver = resolver;
         }
 
@@ -28,7 +28,7 @@ namespace Bot.Music.Spotify {
         }
 
         public async Task<LavalinkTrack> Decode(byte[] data) {
-            return (await (await _resolver.Resolve(_lavalinkCluster,
+            return (await (await _resolver.Resolve(MusicController.Cluster,
                     new SpotifyUrl(Encoding.ASCII.GetString(data), SpotifyUrl.SpotifyUrlType.Track))
                 ).Resolve()).First();
         }

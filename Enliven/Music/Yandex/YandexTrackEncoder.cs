@@ -7,10 +7,10 @@ using YandexMusicResolver;
 
 namespace Bot.Music.Yandex {
     public class YandexTrackEncoder : ITrackEncoder {
-        private YandexMusicMainResolver _resolver;
+        private YandexClientResolver _clientResolver;
 
-        public YandexTrackEncoder(YandexMusicMainResolver resolver) {
-            _resolver = resolver;
+        public YandexTrackEncoder(YandexClientResolver clientResolver) {
+            _clientResolver = clientResolver;
         }
 
         public int Priority { get; } = 10;
@@ -26,8 +26,9 @@ namespace Bot.Music.Yandex {
         }
 
         public async Task<LavalinkTrack> Decode(byte[] data) {
-            var yandexTrack = await _resolver.TrackLoader.LoadTrack(Encoding.ASCII.GetString(data));
-            return new YandexLavalinkTrack(yandexTrack!, _resolver.DirectUrlLoader);
+            var yandexMusicMainResolver = await _clientResolver.GetClient();
+            var yandexTrack = await yandexMusicMainResolver.TrackLoader.LoadTrack(Encoding.ASCII.GetString(data));
+            return new YandexLavalinkTrack(yandexTrack!, yandexMusicMainResolver.DirectUrlLoader);
         }
     }
 }
