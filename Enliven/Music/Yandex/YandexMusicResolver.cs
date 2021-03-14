@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Security.Authentication;
 using System.Threading.Tasks;
 using Common;
 using Common.Music.Resolvers;
@@ -15,16 +16,16 @@ namespace Bot.Music.Yandex
 {
     public class YandexMusicResolver : IMusicResolver
     {
-        private YandexClientResolver _resolver;
+        private YandexClientResolver _clientResolver;
 
-        public YandexMusicResolver(YandexClientResolver resolver)
+        public YandexMusicResolver(YandexClientResolver clientResolver)
         {
-            _resolver = resolver;
+            _clientResolver = clientResolver;
         }
 
         public async Task<MusicResolveResult> Resolve(LavalinkCluster cluster, string query)
         {
-            var yandexMusicMainResolver = await _resolver.GetClient();
+            var yandexMusicMainResolver = await _clientResolver.GetClient();
             var yandexQueryTask = yandexMusicMainResolver.ResolveQuery(query, true, false);
             return new MusicResolveResult(
                 async () => await yandexQueryTask != null,
@@ -66,11 +67,8 @@ namespace Bot.Music.Yandex
 
         public Task OnException(LavalinkCluster cluster, string query, Exception e)
         {
-            // Most likely this is an YandexMusic problem
-            // TODO: Make proper way to sort and handle YandexMusic exceptions
-            if (e is HttpRequestException httpRequestException)
-            {
-                _resolver.SetAuthFailed();
+            if (e is YandexMusicException {InnerException: AuthenticationException _}) {
+                _clientResolver.SetAuthFailed();
             }
             
             return Task.CompletedTask;
