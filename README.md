@@ -110,7 +110,7 @@ You can help by making a contributing or by voting on the following sites:
 ## Compiling sources
 1. Clone this repo:
 ```
-git clone https://github.com/AvaloniaUtils/ShowMeTheXaml.Avalonia.git
+git clone https://gitlab.com/enlivenbot/enliven.git
 ```
 2. Navigate to repo folder
 3. Fetch all submodules:
@@ -131,7 +131,7 @@ If you still want to continue - please ***use the self-hosted version for person
 
 Also, we are not responsible for the code and its operability, updatability, backward compatibility, etc. For all questions - write to our support server.
 
-1. Compile the sources using the guide above.
+1. Compile the sources using the [Getting started section](https://gitlab.com/enliven/bot/enliven#getting-started).
 2. Install, launch and configure [lavalink](https://github.com/Frederikam/Lavalink#server-configuration)
 3. Navigate to binaries folder (typically `Enliven/bin/Release/dotnetcore3.1/`) and launch the bot (`./Enliven` for linux or `Enliven.exe` for Windows)
 4. After first launch bot would generate config file (`Config/config.json`). Edit it.
