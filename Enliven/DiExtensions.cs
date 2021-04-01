@@ -11,13 +11,13 @@ namespace Bot
 {
     public static class DiExtensions
     {
-        public static void AddEnlivenConfig(this ContainerBuilder builder, string configPath = "Config/config.json")
-        {
-            builder.Register(context => new EnlivenConfig(configPath)).AsSelf().AsImplementedInterfaces()
-                .SingleInstance()
-                .OnActivating(args => args.Instance.Load())
-                .OnActivated(args => args.Context.Resolve<IEnumerable<IConfigDependent>>()
-                    .ParallelForEachAsync(dependent => dependent.OnConfigLoaded()).Wait());
+        public static void AddEnlivenConfig(this ContainerBuilder builder, string configPath = "Config/config.json") {
+            var enlivenConfigProvider = new EnlivenConfigProvider(configPath);
+            builder.Register(context => enlivenConfigProvider.Load()).AsSelf().AsImplementedInterfaces()
+                   .SingleInstance()
+                   .OnActivating(args => args.Instance.Load())
+                   .OnActivated(args => args.Context.Resolve<IEnumerable<IConfigDependent>>()
+                                            .ParallelForEachAsync(dependent => dependent.OnConfigLoaded()).Wait());
         }
     }
 }

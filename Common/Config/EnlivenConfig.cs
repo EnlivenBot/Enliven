@@ -1,6 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Reactive;
+using System.Reactive.Subjects;
 using Common.Music;
 using Newtonsoft.Json;
 using YandexMusicResolver.Config;
@@ -13,10 +16,8 @@ using YandexMusicResolver.Config;
 
 namespace Common.Config {
     public class EnlivenConfig : IYandexConfig {
-        public EnlivenConfig(string? filePath = null) {
-            FilePath = filePath ?? "Config/config.json";
-        }
-
+        internal EnlivenConfig() { }
+        private readonly Subject<Unit> _saveRequest = new Subject<Unit>();
         public string BotToken { get; set; } = "Place your token here";
 
         // ReSharper disable once IdentifierTypo
@@ -34,6 +35,13 @@ namespace Common.Config {
 
         public string? YandexProxyAddress { get; set; }
 
+        public IObservable<Unit> SaveRequest => _saveRequest;
+
+        public string? YandexToken { get; set; }
+
+        [JsonIgnore]
+        public bool IsTokenValid { get; set; }
+
         public string? YandexLogin { get; set; }
 
         public string? YandexPassword { get; set; }
@@ -42,43 +50,13 @@ namespace Common.Config {
         [JsonIgnore]
         public IWebProxy? YandexProxy { get; set; }
 
-        private bool isLoaded;
-        private readonly string FilePath;
-
         public void Load() {
-            if (isLoaded) return;
-            isLoaded = true;
-
-            var path = Path.GetFullPath(FilePath);
-
-            if (File.Exists(path)) {
-                var configText = File.ReadAllText(path);
-                var config = JsonConvert.DeserializeObject<EnlivenConfig>(configText);
-
-                BotToken = config.BotToken;
-                LavalinkNodes = config.LavalinkNodes;
-                SpotifyClientID = config.SpotifyClientID;
-                SpotifyClientSecret = config.SpotifyClientSecret;
-
-                YandexProxyAddress = config.YandexProxyAddress;
-                YandexProxy = YandexProxyAddress == null ? null : new WebProxy(YandexProxyAddress);
-                YandexToken = config.YandexToken;
-                YandexLogin = config.YandexLogin;
-                YandexPassword = config.YandexPassword;
-            }
-
-            Save();
+            // Loading handled by EnlivenConfigProvider
         }
 
-        public void Save() {
-            Directory.CreateDirectory("Config");
-            File.WriteAllText(Path.GetFullPath(FilePath), JsonConvert.SerializeObject(this, Formatting.Indented));
+        void IYandexConfig.Save() {
+            _saveRequest.OnNext(Unit.Default);
         }
-
-        public string? YandexToken { get; set; }
-
-        [JsonIgnore]
-        public bool IsTokenValid { get; set; }
 
         [JsonIgnore]
         string? IYandexTokenHolder.YandexToken {
