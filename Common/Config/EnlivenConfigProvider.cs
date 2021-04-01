@@ -41,7 +41,11 @@ namespace Common.Config {
         public void Save() {
             var path = Path.GetFullPath(ConfigPath);
             Directory.CreateDirectory(Path.GetDirectoryName(path));
-            File.WriteAllText(path, JsonConvert.SerializeObject(_config, Formatting.Indented));
+            var configText = JsonConvert.SerializeObject(_config, Formatting.Indented);
+            configText = configText.Insert(0,
+                "/* Properties description can be found here: " +
+                "https://gitlab.com/enlivenbot/enliven/-/blob/master/Common/Config/EnlivenConfig.cs */\n");
+            File.WriteAllText(path, configText);
         }
     }
 }
