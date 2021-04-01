@@ -4,23 +4,25 @@ using Newtonsoft.Json;
 
 namespace Common.Config {
     public class EnlivenConfigProvider {
-        private readonly string _filePath;
         private EnlivenConfig? _config;
         private object _lockObject = new object();
 
-        public EnlivenConfigProvider(string filePath = "Config/config.json") {
-            _filePath = filePath;
+        public EnlivenConfigProvider(string configPath = "Config/config.json") {
+            ConfigPath = configPath;
         }
 
+        public string ConfigPath { get; }
+        public string FullConfigPath => Path.GetFullPath(ConfigPath);
+
         public bool IsConfigExists() {
-            return File.Exists(Path.GetFullPath(_filePath));
+            return File.Exists(Path.GetFullPath(ConfigPath));
         }
 
         public EnlivenConfig Load() {
             lock (_lockObject) {
                 if (_config != null) return _config;
 
-                var path = Path.GetFullPath(_filePath);
+                var path = Path.GetFullPath(ConfigPath);
                 if (File.Exists(path)) {
                     var configText = File.ReadAllText(path);
                     _config = JsonConvert.DeserializeObject<EnlivenConfig>(configText);
@@ -37,7 +39,7 @@ namespace Common.Config {
         }
 
         public void Save() {
-            var path = Path.GetFullPath(_filePath);
+            var path = Path.GetFullPath(ConfigPath);
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             File.WriteAllText(path, JsonConvert.SerializeObject(_config, Formatting.Indented));
         }
