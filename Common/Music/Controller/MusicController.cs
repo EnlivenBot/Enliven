@@ -111,6 +111,9 @@ namespace Common.Music.Controller {
                 PlaybackPlayers.Remove(oldPlayer);
             }
 
+            var finalLavalinkPlayer = Cluster.GetPlayer<FinalLavalinkPlayer>(guildId);
+            if (finalLavalinkPlayer != null) await finalLavalinkPlayer.DestroyAsync();
+            
             var player = await Cluster.JoinAsync(() => new FinalLavalinkPlayer(this, _guildConfigProvider, _playlistProvider, _trackEncoder), guildId, voiceChannelId);
             player.Shutdown.Subscribe(entry => { PlaybackPlayers.Remove(player); });
             PlaybackPlayers.Add(player);
