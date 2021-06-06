@@ -32,16 +32,19 @@ namespace Bot.Commands.Chains {
         private ISpotifyAssociationProvider _spotifyAssociationProvider = null!;
         private ISpotifyAssociationCreator _spotifyAssociationCreator = null!;
         private SpotifyMusicResolver _resolver = null!;
+        private SpotifyClientResolver _spotifyClientResolver = null!;
 
         private FixSpotifyChain(string? uid, ILocalizationProvider loc) : base(uid, loc) { }
 
         public static FixSpotifyChain CreateInstance(IUser requester, IMessageChannel channel, ILocalizationProvider loc, string request,
                                                      IMusicController musicController, IUserDataProvider userDataProvider, 
-                                                     ISpotifyAssociationProvider spotifyAssociationProvider, ISpotifyAssociationCreator spotifyAssociationCreator, SpotifyMusicResolver resolver) {
+                                                     ISpotifyAssociationProvider spotifyAssociationProvider, ISpotifyAssociationCreator spotifyAssociationCreator, 
+                                                     SpotifyMusicResolver resolver, SpotifyClientResolver spotifyClientResolver) {
             var fixSpotifyChain = new FixSpotifyChain($"{nameof(FixSpotifyChain)}_{requester.Id}", loc) {
                 _request = new SpotifyUrl(request), _requester = requester, _channel = channel,
                 _musicController = musicController, _userDataProvider = userDataProvider, 
-                _spotifyAssociationProvider = spotifyAssociationProvider, _spotifyAssociationCreator = spotifyAssociationCreator, _resolver = resolver
+                _spotifyAssociationProvider = spotifyAssociationProvider, _spotifyAssociationCreator = spotifyAssociationCreator, 
+                _resolver = resolver, _spotifyClientResolver = spotifyClientResolver
             };
 
             return fixSpotifyChain;
@@ -84,7 +87,7 @@ namespace Bot.Commands.Chains {
         }
 
         private async Task StartWithPlaylist() {
-            var spotify = (await _resolver.SpotifyClient)!;
+            var spotify = (await _spotifyClientResolver.GetSpotify())!;
             try {
                 var playlist = await spotify.Playlists.Get(_request.Id);
                 var tracks = (await spotify.PaginateAll(playlist!.Tracks!))
@@ -134,7 +137,7 @@ namespace Bot.Commands.Chains {
 
             IDisposable? paginatedMessageDispose = null;
             // ReSharper disable once RedundantAssignment
-            var fullTrack = await spotifyTrackWrapper.GetFullTrack(await _resolver.SpotifyClient);
+            var fullTrack = await spotifyTrackWrapper.GetFullTrack(await _spotifyClientResolver.GetSpotify());
 
             UpdateMessage();
 
@@ -221,7 +224,7 @@ namespace Bot.Commands.Chains {
         private async Task StartWithAssociation(SpotifyAssociation association, SpotifyTrackWrapper trackWrapper,
                                                 SpotifyAssociation.TrackAssociationData data) {
             SetTimeout(Constants.StandardTimeSpan);
-            var fullTrack = await trackWrapper.GetFullTrack((await _resolver.SpotifyClient)!);
+            var fullTrack = await trackWrapper.GetFullTrack((await _spotifyClientResolver.GetSpotify())!);
             UpdateBuilder();
             _controlMessage = await _channel.SendMessageAsync(null, false, MainBuilder.Build());
             var emojiCancellation = new CancellationTokenSource();

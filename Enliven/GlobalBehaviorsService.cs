@@ -32,7 +32,7 @@ namespace Bot {
             return await (channel ?? guild.DefaultChannel).SendMessageAsync(null, false, embedBuilder.Build());
         }
 
-        public Task Initialize() {
+        public Task OnPostDiscordStartInitialize() {
             Program.Client.JoinedGuild += ClientOnJoinedGuild;
             return Task.CompletedTask;
         }

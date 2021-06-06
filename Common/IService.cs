@@ -2,6 +2,16 @@
 
 namespace Common {
     public interface IService {
-        Task Initialize();
+        Task OnPreDiscordLoginInitialize() {
+            return Task.CompletedTask;
+        }
+        
+        Task OnPreDiscordStartInitialize() {
+            return Task.CompletedTask;
+        }
+        
+        Task OnPostDiscordStartInitialize() {
+            return Task.CompletedTask;
+        }
     }
 }

@@ -74,7 +74,8 @@ namespace Bot {
         {
             logger.Info("Start Initialising");
 
-            Task.WaitAll(_patches.Select(patch => patch.Apply()).ToArray());
+            await Task.WhenAll(_patches.Select(patch => patch.Apply()).ToArray());
+            await Task.WhenAll(_services.Select(service => service.OnPreDiscordLoginInitialize()).ToArray());
 
             Client.Log += OnClientLog;
 
@@ -98,10 +99,12 @@ namespace Bot {
             }
 
             LocalizationManager.Initialize();
+            
+            await Task.WhenAll(_services.Select(service => service.OnPreDiscordStartInitialize()).ToArray());
 
             await StartClient();
 
-            Task.WaitAll(_services.Select(service => service.Initialize()).ToArray());
+            await Task.WhenAll(_services.Select(service => service.OnPostDiscordStartInitialize()).ToArray());
 
             AppDomain.CurrentDomain.ProcessExit += async (sender, eventArgs) =>
             {
@@ -138,7 +141,7 @@ namespace Bot {
 
             // Music resolvers
             builder.RegisterType<SpotifyMusicResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
-            builder.RegisterType<SpotifyClientResolver>().SingleInstance();
+            builder.RegisterType<SpotifyClientResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
             
             builder.RegisterType<YandexClientResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<Music.Yandex.YandexMusicResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
