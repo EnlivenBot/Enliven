@@ -102,7 +102,7 @@ namespace Bot.Commands {
 
         [Command("setchannel")]
         [Summary("setchannel0s")]
-        public async Task SetThisChannel([Summary("setchannel0_1s")] ChannelFunction func) {
+        public async Task SetThisChannel([Summary("setchannel0_0s")] ChannelFunction func) {
             await SetChannel(func, Context.Channel);
         }
 
