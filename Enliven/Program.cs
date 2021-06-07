@@ -8,6 +8,7 @@ using Autofac.Extras.NLog;
 using Bot.DiscordRelated;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Logging;
+using Bot.DiscordRelated.MessageComponents;
 using Bot.DiscordRelated.Music;
 using Bot.Music.Spotify;
 using Bot.Music.Yandex;
@@ -161,6 +162,7 @@ namespace Bot {
             builder.RegisterType<ReliabilityService>().As<IService>().AsSelf().SingleInstance();
             builder.RegisterType<CommandHandlerService>().As<IService>().AsSelf().SingleInstance();
             builder.RegisterType<StatisticsService>().As<IStatisticsService>().AsSelf().SingleInstance();
+            builder.RegisterType<MessageComponentService>().As<MessageComponentService>().AsSelf().SingleInstance();
         }
 
         public async Task StartClient()
