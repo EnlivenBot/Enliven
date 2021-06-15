@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Bot.DiscordRelated.Commands;
+using Bot.DiscordRelated.MessageComponents;
 using Common;
 using Common.Config;
 using Common.Music.Players;
@@ -22,9 +23,12 @@ namespace Bot.DiscordRelated.Music {
         private ILogger _logger;
 
         private readonly Thread UpdateThread;
+        private MessageComponentService _messageComponentService;
 
-        public EmbedPlayerDisplayProvider(DiscordShardedClient client, IGuildConfigProvider guildConfigProvider, CommandHandlerService commandHandlerService,
+        public EmbedPlayerDisplayProvider(DiscordShardedClient client, IGuildConfigProvider guildConfigProvider,
+                                          CommandHandlerService commandHandlerService, MessageComponentService messageComponentService,
                                           ILogger logger) {
+            _messageComponentService = messageComponentService;
             _commandHandlerService = commandHandlerService;
             _logger = logger;
             _client = client;
@@ -36,7 +40,7 @@ namespace Bot.DiscordRelated.Music {
         public EmbedPlayerDisplay? Get(string id) {
             return _cache.TryGetValue(id, out var display) ? display : null;
         }
-        
+
         public EmbedPlayerDisplay? Get(ITextChannel channel) {
             return Get($"guild-{channel.GuildId}");
         }
@@ -48,7 +52,7 @@ namespace Bot.DiscordRelated.Music {
         private EmbedPlayerDisplay ProvideInternal(string id, ITextChannel channel, FinalLavalinkPlayer finalLavalinkPlayer, int recursiveCount = 0) {
             var embedPlayerDisplay = _cache.GetOrAdd(id, s => {
                 var guildConfig = _guildConfigProvider.Get(channel.GuildId);
-                var display = new EmbedPlayerDisplay(channel, _client, guildConfig.Loc, _commandHandlerService, guildConfig.PrefixProvider);
+                var display = new EmbedPlayerDisplay(channel, _client, guildConfig.Loc, _commandHandlerService, guildConfig.PrefixProvider, _messageComponentService);
 
                 display.Disposed.Subscribe(playerDisplay => _cache.TryRemove(id, out _));
 
@@ -73,6 +77,7 @@ namespace Bot.DiscordRelated.Music {
                     try {
                         if (display.Player.State != PlayerState.Playing) continue;
                         display.UpdateProgress();
+                        display.UpdateMessageComponents();
                         display.UpdateControlMessage().Wait();
                     }
                     catch (Exception) {

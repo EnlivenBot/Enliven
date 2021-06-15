@@ -2,13 +2,16 @@
 
 namespace Bot.Config.Emoji {
     public static class CommonEmoji {
-        public static Emote RepeatOnce { get; set; } = Emote.Parse(CommonEmojiStrings.Instance.RepeatOnce);
+        public static Emote RepeatOne { get; set; } = Emote.Parse(CommonEmojiStrings.Instance.RepeatOne);
         public static Emote RepeatOff { get; set; } = Emote.Parse(CommonEmojiStrings.Instance.RepeatOff);
         public static Emote Repeat { get; set; } = Emote.Parse(CommonEmojiStrings.Instance.Repeat);
         public static Emote Play { get; set; } = Emote.Parse(CommonEmojiStrings.Instance.Play);
         public static Emote Pause { get; set; } = Emote.Parse(CommonEmojiStrings.Instance.Pause);
         public static Emote Stop { get; set; } = Emote.Parse(CommonEmojiStrings.Instance.Stop);
         public static Emote Spotify { get; set; } = Emote.Parse(CommonEmojiStrings.Instance.Spotify);
+        public static Emote RepeatBox { get; set; } = Emote.Parse(CommonEmojiStrings.Instance.RepeatBox);
+        public static Emote RepeatOneBox { get; set; } = Emote.Parse(CommonEmojiStrings.Instance.RepeatOneBox);
+        public static Emote RepeatOffBox { get; set; } = Emote.Parse(CommonEmojiStrings.Instance.RepeatOffBox);
         public static global::Discord.Emoji LegacyTrackNext { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.LegacyTrackNext);
         public static global::Discord.Emoji LegacyTrackPrevious { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.LegacyTrackPrevious);
         public static global::Discord.Emoji LegacyPause { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.LegacyPause);
@@ -23,6 +26,8 @@ namespace Bot.Config.Emoji {
         public static global::Discord.Emoji LegacyArrowDown { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.LegacyArrowDown);
         public static global::Discord.Emoji LegacyFileBox { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.LegacyFileBox);
         public static global::Discord.Emoji LegacyReverse { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.LegacyReverse);
+        public static global::Discord.Emoji LegacyFastForward { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.LegacyFastForward);
+        public static global::Discord.Emoji LegacyFastReverse { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.LegacyFastReverse);
         public static global::Discord.Emoji Help { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.Help);
         public static global::Discord.Emoji Memo { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.Memo);
         public static global::Discord.Emoji Robot { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.Robot);
@@ -32,5 +37,6 @@ namespace Bot.Config.Emoji {
         public static global::Discord.Emoji ThumbsUp { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.ThumbsUp);
         public static global::Discord.Emoji ThumbsDown { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.ThumbsDown);
         public static global::Discord.Emoji Warning { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.Warning);
+        public static global::Discord.Emoji BookmarkTabs { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.BookmarkTabs);
     }
 }

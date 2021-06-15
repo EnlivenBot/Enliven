@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reactive.Disposables;
@@ -9,9 +10,9 @@ using Discord;
 using Discord.WebSocket;
 
 namespace Bot.DiscordRelated.MessageComponents {
-    /// <summary>
+    /// <remarks>
     /// Should be used one per message!
-    /// </summary>
+    /// </remarks>
     public class EnlivenComponentManager : IDisposable {
         private readonly MessageComponentService _messageComponentService;
         private readonly Dictionary<string, (DateTime, EnlivenButtonBuilder)> _entries = new Dictionary<string, (DateTime, EnlivenButtonBuilder)>();
@@ -19,6 +20,8 @@ namespace Bot.DiscordRelated.MessageComponents {
         private IUserMessage? _message;
         private Action<string, SocketMessageComponent, EnlivenButtonBuilder>? _callback;
         private IDisposable? _callbackDisposable;
+
+        public IReadOnlyDictionary<string, EnlivenButtonBuilder> Entries => _entries.ToImmutableDictionary(pair => pair.Key, pair => pair.Value.Item2);
 
         public EnlivenComponentManager(MessageComponentService messageComponentService) {
             _messageComponentService = messageComponentService;
@@ -32,6 +35,10 @@ namespace Bot.DiscordRelated.MessageComponents {
         public EnlivenComponentManager WithButton(string id, EnlivenButtonBuilder button) {
             _entries[id] = (DateTime.Now, button);
             return this;
+        }
+
+        public EnlivenButtonBuilder? GetButton(string id) {
+            return TryGetButton(id, out var builder) ? builder : null;
         }
 
         public bool TryGetButton(string id, [NotNullWhen(true)] out EnlivenButtonBuilder? buttonBuilder) {
@@ -90,6 +97,10 @@ namespace Bot.DiscordRelated.MessageComponents {
             }
         }
 
+        private Task UpdateAssociatedMessageComponents() {
+            return _message?.ModifyAsync(properties => properties.Components = Build()) ?? Task.CompletedTask;
+        }
+
         /// <remarks>
         /// Invalidates previous <see cref="Build"/> button's callbacks
         /// </remarks>
@@ -102,7 +113,7 @@ namespace Bot.DiscordRelated.MessageComponents {
                 foreach (var (_, (_, buttonBuilder)) in pairs.Where(pair => pair.Value.Item2.IsVisible).OrderBy(pair => pair.Value.Item2.Priority ?? 0).ThenBy(pair => pair.Value.Item1).Take(5)) {
                     var userCustomId = buttonBuilder.CustomId;
                     var systemCustomId = $"{userCustomId}{buttonBuilder.Guid}|";
-                    builder.WithButton(buttonBuilder.WithCustomId(systemCustomId));
+                    builder.WithButton(buttonBuilder.WithCustomId(systemCustomId), buttonBuilder.TargetRow);
                     buttonBuilder.CustomId = userCustomId;
 
                     //Register callback
