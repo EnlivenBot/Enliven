@@ -12,17 +12,27 @@ using NLog;
 namespace Common {
     public static class ExtensionMethods {
         public static void DelayedDelete(this IMessage message, TimeSpan span) {
-            Task.Run(async () => {
-                await Task.Delay(span);
-                message.SafeDelete();
-            });
+            Task.Delay(span).ContinueWith(task => message.SafeDelete());
         }
 
         public static void DelayedDelete(this Task<IUserMessage> message, TimeSpan span) {
-            Task.Run(async () => {
-                await Task.Delay(span);
-                (await message.ConfigureAwait(false)).SafeDelete();
-            });
+            Task.Delay(span).ContinueWith(task => message.SafeDelete());
+        }
+        
+        public static void SafeDelete(this Task<IUserMessage> message) {
+            try {
+                message.ContinueWith(async task => {
+                    try {
+                        (await task).SafeDelete();
+                    }
+                    catch (Exception) {
+                        // ignored
+                    }
+                });
+            }
+            catch (Exception) {
+                // ignored
+            }
         }
 
         public static void SafeDelete(this IMessage? message) {
