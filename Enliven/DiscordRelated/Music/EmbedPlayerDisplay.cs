@@ -21,7 +21,6 @@ using Common.Music.Players;
 using Common.Music.Tracks;
 using Common.Utils;
 using Discord;
-using Discord.WebSocket;
 using Lavalink4NET.Player;
 
 #pragma warning disable 4014
@@ -32,10 +31,7 @@ namespace Bot.DiscordRelated.Music {
         private CollectorsGroup _collectorsGroup = new CollectorsGroup();
         private CommandHandlerService _commandHandlerService;
         private IUserMessage? _controlMessage;
-        private SingleTask _controlMessageSendTask;
-        private IDiscordClient _discordClient;
         private bool _isExternalEmojiAllowed;
-        private bool _isSlashCommandsAllowed;
         private ILocalizationProvider _loc;
 
         private Disposables? _playerSubscriptions;
@@ -44,6 +40,7 @@ namespace Bot.DiscordRelated.Music {
         private IMessageChannel _targetChannel;
         private IGuild? _targetGuild;
         private SingleTask _updateControlMessageTask;
+        private SingleTask _controlMessageSendTask;
 
         private PriorityEmbedBuilderWrapper EmbedBuilder;
 
@@ -61,7 +58,6 @@ namespace Bot.DiscordRelated.Music {
         public EmbedPlayerDisplay(IMessageChannel targetChannel, IDiscordClient discordClient, ILocalizationProvider loc,
                                   CommandHandlerService commandHandlerService, IPrefixProvider prefixProvider, MessageComponentService messageComponentService) {
             _messageComponentService = messageComponentService;
-            _discordClient = discordClient;
             _loc = loc;
             _commandHandlerService = commandHandlerService;
             _prefixProvider = prefixProvider;
@@ -190,68 +186,8 @@ namespace Bot.DiscordRelated.Music {
             await CheckRestrictions();
 
             var oldControlMessage = _controlMessage;
-
-            if (_isSlashCommandsAllowed) {
-                await SendControlMessage_WithMessageComponents();
-            }
-            else {
-                await SendControlMessage_WithReactions();
-            }
-
+            await SendControlMessage_WithMessageComponents();
             oldControlMessage.SafeDelete();
-        }
-
-        private async Task SendControlMessage_WithReactions() {
-            _controlMessage = await _targetChannel.SendMessageAsync(null, false, EmbedBuilder.Build());
-
-            _collectorsGroup.DisposeAll();
-            _collectorsGroup.Add(
-                CollectorsUtils.CollectReactions<string>(
-                    reaction => reaction.MessageId == _controlMessage?.Id && reaction.UserId != Program.Client.CurrentUser.Id,
-                    async (args, s) => {
-                        args.RemoveReason();
-                        await _commandHandlerService.ExecuteCommand(s, new ReactionCommandContext(Program.Client, args.Reaction),
-                            args.Reaction.UserId.ToString());
-                    },
-                    (CommonEmoji.LegacyTrackPrevious, () => Player.TrackPosition.TotalSeconds > 15 ? "seek 0s" : "skip -1"),
-                    (CommonEmoji.LegacyPlay, () => "resume"),
-                    (CommonEmoji.LegacyPause, () => "pause"),
-                    (CommonEmoji.LegacyTrackNext, () => "skip"),
-                    (CommonEmoji.LegacyStop, () => "stop"),
-                    (CommonEmoji.LegacyRepeat, () => "repeat"),
-                    (CommonEmoji.LegacyShuffle, () => "shuffle")
-                ));
-            var addReactionsAsync = _controlMessage.AddReactionsAsync(new IEmote[] {
-                CommonEmoji.LegacyTrackPrevious, CommonEmoji.LegacyPlay, CommonEmoji.LegacyPause, CommonEmoji.LegacyTrackNext,
-                CommonEmoji.LegacyStop, CommonEmoji.LegacyRepeat, CommonEmoji.LegacyShuffle
-            }, new RequestOptions {CancelToken = _cancellationTokenSource.Token});
-
-            _collectorsGroup.Controllers.Add(CollectorsUtils.CollectMessage(_controlMessage.Channel, message => true, async args => {
-                args.StopCollect();
-                try {
-                    await addReactionsAsync;
-                }
-                catch (Exception) {
-                    // ignored
-                }
-
-                if (_controlMessage == null) return;
-                _controlMessage.AddReactionAsync(CommonEmoji.LegacyArrowDown, new RequestOptions {CancelToken = _cancellationTokenSource.Token});
-                _collectorsGroup.Controllers.Add(CollectorsUtils.CollectReaction(_controlMessage,
-                    reaction => reaction.Emote.Equals(CommonEmoji.LegacyArrowDown), async emoteCollectorEventArgs => {
-                        emoteCollectorEventArgs.RemoveReason();
-                        await TryPerformArrowDownResend();
-                    }, CollectorFilter.IgnoreSelf));
-            }));
-        }
-        
-        private async Task TryPerformArrowDownResend() {
-            if ((await _controlMessage!.Channel.GetMessagesAsync(1).FlattenAsync()).FirstOrDefault()?.Id == _controlMessage.Id) {
-                return;
-            }
-
-            NextResendForced = true;
-            await _controlMessageSendTask.Execute(false, TimeSpan.Zero);
         }
 
         private async Task SendControlMessage_WithMessageComponents() {
@@ -290,7 +226,11 @@ namespace Bot.DiscordRelated.Music {
                 }
 
                 async Task<string?> TryPerformArrowDownResendWithComponents() {
-                    await TryPerformArrowDownResend();
+                    if ((await _controlMessage!.Channel.GetMessagesAsync(1).FlattenAsync()).FirstOrDefault()?.Id == _controlMessage.Id) {
+                        return null;
+                    }
+                    NextResendForced = true;
+                    await _controlMessageSendTask.Execute(false, TimeSpan.Zero);
                     _messageComponentManager.GetButton("Down")!.WithDisabled(true);
                     return null;
                 }
@@ -332,14 +272,9 @@ namespace Bot.DiscordRelated.Music {
         private async Task CheckRestrictions() {
             if (_targetGuild != null) {
                 var guildUser = await _targetGuild.GetUserAsync(Program.Client.CurrentUser.Id);
-                var guildPerms = guildUser.GuildPermissions;
                 var channelPerms = guildUser.GetPermissions((IGuildChannel) _targetChannel);
                 _isExternalEmojiAllowed = channelPerms.UseExternalEmojis;
-                _isSlashCommandsAllowed = guildPerms.Administrator || (guildPerms.RawValue & 0x0080000000) == 0x0080000000;
                 var text = "";
-                if (!_isSlashCommandsAllowed) text += _loc.Get("Music.WarningMessageButtons") + "\n";
-                if (!_isSlashCommandsAllowed && !channelPerms.ManageMessages) text += _loc.Get("Music.WarningEmojiRemoval") + "\n";
-                if (!_isSlashCommandsAllowed && !channelPerms.AddReactions) text += _loc.Get("Music.WarningEmojiAdding") + "\n";
                 if (!channelPerms.UseExternalEmojis) text += _loc.Get("Music.WarningCustomEmoji") + "\n";
 
                 // ReSharper disable once AssignmentInConditionalExpression
