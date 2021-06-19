@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Common.Config;
 using Common.Localization.Providers;
 using Discord;
+using Discord.Rest;
 using NLog;
 
 namespace Common {
@@ -15,11 +16,11 @@ namespace Common {
             Task.Delay(span).ContinueWith(task => message.SafeDelete());
         }
 
-        public static void DelayedDelete(this Task<IUserMessage> message, TimeSpan span) {
+        public static void DelayedDelete<T>(this Task<T> message, TimeSpan span) where T : IMessage{
             Task.Delay(span).ContinueWith(task => message.SafeDelete());
         }
-        
-        public static void SafeDelete(this Task<IUserMessage> message) {
+
+        public static void SafeDelete<T>(this Task<T> message) where T : IMessage{
             try {
                 message.ContinueWith(async task => {
                     try {
@@ -35,7 +36,7 @@ namespace Common {
             }
         }
 
-        public static void SafeDelete(this IMessage? message) {
+        public static void SafeDelete<T>(this T? message) where T : IMessage{
             try {
                 message?.DeleteAsync();
             }
