@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Bot.Config.Emoji;
 using Bot.DiscordRelated;
 using Bot.DiscordRelated.Commands;
+using Bot.DiscordRelated.MessageComponents;
 using Bot.Music.Spotify;
 using Bot.Utilities.Collector;
 using Common;
@@ -33,18 +34,20 @@ namespace Bot.Commands.Chains {
         private ISpotifyAssociationCreator _spotifyAssociationCreator = null!;
         private SpotifyMusicResolver _resolver = null!;
         private SpotifyClientResolver _spotifyClientResolver = null!;
+        private MessageComponentService _messageComponentService = null!;
 
         private FixSpotifyChain(string? uid, ILocalizationProvider loc) : base(uid, loc) { }
 
         public static FixSpotifyChain CreateInstance(IUser requester, IMessageChannel channel, ILocalizationProvider loc, string request,
                                                      IMusicController musicController, IUserDataProvider userDataProvider, 
                                                      ISpotifyAssociationProvider spotifyAssociationProvider, ISpotifyAssociationCreator spotifyAssociationCreator, 
-                                                     SpotifyMusicResolver resolver, SpotifyClientResolver spotifyClientResolver) {
+                                                     SpotifyMusicResolver resolver, SpotifyClientResolver spotifyClientResolver,
+                                                     MessageComponentService service) {
             var fixSpotifyChain = new FixSpotifyChain($"{nameof(FixSpotifyChain)}_{requester.Id}", loc) {
                 _request = new SpotifyUrl(request), _requester = requester, _channel = channel,
                 _musicController = musicController, _userDataProvider = userDataProvider, 
                 _spotifyAssociationProvider = spotifyAssociationProvider, _spotifyAssociationCreator = spotifyAssociationCreator, 
-                _resolver = resolver, _spotifyClientResolver = spotifyClientResolver
+                _resolver = resolver, _spotifyClientResolver = spotifyClientResolver, _messageComponentService = service
             };
 
             return fixSpotifyChain;
@@ -102,7 +105,7 @@ namespace Bot.Commands.Chains {
                     stringBuilder.AppendLine($"{index + 1}. [{fullTrack.Name}]({fullTrack.Uri}) *by {fullTrack.Artists.First().Name}*");
                 }
 
-                _paginatedMessage = new PaginatedMessage(PaginatedAppearanceOptions.Default, _controlMessage!, Loc);
+                _paginatedMessage = new PaginatedMessage(PaginatedAppearanceOptions.Default, _controlMessage!, Loc, _messageComponentService);
                 _paginatedMessage.SetPages(stringBuilder.ToString(), "{0}", Int32.MaxValue,
                     new List<EmbedFieldBuilder> {
                         new EmbedFieldBuilder {Name = Loc.Get("Chains.FixSpotifyPlaylistChooseName"), Value = Loc.Get("Chains.FixSpotifyPlaylistChooseValue")}
@@ -214,7 +217,7 @@ namespace Bot.Commands.Chains {
                                 (data.DownvotedUsers.Contains(_requester.Id) ? $"**{data.DownvotedUsers.Count} 👎**" : $"{data.DownvotedUsers.Count} 👎")
                     }).ToList();
 
-                _paginatedMessage ??= new PaginatedMessage(PaginatedAppearanceOptions.Default, _controlMessage!, Loc);
+                _paginatedMessage ??= new PaginatedMessage(PaginatedAppearanceOptions.Default, _controlMessage!, Loc, _messageComponentService);
                 _paginatedMessage.SetPages(Loc.Get("Chains.FixSpotifyAssociationChoose", $"***{fullTrack.Name}*** - **{fullTrack.Artists.First().Name}**"),
                     fields, Int32.MaxValue);
                 _paginatedMessage.Disposed.Subscribe(base1 => End());

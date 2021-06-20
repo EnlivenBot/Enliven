@@ -28,6 +28,7 @@ namespace Bot.DiscordRelated.Commands.Modules {
         public IMusicController MusicController { get; set; } = null!;
         public EmbedPlayerDisplayProvider EmbedPlayerDisplayProvider { get; set; } = null!;
         public LyricsService LyricsService { get; set; } = null!;
+        public EmbedPlayerQueueDisplayProvider EmbedPlayerQueueDisplayProvider { get; set; } = null;
 
         protected override void BeforeExecute(CommandInfo command) {
             base.BeforeExecute(command);

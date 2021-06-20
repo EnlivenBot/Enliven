@@ -237,7 +237,7 @@ namespace Bot.Commands {
                 return;
             }
 
-            await new EmbedPlayerQueueDisplay(Context.Channel, Loc).Initialize(Player);
+            EmbedPlayerQueueDisplayProvider.CreateOrUpdateQueueDisplay(Context.Channel, Player);
         }
 
         [SummonToUser]

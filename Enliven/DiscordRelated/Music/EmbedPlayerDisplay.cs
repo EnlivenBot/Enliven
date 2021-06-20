@@ -116,12 +116,18 @@ namespace Bot.DiscordRelated.Music {
             }
         }
 
-        public override async Task Shutdown(IEntry header, IEntry body) {
-            base.Shutdown(header, body);
+        public override async Task ExecuteShutdown(IEntry header, IEntry body) {
+            base.ExecuteShutdown(header, body);
             _cancellationTokenSource.Cancel();
             var message = _controlMessage;
-            Dispose();
             _controlMessage = null;
+            
+            _playerSubscriptions?.Dispose();
+            _cancellationTokenSource.Dispose();
+            _controlMessageSendTask.Dispose();
+            _updateControlMessageTask.Dispose();
+            _collectorsGroup.DisposeAll();
+            
             if (message != null) {
                 try {
                     message.RemoveAllReactionsAsync();
@@ -164,16 +170,7 @@ namespace Bot.DiscordRelated.Music {
             UpdateNode();
             await ControlMessageResend();
         }
-
-        public override void Dispose() {
-            _playerSubscriptions?.Dispose();
-
-            _cancellationTokenSource.Dispose();
-            _controlMessageSendTask.Dispose();
-            _updateControlMessageTask.Dispose();
-            _collectorsGroup.DisposeAll();
-        }
-
+        
         private async Task SendControlMessage() {
             _cancellationTokenSource.Cancel();
             _cancellationTokenSource = new CancellationTokenSource();

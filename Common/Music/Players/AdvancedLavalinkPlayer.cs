@@ -103,7 +103,7 @@ namespace Common.Music.Players {
                     var body = parameters.NeedSave
                         ? new EntryString("{0}\n{1}", reason, new EntryLocalized("Music.ResumeViaPlaylists", GuildConfig.Prefix, parameters.StoredPlaylist!.Id))
                         : reason;
-                    await playerDisplay.Shutdown(new EntryLocalized("Music.PlaybackStopped"), body);
+                    await playerDisplay.ExecuteShutdown(new EntryLocalized("Music.PlaybackStopped"), body);
                 }
             }
 

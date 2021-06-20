@@ -21,8 +21,6 @@ namespace Bot.DiscordRelated.Music {
         private DiscordShardedClient _client;
         private CommandHandlerService _commandHandlerService;
         private ILogger _logger;
-
-        private readonly Thread UpdateThread;
         private MessageComponentService _messageComponentService;
 
         public EmbedPlayerDisplayProvider(DiscordShardedClient client, IGuildConfigProvider guildConfigProvider,
@@ -33,8 +31,7 @@ namespace Bot.DiscordRelated.Music {
             _logger = logger;
             _client = client;
             _guildConfigProvider = guildConfigProvider;
-            UpdateThread = new Thread(UpdateCycle) {Priority = ThreadPriority.BelowNormal};
-            UpdateThread.Start();
+            new Task(UpdateCycle, TaskCreationOptions.LongRunning).Start();
         }
 
         public EmbedPlayerDisplay? Get(string id) {
@@ -54,13 +51,11 @@ namespace Bot.DiscordRelated.Music {
                 var guildConfig = _guildConfigProvider.Get(channel.GuildId);
                 var display = new EmbedPlayerDisplay(channel, _client, guildConfig.Loc, _commandHandlerService, guildConfig.PrefixProvider, _messageComponentService);
 
-                display.Disposed.Subscribe(playerDisplay => _cache.TryRemove(id, out _));
-
-                display.Initialize(finalLavalinkPlayer);
+                _ = display.Initialize(finalLavalinkPlayer);
 
                 return display;
             });
-            if (!embedPlayerDisplay.Player?.IsShutdowned != false) return embedPlayerDisplay;
+            if (!embedPlayerDisplay.IsShutdowned && !embedPlayerDisplay.Player?.IsShutdowned != false) return embedPlayerDisplay;
             _cache.TryRemove(id, out _);
             if (recursiveCount <= 1) return ProvideInternal(id, channel, finalLavalinkPlayer, ++recursiveCount);
             _logger.Fatal("Provider recursive call. Provider: {data}",
@@ -69,7 +64,7 @@ namespace Bot.DiscordRelated.Music {
             return embedPlayerDisplay;
         }
 
-        private void UpdateCycle() {
+        private async void UpdateCycle() {
             while (true) {
                 var waitCycle = Task.Delay(Constants.PlayerEmbedUpdateDelay);
                 var displays = _cache.Values.ToList();
@@ -78,14 +73,14 @@ namespace Bot.DiscordRelated.Music {
                         if (display.Player.State != PlayerState.Playing) continue;
                         display.UpdateProgress();
                         display.UpdateMessageComponents();
-                        display.UpdateControlMessage().Wait();
+                        await display.UpdateControlMessage();
                     }
                     catch (Exception) {
                         // ignored
                     }
                 }
 
-                waitCycle.GetAwaiter().GetResult();
+                await waitCycle;
             }
             // ReSharper disable once FunctionNeverReturns
         }

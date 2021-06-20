@@ -2,10 +2,14 @@
 using System.Reactive.Subjects;
 
 namespace Common.Utils {
-    public class DisposableBase : IDisposable {
+    public interface IDisposableBase : IDisposable {
+        ISubject<DisposableBase> Disposed { get; }
+        bool IsDisposed { get; }
+    }
+    public class DisposableBase : IDisposableBase {
         public ISubject<DisposableBase> Disposed { get; private set; } = new Subject<DisposableBase>();
         public bool IsDisposed { get; private set; }
-        public void Dispose() {
+        public virtual void Dispose() {
             if (!IsDisposed) DisposeInternal();
         }
 

@@ -4,22 +4,23 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Bot.DiscordRelated.MessageComponents;
 using Bot.Utilities.Collector;
 using Common;
 using Common.Localization.Providers;
 using Common.Utils;
 using Discord;
+using Discord.WebSocket;
 using Tyrrrz.Extensions;
 
 #pragma warning disable 4014
 
 namespace Bot.DiscordRelated {
-    public class PaginatedMessage : DisposableBase {
+    public partial class PaginatedMessage : DisposableBase {
         private readonly EmbedBuilder _embedBuilder = new EmbedBuilder();
         private readonly SingleTask<IUserMessage?> _resendTask;
         private readonly SingleTask _updateTask;
         public readonly PaginatedAppearanceOptions Options;
-        private CollectorController? _collectorController;
         private bool _jumpEnabled;
         private bool _isCollectionUpdating;
 
@@ -27,86 +28,135 @@ namespace Bot.DiscordRelated {
 
         public IUserMessage? Message;
         public ILocalizationProvider Loc;
+        private EnlivenComponentManager _enlivenComponentManager = null!;
+        private MessageComponentService _messageComponentService;
 
-        public PaginatedMessage(PaginatedAppearanceOptions options, IUserMessage message, ILocalizationProvider loc, MessagePage? errorPage = null)
-            : this(options, message.Channel, loc, errorPage) {
+        public PaginatedMessage(PaginatedAppearanceOptions options, IUserMessage message, ILocalizationProvider loc, MessageComponentService messageComponentService, MessagePage? errorPage = null)
+            : this(options, message.Channel, loc, messageComponentService, errorPage) {
             Channel = message.Channel;
             Message = message;
-            SetupReactions();
             if (Message.Author.Id != Program.Client.CurrentUser.Id) throw new ArgumentException($"{nameof(message)} must be from the current user");
         }
 
-        public PaginatedMessage(PaginatedAppearanceOptions options, IMessageChannel channel, ILocalizationProvider loc, MessagePage? errorPage = null) {
+        public PaginatedMessage(PaginatedAppearanceOptions options, IMessageChannel channel, ILocalizationProvider loc, MessageComponentService messageComponentService, MessagePage? errorPage = null) {
+            _messageComponentService = messageComponentService;
             Loc = loc;
             Channel = channel;
             Options = options;
 
             ErrorPage = errorPage ?? new MessagePage("Loading...");
+            _ = InitializeComponentManager();
 
             Pages.CollectionChanged += (sender, args) => Update();
-
-            _timeoutTimer = new Timer(state => {
-                Dispose();
-            });
-
-            _updateTask = new SingleTask(async () => {
-                if (IsDisposed) return;
-                UpdateTimeout(true);
-                try {
-                    if (Message == null) {
-                        await Resend();
-                    }
-                    else {
-                        try {
-                            await Message!.ModifyAsync(properties => {
-                                #pragma warning disable 618
-                                UpdateEmbed();
-                                #pragma warning restore 618
-
-                                properties.Embed = _embedBuilder.Build();
-                                properties.Content = null;
-                            });
-                        }
-                        catch (Exception) {
-                            // ignored
-                        }
-                    }
-                }
-                catch {
-                    // ignored
-                }
-                finally {
-                    UpdateTimeout();
-                }
-            }) {CanBeDirty = true, BetweenExecutionsDelay = TimeSpan.FromSeconds(4)};
-
-            _resendTask = new SingleTask<IUserMessage?>(async () => {
-                UpdateTimeout(true);
-                try {
-                    Message?.SafeDelete();
-                    Message = null;
-                    #pragma warning disable 618
-                    UpdateEmbed();
-                    #pragma warning restore 618
-                    Message = await Channel.SendMessageAsync(null, false, _embedBuilder.Build());
-                    SetupReactions();
-                    return Message;
-                }
-                catch {
-                    // ignored
-                }
-                finally {
-                    UpdateTimeout();
-                }
-
-                return null;
-            }) {BetweenExecutionsDelay = TimeSpan.FromSeconds(10)};
+            _timeoutTimer = new Timer(state => { Dispose(); });
+            _updateTask = new SingleTask(UpdateTaskAction) {CanBeDirty = true, BetweenExecutionsDelay = TimeSpan.FromSeconds(1.5)};
+            _resendTask = new SingleTask<IUserMessage?>(ResendTaskAction) {BetweenExecutionsDelay = TimeSpan.FromSeconds(10)};
 
             _isCollectionUpdating = false;
         }
 
-        [Obsolete("Internal method, do not use")]
-        private void UpdateEmbed() {
+        private async Task InitializeComponentManager() {
+            _enlivenComponentManager = new EnlivenComponentManager(_messageComponentService);
+            _enlivenComponentManager.SetCallback(OnButtonPress);
+            
+            var builder = new EnlivenButtonBuilder().WithStyle(ButtonStyle.Secondary).WithTargetRow(0);
+            _enlivenComponentManager.WithButton(builder.Clone().WithEmote(Options.First).WithCustomId("First"));
+            _enlivenComponentManager.WithButton(builder.Clone().WithEmote(Options.Back).WithCustomId("Back"));
+            _enlivenComponentManager.WithButton(builder.Clone().WithEmote(Options.Next).WithCustomId("Next"));
+            _enlivenComponentManager.WithButton(builder.Clone().WithEmote(Options.Last).WithCustomId("Last"));
+            builder.WithTargetRow(1);
+            if (Options.StopEnabled) _enlivenComponentManager.WithButton(builder.Clone().WithEmote(Options.Stop).WithCustomId("Stop").WithStyle(ButtonStyle.Danger));
+            if (Options.DisplayInformationIcon) _enlivenComponentManager.WithButton(builder.Clone().WithEmote(Options.Info).WithCustomId("Info").WithStyle(ButtonStyle.Primary));
+
+            _jumpEnabled = Options.JumpDisplayOptions == JumpDisplayOptions.Always ||
+                           Options.JumpDisplayOptions == JumpDisplayOptions.WithManageMessages &&
+                           Channel is IGuildChannel guildChannel &&
+                           (await guildChannel.GetUserAsync(Program.Client.CurrentUser.Id)).GetPermissions(guildChannel).ManageMessages;
+            if (_jumpEnabled) _enlivenComponentManager.WithButton(builder.Clone().WithEmote(Options.Jump).WithCustomId("Jump").WithPriority(0));
+        }
+
+        private void OnButtonPress(string s, SocketMessageComponent component, EnlivenButtonBuilder arg3) {
+            switch (s) {
+                case "Back":
+                    PageNumber--;
+                    break;
+                case "Next":
+                    PageNumber++;
+                    break;
+                case "First":
+                    PageNumber = 0;
+                    break;
+                case "Last":
+                    PageNumber = Pages.Count - 1;
+                    break;
+                case "Stop":
+                    Dispose();
+                    return;
+                case "Info":
+                    component.FollowupAsync(Options.InformationText).DelayedDelete(Options.InfoTimeout);
+                    break;
+                case "Jump":
+                    CollectorsUtils.CollectMessage(component.Channel, message => message.Author.Id == component.User.Id, async eventArgs => {
+                        eventArgs.StopCollect();
+                        if (!int.TryParse(eventArgs.Message.Content, out var result)) return;
+                        await eventArgs.RemoveReason();
+                        PageNumber = result - 1;
+                        CoercePageNumber();
+                        Update(false);
+                    });
+                    break;
+                default:
+                    return;
+            }
+
+            CoercePageNumber();
+            _updateTask.Execute(true, TimeSpan.FromSeconds(1));
+        }
+
+        private async Task UpdateTaskAction() {
+            if (IsDisposed) return;
+            UpdateTimeout(true);
+            try {
+                if (Message == null) {
+                    await Resend();
+                }
+                else {
+                    await Message!.ModifyAsync(properties => {
+                        properties.Components = _enlivenComponentManager.Build();
+                        properties.Embed = GenerateEmbed();
+                        properties.Content = null;
+                    });
+                    _enlivenComponentManager.AssociateWithMessage(Message);
+                }
+            }
+            catch {
+                // ignored
+            }
+            finally {
+                UpdateTimeout();
+            }
+        }
+        
+        private async Task<IUserMessage?> ResendTaskAction() {
+            UpdateTimeout(true);
+            try {
+                Message?.SafeDelete();
+                Message = null;
+                Message = await Channel.SendMessageAsync(null, false, GenerateEmbed(), component: _enlivenComponentManager.Build());
+                _enlivenComponentManager.AssociateWithMessage(Message);
+                return Message;
+            }
+            catch {
+                // ignored
+            }
+            finally {
+                UpdateTimeout();
+            }
+
+            return null;
+        }
+
+        private Embed GenerateEmbed() {
             try {
                 UpdateInternal(Pages[PageNumber], true);
             }
@@ -120,84 +170,13 @@ namespace Bot.DiscordRelated {
                 _embedBuilder.Description = messagePage.Description;
                 _embedBuilder.Footer = Footer ?? new EmbedFooterBuilder();
                 if (withFooter) {
-                    _embedBuilder.Footer =
-                        _embedBuilder.Footer.WithText(Options.FooterFormat.Get(Loc, PageNumber + 1, Pages.Count) +
-                                                      (string.IsNullOrWhiteSpace(Footer?.Text) ? "" : $" | {Footer.Text}"));
+                    var footerText = Options.FooterFormat.Get(Loc, PageNumber + 1, Pages.Count);
+                    if (!string.IsNullOrWhiteSpace(Footer?.Text)) footerText += $" | {Footer.Text}";
+                    _embedBuilder.Footer = _embedBuilder.Footer.WithText(footerText);
                 }
             }
-        }
 
-        private void SetupReactions() {
-            try {
-                Message?.RemoveAllReactionsAsync();
-            }
-            catch (Exception) {
-                // Ignored
-            }
-
-            _collectorController = CollectorsUtils.CollectReaction(Message!, reaction => true, args => {
-                if (args.Reaction.Emote.Equals(Options.Back)) {
-                    PageNumber--;
-                }
-                else if (args.Reaction.Emote.Equals(Options.Next)) {
-                    PageNumber++;
-                }
-                else if (args.Reaction.Emote.Equals(Options.First)) {
-                    PageNumber = 0;
-                }
-                else if (args.Reaction.Emote.Equals(Options.Last)) {
-                    PageNumber = Pages.Count - 1;
-                }
-                else if (args.Reaction.Emote.Equals(Options.Stop)) {
-                    Dispose();
-                    return;
-                }
-                else if (Options.DisplayInformationIcon && args.Reaction.Emote.Equals(Options.Info)) {
-                    try {
-                        Channel.SendMessageAsync(Options.InformationText).DelayedDelete(Options.InfoTimeout);
-                    }
-                    catch (Exception) {
-                        // ignored
-                    }
-                }
-                else if (_jumpEnabled && args.Reaction.Emote.Equals(Options.Jump)) {
-                    CollectorsUtils.CollectMessage(args.Reaction.Channel, message => message.Author.Id == args.Reaction.UserId, async eventArgs => {
-                        eventArgs.StopCollect();
-                        await eventArgs.RemoveReason();
-                        if (int.TryParse(eventArgs.Message.Content, out var result)) {
-                            PageNumber = result - 1;
-                            CoercePageNumber();
-                            Update(false);
-                        }
-                    });
-                }
-                else {
-                    return;
-                }
-
-                args.RemoveReason();
-                CoercePageNumber();
-                _updateTask.Execute(true, TimeSpan.FromSeconds(1));
-            }, CollectorFilter.IgnoreBots);
-            _ = Task.Run(async () => {
-                await Message!.AddReactionAsync(Options.First);
-                await Message!.AddReactionAsync(Options.Back);
-                await Message!.AddReactionAsync(Options.Next);
-                await Message!.AddReactionAsync(Options.Last);
-
-                var manageMessages = Channel is IGuildChannel guildChannel &&
-                                     (await guildChannel.GetUserAsync(Program.Client.CurrentUser.Id)).GetPermissions(guildChannel).ManageMessages;
-
-                _jumpEnabled = Options.JumpDisplayOptions == JumpDisplayOptions.Always
-                            || Options.JumpDisplayOptions == JumpDisplayOptions.WithManageMessages && manageMessages;
-                if (_jumpEnabled) await Message!.AddReactionAsync(Options.Jump);
-
-                if (Options.StopEnabled)
-                    await Message!.AddReactionAsync(Options.Stop);
-
-                if (Options.DisplayInformationIcon)
-                    await Message!.AddReactionAsync(Options.Info);
-            });
+            return _embedBuilder.Build();
         }
 
         public IMessageChannel Channel { get; set; }
@@ -341,13 +320,18 @@ namespace Bot.DiscordRelated {
                 return Task.CompletedTask;
             }
 
+            var manyPages = Pages.Count > 1;
+            _enlivenComponentManager.GetButton("Jump")?.WithDisabled(!manyPages);
+            _enlivenComponentManager.GetButton("Back")?.WithDisabled(!manyPages);
+            _enlivenComponentManager.GetButton("Next")?.WithDisabled(!manyPages);
+            _enlivenComponentManager.GetButton("First")?.WithDisabled(!manyPages);
+            _enlivenComponentManager.GetButton("Last")?.WithDisabled(!manyPages);
             return _updateTask.Execute();
         }
 
         public Task Resend() {
             return _resendTask.Execute();
         }
-
 
         public class MessagePage {
             public MessagePage() { }
@@ -368,10 +352,10 @@ namespace Bot.DiscordRelated {
         protected override void DisposeInternal() {
             base.DisposeInternal();
             _timeoutTimer.Dispose();
-            _collectorController?.Dispose();
             _resendTask.Dispose();
             _updateTask.Dispose();
             Message?.SafeDelete();
+            _enlivenComponentManager.Dispose();
         }
     }
 }
