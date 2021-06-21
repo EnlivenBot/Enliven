@@ -116,7 +116,7 @@ namespace Bot.DiscordRelated {
         private Task CriticalAsync(string message, Exception? error = null)
             => _logger.Invoke(new LogMessage(_critical, LogSource, message, error));
 
-        public Task Initialize() {
+        public Task OnPostDiscordStartInitialize() {
             return Task.CompletedTask;
         }
     }

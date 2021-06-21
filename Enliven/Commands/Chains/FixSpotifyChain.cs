@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Bot.Config.Emoji;
 using Bot.DiscordRelated;
 using Bot.DiscordRelated.Commands;
+using Bot.DiscordRelated.MessageComponents;
 using Bot.Music.Spotify;
 using Bot.Utilities.Collector;
 using Common;
@@ -32,16 +33,21 @@ namespace Bot.Commands.Chains {
         private ISpotifyAssociationProvider _spotifyAssociationProvider = null!;
         private ISpotifyAssociationCreator _spotifyAssociationCreator = null!;
         private SpotifyMusicResolver _resolver = null!;
+        private SpotifyClientResolver _spotifyClientResolver = null!;
+        private MessageComponentService _messageComponentService = null!;
 
         private FixSpotifyChain(string? uid, ILocalizationProvider loc) : base(uid, loc) { }
 
         public static FixSpotifyChain CreateInstance(IUser requester, IMessageChannel channel, ILocalizationProvider loc, string request,
                                                      IMusicController musicController, IUserDataProvider userDataProvider, 
-                                                     ISpotifyAssociationProvider spotifyAssociationProvider, ISpotifyAssociationCreator spotifyAssociationCreator, SpotifyMusicResolver resolver) {
+                                                     ISpotifyAssociationProvider spotifyAssociationProvider, ISpotifyAssociationCreator spotifyAssociationCreator, 
+                                                     SpotifyMusicResolver resolver, SpotifyClientResolver spotifyClientResolver,
+                                                     MessageComponentService service) {
             var fixSpotifyChain = new FixSpotifyChain($"{nameof(FixSpotifyChain)}_{requester.Id}", loc) {
                 _request = new SpotifyUrl(request), _requester = requester, _channel = channel,
                 _musicController = musicController, _userDataProvider = userDataProvider, 
-                _spotifyAssociationProvider = spotifyAssociationProvider, _spotifyAssociationCreator = spotifyAssociationCreator, _resolver = resolver
+                _spotifyAssociationProvider = spotifyAssociationProvider, _spotifyAssociationCreator = spotifyAssociationCreator, 
+                _resolver = resolver, _spotifyClientResolver = spotifyClientResolver, _messageComponentService = service
             };
 
             return fixSpotifyChain;
@@ -84,7 +90,7 @@ namespace Bot.Commands.Chains {
         }
 
         private async Task StartWithPlaylist() {
-            var spotify = (await _resolver.SpotifyClient)!;
+            var spotify = (await _spotifyClientResolver.GetSpotify())!;
             try {
                 var playlist = await spotify.Playlists.Get(_request.Id);
                 var tracks = (await spotify.PaginateAll(playlist!.Tracks!))
@@ -99,7 +105,7 @@ namespace Bot.Commands.Chains {
                     stringBuilder.AppendLine($"{index + 1}. [{fullTrack.Name}]({fullTrack.Uri}) *by {fullTrack.Artists.First().Name}*");
                 }
 
-                _paginatedMessage = new PaginatedMessage(PaginatedAppearanceOptions.Default, _controlMessage!, Loc);
+                _paginatedMessage = new PaginatedMessage(PaginatedAppearanceOptions.Default, _controlMessage!, Loc, _messageComponentService);
                 _paginatedMessage.SetPages(stringBuilder.ToString(), "{0}", Int32.MaxValue,
                     new List<EmbedFieldBuilder> {
                         new EmbedFieldBuilder {Name = Loc.Get("Chains.FixSpotifyPlaylistChooseName"), Value = Loc.Get("Chains.FixSpotifyPlaylistChooseValue")}
@@ -134,7 +140,7 @@ namespace Bot.Commands.Chains {
 
             IDisposable? paginatedMessageDispose = null;
             // ReSharper disable once RedundantAssignment
-            var fullTrack = await spotifyTrackWrapper.GetFullTrack(await _resolver.SpotifyClient);
+            var fullTrack = await spotifyTrackWrapper.GetFullTrack(await _spotifyClientResolver.GetSpotify());
 
             UpdateMessage();
 
@@ -211,7 +217,7 @@ namespace Bot.Commands.Chains {
                                 (data.DownvotedUsers.Contains(_requester.Id) ? $"**{data.DownvotedUsers.Count} 👎**" : $"{data.DownvotedUsers.Count} 👎")
                     }).ToList();
 
-                _paginatedMessage ??= new PaginatedMessage(PaginatedAppearanceOptions.Default, _controlMessage!, Loc);
+                _paginatedMessage ??= new PaginatedMessage(PaginatedAppearanceOptions.Default, _controlMessage!, Loc, _messageComponentService);
                 _paginatedMessage.SetPages(Loc.Get("Chains.FixSpotifyAssociationChoose", $"***{fullTrack.Name}*** - **{fullTrack.Artists.First().Name}**"),
                     fields, Int32.MaxValue);
                 _paginatedMessage.Disposed.Subscribe(base1 => End());
@@ -221,7 +227,7 @@ namespace Bot.Commands.Chains {
         private async Task StartWithAssociation(SpotifyAssociation association, SpotifyTrackWrapper trackWrapper,
                                                 SpotifyAssociation.TrackAssociationData data) {
             SetTimeout(Constants.StandardTimeSpan);
-            var fullTrack = await trackWrapper.GetFullTrack((await _resolver.SpotifyClient)!);
+            var fullTrack = await trackWrapper.GetFullTrack((await _spotifyClientResolver.GetSpotify())!);
             UpdateBuilder();
             _controlMessage = await _channel.SendMessageAsync(null, false, MainBuilder.Build());
             var emojiCancellation = new CancellationTokenSource();

@@ -8,6 +8,7 @@ using Autofac.Extras.NLog;
 using Bot.DiscordRelated;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Logging;
+using Bot.DiscordRelated.MessageComponents;
 using Bot.DiscordRelated.Music;
 using Bot.Music.Spotify;
 using Bot.Music.Yandex;
@@ -74,7 +75,8 @@ namespace Bot {
         {
             logger.Info("Start Initialising");
 
-            Task.WaitAll(_patches.Select(patch => patch.Apply()).ToArray());
+            await Task.WhenAll(_patches.Select(patch => patch.Apply()).ToArray());
+            await Task.WhenAll(_services.Select(service => service.OnPreDiscordLoginInitialize()).ToArray());
 
             Client.Log += OnClientLog;
 
@@ -98,10 +100,12 @@ namespace Bot {
             }
 
             LocalizationManager.Initialize();
+            
+            await Task.WhenAll(_services.Select(service => service.OnPreDiscordStartInitialize()).ToArray());
 
             await StartClient();
 
-            Task.WaitAll(_services.Select(service => service.Initialize()).ToArray());
+            await Task.WhenAll(_services.Select(service => service.OnPostDiscordStartInitialize()).ToArray());
 
             AppDomain.CurrentDomain.ProcessExit += async (sender, eventArgs) =>
             {
@@ -138,7 +142,7 @@ namespace Bot {
 
             // Music resolvers
             builder.RegisterType<SpotifyMusicResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
-            builder.RegisterType<SpotifyClientResolver>().SingleInstance();
+            builder.RegisterType<SpotifyClientResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
             
             builder.RegisterType<YandexClientResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<Music.Yandex.YandexMusicResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
@@ -150,6 +154,7 @@ namespace Bot {
             builder.RegisterType<SpotifyAssociationProvider>().As<ISpotifyAssociationProvider>().SingleInstance();
             builder.RegisterType<MessageHistoryProvider>().As<IMessageHistoryProvider>().SingleInstance();
             builder.RegisterType<EmbedPlayerDisplayProvider>().SingleInstance();
+            builder.RegisterType<EmbedPlayerQueueDisplayProvider>().SingleInstance();
 
             // Services
             builder.RegisterType<CustomCommandService>().As<IService>().AsSelf().SingleInstance();
@@ -158,6 +163,7 @@ namespace Bot {
             builder.RegisterType<ReliabilityService>().As<IService>().AsSelf().SingleInstance();
             builder.RegisterType<CommandHandlerService>().As<IService>().AsSelf().SingleInstance();
             builder.RegisterType<StatisticsService>().As<IStatisticsService>().AsSelf().SingleInstance();
+            builder.RegisterType<MessageComponentService>().As<MessageComponentService>().AsSelf().SingleInstance();
         }
 
         public async Task StartClient()

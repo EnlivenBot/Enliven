@@ -16,14 +16,12 @@ using SpotifyAPI.Web;
 namespace Bot.Music.Spotify {
     public class SpotifyMusicResolver : IMusicResolver, ISpotifyAssociationCreator {
         private ISpotifyAssociationProvider _spotifyAssociationProvider;
+        private SpotifyClientResolver _resolver;
 
-        public SpotifyMusicResolver(ISpotifyAssociationProvider spotifyAssociationProvider, SpotifyClientResolver client)
-        {
-            SpotifyClient = client.GetSpotify();
+        public SpotifyMusicResolver(ISpotifyAssociationProvider spotifyAssociationProvider, SpotifyClientResolver resolver) {
+            _resolver = resolver;
             _spotifyAssociationProvider = spotifyAssociationProvider;
         }
-
-        public Task<SpotifyClient?> SpotifyClient { get; }
 
         public Task<MusicResolveResult> Resolve(LavalinkCluster cluster, string query) {
             var url = new SpotifyUrl(query);
@@ -32,7 +30,7 @@ namespace Bot.Music.Spotify {
 
         public async Task<MusicResolveResult> Resolve(LavalinkCluster cluster, SpotifyUrl url) {
             return new MusicResolveResult(
-                async () => await SpotifyClient != null && url.IsValid,
+                async () => await _resolver.GetSpotify() != null && url.IsValid,
                 () => Resolve(url, cluster)
             );
         }
@@ -47,7 +45,7 @@ namespace Bot.Music.Spotify {
             if (cachedTrack != null) return cachedTrack;
 
             try {
-                var lavalinkTracks = await (await new LavalinkMusicResolver().Resolve(lavalinkCluster, await spotifyTrackWrapper.GetTrackInfo(await SpotifyClient))).Resolve();
+                var lavalinkTracks = await (await new LavalinkMusicResolver().Resolve(lavalinkCluster, await spotifyTrackWrapper.GetTrackInfo(await _resolver.GetSpotify()))).Resolve();
                 var spotifyTrackAssociation = _spotifyAssociationProvider.Create(spotifyTrackWrapper.Id, lavalinkTracks[0].Identifier);
                 spotifyTrackAssociation.Save();
                 return spotifyTrackAssociation;
@@ -61,7 +59,7 @@ namespace Bot.Music.Spotify {
 
         private async Task<List<LavalinkTrack>> Resolve(SpotifyUrl url, LavalinkCluster cluster) {
             try {
-                var spotify = await SpotifyClient;
+                var spotify = await _resolver.GetSpotify();
                 var spotifyTracks = await url.Resolve(spotify);
                 var enumerable = spotifyTracks.Select(async s =>
                     new SpotifyLavalinkTrack(s, (await ResolveAssociation(s, cluster)).GetBestAssociation().Association)).ToList();

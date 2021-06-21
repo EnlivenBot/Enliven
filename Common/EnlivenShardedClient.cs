@@ -1,33 +1,52 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Reactive.Linq;
+using System.Reactive.Subjects;
+using System.Threading.Tasks;
+using Discord;
 using Discord.WebSocket;
 
 namespace Common {
     public class EnlivenShardedClient : DiscordShardedClient {
-        public bool IsReady => Ready.IsCompleted;
-        public Task Ready => _readyTaskCompletionSource.Task;
-        private TaskCompletionSource<object> _readyTaskCompletionSource = new TaskCompletionSource<object>();
-
-        public EnlivenShardedClient() {
-            SubscribeToReady();
+        private readonly TaskCompletionSource<object> _readyTaskCompletionSource = new TaskCompletionSource<object>();
+        public EnlivenShardedClient() : base() {
+            SubscribeToEvents();
         }
 
         public EnlivenShardedClient(DiscordSocketConfig config) : base(config) {
-            SubscribeToReady();
+            SubscribeToEvents();
+            SubscribeToMessageComponents();
         }
 
         public EnlivenShardedClient(int[] ids) : base(ids) {
-            SubscribeToReady();
+            SubscribeToEvents();
+            SubscribeToMessageComponents();
         }
 
         public EnlivenShardedClient(int[] ids, DiscordSocketConfig config) : base(ids, config) {
-            SubscribeToReady();
+            SubscribeToEvents();
+            SubscribeToMessageComponents();
         }
 
-        private void SubscribeToReady() {
+        public bool IsReady => Ready.IsCompleted;
+        public Task Ready => _readyTaskCompletionSource.Task;
+        public IObservable<SocketMessageComponent> MessageComponentUse { get; private set; } = null!;
+        private readonly Subject<SocketInteraction> _interactionCreatedSubject = new Subject<SocketInteraction>();
+
+        private void SubscribeToEvents() {
             ShardReady += client => {
                 _readyTaskCompletionSource.TrySetResult(true);
                 return Task.CompletedTask;
             };
+            InteractionCreated += interaction => {
+                _interactionCreatedSubject.OnNext(interaction);
+                return Task.CompletedTask;
+            };
+        }
+
+        private void SubscribeToMessageComponents() {
+            MessageComponentUse = _interactionCreatedSubject
+                                 .Where(interaction => interaction.Type == InteractionType.MessageComponent)
+                                 .Select(interaction => (SocketMessageComponent) interaction);
         }
     }
 }

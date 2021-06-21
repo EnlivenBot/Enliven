@@ -28,6 +28,7 @@ namespace Bot.DiscordRelated.Commands.Modules {
         public IMusicController MusicController { get; set; } = null!;
         public EmbedPlayerDisplayProvider EmbedPlayerDisplayProvider { get; set; } = null!;
         public LyricsService LyricsService { get; set; } = null!;
+        public EmbedPlayerQueueDisplayProvider EmbedPlayerQueueDisplayProvider { get; set; } = null;
 
         protected override void BeforeExecute(CommandInfo command) {
             base.BeforeExecute(command);
@@ -106,7 +107,7 @@ namespace Bot.DiscordRelated.Commands.Modules {
         }
 
         // ReSharper disable once InconsistentNaming
-        protected override async Task<IUserMessage> ReplyAsync(string? message = null, bool isTTS = false, Embed? embed = null, RequestOptions? options = null, AllowedMentions? allowedMentions = null, MessageReference? messageReference = null) {
+        protected override async Task<IUserMessage> ReplyAsync(string message = null, bool isTTS = false, Embed embed = null, RequestOptions options = null, AllowedMentions allowedMentions = null, MessageReference messageReference = null, MessageComponent component = null) {
             return await ResponseChannel.SendMessageAsync(message, isTTS, embed, options).ConfigureAwait(false);
         }
 

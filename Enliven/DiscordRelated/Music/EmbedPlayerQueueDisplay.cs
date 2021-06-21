@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Bot.DiscordRelated.MessageComponents;
 using Common.Localization.Entries;
 using Common.Localization.Providers;
 using Common.Music.Controller;
@@ -13,20 +14,22 @@ namespace Bot.DiscordRelated.Music {
         private ILocalizationProvider _loc;
         private IMessageChannel _targetChannel;
 
-        public EmbedPlayerQueueDisplay(IMessageChannel targetChannel, ILocalizationProvider loc) {
+        public EmbedPlayerQueueDisplay(IMessageChannel targetChannel, ILocalizationProvider loc, MessageComponentService messageComponentService) {
             _loc = loc;
+            _messageComponentService = messageComponentService;
             _targetChannel = targetChannel;
         }
 
         private PaginatedMessage _paginatedMessage = null!;
         private Disposables? _subscribers;
+        private MessageComponentService _messageComponentService;
 
         public override async Task Initialize(FinalLavalinkPlayer finalLavalinkPlayer) {
             var paginatedAppearanceOptions = new PaginatedAppearanceOptions {Timeout = TimeSpan.FromMinutes(1)};
-            _paginatedMessage = new PaginatedMessage(paginatedAppearanceOptions, _targetChannel, _loc) {
+            _paginatedMessage = new PaginatedMessage(paginatedAppearanceOptions, _targetChannel, _loc, _messageComponentService) {
                 Title = _loc.Get("MusicQueues.QueueTitle"), Color = Color.Gold
             };
-            _paginatedMessage.Disposed.Subscribe(base2 => Shutdown(null, null));
+            _paginatedMessage.Disposed.Subscribe(base2 => ExecuteShutdown(null, null));
             await base.Initialize(finalLavalinkPlayer);
             await _paginatedMessage.Resend();
         }
@@ -47,18 +50,17 @@ namespace Bot.DiscordRelated.Music {
             _subscribers = new Disposables(
                 Player.Playlist.Changed.Subscribe(playlist => UpdatePages()),
                 Player.CurrentTrackIndexChanged.Subscribe(i => UpdatePages()),
-                Player.Shutdown.Subscribe(entry => Shutdown(null, null))
+                Player.Shutdown.Subscribe(entry => ExecuteShutdown(null, null))
             );
             return Task.CompletedTask;
         }
 
-        public override Task Shutdown(IEntry? header, IEntry? body) {
-            base.Shutdown(header!, body!);
+        public override async Task ExecuteShutdown(IEntry? header, IEntry? body) {
+            await base.ExecuteShutdown(header!, body!);
             _subscribers?.Dispose();
             _paginatedMessage.Dispose();
-            return Task.CompletedTask;
         }
-
+        
         public override Task LeaveNotification(IEntry? header, IEntry? body) {
             return Task.CompletedTask;
         }

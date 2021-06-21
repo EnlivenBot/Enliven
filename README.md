@@ -1,33 +1,20 @@
-<table align="center" bgcolor="brown"><tr><td align="center" width="9999">
-
-## Old bot owner account is hacked now. 
-Please kick old bot user and,  if you want to continue using the bot, [add a new bot](https://discord.com/oauth2/authorize?client_id=801159808929497208&scope=bot&permissions=1110764608). (Enliven#5499)  
-
-All your data will be kept and transfer to new bot
-</td></tr>
-</table>
 <table align="center"><tr><td align="center" width="9999">
-<img src="https://cdn.discordapp.com/avatars/606760964183949314/e87c138f296e53e63fd55114eff36dcf.png" align="center" alt="Project icon">
+<img src="https://cdn.discordapp.com/avatars/801159808929497208/0995f1b0c7cf4bfc88698c114b3bb18c.png" align="center" alt="Project icon">
 
 # Enliven
-
-  <p align="center">
-  
-  [![Discord Bots](https://top.gg/api/widget/status/606760964183949314.svg)](https://top.gg/bot/606760964183949314)
-  [![Discord Bots](https://top.gg/api/widget/upvotes/606760964183949314.svg)](https://top.gg/bot/606760964183949314)
-  [![Discord Bots](https://top.gg/api/widget/owner/606760964183949314.svg)](https://top.gg/bot/606760964183949314)
-  
-  </p>
+<a href="https://discord.com/oauth2/authorize?client_id=801159808929497208&permissions=2184571456&scope=bot">
+<img src="https://img.shields.io/badge/Official bot instance:-Enliven %235399-yellow?style=for-the-badge&logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAACn0lEQVQ4jW2TS0hUYRTHf9+de8cZH+NoM+PbUdMpoSAisECCIGgTQUQtJCKCaNOuVrqtaBFB0KJaRRiUy4hWlSSRC0mGDHxlar6bQR3HmbnzuPeLb8bUHgfO5nzn/L///zwENaFhoAEhEtimwAZ0F3+aBAQIAVIqV4ESYE4HWkCWI2yfYTZQbC8RM8ch4wS0LRgBWEAG9D1QVwuZtHowFMA6mlWuLcPrriLcrd0c/xgHdwr0ItAkZAX4E9DsQAyFke/6oaxSMVnXC/AalFnsC8epXx2lrz6IDGzgP7CKuz1L6eEkj6f38zB8EhYXIZUCT16O0PMMJdieHPMjIYKzXzh/+R6chtH38OohVIZgbgQI30W6y6CmCXKZfKm+LTHqprpjmuTFKc71BnFOmHweXGEhFoChRnAmoTYNtrZdzK4ugUOS2yzCiGqEOuL89PhZaOqGQyFwjYHfBqkXJrHLtN8SKE2zPlmB0XeMB16bwesz9IaD1A88hYNHYTW6lch/AJRlHWieLLQtQeMmo9EK5p+8xRybhLNnwDTBsv8B2OmBLiEOrHj4MNTMqQGb9OgscAmIqJFDOg0eL+TSfwNI0AQkXLC0QUDEudW2TE3XFHY1XItcJRXohL4X0P8J/NWFjcwDqN9NJ8JYwzjxjch4D0UbkpvBZTAjYCVpbbnAcKiE+88eMZczyWoaWNYW+ZrQLBaNmpVioqGNvZ2txI74WLtxG28WvFVA9RT4v0J7gjvzA/Q8fwm+gKr+oSRIDBtbuLgyaRM03pCYNpl1DZETToxkBu27jTENdfPFzKQjUO4t9A2kYrAOojw/D5GElTLIAlUT4MhBRgfbUfBNCU4v+Cohq5KI7ZwzJPKSVEPVsqiCrSXRFLoKCbVMu84Z5n4B/oIEalc81VUAAAAASUVORK5CYII=">
+<br>
+</a>
 
 > Powerful music and logging bot for Discord  
 
-**Fully free** [Discord](https://discord.com/) bot with Embed music playback, emoji control, various music sources (including livestreams) and more.  
+**Fully free** [Discord](https://discord.com/) bot with Embed music playback, buttons control, various music sources (including livestreams) and more.  
 The best opportunities for logging messages.
 </td></tr>
 <tr><td align="center" width="9999">
 
 #### Join our support server:
-
 [![Discord support server](https://discordapp.com/api/guilds/706098979938500708/widget.png?style=banner3)](https://discord.gg/zfBffbBbCp)
 
 </td></tr>
@@ -36,15 +23,16 @@ The best opportunities for logging messages.
 ## Features
  * Music player
    * Embed playback control
-     * Emoji control
+     * Buttons control
      * Progress display
      * Queue display
      * Request history
      * This and more in one control message:  
-     <img src="https://gitlab.com/skprochlab/nJMaLBot/-/wikis/uploads/80b7037668f4762bcb01017aa7114264/Screenshot_5.png" />
+     <img src="https://gitlab.com/enlivenbot/enliven/-/wikis/uploads/e0810f0e0e8ca07b5bb202286181ac8d/image.png" />
    * Various music sources
      * Youtube, Twitch, SoundCloud and all [supported by youtube-dl sites](https://ytdl-org.github.io/youtube-dl/supportedsites.html)
      * Spotify
+     * Yandex Music
      * Live streams
    * Bass boost support
    * Custom playlists
@@ -66,7 +54,7 @@ The best opportunities for logging messages.
 
 ## Getting started
 
-1. You need to add the bot to your server using [this link](https://discord.com/oauth2/authorize?client_id=801159808929497208&scope=bot&permissions=1110764608)
+1. You need to add the bot to your server using [this link](https://discord.com/oauth2/authorize?client_id=801159808929497208&permissions=2184571456&scope=bot)
 2. To find out all available commands use `&help`
 
 ### Initial Configuration
@@ -89,23 +77,24 @@ branch. Pull requests are warmly welcome.
 - Enliven on discord bots lists:
   - Links will appear here as soon as I regain access to my account. The official source of information is this gitlab.
   
-[comment]: <> (  - [top.gg]&#40;https://top.gg/bot/606760964183949314&#41;)
+  - [top.gg](https://top.gg/bot/801159808929497208) (as soon as approved)
 
-[comment]: <> (  - [discordbotlist.com]&#40;https://discordbotlist.com/bots/enliven&#41;)
+  - [discordbotlist.com](https://discordbotlist.com/bots/enliven)
 
-[comment]: <> (  - [bots.ondiscord.xyz]&#40;https://bots.ondiscord.xyz/bots/606760964183949314&#41;)
-
-[comment]: <> (  - [discord.bots.gg]&#40;https://discord.bots.gg/bots/606760964183949314&#41;)
+  - [discord.bots.gg](https://discord.bots.gg/bots/801159808929497208) 
+    
+  - [bots.discordlabs.org](https://bots.discordlabs.org/bot/801159808929497208) 
   
 ## Help us
-You can help by making a contributing or by voting on the following sites:
-- Links will appear here as soon as I regain access to my account. The official source of information is this gitlab.
+You can help by making a contributing or by telling your friends about the bot. The more people use the bot, the better!
 
-[comment]: <> (- [top.gg]&#40;https://top.gg/bot/606760964183949314&#41; &#40;vote every 12 hours, write a review&#41;)
+Also, you can upvote bot on botlists:
 
-[comment]: <> (- [discordbotlist.com]&#40;https://discordbotlist.com/bots/enliven&#41; &#40;vote every 12 hours&#41;)
+- [top.gg](https://top.gg/bot/801159808929497208) (as soon as approved)
 
-[comment]: <> (- [bots.ondiscord.xyz]&#40;https://bots.ondiscord.xyz/bots/606760964183949314&#41; &#40;write a review&#41;)
+- [discordbotlist.com](https://discordbotlist.com/bots/enliven)
+
+- [bots.discordlabs.org](https://bots.discordlabs.org/bot/801159808929497208) (as soon as approved)
 
 ## Compiling sources
 1. Clone this repo:

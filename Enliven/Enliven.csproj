@@ -5,7 +5,7 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <RootNamespace>Bot</RootNamespace>
     <AssemblyName>Enliven</AssemblyName>
-    <Version>14.1</Version>
+    <Version>15</Version>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
@@ -16,7 +16,6 @@
   <ItemGroup>
     <PackageReference Include="Autofac" Version="6.1.0" />
     <PackageReference Include="Autofac.Extras.NLog" Version="4.0.0" />
-    <PackageReference Include="Discord.Net" Version="2.3.0-dev-20201223.7" />
     <PackageReference Include="GrapeCity.Documents.Html" Version="3.2.0.556" />
     <PackageReference Include="GrapeCity.Documents.Html.Linux.X64" Version="3.2.0.556" />
     <PackageReference Include="GrapeCity.Documents.Html.Mac.X64" Version="3.2.0.556" />

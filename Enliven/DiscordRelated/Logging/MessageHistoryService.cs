@@ -29,7 +29,7 @@ namespace Bot.DiscordRelated.Logging {
             this.logger = logger;
         }
         
-        public Task Initialize() {
+        public Task OnPostDiscordStartInitialize() {
             // Message created handled located in CommandHandler
             Program.Client.MessageUpdated += ClientOnMessageUpdated;
             Program.Client.MessageDeleted += ClientOnMessageDeleted;

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Bot.Config.Emoji;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Criteria;
+using Bot.DiscordRelated.MessageComponents;
 using Bot.Music.Spotify;
 using Bot.Utilities.Collector;
 using Common;
@@ -30,8 +31,6 @@ namespace Bot.DiscordRelated.Music {
         private CollectorsGroup _collectorsGroup = new CollectorsGroup();
         private CommandHandlerService _commandHandlerService;
         private IUserMessage? _controlMessage;
-        private SingleTask _controlMessageSendTask;
-        private IDiscordClient _discordClient;
         private bool _isExternalEmojiAllowed;
         private ILocalizationProvider _loc;
 
@@ -41,20 +40,24 @@ namespace Bot.DiscordRelated.Music {
         private IMessageChannel _targetChannel;
         private IGuild? _targetGuild;
         private SingleTask _updateControlMessageTask;
+        private SingleTask _controlMessageSendTask;
 
         private PriorityEmbedBuilderWrapper EmbedBuilder;
 
         public bool NextResendForced;
+        private MessageComponentService _messageComponentService;
+        private MessageComponent? _messageComponent;
+        private EnlivenComponentManager? _messageComponentManager;
 
         public EmbedPlayerDisplay(ITextChannel targetChannel, IDiscordClient discordClient, ILocalizationProvider loc,
-                                  CommandHandlerService commandHandlerService, IPrefixProvider prefixProvider) :
-            this((IMessageChannel) targetChannel, discordClient, loc, commandHandlerService, prefixProvider) {
+                                  CommandHandlerService commandHandlerService, IPrefixProvider prefixProvider, MessageComponentService messageComponentService) :
+            this((IMessageChannel) targetChannel, discordClient, loc, commandHandlerService, prefixProvider, messageComponentService) {
             _targetGuild = targetChannel.Guild;
         }
 
         public EmbedPlayerDisplay(IMessageChannel targetChannel, IDiscordClient discordClient, ILocalizationProvider loc,
-                                  CommandHandlerService commandHandlerService, IPrefixProvider prefixProvider) {
-            _discordClient = discordClient;
+                                  CommandHandlerService commandHandlerService, IPrefixProvider prefixProvider, MessageComponentService messageComponentService) {
+            _messageComponentService = messageComponentService;
             _loc = loc;
             _commandHandlerService = commandHandlerService;
             _prefixProvider = prefixProvider;
@@ -63,8 +66,9 @@ namespace Bot.DiscordRelated.Music {
                 if (_controlMessage != null) {
                     try {
                         await _controlMessage.ModifyAsync(properties => {
-                            properties.Embed = EmbedBuilder.Build();
+                            properties.Embed = EmbedBuilder!.Build();
                             properties.Content = "";
+                            properties.Components = _messageComponent;
                         }, new RequestOptions {CancelToken = _cancellationTokenSource.Token});
                     }
                     catch (Exception) {
@@ -81,7 +85,7 @@ namespace Bot.DiscordRelated.Music {
                 try {
                     if (NextResendForced || await new EnsureLastMessage(_targetChannel, _controlMessage?.Id ?? 0, 3) {IsNullableTrue = true}.Invert().JudgeAsync()) {
                         NextResendForced = false;
-                        await SendControlMessageInternal();
+                        await SendControlMessage();
                     }
                     else {
                         data.OverrideDelay = TimeSpan.FromSeconds(5);
@@ -112,12 +116,18 @@ namespace Bot.DiscordRelated.Music {
             }
         }
 
-        public override async Task Shutdown(IEntry header, IEntry body) {
-            base.Shutdown(header, body);
+        public override async Task ExecuteShutdown(IEntry header, IEntry body) {
+            base.ExecuteShutdown(header, body);
             _cancellationTokenSource.Cancel();
             var message = _controlMessage;
-            Dispose();
             _controlMessage = null;
+            
+            _playerSubscriptions?.Dispose();
+            _cancellationTokenSource.Dispose();
+            _controlMessageSendTask.Dispose();
+            _updateControlMessageTask.Dispose();
+            _collectorsGroup.DisposeAll();
+            
             if (message != null) {
                 try {
                     message.RemoveAllReactionsAsync();
@@ -129,6 +139,7 @@ namespace Bot.DiscordRelated.Music {
                 await message.ModifyAsync(properties => {
                     properties.Content = Optional<string>.Unspecified;
                     properties.Embed = new EmbedBuilder().WithColor(Color.Gold).WithTitle(header.Get(_loc)).WithDescription(body.Get(_loc)).Build();
+                    properties.Components = new ComponentBuilder().Build();
                 });
             }
             else {
@@ -152,23 +163,15 @@ namespace Bot.DiscordRelated.Music {
                     UpdateProgress();
                     UpdateTrackInfo();
                     UpdateControlMessage();
+                    UpdateMessageComponents();
                 }),
                 Player.CurrentTrackIndexChanged.Subscribe(i => UpdateQueue())
             );
             UpdateNode();
             await ControlMessageResend();
         }
-
-        public override void Dispose() {
-            _playerSubscriptions?.Dispose();
-
-            _cancellationTokenSource.Dispose();
-            _controlMessageSendTask.Dispose();
-            _updateControlMessageTask.Dispose();
-            _collectorsGroup.DisposeAll();
-        }
-
-        private async Task SendControlMessageInternal() {
+        
+        private async Task SendControlMessage() {
             _cancellationTokenSource.Cancel();
             _cancellationTokenSource = new CancellationTokenSource();
 
@@ -180,63 +183,96 @@ namespace Bot.DiscordRelated.Music {
             await CheckRestrictions();
 
             var oldControlMessage = _controlMessage;
-            _controlMessage = await _targetChannel.SendMessageAsync(null, false, EmbedBuilder.Build());
+            await SendControlMessage_WithMessageComponents();
             oldControlMessage.SafeDelete();
+        }
 
-            _collectorsGroup.DisposeAll();
-            _collectorsGroup.Add(
-                CollectorsUtils.CollectReactions<string>(
-                    reaction => reaction.MessageId == _controlMessage?.Id && reaction.UserId != Program.Client.CurrentUser.Id,
-                    async (args, s) => {
-                        args.RemoveReason();
-                        await _commandHandlerService.ExecuteCommand(s, new ReactionCommandContext(Program.Client, args.Reaction),
-                            args.Reaction.UserId.ToString());
-                    },
-                    (CommonEmoji.LegacyTrackPrevious, () => Player.TrackPosition.TotalSeconds > 15 ? "seek 0s" : "skip -1"),
-                    (CommonEmoji.LegacyPlay, () => "resume"),
-                    (CommonEmoji.LegacyPause, () => "pause"),
-                    (CommonEmoji.LegacyTrackNext, () => "skip"),
-                    (CommonEmoji.LegacyStop, () => "stop"),
-                    (CommonEmoji.LegacyRepeat, () => "repeat"),
-                    (CommonEmoji.LegacyShuffle, () => "shuffle")
-                ));
-            var addReactionsAsync = _controlMessage.AddReactionsAsync(new IEmote[] {
-                CommonEmoji.LegacyTrackPrevious, CommonEmoji.LegacyPlay, CommonEmoji.LegacyPause, CommonEmoji.LegacyTrackNext,
-                CommonEmoji.LegacyStop, CommonEmoji.LegacyRepeat, CommonEmoji.LegacyShuffle
-            }, new RequestOptions {CancelToken = _cancellationTokenSource.Token});
+        private async Task SendControlMessage_WithMessageComponents() {
+            _messageComponentManager?.Dispose();
+            _messageComponentManager = _messageComponentService.GetBuilder();
+            var btnTemplate = new EnlivenButtonBuilder().WithTargetRow(0).WithStyle(ButtonStyle.Secondary);
+            _messageComponentManager.WithButton(btnTemplate.Clone().WithEmote(CommonEmoji.LegacyTrackPrevious).WithCustomId("TrackPrevious"));
+            _messageComponentManager.WithButton(btnTemplate.Clone().WithEmote(CommonEmoji.LegacyFastReverse).WithCustomId("FastReverse"));
+            _messageComponentManager.WithButton(btnTemplate.Clone().WithEmote(CommonEmoji.LegacyPlayPause).WithCustomId("PlayPause").WithStyle(ButtonStyle.Primary));
+            _messageComponentManager.WithButton(btnTemplate.Clone().WithEmote(CommonEmoji.LegacyFastForward).WithCustomId("FastForward"));
+            _messageComponentManager.WithButton(btnTemplate.Clone().WithEmote(CommonEmoji.LegacyTrackNext).WithCustomId("TrackNext"));
+            btnTemplate.WithTargetRow(1);
+            _messageComponentManager.WithButton(btnTemplate.Clone().WithEmote(CommonEmoji.BookmarkTabs).WithCustomId("Queue"));
+            _messageComponentManager.WithButton(btnTemplate.Clone().WithEmote(CommonEmoji.LegacyShuffle).WithCustomId("Shuffle"));
+            _messageComponentManager.WithButton(btnTemplate.Clone().WithEmote(CommonEmoji.LegacyStop).WithCustomId("Stop").WithStyle(ButtonStyle.Danger));
+            _messageComponentManager.WithButton(btnTemplate.Clone().WithCustomId("Repeat"));
+            _messageComponentManager.WithButton(btnTemplate.Clone().WithEmote(CommonEmoji.LegacyArrowDown).WithCustomId("Down").WithDisabled(true));
+            _messageComponentManager.SetCallback(async (s, component, arg3) => {
+                var command = s switch {
+                    "TrackPrevious" => Player.TrackPosition.TotalSeconds > 15 ? "seek 0s" : "skip -1",
+                    "FastReverse"   => "rw 20s",
+                    "PlayPause"     => Player.State == PlayerState.Paused ? "resume" : "pause",
+                    "FastForward"   => "ff 20s",
+                    "TrackNext"     => "skip",
+                    "Queue"         => "queue",
+                    "Shuffle"       => "shuffle",
+                    "Stop"          => "stop",
+                    "Repeat"        => "repeat",
+                    "Down"          => await TryPerformArrowDownResendWithComponents(),
+                    _               => throw new ArgumentOutOfRangeException()
+                };
 
+                if (!string.IsNullOrEmpty(command)) {
+                    await _commandHandlerService.ExecuteCommand(command, new ComponentCommandContext(Program.Client, component),
+                        component.User.Id.ToString());
+                }
+
+                async Task<string?> TryPerformArrowDownResendWithComponents() {
+                    if ((await _controlMessage!.Channel.GetMessagesAsync(1).FlattenAsync()).FirstOrDefault()?.Id == _controlMessage.Id) {
+                        return null;
+                    }
+                    NextResendForced = true;
+                    await _controlMessageSendTask.Execute(false, TimeSpan.Zero);
+                    _messageComponentManager.GetButton("Down")!.WithDisabled(true);
+                    return null;
+                }
+            });
+
+            UpdateMessageComponents();
+
+            _messageComponent = _messageComponentManager.Build();
+            _controlMessage = await _targetChannel.SendMessageAsync(null, false, EmbedBuilder.Build(), component: _messageComponent);
+            _messageComponentManager.AssociateWithMessage(_controlMessage);
+            
             _collectorsGroup.Controllers.Add(CollectorsUtils.CollectMessage(_controlMessage.Channel, message => true, async args => {
                 args.StopCollect();
-                try {
-                    await addReactionsAsync;
-                }
-                catch (Exception) {
-                    // ignored
-                }
-
-                if (_controlMessage == null) return;
-                _controlMessage.AddReactionAsync(CommonEmoji.LegacyArrowDown, new RequestOptions {CancelToken = _cancellationTokenSource.Token});
-                _collectorsGroup.Controllers.Add(CollectorsUtils.CollectReaction(_controlMessage,
-                    reaction => reaction.Emote.Equals(CommonEmoji.LegacyArrowDown), async emoteCollectorEventArgs => {
-                        emoteCollectorEventArgs.RemoveReason();
-                        if ((await _controlMessage.Channel.GetMessagesAsync(1).FlattenAsync()).FirstOrDefault()?.Id == _controlMessage.Id) {
-                            return;
-                        }
-
-                        NextResendForced = true;
-                        await _controlMessageSendTask.Execute(false, TimeSpan.Zero);
-                    }, CollectorFilter.IgnoreSelf));
+                _messageComponentManager.GetButton("Down")!.WithDisabled(false);
             }));
+        }
+
+        public void UpdateMessageComponents() {
+            if (_messageComponentManager == null) return;
+            var entries = _messageComponentManager.Entries;
+            var updated = false;
+
+            var targetPlayPauseEmoji = Player.State == PlayerState.Paused ? CommonEmoji.LegacyPlay : CommonEmoji.LegacyPause;
+            updated = updated || Equals(entries["PlayPause"].Emote, targetPlayPauseEmoji);
+            entries["PlayPause"].Emote = targetPlayPauseEmoji;
+
+            var nextRepeatState = Player.LoopingState.Next() switch {
+                LoopingState.One => CommonEmoji.RepeatOneBox,
+                LoopingState.All => CommonEmoji.RepeatBox,
+                LoopingState.Off => CommonEmoji.RepeatOffBox,
+                _                => throw new ArgumentOutOfRangeException()
+            };
+            updated = updated || Equals(entries["Repeat"].Emote, nextRepeatState);
+            entries["Repeat"].Emote = nextRepeatState;
+
+            if (updated) _messageComponent = _messageComponentManager.Build();
         }
 
         private async Task CheckRestrictions() {
             if (_targetGuild != null) {
-                var guildUser = (await _targetGuild.GetUserAsync(Program.Client.CurrentUser.Id)).GetPermissions((IGuildChannel) _targetChannel);
-                _isExternalEmojiAllowed = guildUser.UseExternalEmojis;
+                var guildUser = await _targetGuild.GetUserAsync(Program.Client.CurrentUser.Id);
+                var channelPerms = guildUser.GetPermissions((IGuildChannel) _targetChannel);
+                _isExternalEmojiAllowed = channelPerms.UseExternalEmojis;
                 var text = "";
-                if (!guildUser.ManageMessages) text += _loc.Get("Music.WarningEmojiRemoval") + "\n";
-                if (!guildUser.AddReactions) text += _loc.Get("Music.WarningEmojiAdding") + "\n";
-                if (!guildUser.UseExternalEmojis) text += _loc.Get("Music.WarningCustomEmoji") + "\n";
+                if (!channelPerms.UseExternalEmojis) text += _loc.Get("Music.WarningCustomEmoji") + "\n";
 
                 // ReSharper disable once AssignmentInConditionalExpression
                 if (EmbedBuilder.Fields["Warnings"].IsEnabled = !string.IsNullOrWhiteSpace(text)) {
@@ -258,7 +294,7 @@ namespace Bot.DiscordRelated.Music {
                     _                   => _isExternalEmojiAllowed ? CommonEmojiStrings.Instance.Stop : "⏹"
                 };
                 var loopingStateString = Player.LoopingState switch {
-                    LoopingState.One => _isExternalEmojiAllowed ? CommonEmojiStrings.Instance.RepeatOnce : "🔂",
+                    LoopingState.One => _isExternalEmojiAllowed ? CommonEmojiStrings.Instance.RepeatOne : "🔂",
                     LoopingState.All => _isExternalEmojiAllowed ? CommonEmojiStrings.Instance.Repeat : "🔁",
                     LoopingState.Off => _isExternalEmojiAllowed ? CommonEmojiStrings.Instance.RepeatOff : "❌",
                     _                => throw new InvalidEnumArgumentException()
@@ -296,9 +332,9 @@ namespace Bot.DiscordRelated.Music {
                     ? $"https://img.youtube.com/vi/{Player.CurrentTrack?.TrackIdentifier}/0.jpg"
                     : null;
                 EmbedBuilder
-                   .WithAuthor(Player.CurrentTrack!.Author.SafeSubstring(Constants.MaxEmbedAuthorLength, "...").IsBlank("Unknown"), iconUrl)
-                   .WithTitle(MusicController.EscapeTrack(Player.CurrentTrack!.Title).SafeSubstring(Discord.EmbedBuilder.MaxTitleLength, "...")!)
-                   .WithUrl(Player.CurrentTrack.Source!);
+                    .WithAuthor(Player.CurrentTrack!.Author.SafeSubstring(Constants.MaxEmbedAuthorLength, "...").IsBlank("Unknown"), iconUrl)
+                    .WithTitle(MusicController.EscapeTrack(Player.CurrentTrack!.Title).SafeSubstring(Discord.EmbedBuilder.MaxTitleLength, "...")!)
+                    .WithUrl(Player.CurrentTrack.Source!);
             }
             else {
                 EmbedBuilder.Author = new EmbedAuthorBuilder();

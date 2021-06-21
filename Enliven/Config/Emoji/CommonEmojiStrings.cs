@@ -17,13 +17,16 @@ namespace Bot.Config.Emoji {
 
         public static CommonEmojiStrings Instance => _lazy.Value;
 
-        public string RepeatOnce { get; set; } = "<:repeatonce:682469899351621648>";
+        public string RepeatOne { get; set; } = "<:repeatonce:682469899351621648>";
         public string RepeatOff { get; set; } = "<:repeatoff:682469899276517401>";
         public string Repeat { get; set; } = "<:repeat:682469899066409043>";
         public string Play { get; set; } = "<:play:682580118358458368>";
         public string Pause { get; set; } = "<:pause:682580118425960469>";
         public string Stop { get; set; } = "<:stop:682658172615524382>";
         public string Spotify { get; set; } = "<:spotify:764837934519156746>";
+        public string RepeatBox {get;set;} = "<:repeatbox:854346340993597471>";
+        public string RepeatOffBox {get;set;} = "<:repeatoffbox:854346381410172968>";
+        public string RepeatOneBox {get;set;} = "<:repeatonebox:854346274416230421>";
         public string LegacyTrackNext { get; set; } = "⏭️";
         public string LegacyTrackPrevious { get; set; } = "⏮️";
         public string LegacyPause { get; set; } = "⏸️";
@@ -38,6 +41,8 @@ namespace Bot.Config.Emoji {
         public string LegacyArrowDown { get; set; } = "⬇️";
         public string LegacyFileBox { get; set; } = "🗃️";
         public string LegacyReverse { get; set; } = "◀️";
+        public string LegacyFastReverse { get; set; } = "⏪";
+        public string LegacyFastForward { get; set; } = "⏩";
         public string Help { get; set; } = "ℹ️";
         public string Memo { get; set; } = "📝";
         public string Robot { get; set; } = "🤖";
@@ -47,5 +52,6 @@ namespace Bot.Config.Emoji {
         public string ThumbsUp { get; set; } = "👍";
         public string ThumbsDown { get; set; } = "👎";
         public string Warning { get; set; } = "⚠️";
+        public string BookmarkTabs { get; set; } = "📑";
     }
 }

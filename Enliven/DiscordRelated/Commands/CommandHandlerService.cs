@@ -43,7 +43,7 @@ namespace Bot.DiscordRelated.Commands {
         public static FuzzySearch FuzzySearch { get; set; } = new FuzzySearch();
         public List<CommandInfo> AllCommands { get; } = new List<CommandInfo>();
 
-        public Task Initialize() {
+        public Task OnPostDiscordStartInitialize() {
             FuzzySearch.AddData(CommandService.Aliases.Select(infos => infos.Key));
 
             _client.MessageReceived += HandleCommand;

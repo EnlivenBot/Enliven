@@ -93,8 +93,6 @@
       "ResumeViaPlaylists": "Puedes intentar volver a reproducir usando: `{0}loadplaylist {1}`",
       "Empty": "Vacío",
       "Warning": "**Alerta**",
-      "WarningEmojiRemoval": "❗No puedo eliminar las reacciones de los usuarios, como debería. Para hacerlo, necesito el permiso `MANAGE_MESSAGES`.",
-      "WarningEmojiAdding": "‼️No puedo añadir reacciones a mis mensajes, los controles visuales quedan deshabilitados - the bot cannot add them to the message. Para hacerlo, necesito el permiso `ADD_REACTIONS`.",
       "WarningCustomEmoji": "‼️No puedo añadir los emojis personalizados que necesito para el reproductor. Para hacerlo, necesito el permiso `USE_EXTERNAL_EMOJIS`.",
       "TrackNotSeekable": "{0}, lo siento, pero no puedo mover la posición de reproducción en esta pista",
       "TryReconnectAfterDispose": "Estoy intentando reconectar el reproductor automáticamente.\n Si no lo consigo, escribe `{0}loadplaylist {1}`",

@@ -7,25 +7,36 @@ using System.Threading.Tasks;
 using Common.Config;
 using Common.Localization.Providers;
 using Discord;
+using Discord.Rest;
 using NLog;
 
 namespace Common {
     public static class ExtensionMethods {
         public static void DelayedDelete(this IMessage message, TimeSpan span) {
-            Task.Run(async () => {
-                await Task.Delay(span);
-                message.SafeDelete();
-            });
+            Task.Delay(span).ContinueWith(task => message.SafeDelete());
         }
 
-        public static void DelayedDelete(this Task<IUserMessage> message, TimeSpan span) {
-            Task.Run(async () => {
-                await Task.Delay(span);
-                (await message.ConfigureAwait(false)).SafeDelete();
-            });
+        public static void DelayedDelete<T>(this Task<T> message, TimeSpan span) where T : IMessage{
+            Task.Delay(span).ContinueWith(task => message.SafeDelete());
         }
 
-        public static void SafeDelete(this IMessage? message) {
+        public static void SafeDelete<T>(this Task<T> message) where T : IMessage{
+            try {
+                message.ContinueWith(async task => {
+                    try {
+                        (await task).SafeDelete();
+                    }
+                    catch (Exception) {
+                        // ignored
+                    }
+                });
+            }
+            catch (Exception) {
+                // ignored
+            }
+        }
+
+        public static void SafeDelete<T>(this T? message) where T : IMessage{
             try {
                 message?.DeleteAsync();
             }
