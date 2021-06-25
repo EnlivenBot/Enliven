@@ -84,7 +84,7 @@ namespace Bot.Commands.Chains {
                     properties.Embed = new EmbedBuilder().WithColor(Color.Orange).WithTitle(Loc.Get("ChainsCommon.Ended")).WithDescription(entry.Get(Loc))
                                                          .Build());
                 await _message.RemoveAllReactionsAsync();
-                _message.DelayedDelete(Constants.StandardTimeSpan);
+                _ = _message.DelayedDelete(Constants.StandardTimeSpan);
             };
             SetTimeout(Constants.StandardTimeSpan);
         }

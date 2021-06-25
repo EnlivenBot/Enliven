@@ -7,7 +7,7 @@ namespace Common {
         public static void NotNull(object? o) {
             if (o != null) return;
             var exception = new NullReferenceException();
-            _logger.Error("Object is null in assert", exception);
+            _logger.Error(exception, "Object is null in assert");
             //throw exception;
         }
     }

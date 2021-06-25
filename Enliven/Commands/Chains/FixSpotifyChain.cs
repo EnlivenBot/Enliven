@@ -71,7 +71,7 @@ namespace Bot.Commands.Chains {
                     controlMessage.Channel.SendMessageAsync(null, false, propertiesEmbed);
                 }
 
-                controlMessage.DelayedDelete(Constants.StandardTimeSpan);
+                _ = controlMessage.DelayedDelete(Constants.StandardTimeSpan);
             };
             switch (_request.Type) {
                 case SpotifyUrl.SpotifyUrlType.Album:
@@ -184,9 +184,8 @@ namespace Bot.Commands.Chains {
                         var existentEqualsTrack = association.Associations.FirstOrDefault(data => data.Identifier == resultTrack.Identifier);
                         if (existentEqualsTrack != null) {
                             existentEqualsTrack.AddVote(_requester.Id, true);
-                            _channel.SendMessageAsync(null, false,
-                                         CommandHandlerService.GetErrorEmbed(_requester, Loc, Loc.Get("Chains.FixSpotifyTrackAlreadyExists")).Build())
-                                    .DelayedDelete(Constants.StandardTimeSpan);
+                            var embed = CommandHandlerService.GetErrorEmbed(_requester, Loc, Loc.Get("Chains.FixSpotifyTrackAlreadyExists")).Build();
+                            _ = _channel.SendMessageAsync(null, false, embed).DelayedDelete(Constants.StandardTimeSpan);
                         }
                         else {
                             association.Associations.Add(new SpotifyAssociation.TrackAssociationData(resultTrack.Identifier, _requester.ToLink())
@@ -199,9 +198,9 @@ namespace Bot.Commands.Chains {
                         UpdateMessage();
                     }
                     catch (Exception) {
-                        _channel.SendMessageAsync(null, false, CommandHandlerService.GetErrorEmbed(_requester, Loc,
-                                     Loc.Get("Chains.FixSpotifyNewTrackError", addMatch.Groups[2].Value.SafeSubstring(200, "...")!)).Build())
-                                .DelayedDelete(Constants.StandardTimeSpan);
+                        var embed = CommandHandlerService.GetErrorEmbed(_requester, Loc,
+                            Loc.Get("Chains.FixSpotifyNewTrackError", addMatch.Groups[2].Value.SafeSubstring(200, "...")!)).Build();
+                        _ = _channel.SendMessageAsync(null, false, embed).DelayedDelete(Constants.StandardTimeSpan);
                     }
                 }
             });

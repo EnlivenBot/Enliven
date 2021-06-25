@@ -116,7 +116,7 @@ namespace Bot.Commands.Chains {
             OnEnd = async localized => {
                 _collectorGroup.DisposeAll();
                 _cancellationTokenSource.Cancel();
-                msg.DelayedDelete(Constants.StandardTimeSpan);
+                _ = msg.DelayedDelete(Constants.StandardTimeSpan);
                 await msg.ModifyAsync(properties =>
                     properties.Embed = new EmbedBuilder().WithColor(Color.Orange).WithTitle(Loc.Get("ChainsCommon.Ended"))
                                                          .WithDescription(localized.Get(Loc))

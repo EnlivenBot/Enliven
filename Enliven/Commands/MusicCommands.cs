@@ -112,9 +112,8 @@ namespace Bot.Commands {
                                                    Player.CurrentTrack!.Title.SafeSubstring(0, 40) + "..."));
             }
             else {
-                ReplyFormattedAsync(
-                    Loc.Get("Music.TrackIndexWrong").Format(Context.User.Mention, index, Player.Playlist.Count),
-                    true).DelayedDelete(Constants.StandardTimeSpan);
+                var description = Loc.Get("Music.TrackIndexWrong").Format(Context.User.Mention, index, Player.Playlist.Count);
+                _ = ReplyFormattedAsync(description, true).DelayedDelete(Constants.ShortTimeSpan);
             }
         }
 
@@ -272,8 +271,7 @@ namespace Bot.Commands {
             }
 
             if (!Player.CurrentTrack.IsSeekable) {
-                ReplyFormattedAsync(Loc.Get("Music.TrackNotSeekable").Format(GuildConfig.Prefix), true)
-                   .DelayedDelete(TimeSpan.FromSeconds(1));
+                _ = ReplyFormattedAsync(Loc.Get("Music.TrackNotSeekable").Format(GuildConfig.Prefix), true).DelayedDelete(Constants.ShortTimeSpan);
                 return;
             }
 
@@ -295,8 +293,7 @@ namespace Bot.Commands {
             }
 
             if (!Player.CurrentTrack.IsSeekable) {
-                ReplyFormattedAsync(Loc.Get("Music.TrackNotSeekable").Format(GuildConfig.Prefix), true)
-                   .DelayedDelete(TimeSpan.FromSeconds(1));
+                _ = ReplyFormattedAsync(Loc.Get("Music.TrackNotSeekable").Format(GuildConfig.Prefix), true).DelayedDelete(Constants.ShortTimeSpan);
                 return;
             }
 
@@ -318,8 +315,7 @@ namespace Bot.Commands {
             }
 
             if (!Player.CurrentTrack.IsSeekable) {
-                ReplyFormattedAsync(Loc.Get("Music.TrackNotSeekable").Format(GuildConfig.Prefix), true)
-                   .DelayedDelete(TimeSpan.FromSeconds(1));
+                _ = ReplyFormattedAsync(Loc.Get("Music.TrackNotSeekable").Format(GuildConfig.Prefix), true).DelayedDelete(Constants.ShortTimeSpan);
                 return;
             }
 
@@ -380,15 +376,13 @@ namespace Bot.Commands {
             // For programmers
             if (trackIndex == 0) trackIndex = 1;
             if (trackIndex < 1 || trackIndex > Player.Playlist.Count) {
-                ReplyFormattedAsync(
-                    Loc.Get("Music.TrackIndexWrong").Format(Context.User.Mention, trackIndex, Player.Playlist.Count),
-                    true).DelayedDelete(Constants.ShortTimeSpan);
+                var description = Loc.Get("Music.TrackIndexWrong").Format(Context.User.Mention, trackIndex, Player.Playlist.Count);
+                _ = ReplyFormattedAsync(description, true).DelayedDelete(Constants.ShortTimeSpan);
             }
 
             newIndex = Math.Max(1, Math.Min(Player.Playlist.Count, newIndex));
             Player.Playlist.Move(trackIndex - 1, newIndex - 1);
-            Player.WriteToQueueHistory(Loc.Get("MusicQueues.TrackMoved")
-                                          .Format(Context.User.Mention, trackIndex, newIndex));
+            Player.WriteToQueueHistory(Loc.Get("MusicQueues.TrackMoved").Format(Context.User.Mention, trackIndex, newIndex));
         }
 
         [Command("bassboost", RunMode = RunMode.Async)]

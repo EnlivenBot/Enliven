@@ -13,7 +13,7 @@ namespace Bot.Commands {
         [Summary("stats0s")]
         public Task Stats() {
             Context.Message.SafeDelete();
-            ReplyAsync(null, false, StatisticsService.BuildStats(null, Loc).Build()).DelayedDelete(Constants.StandardTimeSpan);
+            _ = ReplyAsync(null, false, StatisticsService.BuildStats(null, Loc).Build()).DelayedDelete(Constants.StandardTimeSpan);
             return Task.CompletedTask;
         }
 
@@ -21,7 +21,7 @@ namespace Bot.Commands {
         [Summary("userstats0s")]
         public Task UserStats([Summary("userstats0_0s")] IUser user) {
             Context.Message.SafeDelete();
-            ReplyAsync(null, false, StatisticsService.BuildStats(user, Loc).Build()).DelayedDelete(Constants.StandardTimeSpan);
+            _ = ReplyAsync(null, false, StatisticsService.BuildStats(user, Loc).Build()).DelayedDelete(Constants.StandardTimeSpan);
             return Task.CompletedTask;
         }
 

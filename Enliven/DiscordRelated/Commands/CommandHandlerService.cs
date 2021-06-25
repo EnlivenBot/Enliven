@@ -208,14 +208,13 @@ namespace Bot.DiscordRelated.Commands {
                 return;
             }
 
-            (await message.Channel.SendMessageAsync(null, false, GetErrorEmbed(message.Author, loc, description).WithFields(fieldBuilders).Build()))
-               .DelayedDelete(
-                    Constants.LongTimeSpan);
+            var embed = GetErrorEmbed(message.Author, loc, description).WithFields(fieldBuilders).Build();
+            _ = (await message.Channel.SendMessageAsync(null, false, embed)).DelayedDelete(Constants.LongTimeSpan);
         }
 
         private static async Task SendErrorMessage(IMessage message, ILocalizationProvider loc, string description) {
-            (await message.Channel.SendMessageAsync(null, false, GetErrorEmbed(message.Author, loc, description).Build()))
-               .DelayedDelete(Constants.LongTimeSpan);
+            var embed = GetErrorEmbed(message.Author, loc, description).Build();
+            _ = (await message.Channel.SendMessageAsync(null, false, embed)).DelayedDelete(Constants.LongTimeSpan);
         }
 
         public static EmbedBuilder GetErrorEmbed(IUser user, ILocalizationProvider loc, string description) {

@@ -93,7 +93,7 @@ namespace Bot.DiscordRelated {
                     Dispose();
                     return;
                 case "Info":
-                    component.FollowupAsync(Options.InformationText).DelayedDelete(Options.InfoTimeout);
+                    _ = component.FollowupAsync(Options.InformationText).DelayedDelete(Options.InfoTimeout);
                     break;
                 case "Jump":
                     CollectorsUtils.CollectMessage(component.Channel, message => message.Author.Id == component.User.Id, async eventArgs => {

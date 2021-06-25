@@ -28,7 +28,7 @@ namespace Bot.DiscordRelated.Commands.Modules {
             GuildConfig = GuildConfigProvider.Get(Context.Guild.Id);
         }
 
-        protected override async Task<IUserMessage> ReplyAsync(string message = null, bool isTTS = false, Embed embed = null, RequestOptions options = null, AllowedMentions allowedMentions = null, MessageReference messageReference = null, MessageComponent component = null) {
+        protected override async Task<IUserMessage> ReplyAsync(string? message = null, bool isTTS = false, Embed embed = null, RequestOptions options = null, AllowedMentions allowedMentions = null, MessageReference messageReference = null, MessageComponent component = null) {
             return await (await GetResponseChannel()).SendMessageAsync(message, isTTS, embed, options, component:component).ConfigureAwait(false);
         }
 
@@ -39,9 +39,9 @@ namespace Bot.DiscordRelated.Commands.Modules {
         }
 
         protected async Task<IUserMessage> ReplyFormattedAsync(string title, string description, TimeSpan delayedDeleteTime) {
-            var replyFormattedAsync = ReplyFormattedAsync(title, description);
-            replyFormattedAsync.DelayedDelete(delayedDeleteTime);
-            return await replyFormattedAsync;
+            var message = await ReplyFormattedAsync(title, description);
+            _ = message.DelayedDelete(delayedDeleteTime);
+            return message;
         }
     }
 }

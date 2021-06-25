@@ -270,7 +270,7 @@ namespace Bot.DiscordRelated.Logging {
                 logMessage = await outputChannel.SendMessageAsync(null, false, embedBuilder.Build());
             }
 
-            logMessage?.DelayedDelete(Constants.LongTimeSpan);
+            _ = logMessage?.DelayedDelete(Constants.LongTimeSpan);
         }
 
         public bool NeedLogMessage(IMessage arg, GuildConfig config, bool? isCommand) {
