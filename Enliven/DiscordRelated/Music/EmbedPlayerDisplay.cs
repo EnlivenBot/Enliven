@@ -47,7 +47,7 @@ namespace Bot.DiscordRelated.Music {
         public bool NextResendForced;
         private MessageComponentService _messageComponentService;
         private MessageComponent? _messageComponent;
-        private EnlivenComponentManager? _messageComponentManager;
+        private EnlivenComponentBuilder? _messageComponentManager;
 
         public EmbedPlayerDisplay(ITextChannel targetChannel, IDiscordClient discordClient, ILocalizationProvider loc,
                                   CommandHandlerService commandHandlerService, IPrefixProvider prefixProvider, MessageComponentService messageComponentService) :

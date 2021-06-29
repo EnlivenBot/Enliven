@@ -4,6 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Bot.Config.Emoji;
+using Bot.DiscordRelated.Commands;
+using Bot.DiscordRelated.MessageComponents;
 using Bot.Utilities.Collector;
 using Common;
 using Common.Config;
@@ -17,8 +20,22 @@ using Lavalink4NET.Rest;
 
 namespace Bot.Commands.Chains {
     public class AdvancedMusicSearchChain : ChainBase {
-        private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+        public static IEmote[] NumberReactions = {
+            new Emoji("1️⃣"),
+            new Emoji("2️⃣"),
+            new Emoji("3️⃣"),
+            new Emoji("4️⃣"),
+            new Emoji("5️⃣"),
+            new Emoji("6️⃣"),
+            new Emoji("7️⃣"),
+            new Emoji("8️⃣"),
+            new Emoji("9️⃣"),
+            new Emoji("🔟")
+        };
 
+        public static IEmote AllReaction = new Emoji("⬅️");
+        
+        private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private string _query = null!;
         private IUser _requester = null!;
         private SearchMode _searchMode;
@@ -26,17 +43,18 @@ namespace Bot.Commands.Chains {
         private FinalLavalinkPlayer _player = null!;
         private CollectorsGroup? _collectorGroup;
         private IMusicController _controller = null!;
+        private EnlivenComponentBuilder _componentBuilder = null!;
+
 
         private AdvancedMusicSearchChain(string? uid, ILocalizationProvider loc) : base(uid, loc) { }
 
         public static AdvancedMusicSearchChain CreateInstance(GuildConfig guildConfig, FinalLavalinkPlayer player, IMessageChannel targetChannel,
                                                               IUser requester, SearchMode searchMode,
-                                                              string query, IMusicController controller) {
-            
+                                                              string query, IMusicController controller, MessageComponentService messageComponentService) {
             var advancedMusicSearchChain = new AdvancedMusicSearchChain(
                 $"{nameof(AdvancedMusicSearchChain)}_{guildConfig.GuildId}_{requester.Id}", guildConfig.Loc) {
                 _requester = requester, _query = query, _searchMode = searchMode, _targetChannel = targetChannel, 
-                _player = player, _controller = controller
+                _player = player, _controller = controller, _componentBuilder = messageComponentService.GetBuilder()
             };
             advancedMusicSearchChain.MainBuilder
                                     .WithColor(Color.Gold)
@@ -57,86 +75,83 @@ namespace Bot.Commands.Chains {
                 MainBuilder.Description += Loc.Get("Music.NothingFound");
             }
             else {
-                var builder = new StringBuilder();
+                var stringBuilder = new StringBuilder();
                 // 1500 - the maximum number of characters to be within the embed description limit. Taken with a margin
                 // 10 - max number of tracks
-                for (var i = 0; i < tracks.Count && builder.Length < 1500 && i < 10; i++) {
+                for (var i = 0; i < tracks.Count && stringBuilder.Length < 1500 && i < 10; i++) {
                     var track = tracks[i];
-                    builder.AppendLine($"{i + 1}. [{track.Title}]({track.Source})\n");
+                    stringBuilder.AppendLine($"{i + 1}. [{track.Title}]({track.Source})\n");
                 }
 
-                MainBuilder.Description += builder.ToString();
+                MainBuilder.Description += stringBuilder.ToString();
+                
+                for (var index = 0; index < tracks.Count && index < 10; index++) {
+                    var track = tracks[index];
+                    var button = new EnlivenButtonBuilder().WithStyle(ButtonStyle.Secondary)
+                        .WithTargetRow(index / 5).WithEmote(NumberReactions[index]).WithLabel(track.Title.SafeSubstring(20, "...") ?? "")
+                        .WithCustomId(index.ToString());
+                    _componentBuilder.WithButton(button);
+                }
+
+                var controlsRow = tracks.Count < 6 ? 1 : 2;
+                _componentBuilder.WithButton(new EnlivenButtonBuilder().WithStyle(ButtonStyle.Success).WithEmote(AllReaction).WithLabel(Loc.Get("Common.All")).WithTargetRow(controlsRow).WithCustomId("All"));
+                _componentBuilder.WithButton(new EnlivenButtonBuilder().WithStyle(ButtonStyle.Danger).WithEmote(CommonEmoji.LegacyStop).WithLabel(Loc.Get("Common.Stop")).WithTargetRow(controlsRow).WithCustomId("Stop"));
             }
 
-            var msg = await _targetChannel.SendMessageAsync(null, false, MainBuilder.Build());
+            var msg = await _targetChannel.SendMessageAsync(null, false, MainBuilder.Build(), component:_componentBuilder.Build());
+            _componentBuilder.AssociateWithMessage(msg);
             if (!tracks.Any())
                 return;
+            
+            _componentBuilder.SetCallback(async (s, component, arg3) => {
+                if (component.User.Id != _requester.Id) {
+                    var embed = CommandHandlerService.GetErrorEmbed(component.User, Loc, Loc.Get("Common.OnlyRequester", component.User.Mention)).Build();
+                    _ = component.FollowupAsync(embed: embed, ephemeral: true).DelayedDelete(TimeSpan.FromSeconds(15));
+                    return;
+                }
+                switch (s) {
+                    case var _ when int.TryParse(s, out var index):
+                        await ProcessAdd(new[] {tracks[index]}, msg);
+                        break;
+                    case "All":
+                        await ProcessAdd(tracks.Take(10), msg);
+                        break;
+                    case "Stop":
+                        End();
+                        break;
+                }
+            });
 
             _collectorGroup = new CollectorsGroup(
-                CollectorsUtils.CollectReaction(msg, reaction => true, async args => {
-                    var i = args.Reaction.Emote.Name switch {
-                        "1️⃣" => 0,
-                        "2️⃣" => 1,
-                        "3️⃣" => 2,
-                        "4️⃣" => 3,
-                        "5️⃣" => 4,
-                        "6️⃣" => 5,
-                        "7️⃣" => 6,
-                        "8️⃣" => 7,
-                        "9️⃣" => 8,
-                        "🔟"  => 9,
-                        "⬅️"  => -2, // All displayed tracks
-                        _     => -1  // Other emoji, ignore it
-                    };
-
-                    await ProcessAdd(i, tracks, msg);
-                }, CollectorFilter.IgnoreBots),
                 CollectorsUtils.CollectMessage(_requester, message => message.Channel.Id == _targetChannel.Id, async args => {
                     if (!int.TryParse(args.Message.Content, out var result)) return;
                     if (result > tracks.Count || result <= 0) return;
-                    if (await ProcessAdd(result, tracks, msg)) {
+                    if (await ProcessAdd(new[] {tracks[result - 1]}, msg)) {
                         await args.RemoveReason();
                     }
                 })
             );
 
-            var reactions = new IEmote[] {
-                new Emoji("1️⃣"),
-                new Emoji("2️⃣"),
-                new Emoji("3️⃣"),
-                new Emoji("4️⃣"),
-                new Emoji("5️⃣"),
-                new Emoji("6️⃣"),
-                new Emoji("7️⃣"),
-                new Emoji("8️⃣"),
-                new Emoji("9️⃣"),
-                new Emoji("🔟")
-            };
-
             OnEnd = async localized => {
                 _collectorGroup.DisposeAll();
+                _componentBuilder.Dispose();
                 _cancellationTokenSource.Cancel();
                 _ = msg.DelayedDelete(Constants.StandardTimeSpan);
-                await msg.ModifyAsync(properties =>
+                await msg.ModifyAsync(properties => {
                     properties.Embed = new EmbedBuilder().WithColor(Color.Orange).WithTitle(Loc.Get("ChainsCommon.Ended"))
-                                                         .WithDescription(localized.Get(Loc))
-                                                         .Build());
+                        .WithDescription(localized.Get(Loc))
+                        .Build();
+                    properties.Components = new ComponentBuilder().Build();
+                });
                 await msg.RemoveAllReactionsAsync();
             };
-
-            await msg.AddReactionsAsync(reactions.Take(tracks.Count).ToArray(), new RequestOptions {CancelToken = _cancellationTokenSource.Token});
-            await msg.AddReactionAsync(new Emoji("⬅️"), new RequestOptions {CancelToken = _cancellationTokenSource.Token});
+            
             SetTimeout(TimeSpan.FromMinutes(1));
         }
 
-        private async Task<bool> ProcessAdd(int i, List<LavalinkTrack> tracks, IUserMessage msg) {
-            var authoredLavalinkTracks = new List<LavalinkTrack>();
-            if (i == -2)
-                authoredLavalinkTracks.AddRange(tracks.Take(10).Select(track => track.AddAuthor(_requester.Username)));
-            if (i >= 0 && i <= tracks.Count - 1) authoredLavalinkTracks.Add(tracks[i].AddAuthor(_requester.Username));
+        private async Task<bool> ProcessAdd(IEnumerable<LavalinkTrack> tracks, IUserMessage msg) {
+            var authoredLavalinkTracks = tracks.Select(track => track.AddAuthor(_requester.Username)).ToList();
             switch (authoredLavalinkTracks.Count) {
-                case 0:
-                    return false;
                 case 1:
                     _player.WriteToQueueHistory(Loc.Get("MusicQueues.Enqueued", _requester.Username, MusicController.EscapeTrack(authoredLavalinkTracks[0].Title)));
                     break;
@@ -145,7 +160,6 @@ namespace Bot.Commands.Chains {
                     break;
             }
 
-            // await _player.EnqueueControlMessageSend(_targetChannel);
             await _player.PlayAsync(authoredLavalinkTracks.First(), true);
             _player.Playlist.AddRange(authoredLavalinkTracks.Skip(1));
 

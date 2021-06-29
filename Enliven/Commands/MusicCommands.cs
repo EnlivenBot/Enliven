@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Bot.Commands.Chains;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
+using Bot.DiscordRelated.MessageComponents;
 using Bot.DiscordRelated.Music;
 using Common;
 using Common.History;
@@ -26,6 +27,8 @@ namespace Bot.Commands {
     [Grouping("music")]
     [RequireContext(ContextType.Guild)]
     public sealed class MusicCommands : MusicModuleBase {
+        public MessageComponentService ComponentService { get; set; } = null!;
+
         [SummonToUser]
         [Command("play", RunMode = RunMode.Async)]
         [Alias("p")]
@@ -245,7 +248,7 @@ namespace Bot.Commands {
         [Summary("youtube0s")]
         public async Task SearchYoutube([Summary("play0_0s")] [Remainder] string query) {
             if (!await IsPreconditionsValid) return;
-            AdvancedMusicSearchChain.CreateInstance(GuildConfig, Player!, Context.Channel, Context.User, SearchMode.YouTube, query, MusicController).Start();
+            AdvancedMusicSearchChain.CreateInstance(GuildConfig, Player!, Context.Channel, Context.User, SearchMode.YouTube, query, MusicController, ComponentService).Start();
         }
 
         [SummonToUser]
@@ -255,7 +258,7 @@ namespace Bot.Commands {
         public async Task SearchSoundCloud([Summary("play0_0s")] [Remainder] string query) {
             if (!await IsPreconditionsValid) return;
             AdvancedMusicSearchChain
-               .CreateInstance(GuildConfig, Player!, Context.Channel, Context.User, SearchMode.SoundCloud, query, MusicController)
+               .CreateInstance(GuildConfig, Player!, Context.Channel, Context.User, SearchMode.SoundCloud, query, MusicController, ComponentService)
                .Start();
         }
 

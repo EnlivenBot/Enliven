@@ -28,7 +28,7 @@ namespace Bot.DiscordRelated {
 
         public IUserMessage? Message;
         public ILocalizationProvider Loc;
-        private EnlivenComponentManager _enlivenComponentManager = null!;
+        private EnlivenComponentBuilder _enlivenComponentBuilder = null!;
         private MessageComponentService _messageComponentService;
 
         public PaginatedMessage(PaginatedAppearanceOptions options, IUserMessage message, ILocalizationProvider loc, MessageComponentService messageComponentService, MessagePage? errorPage = null)
@@ -56,23 +56,23 @@ namespace Bot.DiscordRelated {
         }
 
         private async Task InitializeComponentManager() {
-            _enlivenComponentManager = new EnlivenComponentManager(_messageComponentService);
-            _enlivenComponentManager.SetCallback(OnButtonPress);
+            _enlivenComponentBuilder = new EnlivenComponentBuilder(_messageComponentService);
+            _enlivenComponentBuilder.SetCallback(OnButtonPress);
             
             var builder = new EnlivenButtonBuilder().WithStyle(ButtonStyle.Secondary).WithTargetRow(0);
-            _enlivenComponentManager.WithButton(builder.Clone().WithEmote(Options.First).WithCustomId("First"));
-            _enlivenComponentManager.WithButton(builder.Clone().WithEmote(Options.Back).WithCustomId("Back"));
-            _enlivenComponentManager.WithButton(builder.Clone().WithEmote(Options.Next).WithCustomId("Next"));
-            _enlivenComponentManager.WithButton(builder.Clone().WithEmote(Options.Last).WithCustomId("Last"));
+            _enlivenComponentBuilder.WithButton(builder.Clone().WithEmote(Options.First).WithCustomId("First"));
+            _enlivenComponentBuilder.WithButton(builder.Clone().WithEmote(Options.Back).WithCustomId("Back"));
+            _enlivenComponentBuilder.WithButton(builder.Clone().WithEmote(Options.Next).WithCustomId("Next"));
+            _enlivenComponentBuilder.WithButton(builder.Clone().WithEmote(Options.Last).WithCustomId("Last"));
             builder.WithTargetRow(1);
-            if (Options.StopEnabled) _enlivenComponentManager.WithButton(builder.Clone().WithEmote(Options.Stop).WithCustomId("Stop").WithStyle(ButtonStyle.Danger));
-            if (Options.DisplayInformationIcon) _enlivenComponentManager.WithButton(builder.Clone().WithEmote(Options.Info).WithCustomId("Info").WithStyle(ButtonStyle.Primary));
+            if (Options.StopEnabled) _enlivenComponentBuilder.WithButton(builder.Clone().WithEmote(Options.Stop).WithCustomId("Stop").WithStyle(ButtonStyle.Danger));
+            if (Options.DisplayInformationIcon) _enlivenComponentBuilder.WithButton(builder.Clone().WithEmote(Options.Info).WithCustomId("Info").WithStyle(ButtonStyle.Primary));
 
             _jumpEnabled = Options.JumpDisplayOptions == JumpDisplayOptions.Always ||
                            Options.JumpDisplayOptions == JumpDisplayOptions.WithManageMessages &&
                            Channel is IGuildChannel guildChannel &&
                            (await guildChannel.GetUserAsync(Program.Client.CurrentUser.Id)).GetPermissions(guildChannel).ManageMessages;
-            if (_jumpEnabled) _enlivenComponentManager.WithButton(builder.Clone().WithEmote(Options.Jump).WithCustomId("Jump").WithPriority(0));
+            if (_jumpEnabled) _enlivenComponentBuilder.WithButton(builder.Clone().WithEmote(Options.Jump).WithCustomId("Jump").WithPriority(0));
         }
 
         private void OnButtonPress(string s, SocketMessageComponent component, EnlivenButtonBuilder arg3) {
@@ -122,11 +122,11 @@ namespace Bot.DiscordRelated {
                 }
                 else {
                     await Message!.ModifyAsync(properties => {
-                        properties.Components = _enlivenComponentManager.Build();
+                        properties.Components = _enlivenComponentBuilder.Build();
                         properties.Embed = GenerateEmbed();
                         properties.Content = null;
                     });
-                    _enlivenComponentManager.AssociateWithMessage(Message);
+                    _enlivenComponentBuilder.AssociateWithMessage(Message);
                 }
             }
             catch {
@@ -142,8 +142,8 @@ namespace Bot.DiscordRelated {
             try {
                 Message?.SafeDelete();
                 Message = null;
-                Message = await Channel.SendMessageAsync(null, false, GenerateEmbed(), component: _enlivenComponentManager.Build());
-                _enlivenComponentManager.AssociateWithMessage(Message);
+                Message = await Channel.SendMessageAsync(null, false, GenerateEmbed(), component: _enlivenComponentBuilder.Build());
+                _enlivenComponentBuilder.AssociateWithMessage(Message);
                 return Message;
             }
             catch {
@@ -321,11 +321,11 @@ namespace Bot.DiscordRelated {
             }
 
             var manyPages = Pages.Count > 1;
-            _enlivenComponentManager.GetButton("Jump")?.WithDisabled(!manyPages);
-            _enlivenComponentManager.GetButton("Back")?.WithDisabled(!manyPages);
-            _enlivenComponentManager.GetButton("Next")?.WithDisabled(!manyPages);
-            _enlivenComponentManager.GetButton("First")?.WithDisabled(!manyPages);
-            _enlivenComponentManager.GetButton("Last")?.WithDisabled(!manyPages);
+            _enlivenComponentBuilder.GetButton("Jump")?.WithDisabled(!manyPages);
+            _enlivenComponentBuilder.GetButton("Back")?.WithDisabled(!manyPages);
+            _enlivenComponentBuilder.GetButton("Next")?.WithDisabled(!manyPages);
+            _enlivenComponentBuilder.GetButton("First")?.WithDisabled(!manyPages);
+            _enlivenComponentBuilder.GetButton("Last")?.WithDisabled(!manyPages);
             return _updateTask.Execute();
         }
 
@@ -355,7 +355,7 @@ namespace Bot.DiscordRelated {
             _resendTask.Dispose();
             _updateTask.Dispose();
             Message?.SafeDelete();
-            _enlivenComponentManager.Dispose();
+            _enlivenComponentBuilder.Dispose();
         }
     }
 }
