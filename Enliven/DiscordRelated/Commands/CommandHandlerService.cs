@@ -116,25 +116,25 @@ namespace Bot.DiscordRelated.Commands {
 
         private static async Task AddEmojiErrorHint(SocketUserMessage targetMessage, ILocalizationProvider loc, IEmote emote, IEntry description,
                                                     IEnumerable<EmbedFieldBuilder>? builders = null) {
-            CollectorController? collector = null;
-            collector = CollectorsUtils.CollectReaction(targetMessage, reaction => reaction.UserId == targetMessage.Author.Id, async eventArgs => {
-                await eventArgs.RemoveReason();
-                // ReSharper disable once AccessToModifiedClosure
-                // ReSharper disable once PossibleNullReferenceException
-                collector?.Dispose();
-                try {
-                    #pragma warning disable 4014
-                    targetMessage.RemoveReactionAsync(CommonEmoji.Help, Program.Client.CurrentUser);
-                    #pragma warning restore 4014
-                }
-                catch {
-                    // ignored
-                }
+            var collector = CollectorsUtils.CollectReaction(targetMessage, reaction => reaction.UserId == targetMessage.Author.Id, async eventArgs => {
+                eventArgs.Controller.Dispose();
+                _ = eventArgs.RemoveReason();
+                _ = targetMessage.RemoveReactionAsync(CommonEmoji.Help, Program.Client.CurrentUser);
 
                 await SendErrorMessage(targetMessage, loc, description.Get(loc), builders);
             });
             try {
-                await targetMessage.AddReactionAsync(emote);
+                var addReactionAsync = targetMessage.AddReactionAsync(emote);
+                _ = addReactionAsync.ContinueWith(async _ => {
+                    await Task.Delay(TimeSpan.FromSeconds(20));
+                    try {
+                        await targetMessage.RemoveReactionAsync(CommonEmoji.Help, Program.Client.CurrentUser);
+                    }
+                    finally {
+                        collector.Dispose();
+                    }
+                });
+                await addReactionAsync;
             }
             catch (Exception) {
                 collector.Dispose();
