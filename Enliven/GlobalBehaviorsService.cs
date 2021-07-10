@@ -21,9 +21,9 @@ namespace Bot {
             var guildConfig = _guildConfigProvider.Get(guild.Id);
             var loc = guildConfig.Loc;
 
-            var embedBuilder = new EmbedBuilder().WithColor(Color.Gold).WithFooter($"Powered by {Program.Client.CurrentUser.Username}");
-            embedBuilder.WithAuthor(Program.Client.CurrentUser.Username, Program.Client.CurrentUser.GetAvatarUrl());
-            embedBuilder.WithDescription(loc.Get("Messages.WelcomeDescription").Format(guildConfig.Prefix, Program.Client.CurrentUser.Mention));
+            var embedBuilder = new EmbedBuilder().WithColor(Color.Gold).WithFooter($"Powered by {EnlivenBot.Client.CurrentUser.Username}");
+            embedBuilder.WithAuthor(EnlivenBot.Client.CurrentUser.Username, EnlivenBot.Client.CurrentUser.GetAvatarUrl());
+            embedBuilder.WithDescription(loc.Get("Messages.WelcomeDescription").Format(guildConfig.Prefix, EnlivenBot.Client.CurrentUser.Mention));
             embedBuilder.AddField(loc.Get("Messages.WelcomeMusicTitle"), loc.Get("Messages.WelcomeMusic").Format(guildConfig.Prefix));
             embedBuilder.AddField(loc.Get("Messages.WelcomeLoggingTitle"), loc.Get("Messages.WelcomeLogging").Format(guildConfig.Prefix));
             embedBuilder.AddField(loc.Get("Messages.WelcomeLocalizationTitle"), loc.Get("Messages.WelcomeLocalization").Format(guildConfig.Prefix));
@@ -33,7 +33,7 @@ namespace Bot {
         }
 
         public Task OnPostDiscordStartInitialize() {
-            Program.Client.JoinedGuild += ClientOnJoinedGuild;
+            EnlivenBot.Client.JoinedGuild += ClientOnJoinedGuild;
             return Task.CompletedTask;
         }
     }

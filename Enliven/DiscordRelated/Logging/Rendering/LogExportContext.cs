@@ -16,7 +16,7 @@ namespace Bot.DiscordRelated.Logging.Rendering {
             channel, after, before, dateFormat, members, channels, roles) { }
 
         public static LogExportContext Create(ulong channelId, out HashSet<Member> members) {
-            var channel = (ITextChannel) Program.Client.GetChannel(channelId);
+            var channel = (ITextChannel) EnlivenBot.Client.GetChannel(channelId);
             var guild = (SocketGuild) channel.Guild;
             
             members = new HashSet<Member>(IdBasedEqualityComparer.Instance);

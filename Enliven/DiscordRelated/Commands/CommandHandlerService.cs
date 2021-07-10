@@ -124,7 +124,7 @@ namespace Bot.DiscordRelated.Commands {
                 collector?.Dispose();
                 try {
                     #pragma warning disable 4014
-                    targetMessage.RemoveReactionAsync(CommonEmoji.Help, Program.Client.CurrentUser);
+                    targetMessage.RemoveReactionAsync(CommonEmoji.Help, EnlivenBot.Client.CurrentUser);
                     #pragma warning restore 4014
                 }
                 catch {

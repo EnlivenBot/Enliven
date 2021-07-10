@@ -53,7 +53,7 @@ namespace Bot.Commands {
                     var packName = pair.Key;
                     return CollectorsUtils.CollectReaction(message, reaction => reaction.Emote.Equals(pair.Value.LocalizationFlagEmoji), async args => {
                         await args.RemoveReason();
-                        var t = await CommandHandlerService.ExecuteCommand($"language {packName}", new ReactionCommandContext(Program.Client, args.Reaction),
+                        var t = await CommandHandlerService.ExecuteCommand($"language {packName}", new ReactionCommandContext(EnlivenBot.Client, args.Reaction),
                             args.Reaction.UserId.ToString());
                         if (t.IsSuccess) {
                             message.SafeDelete();
@@ -116,7 +116,7 @@ namespace Bot.Commands {
         [Command("logging")]
         [Summary("logging0s")]
         public async Task LoggingControlPanel() {
-            var botPermissions = (await Context.Guild.GetUserAsync(Program.Client.CurrentUser.Id)).GetPermissions((IGuildChannel) Context.Channel);
+            var botPermissions = (await Context.Guild.GetUserAsync(EnlivenBot.Client.CurrentUser.Id)).GetPermissions((IGuildChannel) Context.Channel);
             if (botPermissions.SendMessages) {
                 var loggingChainBase = LoggingChain.CreateInstance((ITextChannel) Context.Channel, Context.User, GuildConfig);
                 await loggingChainBase.Start();

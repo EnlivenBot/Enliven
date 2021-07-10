@@ -35,7 +35,7 @@ namespace Bot.DiscordRelated {
             : this(options, message.Channel, loc, messageComponentService, errorPage) {
             Channel = message.Channel;
             Message = message;
-            if (Message.Author.Id != Program.Client.CurrentUser.Id) throw new ArgumentException($"{nameof(message)} must be from the current user");
+            if (Message.Author.Id != EnlivenBot.Client.CurrentUser.Id) throw new ArgumentException($"{nameof(message)} must be from the current user");
         }
 
         public PaginatedMessage(PaginatedAppearanceOptions options, IMessageChannel channel, ILocalizationProvider loc, MessageComponentService messageComponentService, MessagePage? errorPage = null) {
@@ -71,7 +71,7 @@ namespace Bot.DiscordRelated {
             _jumpEnabled = Options.JumpDisplayOptions == JumpDisplayOptions.Always ||
                            Options.JumpDisplayOptions == JumpDisplayOptions.WithManageMessages &&
                            Channel is IGuildChannel guildChannel &&
-                           (await guildChannel.GetUserAsync(Program.Client.CurrentUser.Id)).GetPermissions(guildChannel).ManageMessages;
+                           (await guildChannel.GetUserAsync(EnlivenBot.Client.CurrentUser.Id)).GetPermissions(guildChannel).ManageMessages;
             if (_jumpEnabled) _enlivenComponentManager.WithButton(builder.Clone().WithEmote(Options.Jump).WithCustomId("Jump").WithPriority(0));
         }
 

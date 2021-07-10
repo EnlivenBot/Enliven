@@ -5,7 +5,7 @@ namespace Bot.DiscordRelated.Commands {
     public class ReactionCommandContext : ControllableCommandContext {
         public ReactionCommandContext(IDiscordClient client, SocketReaction reaction) : base(client) {
             Reaction = reaction;
-            User = reaction.User.GetValueOrDefault(Program.Client.GetUser(reaction.UserId));
+            User = reaction.User.GetValueOrDefault(EnlivenBot.Client.GetUser(reaction.UserId));
             Channel = reaction.Channel;
             if (reaction.Channel is SocketTextChannel channel)
                 Guild = channel.Guild;

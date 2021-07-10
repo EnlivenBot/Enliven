@@ -23,11 +23,11 @@ namespace Bot.Utilities.Collector {
         private static Subject<SocketMessage> MessageReceived = new Subject<SocketMessage>();
 
         static CollectorsUtils() {
-            Program.Client.ReactionAdded += (cacheable, channel, arg3) => {
+            EnlivenBot.Client.ReactionAdded += (cacheable, channel, arg3) => {
                 ReactionAdded.OnNext((cacheable, channel, arg3));
                 return Task.CompletedTask;
             };
-            Program.Client.MessageReceived += message => {
+            EnlivenBot.Client.MessageReceived += message => {
                 MessageReceived.OnNext(message);
                 return Task.CompletedTask;
             };
@@ -174,7 +174,7 @@ namespace Bot.Utilities.Collector {
         private static Predicate<IMessage> ApplyFilters(Predicate<IMessage> initial, CollectorFilter filter) {
             return filter switch {
                 CollectorFilter.Off        => initial,
-                CollectorFilter.IgnoreSelf => (message => message.Author.Id != Program.Client.CurrentUser.Id && initial(message)),
+                CollectorFilter.IgnoreSelf => (message => message.Author.Id != EnlivenBot.Client.CurrentUser.Id && initial(message)),
                 CollectorFilter.IgnoreBots => (message => !message.Author.IsBot && !message.Author.IsWebhook && initial(message)),
                 _                          => throw new ArgumentOutOfRangeException(nameof(filter), filter, null)
             };
@@ -183,10 +183,10 @@ namespace Bot.Utilities.Collector {
         private static Predicate<SocketReaction> ApplyFilters(Predicate<SocketReaction> initial, CollectorFilter filter) {
             return filter switch {
                 CollectorFilter.Off        => initial,
-                CollectorFilter.IgnoreSelf => (reaction => reaction.UserId != Program.Client.CurrentUser.Id && initial(reaction)),
+                CollectorFilter.IgnoreSelf => (reaction => reaction.UserId != EnlivenBot.Client.CurrentUser.Id && initial(reaction)),
                 CollectorFilter.IgnoreBots => reaction => {
                     try {
-                        var user = reaction.User.GetValueOrDefault(Program.Client.GetUser(reaction.UserId));
+                        var user = reaction.User.GetValueOrDefault(EnlivenBot.Client.GetUser(reaction.UserId));
                         return !user.IsBot && !user.IsWebhook && initial(reaction);
                     }
                     catch (Exception) {

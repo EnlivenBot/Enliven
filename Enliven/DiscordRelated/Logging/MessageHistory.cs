@@ -88,7 +88,7 @@ namespace Bot.DiscordRelated.Logging {
 
         public SocketGuildUser? GetAuthor() {
             try {
-                return Program.Client.GetUser(AuthorId) as SocketGuildUser;
+                return EnlivenBot.Client.GetUser(AuthorId) as SocketGuildUser;
             }
             catch (Exception) {
                 return null;
@@ -195,7 +195,7 @@ namespace Bot.DiscordRelated.Logging {
         }
 
         private static User ConstructUser(ulong userId) {
-            return ConstructUser(Program.Client.GetUser(userId));
+            return ConstructUser(EnlivenBot.Client.GetUser(userId));
         }
 
         private static User ConstructUser(SocketUser user) {
@@ -276,7 +276,7 @@ namespace Bot.DiscordRelated.Logging {
 
         public async Task<IUserMessage?> GetRealMessage() {
             try {
-                var textChannel = (ITextChannel) Program.Client.GetChannel(ChannelId);
+                var textChannel = (ITextChannel) EnlivenBot.Client.GetChannel(ChannelId);
                 var messageAsync = await textChannel.GetMessageAsync(MessageId)!;
                 return messageAsync as IUserMessage;
             }
