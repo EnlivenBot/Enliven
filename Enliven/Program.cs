@@ -20,18 +20,11 @@ using Common.Music.Controller;
 using Common.Music.Resolvers;
 using Discord;
 using Discord.WebSocket;
-using ICSharpCode.SharpZipLib.Core;
-using ICSharpCode.SharpZipLib.Zip;
 using NLog;
-using NLog.Config;
-using NLog.Layouts;
-using NLog.Targets;
-using YandexMusicResolver;
 
 namespace Bot {
     internal class Program {
         private static async Task Main(string[] args) {
-            InstallLogger();
             #if !DEBUG
             InstallErrorHandlers();
             #endif
@@ -180,66 +173,6 @@ namespace Bot {
 
             logger.Log(message.Severity, message.Exception, "{message} from {source}", message.Message!, message.Source);
             return Task.CompletedTask;
-        }
-
-        private static void InstallLogger()
-        {
-            var logsFolder = Path.Combine(Directory.GetCurrentDirectory(), "Logs");
-            Directory.CreateDirectory(logsFolder);
-
-            foreach (var file in Directory.GetFiles(logsFolder, "*.log"))
-            {
-                try
-                {
-                    using var fs = File.Create(Path.ChangeExtension(file, ".zip"));
-                    using var zip = new ZipOutputStream(fs);
-                    zip.SetLevel(9);
-                    var zipEntry = new ZipEntry(Path.GetFileName(file));
-                    var fileInfo = new FileInfo(file);
-                    zipEntry.Size = fileInfo.Length;
-                    zipEntry.DateTime = fileInfo.LastWriteTime;
-                    zip.PutNextEntry(zipEntry);
-                    var buffer = new byte[4096];
-                    using (var fsInput = File.OpenRead(file))
-                    {
-                        StreamUtils.Copy(fsInput, zip, buffer);
-                    }
-
-                    zip.CloseEntry();
-                    File.Delete(file);
-                }
-                catch (Exception)
-                {
-                    // ignored
-                }
-            }
-
-            var config = new LoggingConfiguration();
-
-            var layout =
-                Layout.FromString(
-                    "${longdate}|${level:uppercase=true}|${logger}|${message}${onexception:${newline}${exception:format=tostring}}");
-            // Targets where to log to: File and Console
-            var logfile = new FileTarget("logfile")
-            {
-                FileName = Path.Combine(Directory.GetCurrentDirectory(), "Logs",
-                    DateTime.Now.ToString("yyyyMMddTHHmmss") + ".log"),
-                Layout = layout
-            };
-            var logconsole = new ColoredConsoleTarget("logconsole") {Layout = layout};
-
-            // Rules for mapping loggers to targets
-#if DEBUG
-            config.AddRule(LogLevel.Debug, LogLevel.Fatal, logconsole);
-            config.AddRule(LogLevel.Debug, LogLevel.Fatal, logfile);
-#endif
-#if !DEBUG
-            config.AddRule(LogLevel.Debug, LogLevel.Fatal, logconsole);
-            config.AddRule(LogLevel.Debug, LogLevel.Fatal, logfile);
-#endif
-
-            // Apply config           
-            LogManager.Configuration = config;
         }
 
         // ReSharper disable once UnusedMember.Local
