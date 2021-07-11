@@ -1,29 +1,25 @@
 ﻿using System;
+using System.Reactive.Linq;
+using System.Reactive.Subjects;
 using Discord;
 
 namespace Bot.DiscordRelated {
     public sealed class PriorityEmbedFieldBuilder : EmbedFieldBuilder {
-        private int? _priority;
-        private bool _isEnabled = true;
+        private BehaviorSubject<int?> _priority = new BehaviorSubject<int?>(null);
+        private BehaviorSubject<bool> _isEnabled = new BehaviorSubject<bool>(true);
 
-        public event EventHandler<int?>? PriorityChanged;
+        public IObservable<int?> PriorityChanged => _priority.AsObservable();
 
         public int? Priority {
-            get => _priority;
-            set {
-                _priority = value;
-                OnPriorityChanged(value);
-            }
+            get => _priority.Value;
+            set => _priority.OnNext(value);
         }
 
-        public event EventHandler<bool>? EnabledChanged;
+        public IObservable<bool> IsEnabledChanged => _isEnabled.AsObservable();
 
         public bool IsEnabled {
-            get => _isEnabled;
-            set {
-                _isEnabled = value;
-                OnEnabledChanged(value);
-            }
+            get => _isEnabled.Value;
+            set => _isEnabled.OnNext(value);
         }
 
         public PriorityEmbedFieldBuilder ClearPriority() {
@@ -61,16 +57,5 @@ namespace Bot.DiscordRelated {
         public new PriorityEmbedFieldBuilder WithIsInline(bool isInline) {
             return (PriorityEmbedFieldBuilder) base.WithIsInline(isInline);
         }
-
-        private void OnPriorityChanged(int? e) {
-            PriorityChanged?.Invoke(this, e);
-        }
-
-        private void OnEnabledChanged(bool e) {
-            EnabledChanged?.Invoke(this, e);
-        }
-
-        [Obsolete("This is a system property, do not modify it!")]
-        public DateTime AddTime { get; set; }
     }
 }

@@ -1,6 +1,12 @@
 ﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
+using System.Reactive.Disposables;
+using System.Reactive.Linq;
 using Bot.Utilities;
+using Common.Localization.Entries;
 using Discord;
 
 #pragma warning disable 8605
@@ -10,51 +16,13 @@ using Discord;
 // ReSharper disable InvalidXmlDocComment
 
 namespace Bot.DiscordRelated {
-    public class PriorityEmbedBuilderWrapper {
+    public class EnlivenEmbedBuilder {
         private readonly object _lockObject = new object();
         private readonly EmbedBuilder _embedBuilder = new EmbedBuilder();
+        private bool _isFieldsUpdateRequired = true;
 
-        private readonly ObservableDictionary<string, PriorityEmbedFieldBuilder> _priorityFields =
-            new ObservableDictionary<string, PriorityEmbedFieldBuilder>();
-
-        public PriorityEmbedBuilderWrapper() {
-            _priorityFields.CollectionChanged += (sender, args) => {
-                if (args.NewItems != null) {
-                    foreach (PriorityEmbedFieldBuilder? builder in args.NewItems) {
-                        try {
-                            builder!.AddTime = DateTime.Now;
-                            builder!.EnabledChanged += BuilderOnEnabledChanged;
-                            builder!.PriorityChanged += BuilderOnPriorityChanged;
-                        }
-                        catch (Exception) {
-                            // ignored
-                        }
-                    }
-                }
-
-                if (args.OldItems != null) {
-                    foreach (PriorityEmbedFieldBuilder? builder in args.OldItems) {
-                        try {
-                            builder!.EnabledChanged -= BuilderOnEnabledChanged;
-                            builder!.PriorityChanged -= BuilderOnPriorityChanged;
-                        }
-                        catch (Exception) {
-                            // ignored
-                        }
-                    }
-                }
-
-                UpdateEmbedFieldsInternal();
-            };
-        }
-
-        private void BuilderOnPriorityChanged(object? sender, int? e) {
-            UpdateEmbedFieldsInternal();
-        }
-
-        private void BuilderOnEnabledChanged(object? sender, bool e) {
-            UpdateEmbedFieldsInternal();
-        }
+        private readonly Dictionary<string, (DateTime, PriorityEmbedFieldBuilder, IDisposable)> _priorityFields =
+            new Dictionary<string, (DateTime, PriorityEmbedFieldBuilder, IDisposable)>();
 
         /// <summary> Gets or sets the title of an <see cref="Embed"/>. </summary>
         /// <exception cref="ArgumentException" accessor="set">Title length exceeds <see cref="MaxTitleLength"/>.
@@ -97,13 +65,11 @@ namespace Bot.DiscordRelated {
             set => _embedBuilder.ImageUrl = value;
         }
 
-        /// <summary> Gets or sets the list of <see cref="EmbedFieldBuilder"/> of an <see cref="Embed"/>. </summary>
-        /// <exception cref="ArgumentNullException" accessor="set">An embed builder's fields collection is set to 
-        /// <c>null</c>.</exception>
-        /// <exception cref="ArgumentException" accessor="set">Description length exceeds <see cref="MaxFieldCount"/>.
-        /// </exception>
+        /// <summary>
+        /// Gets the list of <see cref="EmbedFieldBuilder"/> of an <see cref="Embed"/>.
+        /// </summary>
         /// <returns> The list of existing <see cref="EmbedFieldBuilder"/>.</returns>
-        public ObservableDictionary<string, PriorityEmbedFieldBuilder> Fields => _priorityFields;
+        public IReadOnlyDictionary<string, PriorityEmbedFieldBuilder> Fields => _priorityFields.ToImmutableDictionary(pair => pair.Key, pair => pair.Value.Item2);
 
         /// <summary>
         ///     Gets or sets the timestamp of an <see cref="Embed"/>.
@@ -159,6 +125,7 @@ namespace Bot.DiscordRelated {
         public int Length {
             get {
                 lock (_lockObject) {
+                    UpdateEmbedFieldsInternal();
                     return _embedBuilder.Length;
                 }
             }
@@ -171,7 +138,7 @@ namespace Bot.DiscordRelated {
         /// <returns>
         ///     The current builder.
         /// </returns>
-        public PriorityEmbedBuilderWrapper WithTitle(string title) {
+        public EnlivenEmbedBuilder WithTitle(string title) {
             Title = title;
             return this;
         }
@@ -183,7 +150,7 @@ namespace Bot.DiscordRelated {
         /// <returns>
         ///     The current builder.
         /// </returns>
-        public PriorityEmbedBuilderWrapper WithDescription(string description) {
+        public EnlivenEmbedBuilder WithDescription(string description) {
             Description = description;
             return this;
         }
@@ -195,7 +162,7 @@ namespace Bot.DiscordRelated {
         /// <returns>
         ///     The current builder.
         /// </returns>
-        public PriorityEmbedBuilderWrapper WithUrl(string url) {
+        public EnlivenEmbedBuilder WithUrl(string url) {
             Url = url;
             return this;
         }
@@ -207,7 +174,7 @@ namespace Bot.DiscordRelated {
         /// <returns>
         ///     The current builder.
         /// </returns>
-        public PriorityEmbedBuilderWrapper WithThumbnailUrl(string thumbnailUrl) {
+        public EnlivenEmbedBuilder WithThumbnailUrl(string thumbnailUrl) {
             ThumbnailUrl = thumbnailUrl;
             return this;
         }
@@ -219,7 +186,7 @@ namespace Bot.DiscordRelated {
         /// <returns>
         ///     The current builder.
         /// </returns>
-        public PriorityEmbedBuilderWrapper WithImageUrl(string imageUrl) {
+        public EnlivenEmbedBuilder WithImageUrl(string imageUrl) {
             ImageUrl = imageUrl;
             return this;
         }
@@ -230,7 +197,7 @@ namespace Bot.DiscordRelated {
         /// <returns>
         ///     The current builder.
         /// </returns>
-        public PriorityEmbedBuilderWrapper WithCurrentTimestamp() {
+        public EnlivenEmbedBuilder WithCurrentTimestamp() {
             Timestamp = DateTimeOffset.UtcNow;
             return this;
         }
@@ -242,7 +209,7 @@ namespace Bot.DiscordRelated {
         /// <returns>
         ///     The current builder.
         /// </returns>
-        public PriorityEmbedBuilderWrapper WithTimestamp(DateTimeOffset dateTimeOffset) {
+        public EnlivenEmbedBuilder WithTimestamp(DateTimeOffset dateTimeOffset) {
             Timestamp = dateTimeOffset;
             return this;
         }
@@ -254,7 +221,7 @@ namespace Bot.DiscordRelated {
         /// <returns>
         ///     The current builder.
         /// </returns>
-        public PriorityEmbedBuilderWrapper WithColor(Color color) {
+        public EnlivenEmbedBuilder WithColor(Color color) {
             Color = color;
             return this;
         }
@@ -266,7 +233,7 @@ namespace Bot.DiscordRelated {
         /// <returns>
         ///     The current builder.
         /// </returns>
-        public PriorityEmbedBuilderWrapper WithAuthor(EmbedAuthorBuilder author) {
+        public EnlivenEmbedBuilder WithAuthor(EmbedAuthorBuilder author) {
             Author = author;
             return this;
         }
@@ -278,7 +245,7 @@ namespace Bot.DiscordRelated {
         /// <returns>
         ///     The current builder.
         /// </returns>
-        public PriorityEmbedBuilderWrapper WithAuthor(Action<EmbedAuthorBuilder> action) {
+        public EnlivenEmbedBuilder WithAuthor(Action<EmbedAuthorBuilder> action) {
             var author = new EmbedAuthorBuilder();
             action(author);
             Author = author;
@@ -294,7 +261,7 @@ namespace Bot.DiscordRelated {
         /// <returns>
         ///     The current builder.
         /// </returns>
-        public PriorityEmbedBuilderWrapper WithAuthor(string name, string? iconUrl = null, string? url = null) {
+        public EnlivenEmbedBuilder WithAuthor(string name, string? iconUrl = null, string? url = null) {
             var author = new EmbedAuthorBuilder {
                 Name = name,
                 IconUrl = iconUrl,
@@ -311,7 +278,7 @@ namespace Bot.DiscordRelated {
         /// <returns>
         ///     The current builder.
         /// </returns>
-        public PriorityEmbedBuilderWrapper WithFooter(EmbedFooterBuilder footer) {
+        public EnlivenEmbedBuilder WithFooter(EmbedFooterBuilder footer) {
             Footer = footer;
             return this;
         }
@@ -323,7 +290,7 @@ namespace Bot.DiscordRelated {
         /// <returns>
         ///     The current builder.
         /// </returns>
-        public PriorityEmbedBuilderWrapper WithFooter(Action<EmbedFooterBuilder> action) {
+        public EnlivenEmbedBuilder WithFooter(Action<EmbedFooterBuilder> action) {
             var footer = new EmbedFooterBuilder();
             action(footer);
             Footer = footer;
@@ -338,7 +305,7 @@ namespace Bot.DiscordRelated {
         /// <returns>
         ///     The current builder.
         /// </returns>
-        public PriorityEmbedBuilderWrapper WithFooter(string text, string? iconUrl = null) {
+        public EnlivenEmbedBuilder WithFooter(string text, string? iconUrl = null) {
             var footer = new EmbedFooterBuilder {
                 Text = text,
                 IconUrl = iconUrl
@@ -356,13 +323,13 @@ namespace Bot.DiscordRelated {
         /// <returns>
         ///     The current builder.
         /// </returns>
-        public PriorityEmbedBuilderWrapper AddField(string id, string name, object value, bool inline = false, int? priority = null, bool isEnabled = true) {
+        public EnlivenEmbedBuilder AddField(string id, string name, object value, bool inline = false, int? priority = null, bool isEnabled = true) {
             var field = new PriorityEmbedFieldBuilder()
-                       .WithIsInline(inline)
-                       .WithName(name)
-                       .WithValue(value)
-                       .WithPriority(priority)
-                       .WithEnabled(isEnabled);
+                .WithIsInline(inline)
+                .WithName(name)
+                .WithValue(value)
+                .WithPriority(priority)
+                .WithEnabled(isEnabled);
             AddField(id, field);
             return this;
         }
@@ -376,9 +343,15 @@ namespace Bot.DiscordRelated {
         /// <returns>
         ///     The current builder.
         /// </returns>
-        public PriorityEmbedBuilderWrapper AddField(string id, PriorityEmbedFieldBuilder field) {
-            _priorityFields.Add(id, field);
+        public EnlivenEmbedBuilder AddField(string id, PriorityEmbedFieldBuilder field) {
+            _priorityFields.Add(id, (DateTime.Now, field, SubscribeToBuilderUpdates(field)));
             return this;
+        }
+
+        private IDisposable SubscribeToBuilderUpdates(PriorityEmbedFieldBuilder field) {
+            return new CompositeDisposable(
+                field.PriorityChanged.Subscribe(i => _isFieldsUpdateRequired = true),
+                field.IsEnabledChanged.Subscribe(b => _isFieldsUpdateRequired = true));
         }
 
         /// <summary>
@@ -388,7 +361,7 @@ namespace Bot.DiscordRelated {
         /// <returns>
         ///     The current builder.
         /// </returns>
-        public PriorityEmbedBuilderWrapper AddField(string id, Action<PriorityEmbedFieldBuilder> action) {
+        public EnlivenEmbedBuilder AddField(string id, Action<PriorityEmbedFieldBuilder> action) {
             var field = new PriorityEmbedFieldBuilder();
             action(field);
             AddField(id, field);
@@ -396,15 +369,23 @@ namespace Bot.DiscordRelated {
         }
 
         public PriorityEmbedFieldBuilder GetOrAddField(string id) {
+            var asd = (IEntry) new EntryString("") + new EntryString("");
             return GetOrAddField(id, s => new PriorityEmbedFieldBuilder());
         }
 
         public PriorityEmbedFieldBuilder GetOrAddField(string id, Func<string, PriorityEmbedFieldBuilder> createFieldBuilder) {
             if (Fields.TryGetValue(id, out var fieldBuilder)) return fieldBuilder;
             fieldBuilder = createFieldBuilder(id);
-            Fields.Add(id, fieldBuilder);
+            AddField(id, fieldBuilder);
 
             return fieldBuilder;
+        }
+
+        public EnlivenEmbedBuilder RemoveField(string id) {
+            if (_priorityFields.Remove(id, out var tuple)) {
+                tuple.Item3.Dispose();
+            }
+            return this;
         }
 
         /// <summary>
@@ -416,16 +397,20 @@ namespace Bot.DiscordRelated {
         /// <exception cref="InvalidOperationException">Total embed length exceeds <see cref="MaxEmbedLength"/>.</exception>
         public Embed Build() {
             lock (_lockObject) {
+                UpdateEmbedFieldsInternal();
                 return _embedBuilder.Build();
             }
         }
 
         private void UpdateEmbedFieldsInternal() {
-            lock (_lockObject) {
-                _embedBuilder.Fields.Clear();
-                _embedBuilder.Fields.AddRange(_priorityFields.Values.Where(builder => builder.IsEnabled)
-                                                             .OrderBy(builder => builder.Priority ?? 0).ThenBy(builder => builder.AddTime));
-            }
+            if (!_isFieldsUpdateRequired)  return;
+            _embedBuilder.Fields.Clear();
+            var fieldBuilders = _priorityFields.Values.Where(builder => builder.Item2.IsEnabled)
+                .OrderBy(builder => builder.Item2.Priority ?? 0)
+                .ThenBy(builder => builder.Item1)
+                .Select(tuple => tuple.Item2);
+            _embedBuilder.Fields.AddRange(fieldBuilders);
+            _isFieldsUpdateRequired = false;
         }
     }
 }
