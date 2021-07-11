@@ -10,8 +10,8 @@ namespace Bot.DiscordRelated {
             return embedBuilder;
         }
         
-        public static PriorityEmbedBuilderWrapper GetAuthorEmbedBuilderWrapper(IUser user, ILocalizationProvider loc) {
-            var embedBuilder = new PriorityEmbedBuilderWrapper();
+        public static EnlivenEmbedBuilder GetAuthorEmbedBuilderWrapper(IUser user, ILocalizationProvider loc) {
+            var embedBuilder = new EnlivenEmbedBuilder();
             embedBuilder.WithFooter(loc.Get("Commands.RequestedBy").Format(user.Username), user.GetAvatarUrl());
             return embedBuilder;
         }
