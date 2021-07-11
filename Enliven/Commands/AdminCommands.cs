@@ -114,7 +114,7 @@ namespace Bot.Commands {
                 await loggingChainBase.Start();
             }
             else {
-                await (await Context.User.GetOrCreateDMChannelAsync()).SendMessageAsync(Loc.Get("ChainsCommon.CantSend").Format($"<#{Context.Channel.Id}>"));
+                await (await Context.User.CreateDMChannelAsync()).SendMessageAsync(Loc.Get("ChainsCommon.CantSend").Format($"<#{Context.Channel.Id}>"));
             }
         }
     }

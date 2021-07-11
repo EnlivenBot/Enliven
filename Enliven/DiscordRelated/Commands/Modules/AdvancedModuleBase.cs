@@ -20,7 +20,7 @@ namespace Bot.DiscordRelated.Commands.Modules {
             var user = (await Context.Guild.GetUserAsync(Context.User.Id)).GetPermissions((IGuildChannel) Context.Channel);
             return bot.SendMessages && (!fileSupport || bot.AttachFiles) && (!fileSupport || user.AttachFiles)
                 ? Context.Channel
-                : await Context.User.GetOrCreateDMChannelAsync();
+                : await Context.User.CreateDMChannelAsync();
         }
 
         protected override void BeforeExecute(CommandInfo command) {
