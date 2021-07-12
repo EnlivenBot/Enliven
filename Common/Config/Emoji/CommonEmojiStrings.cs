@@ -2,7 +2,7 @@
 using System.IO;
 using Newtonsoft.Json;
 
-namespace Bot.Config.Emoji {
+namespace Common.Config.Emoji {
     public class CommonEmojiStrings {
         private CommonEmojiStrings() { }
 
@@ -16,6 +16,10 @@ namespace Bot.Config.Emoji {
             });
 
         public static CommonEmojiStrings Instance => _lazy.Value;
+
+        public string GetEmoji(string name) {
+            return this.GetType().GetField("name")?.GetValue(this)?.ToString() ?? throw new ArgumentException("No emoji with this name found"); 
+        }
 
         public string RepeatOne { get; set; } = "<:repeatonce:682469899351621648>";
         public string RepeatOff { get; set; } = "<:repeatoff:682469899276517401>";
