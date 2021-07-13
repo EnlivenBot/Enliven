@@ -35,7 +35,9 @@ namespace Common.Localization {
         [JsonIgnore] public int TranslationCompleteness { get; set; }
 
         public List<string> GetLocalizationEntries() {
-            return Data.SelectMany(groups => groups.Value.Select(pair => groups.Key + "." + pair.Key)).ToList();
+            return Data.SelectMany(groups => groups.Value.Select(pair => groups.Key + "." + pair.Key))
+                .Where(s => !s.Contains("._")) // Remove all auxiliary strings
+                .ToList();
         }
 
         public void CalcTranslationCompleteness(List<string> entries) {
