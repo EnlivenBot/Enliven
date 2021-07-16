@@ -244,7 +244,7 @@
       "Invite": "Invite",
       "InviteDescription": "Here is [your link]({0}) for inviting the bot to another server. Hope to see you there! 😀",
       "Vote": "**Support Us**",
-      "VoteDescription": "You can **freely** support us on:\n[top.gg](https://top.gg/bot/606760964183949314) (voting every 12 hours, write a review)\n[discordbotlist.com](https://discordbotlist.com/bots/enliven) (vote every 12 hours)\n[bots.ondiscord.xyz](https://bots.ondiscord.xyz/bots/606760964183949314) (write a review)\n Or you can just look at [discord.bots.gg](https://discord.bots.gg/bots/606760964183949314)\n\nDo not forget about [our GitLab](https://gitlab.com/enlivenbot/enliven), where you can write errors and suggestions\nAlso, you can join our [Discord support server](https://discord.gg/zfBffbBbCp)"
+      "VoteDescription": "You can **freely** support us on:\n[top.gg](https://top.gg/bot/606760964183949314) (voting every 12 hours, write a review)\n[discordbotlist.com](https://discordbotlist.com/bots/enliven) (vote every 12 hours)\n[bots.ondiscord.xyz](https://bots.ondiscord.xyz/bots/606760964183949314) (write a review)\n Or you can just look at [discord.bots.gg](https://discord.bots.gg/bots/606760964183949314)\n\nDo not forget about [our GitLab](https://gitlab.com/enlivenbot/enliven), where you can write errors and suggestions\nAlso, you can join our [Discord support server](https://discord.gg/zfBffbBbCp)",
       "All": "All",
       "Stop": "Stop",
       "OnlyRequester": "Only the requester ({0}) can interact with this component"
