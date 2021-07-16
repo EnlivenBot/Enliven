@@ -12,12 +12,12 @@ using NLog;
 
 namespace Common {
     public static class ExtensionMethods {
-        public static void DelayedDelete(this IMessage message, TimeSpan span) {
-            Task.Delay(span).ContinueWith(task => message.SafeDelete());
+        public static Task DelayedDelete(this IMessage message, TimeSpan span) {
+            return Task.Delay(span).ContinueWith(task => message.SafeDelete());
         }
 
-        public static void DelayedDelete<T>(this Task<T> message, TimeSpan span) where T : IMessage{
-            Task.Delay(span).ContinueWith(task => message.SafeDelete());
+        public static Task DelayedDelete<T>(this Task<T> message, TimeSpan span) where T : IMessage{
+            return Task.Delay(span).ContinueWith(task => message.SafeDelete());
         }
 
         public static void SafeDelete<T>(this Task<T> message) where T : IMessage{

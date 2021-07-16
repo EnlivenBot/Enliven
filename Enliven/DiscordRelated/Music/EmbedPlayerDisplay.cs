@@ -42,12 +42,12 @@ namespace Bot.DiscordRelated.Music {
         private SingleTask _updateControlMessageTask;
         private SingleTask _controlMessageSendTask;
 
-        private PriorityEmbedBuilderWrapper EmbedBuilder;
+        private EnlivenEmbedBuilder EmbedBuilder;
 
         public bool NextResendForced;
         private MessageComponentService _messageComponentService;
         private MessageComponent? _messageComponent;
-        private EnlivenComponentManager? _messageComponentManager;
+        private EnlivenComponentBuilder? _messageComponentManager;
 
         public EmbedPlayerDisplay(ITextChannel targetChannel, IDiscordClient discordClient, ILocalizationProvider loc,
                                   CommandHandlerService commandHandlerService, IPrefixProvider prefixProvider, MessageComponentService messageComponentService) :
@@ -98,7 +98,7 @@ namespace Bot.DiscordRelated.Music {
                 BetweenExecutionsDelay = TimeSpan.FromSeconds(30), CanBeDirty = false, IsDelayResetByExecute = false,
             };
 
-            EmbedBuilder = new PriorityEmbedBuilderWrapper();
+            EmbedBuilder = new EnlivenEmbedBuilder();
             EmbedBuilder.AddField("State", loc.Get("Music.Empty"), loc.Get("Music.Empty"), true);
             EmbedBuilder.AddField("Parameters", loc.Get("Music.Parameters"), loc.Get("Music.Empty"), true);
             EmbedBuilder.AddField("Queue", loc.Get("Music.Queue").Format(0, 0, 0), loc.Get("Music.Empty"));

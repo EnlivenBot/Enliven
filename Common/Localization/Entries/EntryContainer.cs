@@ -2,7 +2,7 @@
 using Common.Localization.Providers;
 
 namespace Common.Localization.Entries {
-    public class EntryContainer : IEntry {
+    public class EntryContainer : EntryBase {
         public EntryContainer(IEntry entry) {
             SetEntry(entry);
         }
@@ -14,7 +14,7 @@ namespace Common.Localization.Entries {
         private IEntry? Entry { get; set; }
         private Func<IEntry>? EntryFunc { get; set; }
 
-        public string Get(ILocalizationProvider provider, params object[] additionalArgs) {
+        public override string Get(ILocalizationProvider provider, params object[] additionalArgs) {
             return (Entry ?? EntryFunc!()).Get(provider, additionalArgs);
         }
 

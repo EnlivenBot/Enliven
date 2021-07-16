@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Bot.Commands.Chains;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
+using Bot.DiscordRelated.MessageComponents;
 using Bot.DiscordRelated.Music;
 using Common;
 using Common.History;
@@ -26,6 +27,8 @@ namespace Bot.Commands {
     [Grouping("music")]
     [RequireContext(ContextType.Guild)]
     public sealed class MusicCommands : MusicModuleBase {
+        public MessageComponentService ComponentService { get; set; } = null!;
+
         [SummonToUser]
         [Command("play", RunMode = RunMode.Async)]
         [Alias("p")]
@@ -112,9 +115,8 @@ namespace Bot.Commands {
                                                    Player.CurrentTrack!.Title.SafeSubstring(0, 40) + "..."));
             }
             else {
-                ReplyFormattedAsync(
-                    Loc.Get("Music.TrackIndexWrong").Format(Context.User.Mention, index, Player.Playlist.Count),
-                    true).DelayedDelete(Constants.StandardTimeSpan);
+                var description = Loc.Get("Music.TrackIndexWrong").Format(Context.User.Mention, index, Player.Playlist.Count);
+                _ = ReplyFormattedAsync(description, true).DelayedDelete(Constants.ShortTimeSpan);
             }
         }
 
@@ -246,7 +248,7 @@ namespace Bot.Commands {
         [Summary("youtube0s")]
         public async Task SearchYoutube([Summary("play0_0s")] [Remainder] string query) {
             if (!await IsPreconditionsValid) return;
-            AdvancedMusicSearchChain.CreateInstance(GuildConfig, Player!, Context.Channel, Context.User, SearchMode.YouTube, query, MusicController).Start();
+            AdvancedMusicSearchChain.CreateInstance(GuildConfig, Player!, Context.Channel, Context.User, SearchMode.YouTube, query, MusicController, ComponentService).Start();
         }
 
         [SummonToUser]
@@ -256,7 +258,7 @@ namespace Bot.Commands {
         public async Task SearchSoundCloud([Summary("play0_0s")] [Remainder] string query) {
             if (!await IsPreconditionsValid) return;
             AdvancedMusicSearchChain
-               .CreateInstance(GuildConfig, Player!, Context.Channel, Context.User, SearchMode.SoundCloud, query, MusicController)
+               .CreateInstance(GuildConfig, Player!, Context.Channel, Context.User, SearchMode.SoundCloud, query, MusicController, ComponentService)
                .Start();
         }
 
@@ -272,8 +274,7 @@ namespace Bot.Commands {
             }
 
             if (!Player.CurrentTrack.IsSeekable) {
-                ReplyFormattedAsync(Loc.Get("Music.TrackNotSeekable").Format(GuildConfig.Prefix), true)
-                   .DelayedDelete(TimeSpan.FromSeconds(1));
+                _ = ReplyFormattedAsync(Loc.Get("Music.TrackNotSeekable").Format(GuildConfig.Prefix), true).DelayedDelete(Constants.ShortTimeSpan);
                 return;
             }
 
@@ -295,8 +296,7 @@ namespace Bot.Commands {
             }
 
             if (!Player.CurrentTrack.IsSeekable) {
-                ReplyFormattedAsync(Loc.Get("Music.TrackNotSeekable").Format(GuildConfig.Prefix), true)
-                   .DelayedDelete(TimeSpan.FromSeconds(1));
+                _ = ReplyFormattedAsync(Loc.Get("Music.TrackNotSeekable").Format(GuildConfig.Prefix), true).DelayedDelete(Constants.ShortTimeSpan);
                 return;
             }
 
@@ -318,8 +318,7 @@ namespace Bot.Commands {
             }
 
             if (!Player.CurrentTrack.IsSeekable) {
-                ReplyFormattedAsync(Loc.Get("Music.TrackNotSeekable").Format(GuildConfig.Prefix), true)
-                   .DelayedDelete(TimeSpan.FromSeconds(1));
+                _ = ReplyFormattedAsync(Loc.Get("Music.TrackNotSeekable").Format(GuildConfig.Prefix), true).DelayedDelete(Constants.ShortTimeSpan);
                 return;
             }
 
@@ -380,15 +379,13 @@ namespace Bot.Commands {
             // For programmers
             if (trackIndex == 0) trackIndex = 1;
             if (trackIndex < 1 || trackIndex > Player.Playlist.Count) {
-                ReplyFormattedAsync(
-                    Loc.Get("Music.TrackIndexWrong").Format(Context.User.Mention, trackIndex, Player.Playlist.Count),
-                    true).DelayedDelete(Constants.ShortTimeSpan);
+                var description = Loc.Get("Music.TrackIndexWrong").Format(Context.User.Mention, trackIndex, Player.Playlist.Count);
+                _ = ReplyFormattedAsync(description, true).DelayedDelete(Constants.ShortTimeSpan);
             }
 
             newIndex = Math.Max(1, Math.Min(Player.Playlist.Count, newIndex));
             Player.Playlist.Move(trackIndex - 1, newIndex - 1);
-            Player.WriteToQueueHistory(Loc.Get("MusicQueues.TrackMoved")
-                                          .Format(Context.User.Mention, trackIndex, newIndex));
+            Player.WriteToQueueHistory(Loc.Get("MusicQueues.TrackMoved").Format(Context.User.Mention, trackIndex, newIndex));
         }
 
         [Command("bassboost", RunMode = RunMode.Async)]

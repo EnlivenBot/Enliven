@@ -7,7 +7,7 @@ namespace Bot.DiscordRelated.MessageComponents {
         public Guid Guid { get; } = Guid.NewGuid();
 
         /// <summary>
-        /// Is <see cref="IsVisible"/> is <code>false</code> then this button will not get into MessageComponents when calling <see cref="EnlivenComponentManager.Build"/>
+        /// Is <see cref="IsVisible"/> is <code>false</code> then this button will not get into MessageComponents when calling <see cref="EnlivenComponentBuilder.Build"/>
         /// </summary>
         public bool IsVisible { get; set; } = true;
 

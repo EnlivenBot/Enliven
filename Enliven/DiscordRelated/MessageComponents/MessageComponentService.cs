@@ -18,8 +18,8 @@ namespace Bot.DiscordRelated.MessageComponents {
 
         public IObservable<SocketMessageComponent> MessageComponentUse => _enlivenShardedClient.MessageComponentUse;
 
-        public EnlivenComponentManager GetBuilder() {
-            return new EnlivenComponentManager(this);
+        public EnlivenComponentBuilder GetBuilder() {
+            return new EnlivenComponentBuilder(this);
         }
 
         public IDisposable RegisterMessageComponent(string id, Action<SocketMessageComponent> onComponentUse) {

@@ -17,15 +17,14 @@ namespace Bot.Utilities.Collector {
     public static class CollectorsUtils {
         private static Logger logger = LogManager.GetCurrentClassLogger();
 
-        private static Subject<(Cacheable<IUserMessage, ulong>, ISocketMessageChannel, SocketReaction)> ReactionAdded =
-            new Subject<(Cacheable<IUserMessage, ulong>, ISocketMessageChannel, SocketReaction)>();
+        private static Subject<(Cacheable<IUserMessage, ulong> cacheable, IMessageChannel, SocketReaction arg3)> ReactionAdded =
+            new Subject<(Cacheable<IUserMessage, ulong>, IMessageChannel, SocketReaction)>();
 
         private static Subject<SocketMessage> MessageReceived = new Subject<SocketMessage>();
 
         static CollectorsUtils() {
-            EnlivenBot.Client.ReactionAdded += (cacheable, channel, arg3) => {
-                ReactionAdded.OnNext((cacheable, channel, arg3));
-                return Task.CompletedTask;
+            EnlivenBot.Client.ReactionAdded += async (cacheable, channel, arg3) => {
+                ReactionAdded.OnNext((cacheable, await channel.GetOrDownloadAsync(), arg3));
             };
             EnlivenBot.Client.MessageReceived += message => {
                 MessageReceived.OnNext(message);

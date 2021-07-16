@@ -5,6 +5,7 @@ using Bot.Commands.Chains;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
 using Bot.DiscordRelated.Logging;
+using Bot.DiscordRelated.MessageComponents;
 using Bot.Utilities;
 using Bot.Utilities.Collector;
 using Common;
@@ -21,12 +22,13 @@ namespace Bot.Commands {
         public MessageHistoryService MessageHistoryService { get; set; } = null!;
         public GlobalBehaviorsService GlobalBehaviorsService { get; set; } = null!;
         public CommandHandlerService CommandHandlerService { get; set; } = null!;
+        public MessageComponentService MessageComponentService { get; set; } = null!;
 
         [Hidden]
         [Command("printwelcome")]
         public async Task PrintWelcome() {
             Context.Message.SafeDelete();
-            (await GlobalBehaviorsService.PrintWelcomeMessage((SocketGuild) Context.Guild, Context.Channel)).DelayedDelete(Constants.LongTimeSpan);
+            _ = GlobalBehaviorsService.PrintWelcomeMessage((SocketGuild) Context.Guild, Context.Channel).DelayedDelete(Constants.LongTimeSpan);
         }
         
         [Command("setprefix")]
@@ -40,41 +42,32 @@ namespace Bot.Commands {
         
         private async Task ListLanguages() {
             var embedBuilder = this.GetAuthorEmbedBuilder().WithColor(Color.Gold).WithTitle(Loc.Get("Localization.LanguagesList"));
+            var componentBuilder = MessageComponentService.GetBuilder();
+            var i = 0;
             foreach (var (key, pack) in LocalizationManager.Languages) {
                 embedBuilder.AddField($"{pack.LocalizationFlagEmojiText} **{pack.LocalizedName}** ({pack.LanguageName})",
                     Loc.Get("Localization.LanguageDescription").Format(GuildConfig.Prefix, key, pack.Authors, pack.TranslationCompleteness), true);
+                var enlivenButtonBuilder = new EnlivenButtonBuilder().WithStyle(ButtonStyle.Secondary)
+                    .WithEmote(pack.LocalizationFlagEmoji!).WithLabel($"{pack.LocalizedName} ({pack.LanguageName})")
+                    .WithCustomId(key).WithTargetRow(i++ / 5);
+                componentBuilder.WithButton(enlivenButtonBuilder);
             }
 
-            var message = await ReplyAsync(null, false, embedBuilder.Build());
-            CollectorsGroup collectors = null!;
-            var packsWithEmoji = LocalizationManager.Languages.Where(pair => pair.Value.LocalizationFlagEmoji != null).ToList();
-            collectors = new CollectorsGroup(packsWithEmoji.Select(
-                pair => {
-                    var packName = pair.Key;
-                    return CollectorsUtils.CollectReaction(message, reaction => reaction.Emote.Equals(pair.Value.LocalizationFlagEmoji), async args => {
-                        await args.RemoveReason();
-                        var t = await CommandHandlerService.ExecuteCommand($"language {packName}", new ReactionCommandContext(EnlivenBot.Client, args.Reaction),
-                            args.Reaction.UserId.ToString());
-                        if (t.IsSuccess) {
-                            message.SafeDelete();
-                            // ReSharper disable once AccessToModifiedClosure
-                            collectors.DisposeAll();
-                        }
-                    }, CollectorFilter.IgnoreBots);
-                }));
-            try {
-                await message.AddReactionsAsync(packsWithEmoji.Select(pair => pair.Value.LocalizationFlagEmoji).ToArray());
-            }
-            catch (Exception) {
-                // ignored
-            }
-            message.DelayedDelete(Constants.StandardTimeSpan);
+            var message = await ReplyAsync(null!, false, embedBuilder.Build(), component: componentBuilder.Build());
+            componentBuilder.AssociateWithMessage(message);
+            componentBuilder.SetCallback(async (s, component, arg3) => {
+                var t = await CommandHandlerService.ExecuteCommand($"language {s}", new ComponentCommandContext(EnlivenBot.Client, component),
+                    component.User.Id.ToString());
+                if (t.IsSuccess) message.SafeDelete();
+            });
+            _ = message.DelayedDelete(Constants.StandardTimeSpan).ContinueWith(task => componentBuilder.Dispose());
         }
 
         [Command("language")]
         [Alias("languages")]
         [Summary("language0s")]
         public async Task SetLanguage([Summary("language0_0s")] string? language = null) {
+            Context.Message.SafeDelete();
             if (language == null) {
                 await ListLanguages();
                 return;
@@ -82,7 +75,6 @@ namespace Bot.Commands {
 
             if (LocalizationManager.Languages.ContainsKey(language)) {
                 GuildConfig.SetLanguage(language).Save();
-                Context.Message.SafeDelete();
                 await ReplyFormattedAsync(Loc.Get("Commands.Success"), Loc.Get("Localization.Success").Format(language), TimeSpan.FromMinutes(1));
             }
             else {
@@ -122,7 +114,7 @@ namespace Bot.Commands {
                 await loggingChainBase.Start();
             }
             else {
-                await (await Context.User.GetOrCreateDMChannelAsync()).SendMessageAsync(Loc.Get("ChainsCommon.CantSend").Format($"<#{Context.Channel.Id}>"));
+                await (await Context.User.CreateDMChannelAsync()).SendMessageAsync(Loc.Get("ChainsCommon.CantSend").Format($"<#{Context.Channel.Id}>"));
             }
         }
     }

@@ -84,17 +84,18 @@ namespace Bot.DiscordRelated.Logging {
         private IGuildConfigProvider _guildConfigProvider;
         private IStatisticsPartProvider _statisticsPartProvider;
 
-        private Task ClientOnMessageDeleted(Cacheable<IMessage, ulong> arg1, ISocketMessageChannel arg2) {
+        private Task ClientOnMessageDeleted(Cacheable<IMessage, ulong> messageCacheable, Cacheable<IMessageChannel, ulong> channelCacheable) {
             new Task(async o => {
                 try {
-                    if (!(arg2 is ITextChannel textChannel)) return;
+                    var channel = await channelCacheable.GetOrDownloadAsync();
+                    if (!(channel is ITextChannel textChannel)) return;
 
-                    var history = _messageHistoryProvider.Get(arg2.Id, arg1.Id);
+                    var history = _messageHistoryProvider.Get(channel.Id, messageCacheable.Id);
                     var guild = EnlivenBot.Client.GetGuild(textChannel.GuildId);
                     var guildConfig = _guildConfigProvider.Get(textChannel.GuildId);
                     if (!guildConfig.IsLoggingEnabled) return;
 
-                    if (!guildConfig.GetChannel(ChannelFunction.Log, out var logChannelId) || logChannelId == arg2.Id) return;
+                    if (!guildConfig.GetChannel(ChannelFunction.Log, out var logChannelId) || logChannelId == channel.Id) return;
                     var logChannel = EnlivenBot.Client.GetChannel(logChannelId);
                     if (!guildConfig.LoggedChannels.Contains(textChannel.Id)) return;
 
@@ -187,7 +188,7 @@ namespace Bot.DiscordRelated.Logging {
                     logger.Error(e, "Failed to print log message");
                 }
                 finally {
-                    _messageHistoryProvider.Delete($"{arg2.Id}:{arg1.Id}");
+                    _messageHistoryProvider.Delete($"{channelCacheable.Id}:{messageCacheable.Id}");
                 }
             }, TaskCreationOptions.LongRunning).Start();
 
@@ -270,7 +271,7 @@ namespace Bot.DiscordRelated.Logging {
                 logMessage = await outputChannel.SendMessageAsync(null, false, embedBuilder.Build());
             }
 
-            logMessage?.DelayedDelete(Constants.LongTimeSpan);
+            _ = logMessage?.DelayedDelete(Constants.LongTimeSpan);
         }
 
         public bool NeedLogMessage(IMessage arg, GuildConfig config, bool? isCommand) {
