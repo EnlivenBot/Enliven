@@ -244,7 +244,10 @@
       "Invite": "Invitación",
       "InviteDescription": "Aquí está [tu enlace]({0}) para invitarme a otro servidor. ¡Espero verte allí! 😀",
       "Vote": "**Ayúdanos**",
-      "VoteDescription": "Puedes ayudarnos **gratis** en:\n[top.gg](https://top.gg/bot/606760964183949314) (vota [1 voto cada 12 horas] o escribe un comentario)\n[discordbotlist.com](https://discordbotlist.com/bots/enliven) (vota [1 voto cada 12 horas])\n[bots.ondiscord.xyz](https://bots.ondiscord.xyz/bots/606760964183949314) (escribe un comentario)\n O visítanos en [discord.bots.gg](https://discord.bots.gg/bots/606760964183949314)\n\nNo te olvides de [nuestro GitLab](https://gitlab.com/enlivenbot/enliven), donde puedes enviar errores y sugerencias (en inglés/ruso)\nPuedes unirte también a nuestro [Discord de soporte](https://discord.gg/zfBffbBbCp)"
+      "VoteDescription": "Puedes ayudarnos **gratis** en:\n[top.gg](https://top.gg/bot/606760964183949314) (vota [1 voto cada 12 horas] o escribe un comentario)\n[discordbotlist.com](https://discordbotlist.com/bots/enliven) (vota [1 voto cada 12 horas])\n[bots.ondiscord.xyz](https://bots.ondiscord.xyz/bots/606760964183949314) (escribe un comentario)\n O visítanos en [discord.bots.gg](https://discord.bots.gg/bots/606760964183949314)\n\nNo te olvides de [nuestro GitLab](https://gitlab.com/enlivenbot/enliven), donde puedes enviar errores y sugerencias (en inglés/ruso)\nPuedes unirte también a nuestro [Discord de soporte](https://discord.gg/zfBffbBbCp)",
+      "All": "All",
+      "Stop": "Stop",
+      "OnlyRequester": "Only the requester ({0}) can interact with this component"
     },
     "ChainsCommon": {
       "Ended": "Completado",
