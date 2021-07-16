@@ -31,8 +31,8 @@ namespace Bot.DiscordRelated.Logging {
         
         public Task OnPostDiscordStartInitialize() {
             // Message created handled located in CommandHandler
-            Program.Client.MessageUpdated += ClientOnMessageUpdated;
-            Program.Client.MessageDeleted += ClientOnMessageDeleted;
+            EnlivenBot.Client.MessageUpdated += ClientOnMessageUpdated;
+            EnlivenBot.Client.MessageDeleted += ClientOnMessageDeleted;
             CollectorsUtils.CollectReaction(CommonEmoji.LegacyBook, reaction => {
                 if (!(reaction.Channel is ITextChannel textChannel)) return false;
                 return _guildConfigProvider.Get(textChannel.GuildId).IsLoggingEnabled;
@@ -84,21 +84,22 @@ namespace Bot.DiscordRelated.Logging {
         private IGuildConfigProvider _guildConfigProvider;
         private IStatisticsPartProvider _statisticsPartProvider;
 
-        private Task ClientOnMessageDeleted(Cacheable<IMessage, ulong> arg1, ISocketMessageChannel arg2) {
+        private Task ClientOnMessageDeleted(Cacheable<IMessage, ulong> messageCacheable, Cacheable<IMessageChannel, ulong> channelCacheable) {
             new Task(async o => {
                 try {
-                    if (!(arg2 is ITextChannel textChannel)) return;
+                    var channel = await channelCacheable.GetOrDownloadAsync();
+                    if (!(channel is ITextChannel textChannel)) return;
 
-                    var history = _messageHistoryProvider.Get(arg2.Id, arg1.Id);
-                    var guild = Program.Client.GetGuild(textChannel.GuildId);
+                    var history = _messageHistoryProvider.Get(channel.Id, messageCacheable.Id);
+                    var guild = EnlivenBot.Client.GetGuild(textChannel.GuildId);
                     var guildConfig = _guildConfigProvider.Get(textChannel.GuildId);
                     if (!guildConfig.IsLoggingEnabled) return;
 
-                    if (!guildConfig.GetChannel(ChannelFunction.Log, out var logChannelId) || logChannelId == arg2.Id) return;
-                    var logChannel = Program.Client.GetChannel(logChannelId);
+                    if (!guildConfig.GetChannel(ChannelFunction.Log, out var logChannelId) || logChannelId == channel.Id) return;
+                    var logChannel = EnlivenBot.Client.GetChannel(logChannelId);
                     if (!guildConfig.LoggedChannels.Contains(textChannel.Id)) return;
 
-                    var logPermissions = guild.GetUser(Program.Client.CurrentUser.Id).GetPermissions((IGuildChannel) logChannel);
+                    var logPermissions = guild.GetUser(EnlivenBot.Client.CurrentUser.Id).GetPermissions((IGuildChannel) logChannel);
                     if (!logPermissions.SendMessages) return;
 
                     var loc = guildConfig.Loc;
@@ -144,7 +145,7 @@ namespace Bot.DiscordRelated.Logging {
                             try {
                                 IUserMessage? packMessage = await Common.Utilities.TryAsync(async () => {
                                     var firstOrDefault = (await ((logChannel as ITextChannel)!).GetMessagesAsync(1).FlattenAsync()).FirstOrDefault();
-                                    if (firstOrDefault.Author.Id != Program.Client.CurrentUser.Id) return null;
+                                    if (firstOrDefault.Author.Id != EnlivenBot.Client.CurrentUser.Id) return null;
                                     if (!firstOrDefault.Embeds.First().Title.Contains("Pack")) return null;
                                     return (IUserMessage) firstOrDefault;
                                 }, e => null);
@@ -187,7 +188,7 @@ namespace Bot.DiscordRelated.Logging {
                     logger.Error(e, "Failed to print log message");
                 }
                 finally {
-                    _messageHistoryProvider.Delete($"{arg2.Id}:{arg1.Id}");
+                    _messageHistoryProvider.Delete($"{channelCacheable.Id}:{messageCacheable.Id}");
                 }
             }, TaskCreationOptions.LongRunning).Start();
 
@@ -202,7 +203,7 @@ namespace Bot.DiscordRelated.Logging {
                     var guild = _guildConfigProvider.Get(arg.Id);
                     if (!guild.GetChannel(ChannelFunction.Log, out var logChannelId)) return;
                     var loc = new GuildLocalizationProvider(guild);
-                    var logChannel = Program.Client.GetChannel(logChannelId);
+                    var logChannel = EnlivenBot.Client.GetChannel(logChannelId);
                     ((SocketTextChannel) logChannel)!.SendMessageAsync(loc.Get("MessageHistory.GuildLogCleared").Format(
                         arg.Name, arg.Id, deletesCount));
                 }
@@ -260,7 +261,7 @@ namespace Bot.DiscordRelated.Logging {
             else {
                 if (await realMessage != null) {
                     embedBuilder.WithDescription(loc.Get("MessageHistory.MessageWithoutHistory").Format((await realMessage).GetJumpUrl()));
-                    if (Program.Client.GetChannel(history.ChannelId) is SocketGuildChannel guildChannel)
+                    if (EnlivenBot.Client.GetChannel(history.ChannelId) is SocketGuildChannel guildChannel)
                         TryLogCreatedMessage((await realMessage)!, _guildConfigProvider.Get(guildChannel.Guild.Id), null);
                 }
                 else {
@@ -270,7 +271,7 @@ namespace Bot.DiscordRelated.Logging {
                 logMessage = await outputChannel.SendMessageAsync(null, false, embedBuilder.Build());
             }
 
-            logMessage?.DelayedDelete(Constants.LongTimeSpan);
+            _ = logMessage?.DelayedDelete(Constants.LongTimeSpan);
         }
 
         public bool NeedLogMessage(IMessage arg, GuildConfig config, bool? isCommand) {

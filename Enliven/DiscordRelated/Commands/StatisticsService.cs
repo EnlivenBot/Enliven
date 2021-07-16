@@ -14,13 +14,13 @@ using Tyrrrz.Extensions;
 namespace Bot.DiscordRelated.Commands {
     public class StatisticsService : IStatisticsService {
         private Temporary<int> _textChannelsCount =
-            new Temporary<int>(() => Program.Client.Guilds.Sum(guild => guild.TextChannels.Count), Constants.LongTimeSpan);
+            new Temporary<int>(() => EnlivenBot.Client.Guilds.Sum(guild => guild.TextChannels.Count), Constants.LongTimeSpan);
 
         private Temporary<int> _voiceChannelsCount =
-            new Temporary<int>(() => Program.Client.Guilds.Sum(guild => guild.VoiceChannels.Count), Constants.LongTimeSpan);
+            new Temporary<int>(() => EnlivenBot.Client.Guilds.Sum(guild => guild.VoiceChannels.Count), Constants.LongTimeSpan);
 
         private Temporary<int> _usersCount =
-            new Temporary<int>(() => Program.Client.Guilds.Sum(guild => guild.MemberCount), Constants.LongTimeSpan);
+            new Temporary<int>(() => EnlivenBot.Client.Guilds.Sum(guild => guild.MemberCount), Constants.LongTimeSpan);
 
         private Temporary<int> _commandUsagesCount;
 
@@ -100,7 +100,7 @@ namespace Bot.DiscordRelated.Commands {
             embedBuilder.Fields.Insert(0, new EmbedFieldBuilder {
                 Name = loc.Get("Statistics.ByGlobal"),
                 Value = loc.Get("Statistics.ByGlobalFormatted0")
-                           .Format(Program.Client.Guilds.Count, _textChannelsCount.Value, _voiceChannelsCount.Value, _usersCount.Value) +
+                           .Format(EnlivenBot.Client.Guilds.Count, _textChannelsCount.Value, _voiceChannelsCount.Value, _usersCount.Value) +
                         loc.Get("Statistics.ByGlobalFormatted1").Format(_commandUsagesCount.Value, _commandUsersCount.Value)
             });
             return embedBuilder;

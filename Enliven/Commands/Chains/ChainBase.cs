@@ -40,7 +40,7 @@ namespace Bot.Commands.Chains {
         // ReSharper disable once InconsistentNaming
         private static ConcurrentDictionary<string, ChainBase> _runningChains { get; set; } = new ConcurrentDictionary<string, ChainBase>();
 
-        private protected PriorityEmbedBuilderWrapper MainBuilder { get; set; } = new PriorityEmbedBuilderWrapper();
+        private protected EnlivenEmbedBuilder MainBuilder { get; set; } = new EnlivenEmbedBuilder();
 
         public DateTimeOffset? TimeoutDate { get; private set; }
 

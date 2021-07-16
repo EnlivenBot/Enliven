@@ -37,7 +37,7 @@ namespace Bot.Commands.Chains {
                     var match = ChannelRegex.Match(args.Message.Content.Trim());
                     if (!match.Success) return;
                     SetTimeout(Constants.StandardTimeSpan);
-                    var targetChannel = Program.Client.GetChannel(Convert.ToUInt64(match.Groups[1].Value));
+                    var targetChannel = EnlivenBot.Client.GetChannel(Convert.ToUInt64(match.Groups[1].Value));
                     if (!(targetChannel is ITextChannel targetTextChannel) || targetTextChannel.Guild.Id != _guildConfig.GuildId) return;
                     _guildConfig.ToggleChannelLogging(targetChannel.Id);
                     _guildConfig.Save();
@@ -84,7 +84,7 @@ namespace Bot.Commands.Chains {
                     properties.Embed = new EmbedBuilder().WithColor(Color.Orange).WithTitle(Loc.Get("ChainsCommon.Ended")).WithDescription(entry.Get(Loc))
                                                          .Build());
                 await _message.RemoveAllReactionsAsync();
-                _message.DelayedDelete(Constants.StandardTimeSpan);
+                _ = _message.DelayedDelete(Constants.StandardTimeSpan);
             };
             SetTimeout(Constants.StandardTimeSpan);
         }

@@ -13,7 +13,7 @@ namespace Bot.DiscordRelated.MessageComponents {
     /// <remarks>
     /// Should be used one per message!
     /// </remarks>
-    public class EnlivenComponentManager : IDisposable {
+    public class EnlivenComponentBuilder : IDisposable {
         private readonly MessageComponentService _messageComponentService;
         private readonly Dictionary<string, (DateTime, EnlivenButtonBuilder)> _entries = new Dictionary<string, (DateTime, EnlivenButtonBuilder)>();
         private CompositeDisposable? buttonCallbackDisposables;
@@ -23,16 +23,16 @@ namespace Bot.DiscordRelated.MessageComponents {
 
         public IReadOnlyDictionary<string, EnlivenButtonBuilder> Entries => _entries.ToImmutableDictionary(pair => pair.Key, pair => pair.Value.Item2);
 
-        public EnlivenComponentManager(MessageComponentService messageComponentService) {
+        public EnlivenComponentBuilder(MessageComponentService messageComponentService) {
             _messageComponentService = messageComponentService;
         }
 
-        public EnlivenComponentManager WithButton(EnlivenButtonBuilder button) {
+        public EnlivenComponentBuilder WithButton(EnlivenButtonBuilder button) {
             _entries[button.CustomId] = (DateTime.Now, button);
             return this;
         }
 
-        public EnlivenComponentManager WithButton(string id, EnlivenButtonBuilder button) {
+        public EnlivenComponentBuilder WithButton(string id, EnlivenButtonBuilder button) {
             _entries[id] = (DateTime.Now, button);
             return this;
         }
@@ -61,7 +61,7 @@ namespace Bot.DiscordRelated.MessageComponents {
             return enlivenButtonBuilder;
         }
 
-        public EnlivenComponentManager RemoveButton(string id) {
+        public EnlivenComponentBuilder RemoveButton(string id) {
             _entries.Remove(id);
             return this;
         }

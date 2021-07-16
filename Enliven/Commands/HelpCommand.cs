@@ -18,7 +18,7 @@ namespace Bot.Commands {
             var eb = this.GetAuthorEmbedBuilder()
                          .WithTitle(Loc.Get("Help.HelpTitle"))
                          .WithColor(Color.Gold)
-                         .WithDescription(Loc.Get("Help.HelpPrefix").Format(GuildConfig.Prefix, Program.Client.CurrentUser.Mention))
+                         .WithDescription(Loc.Get("Help.HelpPrefix").Format(GuildConfig.Prefix, EnlivenBot.Client.CurrentUser.Mention))
                          .AddField($"{GuildConfig.Prefix}help", Loc.Get("Help.HelpDescription"))
                          .WithFields(CustomCommandService.CommandsGroups.Value.Select(pair =>
                               new EmbedFieldBuilder {
@@ -26,7 +26,8 @@ namespace Bot.Commands {
                                   Value = pair.Value.GroupTextTemplate.Format(GuildConfig.Prefix)
                               }));
             eb.AddField(Loc.Get("Common.Vote"), Loc.Get("Common.VoteDescription"));
-            (await (await GetResponseChannel()).SendMessageAsync(null, false, eb.Build())).DelayedDelete(Constants.LongTimeSpan);
+            var responseChannel = await GetResponseChannel();
+            _ = responseChannel.SendMessageAsync(null, false, eb.Build()).DelayedDelete(Constants.LongTimeSpan);
         }
 
         [Command("help")]
@@ -49,7 +50,8 @@ namespace Bot.Commands {
                   .WithDescription(Loc.Get("Help.NotFoundDescription").Format(message.SafeSubstring(100, "..."), GuildConfig.Prefix));
             }
 
-            (await (await GetResponseChannel()).SendMessageAsync(null, false, eb.Build())).DelayedDelete(Constants.LongTimeSpan);
+            var responseChannel = await GetResponseChannel();
+            _ = responseChannel.SendMessageAsync(null, false, eb.Build()).DelayedDelete(Constants.LongTimeSpan);
         }
     }
 }

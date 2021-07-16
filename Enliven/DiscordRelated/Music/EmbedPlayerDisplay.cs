@@ -42,12 +42,12 @@ namespace Bot.DiscordRelated.Music {
         private SingleTask _updateControlMessageTask;
         private SingleTask _controlMessageSendTask;
 
-        private PriorityEmbedBuilderWrapper EmbedBuilder;
+        private EnlivenEmbedBuilder EmbedBuilder;
 
         public bool NextResendForced;
         private MessageComponentService _messageComponentService;
         private MessageComponent? _messageComponent;
-        private EnlivenComponentManager? _messageComponentManager;
+        private EnlivenComponentBuilder? _messageComponentManager;
 
         public EmbedPlayerDisplay(ITextChannel targetChannel, IDiscordClient discordClient, ILocalizationProvider loc,
                                   CommandHandlerService commandHandlerService, IPrefixProvider prefixProvider, MessageComponentService messageComponentService) :
@@ -98,7 +98,7 @@ namespace Bot.DiscordRelated.Music {
                 BetweenExecutionsDelay = TimeSpan.FromSeconds(30), CanBeDirty = false, IsDelayResetByExecute = false,
             };
 
-            EmbedBuilder = new PriorityEmbedBuilderWrapper();
+            EmbedBuilder = new EnlivenEmbedBuilder();
             EmbedBuilder.AddField("State", loc.Get("Music.Empty"), loc.Get("Music.Empty"), true);
             EmbedBuilder.AddField("Parameters", loc.Get("Music.Parameters"), loc.Get("Music.Empty"), true);
             EmbedBuilder.AddField("Queue", loc.Get("Music.Queue").Format(0, 0, 0), loc.Get("Music.Empty"));
@@ -218,7 +218,7 @@ namespace Bot.DiscordRelated.Music {
                 };
 
                 if (!string.IsNullOrEmpty(command)) {
-                    await _commandHandlerService.ExecuteCommand(command, new ComponentCommandContext(Program.Client, component),
+                    await _commandHandlerService.ExecuteCommand(command, new ComponentCommandContext(EnlivenBot.Client, component),
                         component.User.Id.ToString());
                 }
 
@@ -268,7 +268,7 @@ namespace Bot.DiscordRelated.Music {
 
         private async Task CheckRestrictions() {
             if (_targetGuild != null) {
-                var guildUser = await _targetGuild.GetUserAsync(Program.Client.CurrentUser.Id);
+                var guildUser = await _targetGuild.GetUserAsync(EnlivenBot.Client.CurrentUser.Id);
                 var channelPerms = guildUser.GetPermissions((IGuildChannel) _targetChannel);
                 _isExternalEmojiAllowed = channelPerms.UseExternalEmojis;
                 var text = "";
@@ -344,7 +344,7 @@ namespace Bot.DiscordRelated.Music {
         }
 
         private void UpdateParameters() {
-            var volume = Player.Volume * 200;
+            var volume = (int)Player.Volume * 200;
             var volumeText = volume < 50 || volume > 150 ? $"🔉 ***{volume}%***\n" : $"🔉 {volume}%\n";
             EmbedBuilder.Fields["Parameters"].Value = volumeText + $"🅱️ {Player.BassBoostMode}";
         }
@@ -396,7 +396,7 @@ namespace Bot.DiscordRelated.Music {
         }
 
         private Task UpdateNode() {
-            EmbedBuilder.WithFooter($"Powered by {Program.Client.CurrentUser.Username} | {(Player.LavalinkSocket as EnlivenLavalinkClusterNode)?.Label}");
+            EmbedBuilder.WithFooter($"Powered by {EnlivenBot.Client.CurrentUser.Username} | {(Player.LavalinkSocket as EnlivenLavalinkClusterNode)?.Label}");
             return Task.CompletedTask;
         }
 
