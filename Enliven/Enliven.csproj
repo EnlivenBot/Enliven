@@ -77,7 +77,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Common\Common.csproj" />
-    <ProjectReference Include="..\Lavalink4NET\src\Lavalink4NET\Lavalink4NET.csproj" />
   </ItemGroup>
 
 </Project>
