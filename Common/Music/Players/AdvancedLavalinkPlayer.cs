@@ -21,7 +21,6 @@ namespace Common.Music.Players {
 
         public readonly Subject<IEntry> Shutdown = new Subject<IEntry>();
         public readonly Subject<int> VolumeChanged = new Subject<int>();
-        public readonly Subject<BassBoostMode> BassboostChanged = new Subject<BassBoostMode>();
         public readonly Subject<EnlivenLavalinkClusterNode?> SocketChanged = new Subject<EnlivenLavalinkClusterNode?>();
         public readonly Subject<PlayerState> StateChanged = new Subject<PlayerState>();
         private GuildConfig? _guildConfig;
@@ -36,7 +35,6 @@ namespace Common.Music.Players {
         }
 
         protected GuildConfig GuildConfig => _guildConfig ??= _guildConfigProvider.Get(GuildId);
-        public BassBoostMode BassBoostMode { get; private set; } = BassBoostMode.Off;
         public bool IsShutdowned { get; private set; }
 
         public override async Task OnConnectedAsync(VoiceServer voiceServer, VoiceState voiceState) {
@@ -58,38 +56,6 @@ namespace Common.Music.Players {
         [Obsolete]
         public override async Task SetVolumeAsync(float volume = 1, bool normalize = false, bool force = false) {
             await SetVolumeAsync((int) (volume * 200), force);
-        }
-
-        public virtual void SetBassBoost(BassBoostMode mode) {
-            BassBoostMode = mode;
-            var bands = new List<EqualizerBand>();
-            switch (mode) {
-                case BassBoostMode.Off:
-                    bands.Add(new EqualizerBand(0, 0f));
-                    bands.Add(new EqualizerBand(1, 0f));
-                    break;
-                case BassBoostMode.Low:
-                    bands.Add(new EqualizerBand(0, 0.25f));
-                    bands.Add(new EqualizerBand(1, 0.15f));
-                    break;
-                case BassBoostMode.Medium:
-                    bands.Add(new EqualizerBand(0, 0.5f));
-                    bands.Add(new EqualizerBand(1, 0.25f));
-                    break;
-                case BassBoostMode.High:
-                    bands.Add(new EqualizerBand(0, 0.75f));
-                    bands.Add(new EqualizerBand(1, 0.5f));
-                    break;
-                case BassBoostMode.Extreme:
-                    bands.Add(new EqualizerBand(0, 1f));
-                    bands.Add(new EqualizerBand(1, 0.75f));
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(mode), mode, null);
-            }
-
-            UpdateEqualizerAsync(bands, false, true);
-            BassboostChanged.OnNext(mode);
         }
 
         public virtual async Task ExecuteShutdown(IEntry reason, PlayerShutdownParameters parameters) {

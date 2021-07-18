@@ -156,7 +156,6 @@ namespace Bot.DiscordRelated.Music {
                     if (isChanged) UpdateControlMessage();
                 }),
                 Player.Playlist.Changed.Subscribe(playlist => UpdateQueue()),
-                Player.BassboostChanged.Subscribe(obj => UpdateParameters()),
                 Player.VolumeChanged.Subscribe(obj => UpdateParameters()),
                 Player.SocketChanged.Subscribe(obj => UpdateNode()),
                 Player.StateChanged.Subscribe(obj => {
@@ -346,7 +345,7 @@ namespace Bot.DiscordRelated.Music {
         private void UpdateParameters() {
             var volume = (int)Player.Volume * 200;
             var volumeText = volume < 50 || volume > 150 ? $"🔉 ***{volume}%***\n" : $"🔉 {volume}%\n";
-            EmbedBuilder.Fields["Parameters"].Value = volumeText + $"🅱️ {Player.BassBoostMode}";
+            EmbedBuilder.Fields["Parameters"].Value = volumeText;
         }
 
         private void UpdateQueue() {

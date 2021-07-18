@@ -60,7 +60,6 @@ namespace Bot {
             // Discord type readers
             builder.RegisterType<ChannelFunctionTypeReader>().As<CustomTypeReader>();
             builder.RegisterType<LoopingStateTypeReader>().As<CustomTypeReader>();
-            builder.RegisterType<BassBoostModeTypeReader>().As<CustomTypeReader>();
 
             // Database types
             builder.Register(context => context.Resolve<LiteDatabaseProvider>().ProvideDatabase().GetAwaiter().GetResult()

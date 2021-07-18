@@ -388,21 +388,6 @@ namespace Bot.Commands {
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.TrackMoved").Format(Context.User.Mention, trackIndex, newIndex));
         }
 
-        [Command("bassboost", RunMode = RunMode.Async)]
-        [Alias("bb", "bassboosted")]
-        [Summary("bassboost0s")]
-        public async Task ApplyBassBoost([Summary("bassboost0_0s")] BassBoostMode mode) {
-            if (!await IsPreconditionsValid) return;
-            if (Player == null) {
-                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix))
-                                      .UpdateTimeout(Constants.StandardTimeSpan).Update();
-                return;
-            }
-
-            Player.SetBassBoost(mode);
-            Player.WriteToQueueHistory(Loc.Get("MusicQueues.BassBoostUpdated").Format(Context.User.Username, mode));
-        }
-
         [Command("changenode", RunMode = RunMode.Async)]
         [Alias("newnode", "switchnode")]
         [Summary("changenode0s")]
