@@ -193,7 +193,7 @@
     "Commands": {
       "RequestedBy": "Requested by {0} | Help us by voting",
       "SetChannelResponse": "Channel <#{0}> was successfully assigned the role {1}",
-      "Success": "Bot prefix changed",
+      "Success": "Success",
       "Fail": "Fail",
       "SetPrefixResponse": "Changed the bot prefix to `{0}`.\nIf you forget the prefix, just mention the bot.",
       "LoggingEnabled": "Saving message change history enabled",
