@@ -9,6 +9,7 @@ using Common.Localization.Entries;
 using Common.Music.Controller;
 using Lavalink4NET;
 using Lavalink4NET.Events;
+using Lavalink4NET.Filters;
 using Lavalink4NET.Player;
 using NLog;
 
