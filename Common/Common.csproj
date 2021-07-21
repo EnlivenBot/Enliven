@@ -9,9 +9,9 @@
     <ItemGroup>
       <PackageReference Include="Autofac" Version="6.1.0" />
       <PackageReference Include="Discord.Net.Labs" Version="2.4.7" />
-      <PackageReference Include="Lavalink4NET" Version="2021.7.17.1404" />
-      <PackageReference Include="Lavalink4NET.Discord.NET" Version="2021.7.17.1404" />
-      <PackageReference Include="Lavalink4NET.MemoryCache" Version="2021.7.17.1404" />
+      <PackageReference Include="Lavalink4NET" Version="2021.7.20.1729" />
+      <PackageReference Include="Lavalink4NET.Discord.NET" Version="2021.7.20.1729" />
+      <PackageReference Include="Lavalink4NET.MemoryCache" Version="2021.7.20.1729" />
       <PackageReference Include="Lib.Harmony" Version="2.0.4" />
       <PackageReference Include="LiteDB" Version="5.0.10" />
       <PackageReference Include="NLog" Version="4.7.6" />

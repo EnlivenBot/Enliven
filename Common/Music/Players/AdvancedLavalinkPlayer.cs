@@ -1,12 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Collections.ObjectModel;
 using System.Linq;
+using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Threading.Tasks;
 using Common.Config;
 using Common.History;
 using Common.Localization.Entries;
 using Common.Music.Controller;
+using Discord;
 using Lavalink4NET;
 using Lavalink4NET.Events;
 using Lavalink4NET.Filters;
@@ -18,17 +22,21 @@ namespace Common.Music.Players {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
         public readonly HistoryCollection QueueHistory = new HistoryCollection(512, 1000, false);
+        private readonly Subject<FilterMapBase> _effectsChanged = new Subject<FilterMapBase>();
+        private readonly List<PlayerEffectUse> _effectsList = new List<PlayerEffectUse>();
 
         public readonly Subject<IEntry> Shutdown = new Subject<IEntry>();
         public readonly Subject<int> VolumeChanged = new Subject<int>();
         public readonly Subject<EnlivenLavalinkClusterNode?> SocketChanged = new Subject<EnlivenLavalinkClusterNode?>();
         public readonly Subject<PlayerState> StateChanged = new Subject<PlayerState>();
+        public IObservable<FilterMapBase> EffectsChanged => _effectsChanged.AsObservable();
         private GuildConfig? _guildConfig;
         private ulong _lastVoiceChannelId;
         private protected IMusicController MusicController;
         private IGuildConfigProvider _guildConfigProvider;
         public List<IPlayerDisplay> Displays { get; } = new List<IPlayerDisplay>();
-
+        public ImmutableList<PlayerEffectUse> AppliedPlayerEffects => _effectsList.ToImmutableList();
+        
         protected AdvancedLavalinkPlayer(IMusicController musicController, IGuildConfigProvider guildConfigProvider) {
             _guildConfigProvider = guildConfigProvider;
             MusicController = musicController;
@@ -173,6 +181,41 @@ namespace Common.Music.Players {
         public override async Task ResumeAsync() {
             await base.ResumeAsync();
             StateChanged.OnNext(State);
+        }
+
+        public virtual async Task<PlayerEffectUse> ApplyEffect(PlayerEffect effect, IUser user) {
+            var effectUse = new PlayerEffectUse(user, effect);
+            _effectsList.Add(effectUse);
+
+            await ApplyFilters();
+            return effectUse;
+        }
+
+        public virtual async Task RemoveEffect(PlayerEffectUse effectUse) {
+            if (_effectsList.Remove(effectUse)) {
+                await ApplyFilters();
+            }
+        }
+
+        protected async Task ApplyFilters() {
+            var effects = _effectsList.SelectMany(use => use.Effect.CurrentFilters)
+                .GroupBy(pair => pair.Key)
+                .Select(pairs => pairs.First())
+                .ToDictionary(pair => pair.Key, pair => pair.Value);
+
+            Filters.Distortion = effects.GetValueOrDefault(DistortionFilterOptions.Name) as DistortionFilterOptions;
+            Filters.Equalizer = effects.GetValueOrDefault(EqualizerFilterOptions.Name) as EqualizerFilterOptions;
+            Filters.Karaoke = effects.GetValueOrDefault(KaraokeFilterOptions.Name) as KaraokeFilterOptions;
+            Filters.Rotation = effects.GetValueOrDefault(RotationFilterOptions.Name) as RotationFilterOptions;
+            Filters.Timescale = effects.GetValueOrDefault(TimescaleFilterOptions.Name) as TimescaleFilterOptions;
+            Filters.Tremolo = effects.GetValueOrDefault(TremoloFilterOptions.Name) as TremoloFilterOptions;
+            Filters.Vibrato = effects.GetValueOrDefault(VibratoFilterOptions.Name) as VibratoFilterOptions;
+            Filters.Volume = effects.GetValueOrDefault(VolumeFilterOptions.Name) as VolumeFilterOptions;
+            Filters.ChannelMix = effects.GetValueOrDefault(ChannelMixFilterOptions.Name) as ChannelMixFilterOptions;
+            Filters.LowPass = effects.GetValueOrDefault(LowPassFilterOptions.Name) as LowPassFilterOptions;
+            
+            await Filters.CommitAsync();
+            _effectsChanged.OnNext(Filters);
         }
     }
 }
