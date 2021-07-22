@@ -8,6 +8,7 @@ using Bot.DiscordRelated.Commands.Modules;
 using Bot.DiscordRelated.MessageComponents;
 using Bot.DiscordRelated.Music;
 using Common;
+using Common.Config;
 using Common.History;
 using Common.Localization.Entries;
 using Common.Music;
@@ -465,6 +466,22 @@ namespace Bot.Commands {
 
             var isFail = string.IsNullOrWhiteSpace(lyrics);
             await ReplyFormattedAsync((isFail ? Loc.Get("Music.LyricsNotFound", artist, title) : lyrics)!, isFail);
+        }
+
+        [Command("effect", RunMode = RunMode.Async)]
+        public async Task Effect(string effectName) {
+            if (!await IsPreconditionsValid) return;
+
+            var effect = PlayerEffect.PredefinedEffects.FirstOrDefault(effect => effect.Name == effectName);
+            if (effect != null) {
+                var currentEffectUse = Player!.AppliedPlayerEffects.FirstOrDefault(use => use.Effect == effect);
+                if (currentEffectUse == null) {
+                    await Player.ApplyEffect(effect, Context.User);
+                }
+                else {
+                    await Player.RemoveEffect(currentEffectUse);
+                }
+            }
         }
     }
 }
