@@ -45,12 +45,24 @@ namespace Common.Config {
                 }
             }
         };
+
+        public static PlayerEffect EffectMono { get; } = new PlayerEffect(UserLink.Current, "mono") {
+            ChannelMix = new ChannelMixFilterOptions() {
+                LeftToLeft = 0.5f,
+                LeftToRight = 0.5f,
+                RightToLeft = 0.5f,
+                RightToRight = 0.5f
+            }
+        };
         
-        public static ImmutableList<PlayerEffect> PredefinedEffects { get; } =
-            new List<PlayerEffect>() {
-                Effect8D,
-                EffectNightcore,
-                EffectBassboost
-            }.ToImmutableList();
+        public static ImmutableDictionary<string, PlayerEffect> PredefinedEffects { get; } =
+            new Dictionary<string, PlayerEffect>() {
+                {"8d", Effect8D },
+                {"nightcore", EffectNightcore },
+                {"nc", EffectNightcore },
+                {"bassboost", EffectBassboost },
+                {"bb", EffectBassboost },
+                {"mono", EffectMono },
+            }.ToImmutableDictionary();
     }
 }

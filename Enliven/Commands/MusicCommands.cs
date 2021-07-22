@@ -472,8 +472,7 @@ namespace Bot.Commands {
         public async Task Effect(string effectName) {
             if (!await IsPreconditionsValid) return;
 
-            var effect = PlayerEffect.PredefinedEffects.FirstOrDefault(effect => effect.Name == effectName);
-            if (effect != null) {
+            if (PlayerEffect.PredefinedEffects.TryGetValue(effectName, out var effect)) {
                 var currentEffectUse = Player!.AppliedPlayerEffects.FirstOrDefault(use => use.Effect == effect);
                 if (currentEffectUse == null) {
                     await Player.ApplyEffect(effect, Context.User);
