@@ -41,7 +41,7 @@ namespace Bot.DiscordRelated.Music {
                     loc = guildConfig.Loc;
                 }
                 else {
-                    loc = new LangLocalizationProvider("en");
+                    loc = LangLocalizationProvider.EnglishLocalizationProvider;
                 }
                 var embedPlayerQueueDisplay = new EmbedPlayerQueueDisplay(channel, loc, _messageComponentService);
                 _ = embedPlayerQueueDisplay.Initialize(finalLavalinkPlayer);

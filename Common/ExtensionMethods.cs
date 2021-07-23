@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Common.Config;
 using Common.Localization.Providers;
+using Common.Utils;
 using Discord;
 using Discord.Rest;
 using NLog;
@@ -164,6 +165,14 @@ namespace Common {
         public static TimeSpan Sum<TSource>(this IEnumerable<TSource> source, Func<TSource, TimeSpan> func)
         {
             return new TimeSpan(source.Sum(item => func(item).Ticks));
+        }
+
+        public static string GetLocalizedContent(this Exception exception, ILocalizationProvider provider) {
+            if (exception is LocalizedException localizedException) {
+                return localizedException.Get(provider);
+            }
+
+            return exception.Message;
         }
     }
 }
