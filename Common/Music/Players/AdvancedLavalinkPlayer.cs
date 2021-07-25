@@ -184,6 +184,8 @@ namespace Common.Music.Players {
         }
 
         public virtual async Task<PlayerEffectUse> ApplyEffect(PlayerEffect effect, IUser? source) {
+            if (_effectsList.Count >= 5) throw new Exception("Maximum number of effects - 5");
+
             var effectUse = new PlayerEffectUse(source, effect);
             _effectsList.Add(effectUse);
 

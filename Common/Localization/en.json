@@ -103,10 +103,11 @@
       "PlayerRestored": "**{0}** restored the last player.",
       "LyricsNotFound": "Lyrics for the current song could not be found.\nQuery: {0} - {1}\nThis is an experimental feature, don't blame us if it doesn't work.",
       "EffectParseFailedWithDefault": "Error parsing effect arguments. Possible values: {0} or leave blank for {1}.",
-      "EffectNotFound": "No effect found with this name",
+      "EffectNotFound": "No effect found with this name.",
       "EffectApplied": "**{0}** applies `{1}` effect",
       "EffectRemoved": "**{0}** removes `{1}` effect",
-      "Effects": "Effects"      
+      "Effects": "Effects",
+      "MaxEffectsCountExceed": "The maximum number of effects ({0}) has already been applied to the player."
     },
     "Groups": {
       "": "Other",

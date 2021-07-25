@@ -21,13 +21,16 @@ namespace Bot.Commands.Music {
             if (await TryRemoveEffect(effectName)) return;
 
             if (!EffectSourceProvider.TryResolve(Context.User.ToLink(), effectName, out var effectSource)) {
-                var embed = CommandHandlerService.GetErrorEmbed(Context.User, Loc, Loc.Get("Music.EffectNotFound")).Build();
-                await ReplyAsync(embed: embed);
+                await ReplyFormattedAsync(Loc.Get("Music.EffectNotFound"), true);
                 return;
             }
             
             if (await TryRemoveEffect(effectSource.GetSourceName())) return;
 
+            if (Player!.Effects.Count >= 5) {
+                await ReplyFormattedAsync(Loc.Get("Music.MaxEffectsCountExceed"), true);
+                return;
+            }
             var playerEffect = await effectSource.CreateEffect(args);
             await Player!.ApplyEffect(playerEffect, Context.User);
         }
