@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Immutable;
 using System.ComponentModel;
 using System.Linq;
 using System.Text;
@@ -22,6 +23,7 @@ using Common.Music.Tracks;
 using Common.Utils;
 using Discord;
 using Lavalink4NET.Player;
+using Tyrrrz.Extensions;
 
 #pragma warning disable 4014
 
@@ -101,6 +103,7 @@ namespace Bot.DiscordRelated.Music {
             EmbedBuilder = new EnlivenEmbedBuilder();
             EmbedBuilder.AddField("State", loc.Get("Music.Empty"), loc.Get("Music.Empty"), true);
             EmbedBuilder.AddField("Parameters", loc.Get("Music.Parameters"), loc.Get("Music.Empty"), true);
+            EmbedBuilder.AddField("Effects", loc.Get("Music.Effects"), loc.Get("Music.Empty"), isEnabled: false);
             EmbedBuilder.AddField("Queue", loc.Get("Music.Queue").Format(0, 0, 0), loc.Get("Music.Empty"));
             EmbedBuilder.AddField("RequestHistory", loc.Get("Music.RequestHistory"), loc.Get("Music.Empty"));
             EmbedBuilder.AddField("Warnings", loc.Get("Music.Warning"), loc.Get("Music.Empty"), false, 100, false);
@@ -164,6 +167,7 @@ namespace Bot.DiscordRelated.Music {
                     UpdateControlMessage();
                     UpdateMessageComponents();
                 }),
+                Player.EffectsChanged.Subscribe(_ => UpdateEffects()),
                 Player.CurrentTrackIndexChanged.Subscribe(i => UpdateQueue())
             );
             UpdateNode();
@@ -341,11 +345,33 @@ namespace Bot.DiscordRelated.Music {
                 EmbedBuilder.Url = "";
             }
         }
+        
+        private void UpdateEffects() {
+            var effectsText = ProcessEffectsText(Player.Effects);
+            EmbedBuilder.Fields["Effects"].Value = effectsText.Or("Placeholder");
+            EmbedBuilder.Fields["Effects"].IsEnabled = !effectsText.IsNullOrWhiteSpace();
 
+            string ProcessEffectsText(ImmutableList<PlayerEffectUse> effects) {
+                try {
+                    var text = effects.Select(use => use.Effect.DisplayName).JoinToString(" > ");
+                    if (text.Length < 20) {
+                        _effectsInParameters = "\n" + text;
+                        return "";
+                    }
+                    _effectsInParameters = null;
+                    return effects.Select(use => $"`{use.Effect.DisplayName}`").JoinToString(" > ");
+                }
+                finally {
+                    UpdateParameters();
+                }
+            }
+        }
+
+        private string? _effectsInParameters;
         private void UpdateParameters() {
-            var volume = (int)Player.Volume * 200;
-            var volumeText = volume < 50 || volume > 150 ? $"🔉 ***{volume}%***\n" : $"🔉 {volume}%\n";
-            EmbedBuilder.Fields["Parameters"].Value = volumeText;
+            var volume = (int)(Player.Volume * 200);
+            var volumeText = volume < 50 || volume > 150 ? $"🔉 ***{volume}%***\n" : $"🔉 {volume}%";
+            EmbedBuilder.Fields["Parameters"].Value = volumeText + _effectsInParameters;
         }
 
         private void UpdateQueue() {

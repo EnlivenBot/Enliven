@@ -174,5 +174,12 @@ namespace Common {
 
             return exception.Message;
         }
+
+        public static string Or(this string? source, string replacement) {
+            if (string.IsNullOrWhiteSpace(source)) {
+                return replacement;
+            }
+            return source;
+        }
     }
 }

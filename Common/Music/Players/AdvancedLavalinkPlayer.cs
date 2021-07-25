@@ -35,7 +35,7 @@ namespace Common.Music.Players {
         private protected IMusicController MusicController;
         private IGuildConfigProvider _guildConfigProvider;
         public List<IPlayerDisplay> Displays { get; } = new List<IPlayerDisplay>();
-        public ImmutableList<PlayerEffectUse> AppliedPlayerEffects => _effectsList.ToImmutableList();
+        public ImmutableList<PlayerEffectUse> Effects => _effectsList.ToImmutableList();
         
         protected AdvancedLavalinkPlayer(IMusicController musicController, IGuildConfigProvider guildConfigProvider) {
             _guildConfigProvider = guildConfigProvider;
