@@ -67,7 +67,7 @@ namespace Common.Music.Players {
         }
 
         public virtual async Task ExecuteShutdown(IEntry reason, PlayerShutdownParameters parameters) {
-            GetPlayerShutdownParameters(parameters);
+            await GetPlayerShutdownParameters(parameters);
             IsShutdowned = true;
             Shutdown.OnNext(reason);
             Shutdown.Dispose();
@@ -116,6 +116,7 @@ namespace Common.Music.Players {
             parameters.LastTrack = CurrentTrack;
             parameters.TrackPosition = TrackPosition;
             parameters.PlayerState = State;
+            parameters.Effects = _effectsList.ToList();
             return Task.CompletedTask;
         }
 
@@ -127,7 +128,7 @@ namespace Common.Music.Players {
             if (!IsShutdowned) {
                 try {
                     var playerShutdownParameters = new PlayerShutdownParameters {ShutdownDisplays = false, NeedSave = true};
-                    GetPlayerShutdownParameters(playerShutdownParameters);
+                    await GetPlayerShutdownParameters(playerShutdownParameters);
                     var reason = new EntryLocalized("Music.TryReconnectAfterDispose", GuildConfig.Prefix, playerShutdownParameters.StoredPlaylist!.Id);
                     await ExecuteShutdown(reason, playerShutdownParameters);
                     foreach (var playerDisplay in Displays.ToList()) await playerDisplay.LeaveNotification(new EntryLocalized("Music.PlaybackStopped"), reason);
