@@ -468,30 +468,5 @@ namespace Bot.Commands {
             var isFail = string.IsNullOrWhiteSpace(lyrics);
             await ReplyFormattedAsync((isFail ? Loc.Get("Music.LyricsNotFound", artist, title) : lyrics)!, isFail);
         }
-
-        [Command("effect", RunMode = RunMode.Async)]
-        public async Task Effect(string effectName) {
-            await Effect(effectName, "");
-        }
-        
-        [Command("effect", RunMode = RunMode.Async)]
-        public async Task Effect(string effectName, [Remainder] string args) {
-            if (!await IsPreconditionsValid) return;
-
-            var currentEffectUse = Player!.Effects.FirstOrDefault(use => use.Effect.SourceName == effectName || use.Effect.DisplayName == effectName);
-            if (currentEffectUse != null) {
-                await Player.RemoveEffect(currentEffectUse);
-            }
-
-            if (!PlayerEffectSource.DefaultEffectsMap.TryGetValue(effectName, out var effectSource)) return;
-            var sourceName = effectSource.GetSourceName();
-            currentEffectUse = Player!.Effects.FirstOrDefault(use => use.Effect.SourceName == sourceName);
-            if (currentEffectUse != null) {
-                await Player.RemoveEffect(currentEffectUse);
-            }
-            else {
-                await Player.ApplyEffect(await effectSource.CreateEffect(args), Context.User);
-            }
-        }
     }
 }

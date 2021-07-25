@@ -103,7 +103,10 @@
       "PlayerRestored": "**{0}** restored the last player.",
       "LyricsNotFound": "Lyrics for the current song could not be found.\nQuery: {0} - {1}\nThis is an experimental feature, don't blame us if it doesn't work.",
       "EffectParseFailedWithDefault": "Error parsing effect arguments. Possible values: {0} or leave blank for {1}.",
-      "Effects": "Effects"
+      "EffectNotFound": "No effect found with this name",
+      "EffectApplied": "**{0}** applies `{1}` effect",
+      "EffectRemoved": "**{0}** removes `{1}` effect",
+      "Effects": "Effects"      
     },
     "Groups": {
       "": "Other",
@@ -179,7 +182,10 @@
       "fixspotify0_0s": "Spotify URL of the desired track",
       "playnext0s": "Same as `play`, but adds tracks immediately after the current one, not to the end of the queue",
       "playerrestart0s": "Allows you to completely restart the player. Beware: Experimental feature",
-      "lyrics0s": "Get song lyrics (if available)"
+      "lyrics0s": "Get song lyrics (if available)",
+      "effect0s": "Applies or removes the post-processing effect",
+      "effect0_0s": "Effect name or ID (built-in: `mono`, `bassboost`(`bb`), `nightcore`(`nc`), `8d`)",
+      "effect0_1s": "Parameter of the applied effect. For example `bassboost` mode: `Low`, `Medium`, `High`, `Extreme`"
     },
     "CommandHandler": {
       "FailedTitle": "Error executing command",

@@ -17,6 +17,7 @@ using Common;
 using Common.Config;
 using Common.Localization;
 using Common.Music.Controller;
+using Common.Music.Effects;
 using Common.Music.Resolvers;
 using Discord;
 using Discord.WebSocket;
@@ -82,6 +83,7 @@ namespace Bot {
             builder.RegisterType<MessageHistoryProvider>().As<IMessageHistoryProvider>().SingleInstance();
             builder.RegisterType<EmbedPlayerDisplayProvider>().SingleInstance();
             builder.RegisterType<EmbedPlayerQueueDisplayProvider>().SingleInstance();
+            builder.RegisterType<EffectSourceProvider>().SingleInstance();
 
             // Services
             builder.RegisterType<CustomCommandService>().As<IService>().AsSelf().SingleInstance();

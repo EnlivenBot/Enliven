@@ -183,17 +183,19 @@ namespace Common.Music.Players {
             StateChanged.OnNext(State);
         }
 
-        public virtual async Task<PlayerEffectUse> ApplyEffect(PlayerEffect effect, IUser user) {
-            var effectUse = new PlayerEffectUse(user, effect);
+        public virtual async Task<PlayerEffectUse> ApplyEffect(PlayerEffect effect, IUser? source) {
+            var effectUse = new PlayerEffectUse(source, effect);
             _effectsList.Add(effectUse);
 
+            WriteToQueueHistory(new EntryLocalized("Music.EffectApplied", source?.Username ?? "Unknown", effectUse.Effect.DisplayName));
             await ApplyFilters();
             return effectUse;
         }
 
-        public virtual async Task RemoveEffect(PlayerEffectUse effectUse) {
+        public virtual async Task RemoveEffect(PlayerEffectUse effectUse, IUser? source) {
             if (_effectsList.Remove(effectUse)) {
                 await ApplyFilters();
+                WriteToQueueHistory(new EntryLocalized("Music.EffectRemoved", source?.Username ?? "Unknown", effectUse.Effect.DisplayName));
             }
         }
 
