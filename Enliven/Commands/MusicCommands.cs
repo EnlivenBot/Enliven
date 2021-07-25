@@ -12,6 +12,7 @@ using Common.Config;
 using Common.History;
 using Common.Localization.Entries;
 using Common.Music;
+using Common.Music.Effects;
 using Common.Music.Players;
 using Discord;
 using Discord.Commands;
@@ -470,16 +471,26 @@ namespace Bot.Commands {
 
         [Command("effect", RunMode = RunMode.Async)]
         public async Task Effect(string effectName) {
+            await Effect(effectName, "");
+        }
+        
+        [Command("effect", RunMode = RunMode.Async)]
+        public async Task Effect(string effectName, [Remainder] string args) {
             if (!await IsPreconditionsValid) return;
 
-            if (PlayerEffect.PredefinedEffects.TryGetValue(effectName, out var effect)) {
-                var currentEffectUse = Player!.AppliedPlayerEffects.FirstOrDefault(use => use.Effect == effect);
-                if (currentEffectUse == null) {
-                    await Player.ApplyEffect(effect, Context.User);
-                }
-                else {
-                    await Player.RemoveEffect(currentEffectUse);
-                }
+            var currentEffectUse = Player!.Effects.FirstOrDefault(use => use.Effect.SourceName == effectName || use.Effect.DisplayName == effectName);
+            if (currentEffectUse != null) {
+                await Player.RemoveEffect(currentEffectUse);
+            }
+
+            if (!PlayerEffectSource.DefaultEffectsMap.TryGetValue(effectName, out var effectSource)) return;
+            var sourceName = effectSource.GetSourceName();
+            currentEffectUse = Player!.Effects.FirstOrDefault(use => use.Effect.SourceName == sourceName);
+            if (currentEffectUse != null) {
+                await Player.RemoveEffect(currentEffectUse);
+            }
+            else {
+                await Player.ApplyEffect(await effectSource.CreateEffect(args), Context.User);
             }
         }
     }

@@ -101,7 +101,9 @@
       "TrackStuck": "The current track is stuck. Let's skip.",
       "TrackException": "Track playback error: `{0}`. Let's skip.",
       "PlayerRestored": "**{0}** restored the last player.",
-      "LyricsNotFound": "Lyrics for the current song could not be found.\nQuery: {0} - {1}\nThis is an experimental feature, don't blame us if it doesn't work."
+      "LyricsNotFound": "Lyrics for the current song could not be found.\nQuery: {0} - {1}\nThis is an experimental feature, don't blame us if it doesn't work.",
+      "EffectParseFailedWithDefault": "Error parsing effect arguments. Possible values: {0} or leave blank for {1}.",
+      "Effects": "Effects"
     },
     "Groups": {
       "": "Other",
