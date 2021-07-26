@@ -1,32 +1,34 @@
 ﻿using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using Discord;
 using Lavalink4NET.Filters;
 using Lavalink4NET.Player;
 using LiteDB;
+using Newtonsoft.Json;
 
 namespace Common.Config {
-    public partial class PlayerEffect : FilterMapBase {
-        public PlayerEffect(UserLink user, string displayName) : this(user, displayName, displayName) { }
-        public PlayerEffect(UserLink user, string displayName, string sourceName) {
+    public partial class PlayerEffect : PlayerEffectBase {
+        public PlayerEffect(PlayerEffectBase playerEffectBase, UserLink user, string? sourceName = null)
+            : this(user, playerEffectBase.DisplayName, sourceName ?? playerEffectBase.DisplayName, playerEffectBase.CurrentFilters) { }
+
+        public PlayerEffect(UserLink user, string displayName, IDictionary<string, IFilterOptions>? effects = null)
+            : this(user, displayName, displayName, effects) { }
+
+        public PlayerEffect(UserLink user, string displayName, string sourceName, IDictionary<string, IFilterOptions>? effects = null)
+            : base(displayName, effects) {
             User = user;
             DisplayName = displayName;
             SourceName = sourceName;
-
-            Filters = new Dictionary<string, IFilterOptions>();
         }
 
         [BsonId]
-        public string Id { get; set; } = null!;
+        public string Id { get; set; } = ObjectId.NewObjectId().ToString();
 
-        public string DisplayName { get; set; }
-
+        [BsonIgnore]
         public string SourceName { get; set; }
 
         public UserLink User { get; set; }
-
-        [BsonIgnore]
-        public ImmutableDictionary<string, IFilterOptions> CurrentFilters => Filters.ToImmutableDictionary();
     }
 
     public partial class PlayerEffect {

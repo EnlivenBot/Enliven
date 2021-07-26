@@ -109,6 +109,17 @@
       "Effects": "Effects",
       "MaxEffectsCountExceed": "The maximum number of effects ({0}) has already been applied to the player."
     },
+    "Effects": {
+      "AddEffectTitle": "How to add effect",
+      "AddEffectDescription": "1. Go to [configurator](tinyurl.com/enliveneffects)\n2. Enter effect name\n3. Edit other effect options\n4. Copy resulting json from \"JSON Output\" field at right upper corner\n5. Execute `{0}effect add YourJsonHere` command",
+      "NameLength": "`Name` length must be between `{0}` and `{1}` characters",
+      "FiltersCount": "You must set at least one filter",
+      "ParametersCount": "{0}` filter: You must set at least one parameter",
+      "Between": "`{0}` filter: `{1}` value must be between {2} and {3}",
+      "MoreThen": "`{0}` filter: `{1}` value must be more then {2}",
+      "BandsDuplicate": "The equalizer should not have duplicating bands ({0})",
+      "BandsNumbers": "Bands must be between 0 and 14"
+    },
     "Groups": {
       "": "Other",
       "music": "Music",

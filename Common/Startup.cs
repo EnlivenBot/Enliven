@@ -5,6 +5,7 @@ using Common.Music.Controller;
 using Common.Music.Encoders;
 using Common.Music.Resolvers;
 using Lavalink4NET.Lyrics;
+using LiteDB;
 
 namespace Common
 {
@@ -27,11 +28,16 @@ namespace Common
             builder.Register(context =>
                 context.Resolve<LiteDatabaseProvider>().ProvideDatabase().GetAwaiter().GetResult()
                     .GetCollection<StoredPlaylist>(@"StoredPlaylists")).SingleInstance();
-            builder.Register(context =>
-                context.Resolve<LiteDatabaseProvider>().ProvideDatabase().GetAwaiter().GetResult()
-                    .GetCollection<UserData>("UserData")).SingleInstance();
-            
-            
+            builder.Register(context => {
+                BsonMapper.Global
+                    .Entity<UserData>()
+                    .DbRef(data => data.PlayerEffects, "PlayerEffects");
+                return context.GetDatabase()
+                    .GetCollection<UserData>("UserData")
+                    .Include(data => data.PlayerEffects);
+            }).SingleInstance();
+            builder.Register(context => context.GetDatabase().GetCollection<PlayerEffect>("PlayerEffects")).SingleInstance();
+
             // Music
             builder.RegisterType<MusicResolverService>().SingleInstance();
             builder.RegisterType<MusicController>().As<IMusicController>().As<IService>().SingleInstance();
@@ -45,6 +51,10 @@ namespace Common
             builder.RegisterType<StatisticsPartProvider>().As<IStatisticsPartProvider>().SingleInstance();
             builder.RegisterType<GuildConfigProvider>().As<IGuildConfigProvider>().SingleInstance();
             builder.RegisterType<PlaylistProvider>().As<IPlaylistProvider>().SingleInstance();
+        }
+        
+        private static LiteDatabase GetDatabase(this IComponentContext context) {
+            return context.Resolve<LiteDatabaseProvider>().ProvideDatabase().GetAwaiter().GetResult();
         }
     }
 }
