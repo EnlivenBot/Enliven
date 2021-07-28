@@ -1,13 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>netstandard2.1</TargetFramework>
+        <TargetFramework>netcoreapp3.1</TargetFramework>
         <Nullable>enable</Nullable>
+        <DisableTransitiveProjectReferences>true</DisableTransitiveProjectReferences>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="DiscordChatExporter.Core" Version="2021.7.19.1515" PrivateAssets="All" />
-        <PackageReference Include="Discord.Net.Labs" Version="2.4.7" />
-        <PackageReference Include="NLog" Version="4.7.10" />
+        <PackageReference Include="DiscordChatExporter.Core" Version="2021.7.19.1515" PrivateAssets="Compile"/>
+        <PackageReference Include="PuppeteerSharp" Version="5.0.0" PrivateAssets="Compile"/>
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Common\Common.csproj" />
     </ItemGroup>
 </Project>
