@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -9,20 +8,20 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bot.Config.Emoji;
 using Bot.Utilities.Collector;
+using ChatExporter;
 using Common;
 using Common.Config;
 using Common.Localization.Providers;
 using Discord;
 using Discord.WebSocket;
-using GrapeCity.Documents.Html;
-using HarmonyLib;
 using NLog;
 
 namespace Bot.DiscordRelated.Logging {
     public class MessageHistoryService : IService {
         public static readonly Utilities.DiffMatchPatch.DiffMatchPatch DiffMatchPatch = new Utilities.DiffMatchPatch.DiffMatchPatch();
         public MessageHistoryService(ILogger logger, IMessageHistoryProvider messageHistoryProvider, IGuildConfigProvider guildConfigProvider, 
-                                     IStatisticsPartProvider statisticsPartProvider) {
+                                     IStatisticsPartProvider statisticsPartProvider, HtmlRendererService htmlRendererService) {
+            _htmlRendererService = htmlRendererService;
             _statisticsPartProvider = statisticsPartProvider;
             _guildConfigProvider = guildConfigProvider;
             _messageHistoryProvider = messageHistoryProvider;
@@ -48,13 +47,6 @@ namespace Bot.DiscordRelated.Logging {
                     LogManager.GetCurrentClassLogger().Error(e, "Faled to print log");
                 }
             }, CollectorFilter.IgnoreBots);
-
-            // Sorry for this hack
-            // But this project does not bring me income, and I can not afford to buy this license
-            // If you using it consider buying license at https://www.grapecity.com/documents-api/licensing
-            var type = typeof(GcHtmlRenderer).Assembly.GetType("aov");
-            AccessTools.Field(type, "c").SetValue(null, int.MaxValue);
-            
             return Task.CompletedTask;
         }
 
@@ -83,6 +75,7 @@ namespace Bot.DiscordRelated.Logging {
         private IMessageHistoryProvider _messageHistoryProvider;
         private IGuildConfigProvider _guildConfigProvider;
         private IStatisticsPartProvider _statisticsPartProvider;
+        private HtmlRendererService _htmlRendererService;
 
         private Task ClientOnMessageDeleted(Cacheable<IMessage, ulong> messageCacheable, Cacheable<IMessageChannel, ulong> channelCacheable) {
             new Task(async o => {
@@ -125,7 +118,7 @@ namespace Bot.DiscordRelated.Logging {
                             var historyHtml = await history.ExportToHtml(loc);
                             var uploadStream = guildConfig.LogExportType switch {
                                 LogExportTypes.Html  => new MemoryStream(Encoding.UTF8.GetBytes(historyHtml)),
-                                LogExportTypes.Image => RenderLog(historyHtml),
+                                LogExportTypes.Image => await _htmlRendererService.RenderHtmlToStream(historyHtml),
                                 _                    => throw new SwitchExpressionException(guildConfig.LogExportType)
                             };
                             var fileName = guildConfig.LogExportType switch {
@@ -215,18 +208,8 @@ namespace Bot.DiscordRelated.Logging {
             return Task.CompletedTask;
         }
 
-        private MemoryStream RenderLog(string html) {
-            using var re1 = new GcHtmlRenderer(html);
-            var pngSettings = new PngSettings {FullPage = true, WindowSize = new Size(512, 1)};
-
-            var stream = new MemoryStream();
-            re1.RenderToPng(stream, pngSettings);
-            stream.Position = 0;
-            return stream;
-        }
-
         public async Task PrintLog(MessageHistory history, ITextChannel outputChannel, ILocalizationProvider loc, IGuildUser requester,
-                                          bool forceImage = false) {
+                                   bool forceImage = false) {
             var realMessage = history.GetRealMessage();
             IUserMessage? logMessage = null;
             var embedBuilder = new EmbedBuilder().WithCurrentTimestamp()
@@ -253,7 +236,7 @@ namespace Bot.DiscordRelated.Logging {
                     logMessage = await outputChannel.SendMessageAsync(null, false, embedBuilder.Build());
                 }
                 else {
-                    var logImage = RenderLog(await history.ExportToHtml(loc));
+                    var logImage = await _htmlRendererService.RenderHtmlToStream(await history.ExportToHtml(loc));
                     logMessage = await outputChannel.SendFileAsync(logImage, $"History-{history.ChannelId}-{history.MessageId}.png",
                         null, false, embedBuilder.Build());
                 }
