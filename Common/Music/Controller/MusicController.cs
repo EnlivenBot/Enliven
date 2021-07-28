@@ -19,7 +19,7 @@ using Lavalink4NET.Tracking;
 using ILogger = NLog.ILogger;
 
 namespace Common.Music.Controller {
-    public class MusicController : IMusicController, IDisposable {
+    public class MusicController : IMusicController, IService {
         private static readonly List<FinalLavalinkPlayer> PlaybackPlayers = new List<FinalLavalinkPlayer>();
         private static readonly Dictionary<ulong, PlayerShutdownParameters> PlayerShutdownParametersMap = new Dictionary<ulong, PlayerShutdownParameters>();
         private static EventLogger _lavalinkLogger = new EventLogger();
@@ -41,12 +41,14 @@ namespace Common.Music.Controller {
             _playlistProvider = playlistProvider;
             _guildConfigProvider = guildConfigProvider;
             _musicResolverService = musicResolverService;
-            AppDomain.CurrentDomain.ProcessExit += (sender, args) => { Dispose(); };
         }
-
-        public void Dispose() {
-            Task.WaitAll(PlaybackPlayers.ToList()
-                                        .Select(player => player.ExecuteShutdown(new PlayerShutdownParameters())).ToArray());
+        
+        public Task OnShutdown(bool isDiscordStarted) {
+            var tasks = PlaybackPlayers
+                .ToList()
+                .Select(player => player.ExecuteShutdown(new PlayerShutdownParameters()))
+                .ToArray();
+            return Task.WhenAll(tasks);
         }
 
         public bool IsMusicEnabled { get; set; }

@@ -13,5 +13,9 @@ namespace Common {
         Task OnPostDiscordStartInitialize() {
             return Task.CompletedTask;
         }
+
+        Task OnShutdown(bool isDiscordStarted) {
+            return Task.CompletedTask;
+        }
     }
 }
