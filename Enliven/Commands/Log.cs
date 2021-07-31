@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Bot.DiscordRelated.Commands.Modules;
 using Bot.DiscordRelated.Logging;
 using Common;
+using Common.Entities;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -10,7 +11,7 @@ using Discord.WebSocket;
 namespace Bot.Commands {
     public class Log : AdvancedModuleBase {
         public MessageHistoryService MessageHistoryService { get; set; } = null!;
-        public IMessageHistoryProvider MessageHistoryProvider { get; set; } = null!;
+        public MessageHistoryProvider MessageHistoryProvider { get; set; } = null!;
         
         [Alias("log")]
         [Command("history", RunMode = RunMode.Async)]

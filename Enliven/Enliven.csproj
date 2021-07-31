@@ -20,9 +20,6 @@
     <PackageReference Include="LiteDB" Version="5.0.10" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
     <PackageReference Include="NLog" Version="4.7.6" />
-    
-    <PackageReference Include="Polly" Version="7.2.2" />
-    <PackageReference Include="Scriban" Version="3.3.3" />
     <PackageReference Include="SpotifyAPI.Web" Version="6.0.0" />
     <PackageReference Include="System.Reactive" Version="5.0.0" />
     <PackageReference Include="Tyrrrz.Extensions" Version="1.6.5" />
@@ -65,14 +62,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="DiscordChatExporter.Domain, Version=2.20.0.0, Culture=neutral, PublicKeyToken=null">
-      <HintPath>..\packages\DiscordChatExporter.Domain.dll</HintPath>
-    </Reference>
+    <ProjectReference Include="..\ChatExporter\ChatExporter.csproj" />
+    <ProjectReference Include="..\Common\Common.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ChatExporter\ChatExporter.csproj" />
-    <ProjectReference Include="..\Common\Common.csproj" />
+    <Folder Include="DiscordRelated\Logging" />
   </ItemGroup>
 
 </Project>

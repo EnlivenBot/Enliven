@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Common.Config;
+using Common.Entities;
 using Common.Localization.Providers;
 using Discord;
 using Discord.Rest;
@@ -164,6 +165,18 @@ namespace Common {
         public static TimeSpan Sum<TSource>(this IEnumerable<TSource> source, Func<TSource, TimeSpan> func)
         {
             return new TimeSpan(source.Sum(item => func(item).Ticks));
+        }
+        
+        public static IEnumerable<EmbedFieldBuilder> AsFields(this IEnumerable<MessageSnapshot> snapshots, ILocalizationProvider loc) {
+            var embedFields = snapshots.Select(messageSnapshot => new EmbedFieldBuilder {
+                Name = messageSnapshot.EditTimestamp.ToString(),
+                Value = string.IsNullOrWhiteSpace(messageSnapshot.CurrentContent) ? loc.Get("MessageHistory.EmptyMessage") : $">>> {messageSnapshot.CurrentContent}"
+            }).ToList();
+
+            var lastContent = embedFields.Last();
+            lastContent.Name = loc.Get("MessageHistory.LastContent").Format(lastContent.Name);
+
+            return embedFields;
         }
     }
 }

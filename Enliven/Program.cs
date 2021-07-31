@@ -16,6 +16,7 @@ using Bot.Patches;
 using ChatExporter;
 using Common;
 using Common.Config;
+using Common.Entities;
 using Common.Localization;
 using Common.Music.Controller;
 using Common.Music.Resolvers;
@@ -81,7 +82,7 @@ namespace Bot {
 
             // Providers
             builder.RegisterType<SpotifyAssociationProvider>().As<ISpotifyAssociationProvider>().SingleInstance();
-            builder.RegisterType<MessageHistoryProvider>().As<IMessageHistoryProvider>().SingleInstance();
+            builder.RegisterType<MessageHistoryProvider>().SingleInstance();
             builder.RegisterType<EmbedPlayerDisplayProvider>().SingleInstance();
             builder.RegisterType<EmbedPlayerQueueDisplayProvider>().SingleInstance();
 

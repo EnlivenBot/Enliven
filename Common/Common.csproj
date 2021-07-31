@@ -8,6 +8,7 @@
 
     <ItemGroup>
       <PackageReference Include="Autofac" Version="6.1.0" />
+      <PackageReference Include="DiffMatchPatchCSharp" Version="1.0.0" />
       <PackageReference Include="Discord.Net.Labs" Version="2.4.7" />
       <PackageReference Include="Lavalink4NET" Version="2021.7.16.2009" />
       <PackageReference Include="Lavalink4NET.Discord.NET" Version="2021.7.16.2009" />
