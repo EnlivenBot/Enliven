@@ -43,13 +43,12 @@ namespace Common.Localization.Entries {
         private string _cache = null!;
 
         public override string Get(ILocalizationProvider provider, params object[] additionalArgs) {
-            if (!_isCalculated || _lastProvider != provider || additionalArgs.Length != 0) {
-                var formatArgs = FormatArgs.ToList().Concat(additionalArgs.Select(o => new Func<object>(() => o)))
-                                        .Select(func => {
-                                             var result = func();
-                                             return result is IEntry loc ? loc.Get(provider) : result;
-                                         }).ToArray();
-                _cache = formatArgs.Length == 0 ? GetFormatString(provider) : string.Format(GetFormatString(provider), formatArgs);
+            if (_isCalculated || _lastProvider != provider || additionalArgs.Length != 0) {
+                var formatArgs = FormatArgs
+                    .Select(func => func().Pipe(o => o is IEntry loc ? loc.Get(provider) : o))
+                    .Concat(additionalArgs)
+                    .ToArray();
+                _cache = GetFormatString(provider).Pipe(s => formatArgs.Length == 0 ? s : string.Format(s, formatArgs));
                 _lastProvider = provider;
             }
 

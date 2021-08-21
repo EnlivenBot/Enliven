@@ -165,5 +165,7 @@ namespace Common {
         {
             return new TimeSpan(source.Sum(item => func(item).Ticks));
         }
+        
+        public static TOut Pipe<TIn, TOut>(this TIn input, Func<TIn, TOut> transform) => transform(input);
     }
 }
