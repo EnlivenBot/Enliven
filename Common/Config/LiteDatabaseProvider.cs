@@ -15,6 +15,19 @@ using NLog;
 namespace Common.Config {
     // ReSharper disable once InconsistentNaming
     public class LiteDatabaseProvider {
+        static LiteDatabaseProvider() {
+            //Fix for mapping TimeSpan?
+            BsonMapper.Global.RegisterType
+            (
+                timeSpan => BsonMapper.Global.Serialize(timeSpan?.Ticks),
+                // ReSharper disable once RedundantCast
+                bson => bson == null ? (TimeSpan?) null : TimeSpan.FromTicks((long) bson.RawValue)
+            );
+
+            BsonMapper.Global.IncludeNonPublic = true;
+            BsonMapper.Global.EmptyStringToNull = false;
+        }
+        
         // ReSharper disable once NotAccessedField.Local
         private static Timer _checkpointTimer = null!;
 
@@ -33,13 +46,6 @@ namespace Common.Config {
         }
 
         private async Task<LiteDatabase> ProvideDatabaseInternal() {
-            //Fix for mapping TimeSpan?
-            BsonMapper.Global.RegisterType
-            (
-                timeSpan => BsonMapper.Global.Serialize(timeSpan?.Ticks),
-                // ReSharper disable once RedundantCast
-                bson => bson == null ? (TimeSpan?) null : TimeSpan.FromTicks((long) bson.RawValue)
-            );
             logger.Info("Loading database");
 
             var db = LoadDatabase();

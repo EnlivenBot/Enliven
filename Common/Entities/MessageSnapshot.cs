@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Immutable;
+using System.Threading;
 using Common.Localization.Providers;
+using DiffMatchPatch;
 
 namespace Common.Entities {
     public class MessageSnapshot {
@@ -17,6 +20,14 @@ namespace Common.Entities {
 
         public static MessageSnapshot WithMessageUnavailable(MessageHistory messageHistory, ILocalizationProvider loc) {
             return new MessageSnapshot(messageHistory, default, -1, loc.Get("MessageHistory.PreviousUnavailable"), null, true);
+        }
+
+        public IImmutableList<Diff>? GetEdits() {
+            return ChangeIndex switch {
+                < 0 => null,
+                0   => new ImmutableArray<Diff> {new(Operation.Equal, CurrentContent)},
+                _   => Diff.Compute(PreviousMessageContent ?? "", CurrentContent, true, true, CancellationToken.None).MakeHumanReadable()
+            };
         }
 
         public MessageHistory MessageHistory { get; }

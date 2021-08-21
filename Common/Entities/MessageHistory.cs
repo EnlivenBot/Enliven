@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reactive.Subjects;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Common.Config;
 using Common.Localization.Providers;
 using DiffMatchPatch;
 using Discord;
@@ -11,25 +12,27 @@ using LiteDB;
 
 namespace Common.Entities {
     public class MessageHistory {
-        [BsonField("At")] public List<string>? Attachments { get; set; }
+        public List<string>? Attachments { get; set; }
 
-        [BsonField("U")] public bool IsHistoryUnavailable { get; set; }
+        public bool IsHistoryUnavailable { get; set; }
 
         [BsonId] public string Id { get; internal set; } = null!;
 
-        [BsonField("A")] public ulong AuthorId { get; set; }
+        public UserLink Author { get; set; } = null!;
 
+        internal List<MessageSnapshotEntity> Edits { get; set; } = new();
+        
         [BsonIgnore] public ulong ChannelId => Convert.ToUInt64(Id.Split(":")[0]);
 
         [BsonIgnore] public ulong MessageId => Convert.ToUInt64(Id.Split(":")[1]);
-
-        [BsonField("E")] internal List<MessageSnapshotEntity> Edits { get; set; } = new List<MessageSnapshotEntity>();
-
+        
         [BsonIgnore] public bool HistoryExists => Edits.Count != 0;
 
         [BsonIgnore] public bool HasAttachments => Attachments != null && Attachments.Count != 0;
 
         [BsonIgnore] public ISubject<MessageHistory> SaveRequest = new Subject<MessageHistory>();
+
+        [BsonIgnore] public int EditsCount => Edits.Count;
 
         public void Save() {
             SaveRequest.OnNext(this);
@@ -41,9 +44,16 @@ namespace Common.Entities {
 
         public void AddSnapshot(DateTimeOffset editTime, string? newContent) {
             newContent ??= "";
+            #pragma warning disable 618
+            AddSnapshotInternal(editTime, Patch.Compute(GetLastContent(), newContent).ToText());
+            #pragma warning restore 618
+        }
+        
+        [Obsolete("Use AddSnapshot. This method for ")]
+        internal void AddSnapshotInternal(DateTimeOffset editTime, string diff) {
             Edits.Add(new MessageSnapshotEntity {
                 EditTimestamp = editTime,
-                DiffString = Patch.Compute(GetLastContent(), newContent).ToText()
+                DiffString = diff
             });
         }
 
@@ -73,8 +83,8 @@ namespace Common.Entities {
         
         public async Task<IMessage?> GetRealMessage(EnlivenShardedClient client) {
             try {
-                var textChannel = (ITextChannel) client.GetChannel(ChannelId);
-                return await textChannel.GetMessageAsync(MessageId)!;
+                if (await client.GetChannelAsync(ChannelId) is not ITextChannel textChannel) return null;
+                return await textChannel.GetMessageAsync(MessageId);
             }
             catch (Exception) {
                 return null;

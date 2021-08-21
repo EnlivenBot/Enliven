@@ -14,6 +14,7 @@ using Bot.Music.Spotify;
 using Bot.Music.Yandex;
 using Bot.Patches;
 using ChatExporter;
+using ChatExporter.Exporter.MessageHistories;
 using Common;
 using Common.Config;
 using Common.Entities;
@@ -95,6 +96,7 @@ namespace Bot {
             builder.RegisterType<StatisticsService>().As<IStatisticsService>().AsSelf().SingleInstance();
             builder.RegisterType<MessageComponentService>().As<MessageComponentService>().AsSelf().SingleInstance();
             builder.RegisterType<HtmlRendererService>().As<IService>().AsSelf().SingleInstance();
+            builder.RegisterType<MessageHistoryHtmlExporter>().SingleInstance();
         }
 
         // ReSharper disable once UnusedMember.Local

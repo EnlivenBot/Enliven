@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using Common.Config;
 using Discord;
 using LiteDB;
 
@@ -23,7 +24,7 @@ namespace Common.Entities {
             }
 
             var history = _cache[id] = _liteCollection.FindById(id);
-            history.SaveRequest.Subscribe(messageHistory => _liteCollection.Upsert(messageHistory));
+            history?.SaveRequest.Subscribe(messageHistory => _liteCollection.Upsert(messageHistory));
             return history;
         }
 
@@ -35,12 +36,13 @@ namespace Common.Entities {
             var history = Get(message);
             if (history == null) {
                 history = new MessageHistory {
-                    AuthorId = message.Author.Id,
+                    Author = new UserLink(message.Author.Id),
                     Id = $"{message.Channel.Id}:{message.Id}",
                     Attachments = message.Attachments.Select(attachment => attachment.Url).ToList(),
                     IsHistoryUnavailable = message.EditedTimestamp != null
                 };
                 history.SaveRequest.Subscribe(messageHistory => _liteCollection.Upsert(messageHistory));
+                _cache[history.Id] = history;
             }
 
             if (history.Edits.All(entity => entity.EditTimestamp != message.EditedTimestamp)) {

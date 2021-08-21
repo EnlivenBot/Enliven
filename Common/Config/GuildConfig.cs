@@ -34,8 +34,8 @@ namespace Common.Config {
     }
 
     public partial class GuildConfig {
-        private ILocalizationProvider? _loc;
-        private GuildPrefixProvider? _prefixProvider;
+        [BsonIgnore] private ILocalizationProvider? _loc;
+        [BsonIgnore] private GuildPrefixProvider? _prefixProvider;
         [BsonId] public ulong GuildId { get; set; }
         public string Prefix { get; set; } = "&";
         public int Volume { get; set; } = 100;
@@ -73,7 +73,7 @@ namespace Common.Config {
 
         [BsonIgnore] public ISubject<GuildConfig> LocalizationChanged { get; } = new Subject<GuildConfig>();
 
-        public static Subject<ulong> ChannelLoggingDisabled { get; } = new Subject<ulong>();
+        [BsonIgnore] public static Subject<ulong> ChannelLoggingDisabled { get; } = new Subject<ulong>();
 
         public void Save() {
             _saveRequest.OnNext(this);
