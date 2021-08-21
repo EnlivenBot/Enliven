@@ -344,7 +344,7 @@ namespace Bot.DiscordRelated.Music {
         }
 
         private void UpdateParameters() {
-            var volume = (int)Player.Volume * 200;
+            var volume = (int) (Player.Volume * 200);
             var volumeText = volume < 50 || volume > 150 ? $"🔉 ***{volume}%***\n" : $"🔉 {volume}%\n";
             EmbedBuilder.Fields["Parameters"].Value = volumeText + $"🅱️ {Player.BassBoostMode}";
         }
