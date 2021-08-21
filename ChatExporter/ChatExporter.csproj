@@ -4,14 +4,16 @@
         <TargetFramework>netcoreapp3.1</TargetFramework>
         <Nullable>enable</Nullable>
         <DisableTransitiveProjectReferences>true</DisableTransitiveProjectReferences>
+        <LangVersion>9</LangVersion>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="DiscordChatExporter.Core" Version="2021.7.19.1515" PrivateAssets="Compile"/>
+        <PackageReference Include="DiscordChatExporter.Core" Version="2021.7.29.2003" PrivateAssets="Compile"/>
+        <PackageReference Include="MiniRazor.CodeGen" Version="2.1.4" PrivateAssets="Compile"/>
         <PackageReference Include="PuppeteerSharp" Version="5.0.0" PrivateAssets="Compile"/>
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Common\Common.csproj" />
+        <ProjectReference Include="..\Common\Common.csproj"/>
     </ItemGroup>
 </Project>

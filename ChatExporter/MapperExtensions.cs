@@ -13,11 +13,11 @@ using DiscordChatExporter.Core.Utils.Extensions;
 using NLog;
 using Tyrrrz.Extensions;
 using Attachment = DiscordChatExporter.Core.Discord.Data.Attachment;
-using Embed = DiscordChatExporter.Core.Discord.Data.Embed;
-using EmbedAuthor = DiscordChatExporter.Core.Discord.Data.EmbedAuthor;
-using EmbedField = DiscordChatExporter.Core.Discord.Data.EmbedField;
-using EmbedFooter = DiscordChatExporter.Core.Discord.Data.EmbedFooter;
-using EmbedImage = DiscordChatExporter.Core.Discord.Data.EmbedImage;
+using EmbedAuthor = DiscordChatExporter.Core.Discord.Data.Embeds.EmbedAuthor;
+using EmbedField = DiscordChatExporter.Core.Discord.Data.Embeds.EmbedField;
+using EmbedFooter = DiscordChatExporter.Core.Discord.Data.Embeds.EmbedFooter;
+using EmbedImage = DiscordChatExporter.Core.Discord.Data.Embeds.EmbedImage;
+using Embed = DiscordChatExporter.Core.Discord.Data.Embeds.Embed;
 using Emoji = DiscordChatExporter.Core.Discord.Data.Emoji;
 using MessageReference = DiscordChatExporter.Core.Discord.Data.MessageReference;
 
@@ -97,8 +97,8 @@ namespace ChatExporter {
         }
         
         public static Emoji ToEmoji(this IEmote emote) {
-            var id = ((Emote) emote)?.Id.ToString();
-            var isAnimated = ((Emote) emote)?.Animated ?? false;
+            var id = (emote as Emote)?.Id.ToString();
+            var isAnimated = (emote as Emote)?.Animated ?? false;
             var imageUrl = GetEmojiImageUrl(id, emote.Name, isAnimated);
             return new Emoji(id, emote.Name, isAnimated, imageUrl);
         }
