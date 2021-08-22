@@ -193,7 +193,7 @@
     "Commands": {
       "RequestedBy": "Solicitado por {0} | Ayúdanos votando",
       "SetChannelResponse": "El canal <#{0}> ha sido designado para el rol {1}",
-      "Success": "Éxito",
+      "Success": "Completado",
       "Fail": "Fallo",
       "SetPrefixResponse": "Prefijo cambiado a `{0}`.\nSi lo olvidas, mencióname.",
       "LoggingEnabled": "Guardado de historial de cambios de mensaje activado",
