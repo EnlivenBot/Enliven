@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using Common.Localization.Providers;
 using LiteDB;
@@ -21,9 +22,9 @@ namespace Common.Config {
 
         public GuildConfig Get(ulong guildId) {
             return _configCache.GetOrAdd(guildId, arg => {
-                var guildConfig = _collection.FindById((long) arg);
+                var guildConfig = _collection.FindById((long)arg);
                 if (guildConfig == null) {
-                    guildConfig = new GuildConfig() {GuildId = guildId};
+                    guildConfig = new GuildConfig() { GuildId = guildId };
                     _collection.Upsert(guildConfig);
                 }
 
@@ -50,11 +51,6 @@ namespace Common.Config {
         public LogExportTypes LogExportType { get; set; } = LogExportTypes.Html;
 
         public ConcurrentDictionary<ChannelFunction, ulong> FunctionalChannels { get; set; } = new ConcurrentDictionary<ChannelFunction, ulong>();
-
-        [BsonIgnore] public ILocalizationProvider Loc => _loc ??= new GuildLocalizationProvider(this);
-
-        [BsonIgnore] public GuildPrefixProvider PrefixProvider => _prefixProvider ??= new GuildPrefixProvider(this);
-        [BsonIgnore] public event EventHandler<ChannelFunction>? FunctionalChannelsChanged;
     }
 
     public enum ChannelFunction {
@@ -68,19 +64,23 @@ namespace Common.Config {
     }
 
     public partial class GuildConfig {
-        [BsonIgnore] private readonly Subject<GuildConfig> _saveRequest = new Subject<GuildConfig>();
-        [BsonIgnore] public ISubject<GuildConfig> SaveRequest => _saveRequest;
+        [BsonIgnore] private readonly Subject<GuildConfig> _saveRequest = new();
+        [BsonIgnore] public IObservable<GuildConfig> SaveRequest => _saveRequest.AsObservable();
 
-        [BsonIgnore] public ISubject<GuildConfig> LocalizationChanged { get; } = new Subject<GuildConfig>();
+        [BsonIgnore] private readonly Subject<GuildConfig> _localizationChanged = new();
+        [BsonIgnore] public IObservable<GuildConfig> LocalizationChanged => _localizationChanged.AsObservable();
 
-        public static Subject<ulong> ChannelLoggingDisabled { get; } = new Subject<ulong>();
+        [BsonIgnore] private readonly Subject<ulong> _channelLoggingChanged = new();
+        [BsonIgnore] public IObservable<ulong> ChannelLoggingChanged => _channelLoggingChanged.AsObservable();
+
+        [BsonIgnore] private readonly Subject<ChannelFunction> _functionalChannelsChanged = new();
+        [BsonIgnore] public IObservable<ChannelFunction> FunctionalChannelsChanged => _functionalChannelsChanged.AsObservable();
+
+        [BsonIgnore] public ILocalizationProvider Loc => _loc ??= new GuildLocalizationProvider(this);
+        [BsonIgnore] public GuildPrefixProvider PrefixProvider => _prefixProvider ??= new GuildPrefixProvider(this);
 
         public void Save() {
             _saveRequest.OnNext(this);
-        }
-
-        protected virtual void OnFunctionalChannelsChanged(ChannelFunction e) {
-            FunctionalChannelsChanged?.Invoke(this, e);
         }
 
         public GuildConfig SetChannel(string channelId, ChannelFunction func) {
@@ -90,10 +90,10 @@ namespace Common.Config {
                 FunctionalChannels[func] = Convert.ToUInt64(channelId);
 
             if (func == ChannelFunction.Log) {
-                LoggedChannels.Remove(Convert.ToUInt64(channelId));
+                ToggleChannelLogging(Convert.ToUInt64(channelId));
             }
 
-            OnFunctionalChannelsChanged(func);
+            _functionalChannelsChanged.OnNext(func);
 
             return this;
         }
@@ -106,18 +106,20 @@ namespace Common.Config {
 
         public GuildConfig SetLanguage(string language) {
             GuildLanguage = language;
-            LocalizationChanged.OnNext(this);
+            _localizationChanged.OnNext(this);
             return this;
         }
 
-        public void ToggleChannelLogging(ulong channelId) {
-            if (LoggedChannels.Contains(channelId)) {
-                LoggedChannels.Remove(channelId);
-                ChannelLoggingDisabled.OnNext(channelId);
-            }
-            else {
+        public void ToggleChannelLogging(ulong channelId, bool? enable = null) {
+            var contains = LoggedChannels.Contains(channelId);
+            if (enable == contains) return;
+            if (enable ?? !contains) {
                 LoggedChannels.Add(channelId);
             }
+            else {
+                LoggedChannels.Remove(channelId);
+            }
+            _channelLoggingChanged.OnNext(channelId);
         }
     }
 }

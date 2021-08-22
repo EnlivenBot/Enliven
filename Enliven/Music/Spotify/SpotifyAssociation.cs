@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using Common.Config;
 using Lavalink4NET.Decoding;
@@ -26,9 +27,11 @@ namespace Bot.Music.Spotify {
             return Associations.Max();
         }
 
-        [BsonIgnore] public ISubject<SpotifyAssociation> SaveRequest = new Subject<SpotifyAssociation>();
+        [BsonIgnore] private readonly ISubject<SpotifyAssociation> _saveRequest = new Subject<SpotifyAssociation>();
+        [BsonIgnore] public IObservable<SpotifyAssociation> SaveRequest => _saveRequest.AsObservable();
+        
         public void Save() {
-            SaveRequest.OnNext(this);
+            _saveRequest.OnNext(this);
         }
 
         public class TrackAssociationData : IComparable<TrackAssociationData> {

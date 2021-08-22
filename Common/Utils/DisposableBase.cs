@@ -1,13 +1,16 @@
 ﻿using System;
+using System.Reactive.Linq;
 using System.Reactive.Subjects;
 
 namespace Common.Utils {
     public interface IDisposableBase : IDisposable {
-        ISubject<DisposableBase> Disposed { get; }
+        IObservable<DisposableBase> Disposed { get; }
         bool IsDisposed { get; }
     }
+    
     public class DisposableBase : IDisposableBase {
-        public ISubject<DisposableBase> Disposed { get; private set; } = new Subject<DisposableBase>();
+        private readonly Subject<DisposableBase> _disposed = new Subject<DisposableBase>();
+        public IObservable<DisposableBase> Disposed => _disposed.AsObservable();
         public bool IsDisposed { get; private set; }
         public virtual void Dispose() {
             if (!IsDisposed) DisposeInternal();
@@ -15,8 +18,8 @@ namespace Common.Utils {
 
         protected virtual void DisposeInternal() {
             IsDisposed = true;
-            Disposed.OnNext(this);
-            (Disposed as IDisposable)?.Dispose();
+            _disposed.OnNext(this);
+            _disposed.Dispose();
         }
     }
 }

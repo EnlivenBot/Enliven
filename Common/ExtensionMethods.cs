@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Common.Config;
 using Common.Localization.Providers;
+using Common.Utils;
 using Discord;
 using Discord.Rest;
 using NLog;
@@ -167,5 +168,14 @@ namespace Common {
         }
         
         public static TOut Pipe<TIn, TOut>(this TIn input, Func<TIn, TOut> transform) => transform(input);
+
+        public static void ShouldDispose(this IDisposableBase disposableBase, IDisposable disposable) {
+            if (disposableBase.IsDisposed) {
+                disposable.Dispose();
+            }
+            else {
+                disposableBase.Disposed.Subscribe(_ => disposable.Dispose());
+            }
+        }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Reactive.Linq;
 using System.Reactive.Subjects;
 
 namespace Common.Localization.Providers {
@@ -7,23 +8,23 @@ namespace Common.Localization.Providers {
         private IDisposable? _languageChangedSubscriber;
 
         public LocalizationContainer(ILocalizationProvider provider) {
-            LanguageChanged = new Subject<ILocalizationProvider>();
             Provider = provider;
         }
 
         public ILocalizationProvider Provider {
             get => _provider!;
             set {
-                _languageChangedSubscriber?.Dispose();
                 _provider = value ?? throw new ArgumentNullException(nameof(value), $"Provider in {nameof(LocalizationContainer)} can not be null");
-                _languageChangedSubscriber = _provider.LanguageChanged?.Subscribe(LanguageChanged);
+                _languageChangedSubscriber?.Dispose();
+                _languageChangedSubscriber = _provider.LanguageChanged?.Subscribe(_languageChanged);
             }
         }
 
         public string Get(string id, params object[]? formatArgs) {
             return Provider.Get(id, formatArgs);
         }
-
-        public ISubject<ILocalizationProvider> LanguageChanged { get; }
+        
+        private readonly ISubject<ILocalizationProvider> _languageChanged = new Subject<ILocalizationProvider>();
+        public IObservable<ILocalizationProvider> LanguageChanged => _languageChanged.AsObservable();
     }
 }

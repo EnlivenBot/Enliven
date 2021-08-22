@@ -5,7 +5,6 @@ namespace Bot.Utilities.Collector {
     public abstract class CollectorEventArgsBase : EventArgs {
         protected CollectorEventArgsBase(CollectorController controller) {
             Controller = controller;
-            Controller.TaskCompletionSource?.SetResult(this);
         }
 
         public CollectorController Controller { get; set; }
