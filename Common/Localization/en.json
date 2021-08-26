@@ -118,7 +118,13 @@
       "Between": "`{0}` filter: `{1}` value must be between {2} and {3}",
       "MoreThen": "`{0}` filter: `{1}` value must be more then {2}",
       "BandsDuplicate": "The equalizer should not have duplicating bands ({0})",
-      "BandsNumbers": "Bands must be between 0 and 14"
+      "BandsNumbers": "Bands must be between 0 and 14",
+      "ApplyEffectTitle": "Apply effect",
+      "ApplyEffectDescription": "Use command `{0}effect NAME` where name is effect name or id.\nBuild-in effects: {1}",
+      "AddCustomEffectTitle": "Custom effects",
+      "AddCustomEffectDescription": "Use command `{0}effect add` to get instructions",
+      "Remove": "Remove:",
+      "Add": "Add:"
     },
     "Groups": {
       "": "Other",
@@ -197,7 +203,8 @@
       "lyrics0s": "Get song lyrics (if available)",
       "effect0s": "Applies or removes the post-processing effect",
       "effect0_0s": "Effect name or ID (built-in: `mono`, `bassboost`(`bb`), `nightcore`(`nc`), `8d`)",
-      "effect0_1s": "Parameter of the applied effect. For example `bassboost` mode: `Low`, `Medium`, `High`, `Extreme`"
+      "effect0_1s": "Parameter of the applied effect. For example `bassboost` mode: `Low`, `Medium`, `High`, `Extreme`",
+      "effects0": "Display and allow to manage sounds effects"
     },
     "CommandHandler": {
       "FailedTitle": "Error executing command",

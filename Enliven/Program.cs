@@ -84,6 +84,7 @@ namespace Bot {
             builder.RegisterType<EmbedPlayerDisplayProvider>().SingleInstance();
             builder.RegisterType<EmbedPlayerQueueDisplayProvider>().SingleInstance();
             builder.RegisterType<EffectSourceProvider>().SingleInstance();
+            builder.RegisterType<EmbedPlayerEffectsDisplayProvider>().SingleInstance();
 
             // Services
             builder.RegisterType<CustomCommandService>().As<IService>().AsSelf().SingleInstance();

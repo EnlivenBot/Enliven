@@ -38,5 +38,7 @@ namespace Bot.Config.Emoji {
         public static global::Discord.Emoji ThumbsDown { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.ThumbsDown);
         public static global::Discord.Emoji Warning { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.Warning);
         public static global::Discord.Emoji BookmarkTabs { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.BookmarkTabs);
+        public static global::Discord.Emoji NoEntry { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.NoEntry);
+        public static global::Discord.Emoji Level { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.Level);
     }
 }

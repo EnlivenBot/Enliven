@@ -22,14 +22,14 @@ namespace Common.Music.Players {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
         public readonly HistoryCollection QueueHistory = new HistoryCollection(512, 1000, false);
-        private readonly Subject<FilterMapBase> _effectsChanged = new Subject<FilterMapBase>();
+        private readonly Subject<FilterMapBase> _filtersChanged = new Subject<FilterMapBase>();
         private readonly List<PlayerEffectUse> _effectsList = new List<PlayerEffectUse>();
 
         public readonly Subject<IEntry> Shutdown = new Subject<IEntry>();
         public readonly Subject<int> VolumeChanged = new Subject<int>();
         public readonly Subject<EnlivenLavalinkClusterNode?> SocketChanged = new Subject<EnlivenLavalinkClusterNode?>();
         public readonly Subject<PlayerState> StateChanged = new Subject<PlayerState>();
-        public IObservable<FilterMapBase> EffectsChanged => _effectsChanged.AsObservable();
+        public IObservable<FilterMapBase> FiltersChanged => _filtersChanged.AsObservable();
         private GuildConfig? _guildConfig;
         private ulong _lastVoiceChannelId;
         private protected IMusicController MusicController;
@@ -185,7 +185,7 @@ namespace Common.Music.Players {
         }
 
         public virtual async Task<PlayerEffectUse> ApplyEffect(PlayerEffect effect, IUser? source) {
-            if (_effectsList.Count >= 5) throw new Exception("Maximum number of effects - 5");
+            if (_effectsList.Count >= 4) throw new Exception("Maximum number of effects - 5");
 
             var effectUse = new PlayerEffectUse(source, effect);
             _effectsList.Add(effectUse);
@@ -220,7 +220,7 @@ namespace Common.Music.Players {
             Filters.LowPass = effects.GetValueOrDefault(LowPassFilterOptions.Name) as LowPassFilterOptions;
             
             await Filters.CommitAsync();
-            _effectsChanged.OnNext(Filters);
+            _filtersChanged.OnNext(Filters);
         }
     }
 }

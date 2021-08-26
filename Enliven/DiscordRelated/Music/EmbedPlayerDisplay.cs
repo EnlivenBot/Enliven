@@ -167,7 +167,7 @@ namespace Bot.DiscordRelated.Music {
                     UpdateControlMessage();
                     UpdateMessageComponents();
                 }),
-                Player.EffectsChanged.Subscribe(_ => UpdateEffects()),
+                Player.FiltersChanged.Subscribe(_ => UpdateEffects()),
                 Player.CurrentTrackIndexChanged.Subscribe(i => UpdateQueue())
             );
             UpdateNode();
