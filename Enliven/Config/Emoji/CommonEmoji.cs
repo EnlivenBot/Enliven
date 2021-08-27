@@ -40,5 +40,6 @@ namespace Bot.Config.Emoji {
         public static global::Discord.Emoji BookmarkTabs { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.BookmarkTabs);
         public static global::Discord.Emoji NoEntry { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.NoEntry);
         public static global::Discord.Emoji Level { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.Level);
+        public static global::Discord.Emoji E { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.E);
     }
 }

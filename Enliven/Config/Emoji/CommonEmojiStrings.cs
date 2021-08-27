@@ -55,5 +55,6 @@ namespace Bot.Config.Emoji {
         public string BookmarkTabs { get; set; } = "📑";
         public string NoEntry { get; set; } = "⛔";
         public string Level { get; set; } = "🎚️";
+        public string E { get; set; } = "🇪";
     }
 }

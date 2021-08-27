@@ -204,7 +204,7 @@ namespace Bot.DiscordRelated.Music {
             _messageComponentManager.WithButton(btnTemplate.Clone().WithEmote(CommonEmoji.LegacyShuffle).WithCustomId("Shuffle"));
             _messageComponentManager.WithButton(btnTemplate.Clone().WithEmote(CommonEmoji.LegacyStop).WithCustomId("Stop").WithStyle(ButtonStyle.Danger));
             _messageComponentManager.WithButton(btnTemplate.Clone().WithCustomId("Repeat"));
-            _messageComponentManager.WithButton(btnTemplate.Clone().WithEmote(CommonEmoji.LegacyArrowDown).WithCustomId("Down").WithDisabled(true));
+            _messageComponentManager.WithButton(btnTemplate.Clone().WithEmote(CommonEmoji.E).WithCustomId("Effects"));
             _messageComponentManager.SetCallback(async (s, component, arg3) => {
                 var command = s switch {
                     "TrackPrevious" => Player.TrackPosition.TotalSeconds > 15 ? "seek 0s" : "skip -1",
@@ -216,23 +216,13 @@ namespace Bot.DiscordRelated.Music {
                     "Shuffle"       => "shuffle",
                     "Stop"          => "stop",
                     "Repeat"        => "repeat",
-                    "Down"          => await TryPerformArrowDownResendWithComponents(),
+                    "Effects"          => "effects",
                     _               => throw new ArgumentOutOfRangeException()
                 };
 
                 if (!string.IsNullOrEmpty(command)) {
                     await _commandHandlerService.ExecuteCommand(command, new ComponentCommandContext(EnlivenBot.Client, component),
                         component.User.Id.ToString());
-                }
-
-                async Task<string?> TryPerformArrowDownResendWithComponents() {
-                    if ((await _controlMessage!.Channel.GetMessagesAsync(1).FlattenAsync()).FirstOrDefault()?.Id == _controlMessage.Id) {
-                        return null;
-                    }
-                    NextResendForced = true;
-                    await _controlMessageSendTask.Execute(false, TimeSpan.Zero);
-                    _messageComponentManager.GetButton("Down")!.WithDisabled(true);
-                    return null;
                 }
             });
 
@@ -241,11 +231,6 @@ namespace Bot.DiscordRelated.Music {
             _messageComponent = _messageComponentManager.Build();
             _controlMessage = await _targetChannel.SendMessageAsync(null, false, EmbedBuilder.Build(), component: _messageComponent);
             _messageComponentManager.AssociateWithMessage(_controlMessage);
-            
-            _collectorsGroup.Controllers.Add(CollectorsUtils.CollectMessage(_controlMessage.Channel, message => true, async args => {
-                args.StopCollect();
-                _messageComponentManager.GetButton("Down")!.WithDisabled(false);
-            }));
         }
 
         public void UpdateMessageComponents() {
