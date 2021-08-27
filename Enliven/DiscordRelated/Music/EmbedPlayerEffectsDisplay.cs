@@ -91,8 +91,10 @@ namespace Bot.DiscordRelated.Music {
 
         private void AddEffect(SocketInteraction interaction, IPlayerEffectSource playerEffectSource) {
             Task.Run(async () => {
+                var effects = Player.Effects;
+                if (effects.Count >= AdvancedLavalinkPlayer.MaxEffectsCount) return;
                 var sourceName = playerEffectSource.GetSourceName();
-                if (Player.Effects.All(use => use.Effect.SourceName != sourceName)) {
+                if (effects.All(use => use.Effect.SourceName != sourceName)) {
                     var effect = await playerEffectSource.CreateEffect(null);
                     await Player.ApplyEffect(effect, interaction.User);
                 }

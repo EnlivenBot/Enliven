@@ -19,6 +19,8 @@ using NLog;
 
 namespace Common.Music.Players {
     public class AdvancedLavalinkPlayer : LavalinkPlayer {
+        public const int MaxEffectsCount = 4;
+        
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
         public readonly HistoryCollection QueueHistory = new HistoryCollection(512, 1000, false);
@@ -185,7 +187,7 @@ namespace Common.Music.Players {
         }
 
         public virtual async Task<PlayerEffectUse> ApplyEffect(PlayerEffect effect, IUser? source) {
-            if (_effectsList.Count >= 4) throw new Exception("Maximum number of effects - 5");
+            if (_effectsList.Count >= MaxEffectsCount) throw new Exception("Maximum number of effects - 5");
 
             var effectUse = new PlayerEffectUse(source, effect);
             _effectsList.Add(effectUse);

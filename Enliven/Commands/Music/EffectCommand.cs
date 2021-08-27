@@ -4,6 +4,7 @@ using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
 using Common;
 using Common.Music.Effects;
+using Common.Music.Players;
 using Discord.Commands;
 
 namespace Bot.Commands.Music {
@@ -27,8 +28,8 @@ namespace Bot.Commands.Music {
             
             if (await TryRemoveEffect(effectSource.GetSourceName())) return;
 
-            if (Player!.Effects.Count >= 5) {
-                await ReplyFormattedAsync(Loc.Get("Music.MaxEffectsCountExceed"), true);
+            if (Player!.Effects.Count >= AdvancedLavalinkPlayer.MaxEffectsCount) {
+                await ReplyFormattedAsync(Loc.Get("Music.MaxEffectsCountExceed", AdvancedLavalinkPlayer.MaxEffectsCount), true);
                 return;
             }
             var playerEffect = await effectSource.CreateEffect(args);
