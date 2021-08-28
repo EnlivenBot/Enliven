@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Bot.DiscordRelated.MessageComponents;
 using Common.Config;
 using Common.Localization.Providers;
@@ -21,11 +22,11 @@ namespace Bot.DiscordRelated.Music {
             return _cache.TryGetValue(channel, out var display) ? display : null;
         }
 
-        public EmbedPlayerEffectsDisplay CreateOrUpdateQueueDisplay(IMessageChannel channel, FinalLavalinkPlayer finalLavalinkPlayer) {
+        public Task<EmbedPlayerEffectsDisplay> CreateOrUpdateQueueDisplay(IMessageChannel channel, FinalLavalinkPlayer finalLavalinkPlayer) {
             return ProvideInternal(channel, finalLavalinkPlayer);
         }
 
-        private EmbedPlayerEffectsDisplay ProvideInternal(IMessageChannel channel, FinalLavalinkPlayer finalLavalinkPlayer) {
+        private async Task<EmbedPlayerEffectsDisplay> ProvideInternal(IMessageChannel channel, FinalLavalinkPlayer finalLavalinkPlayer) {
             var display = _cache.GetOrAdd(channel, messageChannel => {
                 ILocalizationProvider loc;
                 if (channel is ITextChannel textChannel) {
@@ -39,9 +40,9 @@ namespace Bot.DiscordRelated.Music {
                 _ = embedPlayerQueueDisplay.Initialize(finalLavalinkPlayer);
                 return embedPlayerQueueDisplay;
             });
-            if (!display.IsShutdowned) return display;
+            if (!display.IsShutdowned && await display.EnsureCorrectnessAsync()) return display;
             _cache.Remove(channel, out _);
-            return ProvideInternal(channel, finalLavalinkPlayer);
+            return await ProvideInternal(channel, finalLavalinkPlayer);
         }
     }
 }

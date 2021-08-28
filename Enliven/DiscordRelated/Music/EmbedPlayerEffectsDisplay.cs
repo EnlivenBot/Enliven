@@ -20,7 +20,6 @@ namespace Bot.DiscordRelated.Music {
     public class EmbedPlayerEffectsDisplay : PlayerDisplayBase {
         private ILocalizationProvider _loc;
         private IMessageChannel _targetChannel;
-        private PaginatedMessage _paginatedMessage = null!;
         private CompositeDisposable _disposable = new CompositeDisposable();
         private EnlivenEmbedBuilder _enlivenEmbedBuilder = new EnlivenEmbedBuilder();
         private EnlivenComponentBuilder _enlivenComponentBuilder;
@@ -77,7 +76,7 @@ namespace Bot.DiscordRelated.Music {
                             _controlMessage = null;
                         }
 
-                        _ = ExecuteShutdown(null!, null!);
+                        await ExecuteShutdown(null!, null!);
                     }
                 }
             }) {BetweenExecutionsDelay = TimeSpan.FromSeconds(1.5), CanBeDirty = true};
@@ -99,6 +98,11 @@ namespace Bot.DiscordRelated.Music {
                     await Player.ApplyEffect(effect, interaction.User);
                 }
             });
+        }
+
+        public async Task<bool> EnsureCorrectnessAsync() {
+            await _updateControlMessageTask.Execute(false);
+            return !IsShutdowned;
         }
 
         public override async Task ChangePlayer(FinalLavalinkPlayer newPlayer) {
@@ -146,7 +150,6 @@ namespace Bot.DiscordRelated.Music {
             await base.ExecuteShutdown(header, body);
             _controlMessage.SafeDelete();
             _disposable?.Dispose();
-            _paginatedMessage.Dispose();
         }
 
         public override Task LeaveNotification(IEntry header, IEntry body) {
