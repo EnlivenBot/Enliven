@@ -121,32 +121,25 @@ namespace Bot.DiscordRelated.Music {
                 _enlivenComponentBuilder.Entries["rm"].IsVisible = true;
                 for (var i = 0; i < 4; i++) {
                     var entry = _enlivenComponentBuilder.Entries[$"rm{i}"];
-                    if (i < effects.Count) {
-                        entry.IsVisible = true;
-                        var playerEffectUse = effects[i];
-                        // ReSharper disable once AsyncVoidLambda
-                        entry.Callback = async component => {
-                            await Player.RemoveEffect(playerEffectUse, component.User);
-                        };
-                    }
-                    else {
-                        entry.IsVisible = false;
-                    }
+                    entry.IsVisible = i < effects.Count;
+                    entry.Callback = i < effects.Count ? GetRemoveButtonCallback(i) : null;
                 }
             }
 
-            for (var i = 0; i < 4; i++) {
-                var entry = _enlivenComponentBuilder.Entries[$"add{i}"];
-                entry.IsVisible = effects.All(use => use.Effect.SourceName != entry.Label);
-                entry.Disabled = false;
-            }
-            
-            if (effects.Count >= 4) {
-                _enlivenComponentBuilder.Entries.Where(pair => pair.Key.StartsWith("add"))
-                    .Do(pair => pair.Value.Disabled = true);
-            }
+            var addButtons = Enumerable.Range(0, 4).Select(i => _enlivenComponentBuilder.Entries[$"add{i}"]).ToList();
+            addButtons.Do(builder => builder.IsVisible = effects.All(use => use.Effect.SourceName != builder.Label));
+            addButtons.Do(builder => builder.Disabled = effects.Count >= AdvancedLavalinkPlayer.MaxEffectsCount);
+            _enlivenComponentBuilder.Entries["add"].IsVisible = addButtons.Any(builder => builder.IsVisible);
 
             _updateControlMessageTask.Execute();
+
+            Action<SocketMessageComponent> GetRemoveButtonCallback(int i) {
+                var playerEffectUse = effects[i];
+                // ReSharper disable once AsyncVoidLambda
+                return async component => {
+                    await Player.RemoveEffect(playerEffectUse, component.User);
+                };
+            }
         }
 
         public override async Task ExecuteShutdown(IEntry header, IEntry body) {
