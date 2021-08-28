@@ -92,19 +92,27 @@ namespace Common.Music.Players {
         }
 
         public virtual async Task ExecuteShutdown(IEntry reason, PlayerShutdownParameters parameters) {
-            GetPlayerShutdownParameters(parameters);
+            if (IsShutdowned) return;
+            await GetPlayerShutdownParameters(parameters);
             IsShutdowned = true;
             Shutdown.OnNext(reason);
             Shutdown.Dispose();
             MusicController.StoreShutdownParameters(parameters);
 
             if (parameters.ShutdownDisplays) {
-                foreach (var playerDisplay in Displays.ToList()) {
-                    var body = parameters.NeedSave
-                        ? new EntryString("{0}\n{1}", reason, new EntryLocalized("Music.ResumeViaPlaylists", GuildConfig.Prefix, parameters.StoredPlaylist!.Id))
-                        : reason;
-                    await playerDisplay.ExecuteShutdown(new EntryLocalized("Music.PlaybackStopped"), body);
-                }
+                var body = parameters.NeedSave
+                    ? new EntryString("{0}\n{1}", reason, new EntryLocalized("Music.ResumeViaPlaylists", GuildConfig.Prefix, parameters.StoredPlaylist!.Id))
+                    : reason;
+                var header = new EntryLocalized("Music.PlaybackStopped");
+                var displayShutdownTasks = Displays.Select(async display => {
+                    try {
+                        await display.ExecuteShutdown(header, body);
+                    }
+                    catch (Exception e) {
+                        Logger.Error(e, "Error while shutdowning {DisplayType}", display.GetType().Name);
+                    }
+                });
+                await Task.WhenAll(displayShutdownTasks.ToArray());
             }
 
             base.Dispose();
