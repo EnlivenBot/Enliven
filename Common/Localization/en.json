@@ -111,7 +111,7 @@
     },
     "Effects": {
       "AddEffectTitle": "How to add effect",
-      "AddEffectDescription": "1. Go to [configurator](tinyurl.com/enliveneffects)\n2. Enter effect name\n3. Edit other effect options\n4. Copy resulting json from \"JSON Output\" field at right upper corner\n5. Execute `{0}effect add YourJsonHere` command",
+      "AddEffectDescription": "1. Go to [configurator](https://tinyurl.com/enliveneffects) \n2. Enter effect name \n3. Edit other effect options \n4. Copy resulting json from \"JSON Output\" field at right upper corner \n5. Execute `{0}effect add YourJsonHere` command",
       "NameLength": "`Name` length must be between `{0}` and `{1}` characters",
       "FiltersCount": "You must set at least one filter",
       "ParametersCount": "{0}` filter: You must set at least one parameter",

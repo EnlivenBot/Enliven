@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Discord;
@@ -9,6 +10,8 @@ using Newtonsoft.Json;
 
 namespace Common.Config {
     public partial class PlayerEffect : PlayerEffectBase {
+        [Obsolete("Constructor for database")]
+        public PlayerEffect() : base(null!, null){}
         public PlayerEffect(PlayerEffectBase playerEffectBase, UserLink user, string? sourceName = null)
             : this(user, playerEffectBase.DisplayName, sourceName ?? playerEffectBase.DisplayName, playerEffectBase.CurrentFilters) { }
 
@@ -26,9 +29,9 @@ namespace Common.Config {
         public string Id { get; set; } = ObjectId.NewObjectId().ToString();
 
         [BsonIgnore]
-        public string SourceName { get; set; }
+        public string SourceName { get; set; } = null!;
 
-        public UserLink User { get; set; }
+        public UserLink User { get; set; } = null!;
     }
 
     public partial class PlayerEffect {
