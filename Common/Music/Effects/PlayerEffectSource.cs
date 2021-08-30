@@ -46,5 +46,10 @@ namespace Common.Music.Effects {
 
         public static ImmutableList<IPlayerEffectSource> DefaultEffects { get; } 
             = DefaultEffectsMap.Values.Distinct().ToImmutableList();
+
+        public static ImmutableArray<IPlayerEffectSource> EffectsForButtons { get; }
+            = new List<IPlayerEffectSource>() {
+                EffectNightcore, Effect8D, EffectBassboost, EffectMono
+            }.ToImmutableArray();
     }
 }

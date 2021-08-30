@@ -53,7 +53,7 @@ namespace Bot.DiscordRelated.Music {
                 _enlivenComponentBuilder.WithButton(new EnlivenButtonBuilder().WithStyle(ButtonStyle.Secondary).WithCustomId($"rm{i}").WithLabel((i + 1).ToString()));
             }
             for (var i = 0; i < 4; i++) {
-                var effect = PlayerEffectSource.DefaultEffects[i];
+                var effect = PlayerEffectSource.EffectsForButtons[i];
                 var builder = new EnlivenButtonBuilder().WithStyle(ButtonStyle.Secondary)
                     .WithTargetRow(1)
                     .WithCustomId($"add{i}").WithLabel(effect.GetSourceName())
