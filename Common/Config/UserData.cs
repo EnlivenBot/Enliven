@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Reactive.Linq;
+using System.Collections.Generic;
 using System.Reactive.Subjects;
 using Discord;
 using LiteDB;
@@ -60,6 +61,8 @@ namespace Common.Config {
         [BsonId] public ulong UserId { get; set; }
 
         public string? LastKnownUsername { get; set; }
+        
+        public List<PlayerEffect> PlayerEffects { get; set; } = new List<PlayerEffect>();
 
         [BsonIgnore] public bool IsCurrentUser => UserId == 0;
 

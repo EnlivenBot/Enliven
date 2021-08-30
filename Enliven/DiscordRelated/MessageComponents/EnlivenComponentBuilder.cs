@@ -108,12 +108,20 @@ namespace Bot.DiscordRelated.MessageComponents {
             buttonCallbackDisposables?.Dispose();
             buttonCallbackDisposables = new CompositeDisposable();
             var builder = new ComponentBuilder();
-            List<(DateTime, EnlivenButtonBuilder)> toWrap = new List<(DateTime, EnlivenButtonBuilder)>();
-            foreach (var pairs in _entries.GroupBy(pair => pair.Value.Item2.TargetRow).OrderBy(pairs => pairs.Key)) {
-                foreach (var (_, (_, buttonBuilder)) in pairs.Where(pair => pair.Value.Item2.IsVisible).OrderBy(pair => pair.Value.Item2.Priority ?? 0).ThenBy(pair => pair.Value.Item1).Take(5)) {
+            var rows = _entries
+                .Where(pair => pair.Value.Item2.IsVisible)
+                .GroupBy(pair => pair.Value.Item2.TargetRow)
+                .OrderBy(pairs => pairs.Key)
+                .Select((pairs, i) => new {Row = Math.Min(pairs.Key, i), Values = pairs});
+            foreach (var pairs in rows) {
+                var builders = pairs.Values
+                    .OrderBy(pair => pair.Value.Item2.Priority ?? 0)
+                    .ThenBy(pair => pair.Value.Item1)
+                    .Take(5);
+                foreach (var (_, (_, buttonBuilder)) in builders) {
                     var userCustomId = buttonBuilder.CustomId;
                     var systemCustomId = $"{userCustomId}{buttonBuilder.Guid}|";
-                    builder.WithButton(buttonBuilder.WithCustomId(systemCustomId), buttonBuilder.TargetRow);
+                    builder.WithButton(buttonBuilder.WithCustomId(systemCustomId), pairs.Row);
                     buttonBuilder.CustomId = userCustomId;
 
                     //Register callback

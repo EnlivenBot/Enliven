@@ -286,7 +286,7 @@ namespace Common.Music.Players {
         }
 
         public override async Task OnTrackExceptionAsync(TrackExceptionEventArgs eventArgs) {
-            WriteToQueueHistory(new EntryLocalized("Music.TrackException", eventArgs.Error));
+            WriteToQueueHistory(new EntryLocalized("Music.TrackException", eventArgs.Exception.Cause));
             await SkipAsync(1, true);
             await base.OnTrackExceptionAsync(eventArgs);
         }

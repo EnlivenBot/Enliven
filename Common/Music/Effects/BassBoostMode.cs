@@ -1,6 +1,5 @@
-﻿namespace Common.Music {
+﻿namespace Common.Music.Effects {
     public enum BassBoostMode {
-        Off,
         Low,
         Medium,
         High,

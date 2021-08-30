@@ -8,9 +8,11 @@ using Bot.DiscordRelated.Commands.Modules;
 using Bot.DiscordRelated.MessageComponents;
 using Bot.DiscordRelated.Music;
 using Common;
+using Common.Config;
 using Common.History;
 using Common.Localization.Entries;
 using Common.Music;
+using Common.Music.Effects;
 using Common.Music.Players;
 using Discord;
 using Discord.Commands;
@@ -386,21 +388,6 @@ namespace Bot.Commands {
             newIndex = Math.Max(1, Math.Min(Player.Playlist.Count, newIndex));
             Player.Playlist.Move(trackIndex - 1, newIndex - 1);
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.TrackMoved").Format(Context.User.Mention, trackIndex, newIndex));
-        }
-
-        [Command("bassboost", RunMode = RunMode.Async)]
-        [Alias("bb", "bassboosted")]
-        [Summary("bassboost0s")]
-        public async Task ApplyBassBoost([Summary("bassboost0_0s")] BassBoostMode mode) {
-            if (!await IsPreconditionsValid) return;
-            if (Player == null) {
-                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix))
-                                      .UpdateTimeout(Constants.StandardTimeSpan).Update();
-                return;
-            }
-
-            Player.SetBassBoost(mode);
-            Player.WriteToQueueHistory(Loc.Get("MusicQueues.BassBoostUpdated").Format(Context.User.Username, mode));
         }
 
         [Command("changenode", RunMode = RunMode.Async)]

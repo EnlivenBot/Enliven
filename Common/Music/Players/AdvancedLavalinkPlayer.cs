@@ -1,41 +1,50 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Collections.ObjectModel;
 using System.Linq;
+using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Threading.Tasks;
 using Common.Config;
 using Common.History;
 using Common.Localization.Entries;
 using Common.Music.Controller;
+using Discord;
 using Lavalink4NET;
 using Lavalink4NET.Events;
+using Lavalink4NET.Filters;
 using Lavalink4NET.Player;
 using NLog;
 
 namespace Common.Music.Players {
     public class AdvancedLavalinkPlayer : LavalinkPlayer {
+        public const int MaxEffectsCount = 4;
+        
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
         public readonly HistoryCollection QueueHistory = new HistoryCollection(512, 1000, false);
+        private readonly Subject<FilterMapBase> _filtersChanged = new Subject<FilterMapBase>();
+        private readonly List<PlayerEffectUse> _effectsList = new List<PlayerEffectUse>();
 
         public readonly Subject<IEntry> Shutdown = new Subject<IEntry>();
         public readonly Subject<int> VolumeChanged = new Subject<int>();
-        public readonly Subject<BassBoostMode> BassboostChanged = new Subject<BassBoostMode>();
         public readonly Subject<EnlivenLavalinkClusterNode?> SocketChanged = new Subject<EnlivenLavalinkClusterNode?>();
         public readonly Subject<PlayerState> StateChanged = new Subject<PlayerState>();
+        public IObservable<FilterMapBase> FiltersChanged => _filtersChanged.AsObservable();
         private GuildConfig? _guildConfig;
         private ulong _lastVoiceChannelId;
         private protected IMusicController MusicController;
         private IGuildConfigProvider _guildConfigProvider;
         public List<IPlayerDisplay> Displays { get; } = new List<IPlayerDisplay>();
-
+        public ImmutableList<PlayerEffectUse> Effects => _effectsList.ToImmutableList();
+        
         protected AdvancedLavalinkPlayer(IMusicController musicController, IGuildConfigProvider guildConfigProvider) {
             _guildConfigProvider = guildConfigProvider;
             MusicController = musicController;
         }
 
         protected GuildConfig GuildConfig => _guildConfig ??= _guildConfigProvider.Get(GuildId);
-        public BassBoostMode BassBoostMode { get; private set; } = BassBoostMode.Off;
         public bool IsShutdowned { get; private set; }
 
         public override async Task OnConnectedAsync(VoiceServer voiceServer, VoiceState voiceState) {
@@ -57,38 +66,6 @@ namespace Common.Music.Players {
         [Obsolete]
         public override async Task SetVolumeAsync(float volume = 1, bool normalize = false, bool force = false) {
             await SetVolumeAsync((int) (volume * 200), force);
-        }
-
-        public virtual void SetBassBoost(BassBoostMode mode) {
-            BassBoostMode = mode;
-            var bands = new List<EqualizerBand>();
-            switch (mode) {
-                case BassBoostMode.Off:
-                    bands.Add(new EqualizerBand(0, 0f));
-                    bands.Add(new EqualizerBand(1, 0f));
-                    break;
-                case BassBoostMode.Low:
-                    bands.Add(new EqualizerBand(0, 0.25f));
-                    bands.Add(new EqualizerBand(1, 0.15f));
-                    break;
-                case BassBoostMode.Medium:
-                    bands.Add(new EqualizerBand(0, 0.5f));
-                    bands.Add(new EqualizerBand(1, 0.25f));
-                    break;
-                case BassBoostMode.High:
-                    bands.Add(new EqualizerBand(0, 0.75f));
-                    bands.Add(new EqualizerBand(1, 0.5f));
-                    break;
-                case BassBoostMode.Extreme:
-                    bands.Add(new EqualizerBand(0, 1f));
-                    bands.Add(new EqualizerBand(1, 0.75f));
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(mode), mode, null);
-            }
-
-            UpdateEqualizerAsync(bands, false, true);
-            BassboostChanged.OnNext(mode);
         }
 
         public virtual async Task ExecuteShutdown(IEntry reason, PlayerShutdownParameters parameters) {
@@ -149,6 +126,7 @@ namespace Common.Music.Players {
             parameters.LastTrack = CurrentTrack;
             parameters.TrackPosition = TrackPosition;
             parameters.PlayerState = State;
+            parameters.Effects = _effectsList.ToList();
             return Task.CompletedTask;
         }
 
@@ -160,7 +138,7 @@ namespace Common.Music.Players {
             if (!IsShutdowned) {
                 try {
                     var playerShutdownParameters = new PlayerShutdownParameters {ShutdownDisplays = false, NeedSave = true};
-                    GetPlayerShutdownParameters(playerShutdownParameters);
+                    await GetPlayerShutdownParameters(playerShutdownParameters);
                     var reason = new EntryLocalized("Music.TryReconnectAfterDispose", GuildConfig.Prefix, playerShutdownParameters.StoredPlaylist!.Id);
                     await ExecuteShutdown(reason, playerShutdownParameters);
                     foreach (var playerDisplay in Displays.ToList()) await playerDisplay.LeaveNotification(new EntryLocalized("Music.PlaybackStopped"), reason);
@@ -214,6 +192,45 @@ namespace Common.Music.Players {
         public override async Task ResumeAsync() {
             await base.ResumeAsync();
             StateChanged.OnNext(State);
+        }
+
+        public virtual async Task<PlayerEffectUse> ApplyEffect(PlayerEffect effect, IUser? source) {
+            if (_effectsList.Count >= MaxEffectsCount) throw new Exception("Maximum number of effects - 5");
+
+            var effectUse = new PlayerEffectUse(source, effect);
+            _effectsList.Add(effectUse);
+
+            WriteToQueueHistory(new EntryLocalized("Music.EffectApplied", source?.Username ?? "Unknown", effectUse.Effect.DisplayName));
+            await ApplyFilters();
+            return effectUse;
+        }
+
+        public virtual async Task RemoveEffect(PlayerEffectUse effectUse, IUser? source) {
+            if (_effectsList.Remove(effectUse)) {
+                await ApplyFilters();
+                WriteToQueueHistory(new EntryLocalized("Music.EffectRemoved", source?.Username ?? "Unknown", effectUse.Effect.DisplayName));
+            }
+        }
+
+        protected async Task ApplyFilters() {
+            var effects = _effectsList.SelectMany(use => use.Effect.CurrentFilters)
+                .GroupBy(pair => pair.Key)
+                .Select(pairs => pairs.First())
+                .ToDictionary(pair => pair.Key, pair => pair.Value);
+
+            Filters.Distortion = effects.GetValueOrDefault(DistortionFilterOptions.Name) as DistortionFilterOptions;
+            Filters.Equalizer = effects.GetValueOrDefault(EqualizerFilterOptions.Name) as EqualizerFilterOptions;
+            Filters.Karaoke = effects.GetValueOrDefault(KaraokeFilterOptions.Name) as KaraokeFilterOptions;
+            Filters.Rotation = effects.GetValueOrDefault(RotationFilterOptions.Name) as RotationFilterOptions;
+            Filters.Timescale = effects.GetValueOrDefault(TimescaleFilterOptions.Name) as TimescaleFilterOptions;
+            Filters.Tremolo = effects.GetValueOrDefault(TremoloFilterOptions.Name) as TremoloFilterOptions;
+            Filters.Vibrato = effects.GetValueOrDefault(VibratoFilterOptions.Name) as VibratoFilterOptions;
+            Filters.Volume = effects.GetValueOrDefault(VolumeFilterOptions.Name) as VolumeFilterOptions;
+            Filters.ChannelMix = effects.GetValueOrDefault(ChannelMixFilterOptions.Name) as ChannelMixFilterOptions;
+            Filters.LowPass = effects.GetValueOrDefault(LowPassFilterOptions.Name) as LowPassFilterOptions;
+            
+            await Filters.CommitAsync();
+            _filtersChanged.OnNext(Filters);
         }
     }
 }

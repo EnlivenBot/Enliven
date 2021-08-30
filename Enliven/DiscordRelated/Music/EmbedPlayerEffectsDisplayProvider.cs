@@ -1,39 +1,32 @@
-﻿using System;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Bot.DiscordRelated.MessageComponents;
 using Common.Config;
 using Common.Localization.Providers;
 using Common.Music.Players;
 using Discord;
-using Newtonsoft.Json;
-using NLog;
 
 namespace Bot.DiscordRelated.Music {
-    public class EmbedPlayerQueueDisplayProvider {
-        private ConcurrentDictionary<IMessageChannel, EmbedPlayerQueueDisplay> _cache = new ConcurrentDictionary<IMessageChannel, EmbedPlayerQueueDisplay>();
+    public class EmbedPlayerEffectsDisplayProvider {
+        private ConcurrentDictionary<IMessageChannel, EmbedPlayerEffectsDisplay> _cache = new ConcurrentDictionary<IMessageChannel, EmbedPlayerEffectsDisplay>();
         private IGuildConfigProvider _guildConfigProvider;
-        private ILogger _logger;
         private MessageComponentService _messageComponentService;
 
-        public EmbedPlayerQueueDisplayProvider(IGuildConfigProvider guildConfigProvider, MessageComponentService messageComponentService, ILogger logger) {
+        public EmbedPlayerEffectsDisplayProvider(IGuildConfigProvider guildConfigProvider, MessageComponentService messageComponentService) {
             _messageComponentService = messageComponentService;
-            _logger = logger;
             _guildConfigProvider = guildConfigProvider;
         }
 
-        public EmbedPlayerQueueDisplay? Get(IMessageChannel channel) {
+        public EmbedPlayerEffectsDisplay? Get(IMessageChannel channel) {
             return _cache.TryGetValue(channel, out var display) ? display : null;
         }
 
-        public EmbedPlayerQueueDisplay CreateOrUpdateQueueDisplay(IMessageChannel channel, FinalLavalinkPlayer finalLavalinkPlayer) {
+        public Task<EmbedPlayerEffectsDisplay> CreateOrUpdateQueueDisplay(IMessageChannel channel, FinalLavalinkPlayer finalLavalinkPlayer) {
             return ProvideInternal(channel, finalLavalinkPlayer);
         }
 
-        private EmbedPlayerQueueDisplay ProvideInternal(IMessageChannel channel, FinalLavalinkPlayer finalLavalinkPlayer) {
+        private async Task<EmbedPlayerEffectsDisplay> ProvideInternal(IMessageChannel channel, FinalLavalinkPlayer finalLavalinkPlayer) {
             var display = _cache.GetOrAdd(channel, messageChannel => {
                 ILocalizationProvider loc;
                 if (channel is ITextChannel textChannel) {
@@ -43,13 +36,13 @@ namespace Bot.DiscordRelated.Music {
                 else {
                     loc = LangLocalizationProvider.EnglishLocalizationProvider;
                 }
-                var embedPlayerQueueDisplay = new EmbedPlayerQueueDisplay(channel, loc, _messageComponentService);
+                var embedPlayerQueueDisplay = new EmbedPlayerEffectsDisplay(channel, loc, _messageComponentService, _guildConfigProvider);
                 _ = embedPlayerQueueDisplay.Initialize(finalLavalinkPlayer);
                 return embedPlayerQueueDisplay;
             });
-            if (!display.IsShutdowned) return display;
+            if (!display.IsShutdowned && await display.EnsureCorrectnessAsync()) return display;
             _cache.Remove(channel, out _);
-            return ProvideInternal(channel, finalLavalinkPlayer);
+            return await ProvideInternal(channel, finalLavalinkPlayer);
         }
     }
 }

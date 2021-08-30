@@ -1,0 +1,387 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "PlayerEffect",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "Name": {
+      "type": "string"
+    },
+    "Volume": {
+      "description": "Float value where 1.0 is 100%. Maximum 2.0",
+      "oneOf": [
+        {
+          "type": "null",
+          "title": "Disabled"
+        },
+        {
+          "$ref": "#/definitions/VolumeFilterOptions",
+          "title": "Enabled"
+        }
+      ]
+    },
+    "Equalizer": {
+      "description": "There are 15 bands (0-14) that can be changed. gain is the multiplier for the given band. The default value is 0. Valid values range from -0.25 to 1.0, where -0.25 means the given band is completely muted, and 0.25 means it is doubled. Modifying the gain could also change the volume of the output.",
+      "oneOf": [
+        {
+          "type": "null",
+          "title": "Disabled"
+        },
+        {
+          "$ref": "#/definitions/EqualizerFilterOptions",
+          "title": "Enabled"
+        }
+      ]
+    },
+    "Karaoke": {
+      "description": "Uses equalization to eliminate part of a band, usually targeting vocals.",
+      "oneOf": [
+        {
+          "type": "null",
+          "title": "Disabled"
+        },
+        {
+          "$ref": "#/definitions/KaraokeFilterOptions",
+          "title": "Enabled"
+        }
+      ]
+    },
+    "Timescale": {
+      "description": "Changes the speed, pitch, and rate.",
+      "oneOf": [
+        {
+          "type": "null",
+          "title": "Disabled"
+        },
+        {
+          "$ref": "#/definitions/TimescaleFilterOptions",
+          "title": "Enabled"
+        }
+      ]
+    },
+    "Tremolo": {
+      "description": "Uses amplification to create a shuddering effect, where the volume quickly oscillates. Example: https://en.wikipedia.org/wiki/File:Fuse_Electronics_Tremolo_MK-III_Quick_Demo.ogv",
+      "oneOf": [
+        {
+          "type": "null",
+          "title": "Disabled"
+        },
+        {
+          "$ref": "#/definitions/TremoloFilterOptions",
+          "title": "Enabled"
+        }
+      ]
+    },
+    "Vibrato": {
+      "description": "Similar to tremolo. While tremolo oscillates the volume, vibrato oscillates the pitch.",
+      "oneOf": [
+        {
+          "type": "null",
+          "title": "Disabled"
+        },
+        {
+          "$ref": "#/definitions/VibratoFilterOptions",
+          "title": "Enabled"
+        }
+      ]
+    },
+    "Rotation": {
+      "description": "Rotates the sound around the stereo channels/user headphones aka Audio Panning. It can produce an effect similar to: https://youtu.be/QB9EB8mTKcc (without the reverb)",
+      "oneOf": [
+        {
+          "type": "null",
+          "title": "Disabled"
+        },
+        {
+          "$ref": "#/definitions/RotationFilterOptions",
+          "title": "Enabled"
+        }
+      ]
+    },
+    "Distortion": {
+      "description": "Distortion effect. It can generate some pretty unique audio effects.",
+      "oneOf": [
+        {
+          "type": "null",
+          "title": "Disabled"
+        },
+        {
+          "$ref": "#/definitions/DistortionFilterOptions",
+          "title": "Enabled"
+        }
+      ]
+    },
+    "ChannelMix": {
+      "description": "Mixes both channels (left and right), with a configurable factor on how much each channel affects the other. With the defaults, both channels are kept independent from each other. Setting all factors to 0.5 means both channels get the same audio.",
+      "oneOf": [
+        {
+          "type": "null",
+          "title": "Disabled"
+        },
+        {
+          "$ref": "#/definitions/ChannelMixFilterOptions",
+          "title": "Enabled"
+        }
+      ]
+    },
+    "LowPass": {
+      "description": "Higher frequencies get suppressed, while lower frequencies pass through this filter, thus the name low pass.",
+      "oneOf": [
+        {
+          "type": "null",
+          "title": "Disabled"
+        },
+        {
+          "$ref": "#/definitions/LowPassFilterOptions",
+          "title": "Enabled"
+        }
+      ]
+    }
+  },
+  "definitions": {
+    "VolumeFilterOptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "volume": {
+          "type": "number",
+          "format": "float",
+          "minimum": 0,
+          "maximum": 2,
+          "default": 0.5
+        }
+      }
+    },
+    "EqualizerFilterOptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "Bands": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/EqualizerBand"
+          }
+        }
+      }
+    },
+    "EqualizerBand": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "band",
+        "gain"
+      ],
+      "properties": {
+        "band": {
+          "type": "integer",
+          "format": "int32",
+          "minimum": 0,
+          "maximum": 14
+        },
+        "gain": {
+          "type": "number",
+          "format": "float",
+          "minimum": -0.25,
+          "maximum": 1,
+          "default": 0
+        }
+      }
+    },
+    "KaraokeFilterOptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "level": {
+          "type": "number",
+          "format": "float",
+          "default": 1
+        },
+        "monoLevel": {
+          "type": "number",
+          "format": "float",
+          "default": 1
+        },
+        "filterBand": {
+          "type": "number",
+          "format": "float",
+          "default": 220
+        },
+        "filterWidth": {
+          "type": "number",
+          "format": "float",
+          "default": 100
+        }
+      }
+    },
+    "TimescaleFilterOptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "speed": {
+          "type": "number",
+          "format": "float",
+          "minimum": 0.25,
+          "maximum": 2,
+          "default": 1
+        },
+        "pitch": {
+          "type": "number",
+          "format": "float",
+          "minimum": 0.25,
+          "maximum": 2,
+          "default": 1
+        },
+        "rate": {
+          "type": "number",
+          "format": "float",
+          "minimum": 0.25,
+          "maximum": 2,
+          "default": 1
+        }
+      }
+    },
+    "TremoloFilterOptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "frequency": {
+          "type": "number",
+          "format": "float",
+          "exclusiveMinimum": 0,
+          "default": 2
+        },
+        "depth": {
+          "type": "number",
+          "format": "float",
+          "exclusiveMinimum": 0,
+          "maximum": 1,
+          "default": 0.5
+        }
+      }
+    },
+    "VibratoFilterOptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "frequency": {
+          "type": "number",
+          "format": "float",
+          "exclusiveMinimum": 0,
+          "maximum": 14,
+          "default": 2
+        },
+        "depth": {
+          "type": "number",
+          "format": "float",
+          "exclusiveMinimum": 0,
+          "maximum": 1,
+          "default": 0.5
+        }
+      }
+    },
+    "RotationFilterOptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "rotationHz": {
+          "type": "number",
+          "format": "float",
+          "minimum": -1,
+          "maximum": 1,
+          "default": 0
+        }
+      }
+    },
+    "DistortionFilterOptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "sinOffset": {
+          "type": "number",
+          "format": "float",
+          "default": 0
+        },
+        "sinScale": {
+          "type": "number",
+          "format": "float",
+          "default": 1
+        },
+        "cosOffset": {
+          "type": "number",
+          "format": "float",
+          "default": 0
+        },
+        "cosScale": {
+          "type": "number",
+          "format": "float",
+          "default": 1
+        },
+        "tanOffset": {
+          "type": "number",
+          "format": "float",
+          "default": 0
+        },
+        "tanScale": {
+          "type": "number",
+          "format": "float",
+          "default": 1
+        },
+        "offset": {
+          "type": "number",
+          "format": "float",
+          "default": 0
+        },
+        "scale": {
+          "type": "number",
+          "format": "float",
+          "default": 1
+        }
+      }
+    },
+    "ChannelMixFilterOptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "leftToLeft": {
+          "type": "number",
+          "format": "float",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 1
+        },
+        "leftToRight": {
+          "type": "number",
+          "format": "float",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0
+        },
+        "rightToLeft": {
+          "type": "number",
+          "format": "float",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0
+        },
+        "rightToRight": {
+          "type": "number",
+          "format": "float",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 1
+        }
+      }
+    },
+    "LowPassFilterOptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "smoothing": {
+          "type": "number",
+          "format": "float",
+          "default": 20
+        }
+      }
+    }
+  }
+}

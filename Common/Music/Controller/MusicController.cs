@@ -120,6 +120,7 @@ namespace Common.Music.Controller {
             return player;
         }
 
+        // TODO: Replace it with method inside player
         public async Task<FinalLavalinkPlayer> CreatePlayer(PlayerShutdownParameters parameters) {
             var newPlayer = await ProvidePlayer(parameters.GuildId, parameters.LastVoiceChannelId, true);
             newPlayer.Playlist.AddRange(parameters.Playlist!);
@@ -127,6 +128,9 @@ namespace Common.Music.Controller {
             if (parameters.PlayerState == PlayerState.Paused) await newPlayer.PauseAsync();
             newPlayer.LoopingState = parameters.LoopingState;
             newPlayer.UpdateCurrentTrackIndex();
+            foreach (var playerEffectUse in parameters.Effects) {
+                await newPlayer.ApplyEffect(playerEffectUse.Effect, playerEffectUse.User);
+            }
 
             return newPlayer;
         }
