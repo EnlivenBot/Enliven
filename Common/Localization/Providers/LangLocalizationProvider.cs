@@ -1,7 +1,10 @@
-﻿using System.Reactive.Subjects;
+﻿using System;
+using System.Reactive.Subjects;
 
 namespace Common.Localization.Providers {
     public class LangLocalizationProvider : ILocalizationProvider {
+        public static LangLocalizationProvider EnglishLocalizationProvider { get; } = new LangLocalizationProvider("en");
+
         private readonly string _lang;
         public LangLocalizationProvider(string lang) {
             _lang = lang;
@@ -11,6 +14,6 @@ namespace Common.Localization.Providers {
             return LocalizationManager.Get(_lang, id, formatArgs);
         }
 
-        public ISubject<ILocalizationProvider>? LanguageChanged { get; } = null;
+        public IObservable<ILocalizationProvider> LanguageChanged { get; } = null;
     }
 }

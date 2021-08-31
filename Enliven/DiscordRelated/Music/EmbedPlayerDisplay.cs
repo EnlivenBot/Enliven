@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Immutable;
 using System.ComponentModel;
 using System.Linq;
 using System.Text;
@@ -22,6 +23,7 @@ using Common.Music.Tracks;
 using Common.Utils;
 using Discord;
 using Lavalink4NET.Player;
+using Tyrrrz.Extensions;
 
 #pragma warning disable 4014
 
@@ -101,6 +103,7 @@ namespace Bot.DiscordRelated.Music {
             EmbedBuilder = new EnlivenEmbedBuilder();
             EmbedBuilder.AddField("State", loc.Get("Music.Empty"), loc.Get("Music.Empty"), true);
             EmbedBuilder.AddField("Parameters", loc.Get("Music.Parameters"), loc.Get("Music.Empty"), true);
+            EmbedBuilder.AddField("Effects", loc.Get("Music.Effects"), loc.Get("Music.Empty"), isEnabled: false);
             EmbedBuilder.AddField("Queue", loc.Get("Music.Queue").Format(0, 0, 0), loc.Get("Music.Empty"));
             EmbedBuilder.AddField("RequestHistory", loc.Get("Music.RequestHistory"), loc.Get("Music.Empty"));
             EmbedBuilder.AddField("Warnings", loc.Get("Music.Warning"), loc.Get("Music.Empty"), false, 100, false);
@@ -156,7 +159,6 @@ namespace Bot.DiscordRelated.Music {
                     if (isChanged) UpdateControlMessage();
                 }),
                 Player.Playlist.Changed.Subscribe(playlist => UpdateQueue()),
-                Player.BassboostChanged.Subscribe(obj => UpdateParameters()),
                 Player.VolumeChanged.Subscribe(obj => UpdateParameters()),
                 Player.SocketChanged.Subscribe(obj => UpdateNode()),
                 Player.StateChanged.Subscribe(obj => {
@@ -165,6 +167,7 @@ namespace Bot.DiscordRelated.Music {
                     UpdateControlMessage();
                     UpdateMessageComponents();
                 }),
+                Player.FiltersChanged.Subscribe(_ => UpdateEffects()),
                 Player.CurrentTrackIndexChanged.Subscribe(i => UpdateQueue())
             );
             UpdateNode();
@@ -201,7 +204,7 @@ namespace Bot.DiscordRelated.Music {
             _messageComponentManager.WithButton(btnTemplate.Clone().WithEmote(CommonEmoji.LegacyShuffle).WithCustomId("Shuffle"));
             _messageComponentManager.WithButton(btnTemplate.Clone().WithEmote(CommonEmoji.LegacyStop).WithCustomId("Stop").WithStyle(ButtonStyle.Danger));
             _messageComponentManager.WithButton(btnTemplate.Clone().WithCustomId("Repeat"));
-            _messageComponentManager.WithButton(btnTemplate.Clone().WithEmote(CommonEmoji.LegacyArrowDown).WithCustomId("Down").WithDisabled(true));
+            _messageComponentManager.WithButton(btnTemplate.Clone().WithEmote(CommonEmoji.E).WithCustomId("Effects"));
             _messageComponentManager.SetCallback(async (s, component, arg3) => {
                 var command = s switch {
                     "TrackPrevious" => Player.TrackPosition.TotalSeconds > 15 ? "seek 0s" : "skip -1",
@@ -213,23 +216,13 @@ namespace Bot.DiscordRelated.Music {
                     "Shuffle"       => "shuffle",
                     "Stop"          => "stop",
                     "Repeat"        => "repeat",
-                    "Down"          => await TryPerformArrowDownResendWithComponents(),
+                    "Effects"          => "effects",
                     _               => throw new ArgumentOutOfRangeException()
                 };
 
                 if (!string.IsNullOrEmpty(command)) {
                     await _commandHandlerService.ExecuteCommand(command, new ComponentCommandContext(EnlivenBot.Client, component),
                         component.User.Id.ToString());
-                }
-
-                async Task<string?> TryPerformArrowDownResendWithComponents() {
-                    if ((await _controlMessage!.Channel.GetMessagesAsync(1).FlattenAsync()).FirstOrDefault()?.Id == _controlMessage.Id) {
-                        return null;
-                    }
-                    NextResendForced = true;
-                    await _controlMessageSendTask.Execute(false, TimeSpan.Zero);
-                    _messageComponentManager.GetButton("Down")!.WithDisabled(true);
-                    return null;
                 }
             });
 
@@ -238,11 +231,6 @@ namespace Bot.DiscordRelated.Music {
             _messageComponent = _messageComponentManager.Build();
             _controlMessage = await _targetChannel.SendMessageAsync(null, false, EmbedBuilder.Build(), component: _messageComponent);
             _messageComponentManager.AssociateWithMessage(_controlMessage);
-            
-            _collectorsGroup.Controllers.Add(CollectorsUtils.CollectMessage(_controlMessage.Channel, message => true, async args => {
-                args.StopCollect();
-                _messageComponentManager.GetButton("Down")!.WithDisabled(false);
-            }));
         }
 
         public void UpdateMessageComponents() {
@@ -342,11 +330,33 @@ namespace Bot.DiscordRelated.Music {
                 EmbedBuilder.Url = "";
             }
         }
+        
+        private void UpdateEffects() {
+            var effectsText = ProcessEffectsText(Player.Effects);
+            EmbedBuilder.Fields["Effects"].Value = effectsText.Or("Placeholder");
+            EmbedBuilder.Fields["Effects"].IsEnabled = !effectsText.IsNullOrWhiteSpace();
 
+            string ProcessEffectsText(ImmutableList<PlayerEffectUse> effects) {
+                try {
+                    var text = effects.Select(use => use.Effect.DisplayName).JoinToString(" > ");
+                    if (text.Length < 20) {
+                        _effectsInParameters = "\n" + text;
+                        return "";
+                    }
+                    _effectsInParameters = null;
+                    return effects.Select(use => $"`{use.Effect.DisplayName}`").JoinToString(" > ");
+                }
+                finally {
+                    UpdateParameters();
+                }
+            }
+        }
+
+        private string? _effectsInParameters;
         private void UpdateParameters() {
-            var volume = (int)Player.Volume * 200;
-            var volumeText = volume < 50 || volume > 150 ? $"🔉 ***{volume}%***\n" : $"🔉 {volume}%\n";
-            EmbedBuilder.Fields["Parameters"].Value = volumeText + $"🅱️ {Player.BassBoostMode}";
+            var volume = (int)(Player.Volume * 200);
+            var volumeText = volume < 50 || volume > 150 ? $"🔉 ***{volume}%***\n" : $"🔉 {volume}%";
+            EmbedBuilder.Fields["Parameters"].Value = volumeText + _effectsInParameters;
         }
 
         private void UpdateQueue() {

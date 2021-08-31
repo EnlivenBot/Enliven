@@ -9,6 +9,9 @@
     <ItemGroup>
       <PackageReference Include="Autofac" Version="6.1.0" />
       <PackageReference Include="Discord.Net.Labs" Version="2.4.7" />
+      <PackageReference Include="Lavalink4NET" Version="2021.7.21.1609" />
+      <PackageReference Include="Lavalink4NET.Discord.NET" Version="2021.7.21.1609" />
+      <PackageReference Include="Lavalink4NET.MemoryCache" Version="2021.7.21.1609" />
       <PackageReference Include="Lib.Harmony" Version="2.0.4" />
       <PackageReference Include="LiteDB" Version="5.0.10" />
       <PackageReference Include="NLog" Version="4.7.6" />
@@ -28,11 +31,4 @@
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
     </ItemGroup>
-
-    <ItemGroup>
-      <ProjectReference Include="..\Lavalink4NET\src\Lavalink4NET.Discord_NET\Lavalink4NET.DiscordNet.csproj" />
-      <ProjectReference Include="..\Lavalink4NET\src\Lavalink4NET.MemoryCache\Lavalink4NET.MemoryCache.csproj" />
-      <ProjectReference Include="..\Lavalink4NET\src\Lavalink4NET\Lavalink4NET.csproj" />
-    </ItemGroup>
-
 </Project>

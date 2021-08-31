@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -50,10 +51,11 @@ namespace Bot.DiscordRelated.Logging {
 
         [BsonIgnore] private static Regex AttachmentRegex = new Regex(@"(\d+)\/(\d+)\/(.+?)$");
 
-        [BsonIgnore] public ISubject<MessageHistory> SaveRequest = new Subject<MessageHistory>();
+        [BsonIgnore] private readonly ISubject<MessageHistory> _saveRequest = new Subject<MessageHistory>();
+        [BsonIgnore] public IObservable<MessageHistory> SaveRequest => _saveRequest.AsObservable();
 
         public void Save() {
-            SaveRequest.OnNext(this);
+            _saveRequest.OnNext(this);
         }
 
         public void AddSnapshot(IMessage message) {

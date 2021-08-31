@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Text;
 using Common.Localization.Entries;
@@ -123,7 +124,8 @@ namespace Common.History {
             }
         }
 
-        public ISubject<HistoryCollection> HistoryChanged = new Subject<HistoryCollection>();
+        private readonly ISubject<HistoryCollection> _historyChangedSubject = new Subject<HistoryCollection>();
+        public IObservable<HistoryCollection> HistoryChanged => _historyChangedSubject.AsObservable();
 
         public string GetLastHistory(ILocalizationProvider provider) {
             return GetLastHistory(provider, out _);
@@ -177,7 +179,7 @@ namespace Common.History {
 
         protected virtual void OnHistoryChanged(int? affectedIndex = null) {
             _isChanged = affectedIndex == null || affectedIndex.Value >= _firstAffectedIndex;
-            HistoryChanged.OnNext(this);
+            _historyChangedSubject.OnNext(this);
         }
 
         private void SubscribeItem(HistoryEntry entry) {

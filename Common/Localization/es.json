@@ -39,7 +39,6 @@
       "Remove": "**{0}** ha eliminado la pista `{1}` - `{2}`",
       "RemoveRange": "**{0}** ha eliminado `{1}` pistas. From `{2}` to `{3}`",
       "TrackMoved": "**{0}** ha movido la pista `{1}` a la posición `{2}`",
-      "BassBoostUpdated": "**{0}** ha cambiado el modo BassBoost a `{1}`",
       "NodeChanged": "**{0}** ha movido la reproducción a un nodo nuevo: `{1}`",
       "LimitExceed": "**{0}** ha hecho `{1}` solicitudes que no se han podido procesar. La cola ya contiene {2} pistas",
       "PlaylistLoadingLimit": "**{0}** no puede cargar una playlist con `{1}` pistas. La cola no puede tener más de {2} pistas",
@@ -102,7 +101,30 @@
       "TrackStuck": "La pista actual está bloqueada. La voy a saltar.",
       "TrackException": "Error de reproducción de pista: `{0}`. La voy a saltar.",
       "PlayerRestored": "**{0}** ha restaurado la última reproducción.",
-      "LyricsNotFound": "No he encontrado la letra de la canción actual.\nSolicitud: {0} - {1}\n-Característica experimental, no te quejes si no funciona"
+      "LyricsNotFound": "No he encontrado la letra de la canción actual.\nSolicitud: {0} - {1}\n-Característica experimental, no te quejes si no funciona",
+      "EffectParseFailedWithDefault": "Error al analizar argumentos de efecto. Valores posibles: {0} o dejar en blanco para {1}.",
+      "EffectNotFound": "No existen efectos con este nombre.",
+      "EffectApplied": "**{0}** aplica el efecto `{1}`",
+      "EffectRemoved": "**{0}** elimina el efecto `{1}`",
+      "Effects": "Efectos",
+      "MaxEffectsCountExceed": "El número máximo de efectos ({0}) ya ha sido aplicado al reproductor."
+    },
+    "Effects": {
+      "AddEffectTitle": "Cómo agregar un efecto",
+      "AddEffectDescription": "1. Ve al [configurador](https://tinyurl.com/enliveneffects) \n2. Introduce un nombre para el efecto \n3. Edita las opciones para el efecto \n4. Copia el texto JSON del campo \"JSON Output\" de la esquina superior derecha \n5. Ejecuta el comando `{0}effect add TEXTOJSON`, donde TEXTOJSON es el texto copiado en el paso anterior",
+      "NameLength": "La longitud de `Nombre` debe estar entre `{0}` y `{1}` caracteres",
+      "FiltersCount": "Debes seleccionar al menos un filtro",
+      "ParametersCount": "Filtro `{0}`: Debes establecer al menos un parámetro",
+      "Between": "Filtro `{0}`: `{1}` el valor debe estar entre {2} y {3}",
+      "MoreThen": "Filtro `{0}`: `{1}` el valor debe ser mayor que {2}",
+      "BandsDuplicate": "El ecualizador no puede tener bandas duplicadas ({0})",
+      "BandsNumbers": "Las bandas deben ser entre 0 y 14",
+      "ApplyEffectTitle": "Aplicar efecto",
+      "ApplyEffectDescription": "Usa el comando `{0}effect NOMBRE` donde NOMBRE es el nombre del efecto o id.\nEfectos predeterminados: {1}",
+      "AddCustomEffectTitle": "Efectos personalizados",
+      "AddCustomEffectDescription": "Use el comando `{0}effect add` para obtener instrucciones",
+      "Remove": "Eliminar:",
+      "Add": "Añadir:"
     },
     "Groups": {
       "": "Otro",
@@ -171,8 +193,6 @@
       "move0s": "Mueve la pista en la cola",
       "move0_0s": "Índice de pista",
       "move0_1s": "Posición nueva",
-      "bassboost0s": "Activación/desactivación del BassBoost",
-      "bassboost0_0s": "Modo de BassBoost: `Off`, `Low`, `Medium`, `High`, `Extreme`",
       "changenode0s": "Intenta mover la reproducción a otro nodo. Puede ayudar si hay interrupciones en la reproducción",
       "invite0s": "Enlace para añadir el bot a otro servidor",
       "logging0s": "Muestra el panel de control del logging",
@@ -180,7 +200,11 @@
       "fixspotify0_0s": "URL de la canción deseada",
       "playnext0s": "Igual a `play`, pero añade la pista inmediatamente después de la actual, no al final de la cola",
       "playerrestart0s": "Te permite reiniciar completamente el reproductor. Atención: característica experimental",
-      "lyrics0s": "Letra de la canción (si está disponible)"
+      "lyrics0s": "Letra de la canción (si está disponible)",
+      "effect0s": "Aplica o elimina el efecto de post-procesamiento",
+      "effect0_0s": "Nombre o ID del efecto (predeterminados: `mono`, `bassboost`(`bb`), `nightcore`(`nc`), `8d`)",
+      "effect0_1s": "Parámetro del efecto aplicado. Por ejemplo, para el efecto `bassboost`: `Low`, `Medium`, `High`, `Extreme`",
+      "effects0": "Mostrar y permitir gestionar efectos de sonido"
     },
     "CommandHandler": {
       "FailedTitle": "Error al ejecutar un comando",
@@ -193,7 +217,7 @@
     "Commands": {
       "RequestedBy": "Solicitado por {0} | Ayúdanos votando",
       "SetChannelResponse": "El canal <#{0}> ha sido designado para el rol {1}",
-      "Success": "Prefijo cambiado",
+      "Success": "Completado",
       "Fail": "Fallo",
       "SetPrefixResponse": "Prefijo cambiado a `{0}`.\nSi lo olvidas, mencióname.",
       "LoggingEnabled": "Guardado de historial de cambios de mensaje activado",
@@ -244,7 +268,10 @@
       "Invite": "Invitación",
       "InviteDescription": "Aquí está [tu enlace]({0}) para invitarme a otro servidor. ¡Espero verte allí! 😀",
       "Vote": "**Ayúdanos**",
-      "VoteDescription": "Puedes ayudarnos **gratis** en:\n[top.gg](https://top.gg/bot/606760964183949314) (vota [1 voto cada 12 horas] o escribe un comentario)\n[discordbotlist.com](https://discordbotlist.com/bots/enliven) (vota [1 voto cada 12 horas])\n[bots.ondiscord.xyz](https://bots.ondiscord.xyz/bots/606760964183949314) (escribe un comentario)\n O visítanos en [discord.bots.gg](https://discord.bots.gg/bots/606760964183949314)\n\nNo te olvides de [nuestro GitLab](https://gitlab.com/enlivenbot/enliven), donde puedes enviar errores y sugerencias (en inglés/ruso)\nPuedes unirte también a nuestro [Discord de soporte](https://discord.gg/zfBffbBbCp)"
+      "VoteDescription": "Puedes ayudarnos **gratis** en:\n[top.gg](https://top.gg/bot/606760964183949314) (vota [1 voto cada 12 horas] o escribe un comentario)\n[discordbotlist.com](https://discordbotlist.com/bots/enliven) (vota [1 voto cada 12 horas])\n[bots.ondiscord.xyz](https://bots.ondiscord.xyz/bots/606760964183949314) (escribe un comentario)\n O visítanos en [discord.bots.gg](https://discord.bots.gg/bots/606760964183949314)\n\nNo te olvides de [nuestro GitLab](https://gitlab.com/enlivenbot/enliven), donde puedes enviar errores y sugerencias (en inglés/ruso)\nPuedes unirte también a nuestro [Discord de soporte](https://discord.gg/zfBffbBbCp)",
+      "All": "Todo",
+      "Stop": "Detener",
+      "OnlyRequester": "Sólo el solicitante ({0}) puede interactuar con este componente"
     },
     "ChainsCommon": {
       "Ended": "Completado",

@@ -17,6 +17,7 @@ using Common;
 using Common.Config;
 using Common.Localization;
 using Common.Music.Controller;
+using Common.Music.Effects;
 using Common.Music.Resolvers;
 using Discord;
 using Discord.WebSocket;
@@ -60,7 +61,6 @@ namespace Bot {
             // Discord type readers
             builder.RegisterType<ChannelFunctionTypeReader>().As<CustomTypeReader>();
             builder.RegisterType<LoopingStateTypeReader>().As<CustomTypeReader>();
-            builder.RegisterType<BassBoostModeTypeReader>().As<CustomTypeReader>();
 
             // Database types
             builder.Register(context => context.Resolve<LiteDatabaseProvider>().ProvideDatabase().GetAwaiter().GetResult()
@@ -83,6 +83,8 @@ namespace Bot {
             builder.RegisterType<MessageHistoryProvider>().As<IMessageHistoryProvider>().SingleInstance();
             builder.RegisterType<EmbedPlayerDisplayProvider>().SingleInstance();
             builder.RegisterType<EmbedPlayerQueueDisplayProvider>().SingleInstance();
+            builder.RegisterType<EffectSourceProvider>().SingleInstance();
+            builder.RegisterType<EmbedPlayerEffectsDisplayProvider>().SingleInstance();
 
             // Services
             builder.RegisterType<CustomCommandService>().As<IService>().AsSelf().SingleInstance();

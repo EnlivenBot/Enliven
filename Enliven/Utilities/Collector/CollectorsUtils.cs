@@ -3,6 +3,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Reactive.Disposables;
+using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Threading.Tasks;
 using Common;
@@ -42,7 +44,7 @@ namespace Bot.Utilities.Collector {
                     if (predicate(tuple.Item3)) action(new EmoteCollectorEventArgs(collectorController, tuple.Item3));
                 });
             });
-            collectorController.Stop += (sender, args) => disposable.Dispose();
+            collectorController.ShouldDispose(disposable);
 
             return collectorController;
         }
@@ -57,7 +59,7 @@ namespace Bot.Utilities.Collector {
                     if (predicate(message)) action(new MessageCollectorEventArgs(collectorController, message));
                 });
             });
-            collectorController.Stop += (sender, args) => disposable.Dispose();
+            collectorController.ShouldDispose(disposable);
 
             return collectorController;
         }
@@ -116,7 +118,7 @@ namespace Bot.Utilities.Collector {
                             action(new EmoteMultiCollectorEventArgs(collectorController, collectorsGroup, tuple.Item3), selector.Item2());
                     });
                 });
-                collectorController.Stop += (sender, args) => disposable.Dispose();
+                collectorController.ShouldDispose(disposable);
 
                 // ReSharper disable once PossiblyMistakenUseOfParamsMethod
                 collectorsGroup.Add(collectorController);
@@ -137,13 +139,13 @@ namespace Bot.Utilities.Collector {
             info ??= default!;
             var collectorController = new CollectorController();
             var key = Guid.NewGuid();
-            collectorController.Stop += (sender, args) => {
-                if (!ByCommand.TryGetValue(info, out var value)) return;
-                value.TryRemove(key, out _);
+            collectorController.Disposed.Subscribe(@base => {
+                if (!ByCommand.TryGetValue(info!, out var value)) return;
+                value!.TryRemove(key, out _);
                 if (value.IsEmpty) {
                     ByCommand.TryRemove(info, out _);
                 }
-            };
+            });
             var concurrentDictionary = ByCommand.GetOrAdd(info,
                 arg =>
                     new ConcurrentDictionary<Guid, (Func<ICommandContext, CommandMatch, bool>,

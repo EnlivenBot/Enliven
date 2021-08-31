@@ -5,12 +5,8 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <RootNamespace>Bot</RootNamespace>
     <AssemblyName>Enliven</AssemblyName>
-    <Version>15.1</Version>
+    <Version>16.0</Version>
     <Nullable>enable</Nullable>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <Optimize>false</Optimize>
   </PropertyGroup>
 
   <ItemGroup>
@@ -42,34 +38,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Remove="Music\AdvancedPlayer.cs" />
-    <Compile Remove="Config\Entity.cs" />
-    <Compile Remove="Config\GuildConfig.cs" />
-    <Compile Remove="Config\StatisticsPart.cs" />
-    <Compile Remove="Config\UserData.cs" />
-    <Compile Remove="Utilities\History\HistoryCollection.cs" />
-    <Compile Remove="Config\Localization\Entries\EntryContainer.cs" />
-    <Compile Remove="Config\Localization\Entries\EntryLocalized.cs" />
-    <Compile Remove="Config\Localization\Entries\EntryString.cs" />
-    <Compile Remove="Config\Localization\Providers\GuildLocalizationProvider.cs" />
-    <Compile Remove="Config\Localization\Providers\ILocalizationProvider.cs" />
-    <Compile Remove="Config\Localization\Providers\LangLocalizationProvider.cs" />
-    <Compile Remove="Config\Localization\LocalizationManager.cs" />
-    <Compile Remove="Config\Localization\LocalizationPack.cs" />
-    <Compile Remove="DiscordRelated\Music\Tracks\AuthoredTrack.cs" />
-    <Compile Remove="DiscordRelated\Music\AdvancedLavalinkPlayer.cs" />
-    <Compile Remove="Music\BassBoostMode.cs" />
-    <Compile Remove="Music\ExportPlaylist.cs" />
-    <Compile Remove="Music\LavalinkNodeInfo.cs" />
-    <Compile Remove="DiscordRelated\Music\LavalinkPlaylist.cs" />
-    <Compile Remove="DiscordRelated\Music\PlayerShutdownParameters.cs" />
-    <Compile Remove="Utilities\Constants.cs" />
-    <Compile Remove="DiscordRelated\Music\PlayersController.cs" />
-    <Compile Remove="Music\MusicUtils.cs" />
-    <Compile Remove="DiscordRelated\Music\EmbedPlaybackPlayer.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Reference Include="DiscordChatExporter.Domain, Version=2.20.0.0, Culture=neutral, PublicKeyToken=null">
       <HintPath>..\packages\DiscordChatExporter.Domain.dll</HintPath>
     </Reference>
@@ -77,7 +45,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Common\Common.csproj" />
-    <ProjectReference Include="..\Lavalink4NET\src\Lavalink4NET\Lavalink4NET.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Reactive.Linq;
+using System.Collections.Generic;
 using System.Reactive.Subjects;
 using Discord;
 using LiteDB;
@@ -59,6 +61,8 @@ namespace Common.Config {
         [BsonId] public ulong UserId { get; set; }
 
         public string? LastKnownUsername { get; set; }
+        
+        public List<PlayerEffect> PlayerEffects { get; set; } = new List<PlayerEffect>();
 
         [BsonIgnore] public bool IsCurrentUser => UserId == 0;
 
@@ -76,9 +80,10 @@ namespace Common.Config {
             return username != null ? $"{GetMention()} ({username})" : GetMention();
         }
 
-        [BsonIgnore] public ISubject<UserData> SaveRequest { get; } = new Subject<UserData>();
+        [BsonIgnore] private readonly ISubject<UserData> _saveRequest = new Subject<UserData>();
+        [BsonIgnore] public IObservable<UserData> SaveRequest => _saveRequest.AsObservable();
         public void Save() {
-            SaveRequest.OnNext(this);
+            _saveRequest.OnNext(this);
         }
 
         public UserLink ToLink() {

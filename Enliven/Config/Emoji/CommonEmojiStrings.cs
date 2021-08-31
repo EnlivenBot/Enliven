@@ -53,5 +53,8 @@ namespace Bot.Config.Emoji {
         public string ThumbsDown { get; set; } = "👎";
         public string Warning { get; set; } = "⚠️";
         public string BookmarkTabs { get; set; } = "📑";
+        public string NoEntry { get; set; } = "⛔";
+        public string Level { get; set; } = "🎚️";
+        public string E { get; set; } = "🇪";
     }
 }

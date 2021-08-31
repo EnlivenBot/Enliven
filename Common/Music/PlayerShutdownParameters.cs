@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Common.Music.Players;
 using Lavalink4NET.Player;
 
@@ -22,6 +23,8 @@ namespace Common.Music {
         public TimeSpan TrackPosition { get; set; }
         public PlayerState PlayerState { get; set; }
         public LoopingState LoopingState { get; set; } 
+        
+        public List<PlayerEffectUse> Effects { get; set; }
 
         #endregion
     }

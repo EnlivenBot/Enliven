@@ -34,15 +34,15 @@ namespace Common.Music.Players {
 
         public LavalinkPlaylist Playlist { get; } = new LavalinkPlaylist();
 
-        public ISubject<int> CurrentTrackIndexChanged { get; set; } = new Subject<int>();
+        private readonly ISubject<int> _currentTrackIndexChanged = new Subject<int>();
+        public IObservable<int> CurrentTrackIndexChanged => _currentTrackIndexChanged;
 
         public int CurrentTrackIndex {
             get => _currentTrackIndex;
             private set {
-                var notify = _currentTrackIndex != value;
+                if (_currentTrackIndex == value) return;
                 _currentTrackIndex = value;
-                if (notify)
-                    CurrentTrackIndexChanged.OnNext(value);
+                _currentTrackIndexChanged.OnNext(value);
             }
         }
 
@@ -133,7 +133,7 @@ namespace Common.Music.Players {
 
         public virtual async Task<ExportPlaylist> ExportPlaylist(ExportPlaylistOptions options) {
             var encodedTracks = await Task.WhenAll(Playlist.Select(track => _trackEncoder.Encode(track)));
-            var exportPlaylist = new ExportPlaylist {Tracks = encodedTracks.ToList()};
+            var exportPlaylist = new ExportPlaylist { Tracks = encodedTracks.ToList() };
             if (options != ExportPlaylistOptions.IgnoreTrackIndex) {
                 exportPlaylist.TrackIndex = CurrentTrackIndex.Normalize(0, Playlist.Count - 1);
             }
@@ -286,7 +286,7 @@ namespace Common.Music.Players {
         }
 
         public override async Task OnTrackExceptionAsync(TrackExceptionEventArgs eventArgs) {
-            WriteToQueueHistory(new EntryLocalized("Music.TrackException", eventArgs.Error));
+            WriteToQueueHistory(new EntryLocalized("Music.TrackException", eventArgs.Exception.Cause));
             await SkipAsync(1, true);
             await base.OnTrackExceptionAsync(eventArgs);
         }

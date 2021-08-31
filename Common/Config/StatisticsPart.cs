@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using LiteDB;
 
@@ -55,9 +56,10 @@ namespace Common.Config {
         [BsonId] public string Id { get; set; } = null!;
         public Dictionary<string, int> UsagesList { get; set; } = new Dictionary<string, int>();
 
-        [BsonIgnore] public ISubject<StatisticsPart> SaveRequest { get; } = new Subject<StatisticsPart>();
+        [BsonIgnore] private readonly ISubject<StatisticsPart> _saveRequest = new Subject<StatisticsPart>();
+        [BsonIgnore] public IObservable<StatisticsPart> SaveRequest => _saveRequest.AsObservable();
         public void Save() {
-            SaveRequest.OnNext(this);
+            _saveRequest.OnNext(this);
         }
     }
 }

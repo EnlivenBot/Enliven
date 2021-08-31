@@ -30,7 +30,7 @@ namespace Bot.Commands.Chains {
         }
 
         public async Task Start() {
-            _guildConfig.FunctionalChannelsChanged += GuildConfigOnFunctionalChannelsChanged;
+            var functionalChannelsChangedSubscribe = _guildConfig.FunctionalChannelsChanged.Subscribe(_ => Update());
             Update();
             _message = await _channel.SendMessageAsync(null, false, MainBuilder.Build());
             _collectorsGroup = new CollectorsGroup(CollectorsUtils.CollectMessage(_user, message => message.Channel.Id == _message.Channel.Id, async args => {
@@ -80,6 +80,7 @@ namespace Bot.Commands.Chains {
                 {CommonEmoji.Memo, CommonEmoji.Robot, CommonEmoji.ExclamationPoint, CommonEmoji.LegacyFileBox, CommonEmoji.Printer, CommonEmoji.LegacyStop});
             OnEnd = async entry => {
                 _collectorsGroup.DisposeAll();
+                functionalChannelsChangedSubscribe.Dispose();
                 await _message.ModifyAsync(properties =>
                     properties.Embed = new EmbedBuilder().WithColor(Color.Orange).WithTitle(Loc.Get("ChainsCommon.Ended")).WithDescription(entry.Get(Loc))
                                                          .Build());
@@ -87,10 +88,6 @@ namespace Bot.Commands.Chains {
                 _ = _message.DelayedDelete(Constants.StandardTimeSpan);
             };
             SetTimeout(Constants.StandardTimeSpan);
-        }
-
-        private void GuildConfigOnFunctionalChannelsChanged(object? sender, ChannelFunction e) {
-            Update();
         }
 
         public override void Update() {

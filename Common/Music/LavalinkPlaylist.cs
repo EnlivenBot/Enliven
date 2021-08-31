@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using Lavalink4NET.Player;
 
@@ -216,11 +217,13 @@ namespace Common.Music {
                 }
             }
         }
-
-        public ISubject<LavalinkPlaylist> Changed = new Subject<LavalinkPlaylist>();
+        
+        private readonly ISubject<LavalinkPlaylist> _changed = new Subject<LavalinkPlaylist>();
+        public IObservable<LavalinkPlaylist> Changed => _changed.AsObservable();
+        
         private void OnUpdate() {
             _totalPlaylistLength = null;
-            Changed.OnNext(this);
+            _changed.OnNext(this);
         }
     }
 }

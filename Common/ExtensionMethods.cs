@@ -6,8 +6,8 @@ using System.Text;
 using System.Threading.Tasks;
 using Common.Config;
 using Common.Localization.Providers;
+using Common.Utils;
 using Discord;
-using Discord.Rest;
 using NLog;
 
 namespace Common {
@@ -164,6 +164,32 @@ namespace Common {
         public static TimeSpan Sum<TSource>(this IEnumerable<TSource> source, Func<TSource, TimeSpan> func)
         {
             return new TimeSpan(source.Sum(item => func(item).Ticks));
+        }
+        
+        public static TOut Pipe<TIn, TOut>(this TIn input, Func<TIn, TOut> transform) => transform(input);
+
+        public static void ShouldDispose(this IDisposableBase disposableBase, IDisposable disposable) {
+            if (disposableBase.IsDisposed) {
+                disposable.Dispose();
+            }
+            else {
+                disposableBase.Disposed.Subscribe(_ => disposable.Dispose());
+            }
+        }
+
+        public static string GetLocalizedContent(this Exception exception, ILocalizationProvider provider) {
+            if (exception is LocalizedException localizedException) {
+                return localizedException.Get(provider);
+            }
+
+            return exception.Message;
+        }
+
+        public static string Or(this string? source, string replacement) {
+            if (string.IsNullOrWhiteSpace(source)) {
+                return replacement;
+            }
+            return source;
         }
     }
 }

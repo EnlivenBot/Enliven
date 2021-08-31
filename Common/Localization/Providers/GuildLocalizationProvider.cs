@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using Common.Config;
 
@@ -7,15 +8,15 @@ namespace Common.Localization.Providers {
         private GuildConfig _guildConfig;
 
         public GuildLocalizationProvider(GuildConfig guildConfig) {
-            LanguageChanged = new Subject<ILocalizationProvider>();
             _guildConfig = guildConfig;
-            guildConfig.LocalizationChanged.Subscribe(config => LanguageChanged.OnNext(this));
+            guildConfig.LocalizationChanged.Select(_ => this).Subscribe(_languageChanged);
         }
 
         public string Get(string id, params object[]? formatArgs) {
             return LocalizationManager.Get(_guildConfig.GetLanguage(), id, formatArgs);
         }
 
-        public ISubject<ILocalizationProvider> LanguageChanged { get; }
+        private readonly ISubject<ILocalizationProvider> _languageChanged = new Subject<ILocalizationProvider>();
+        public IObservable<ILocalizationProvider> LanguageChanged => _languageChanged.AsObservable();
     }
 }
