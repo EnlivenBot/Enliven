@@ -101,7 +101,30 @@
       "TrackStuck": "La pista actual está bloqueada. La voy a saltar.",
       "TrackException": "Error de reproducción de pista: `{0}`. La voy a saltar.",
       "PlayerRestored": "**{0}** ha restaurado la última reproducción.",
-      "LyricsNotFound": "No he encontrado la letra de la canción actual.\nSolicitud: {0} - {1}\n-Característica experimental, no te quejes si no funciona"
+      "LyricsNotFound": "No he encontrado la letra de la canción actual.\nSolicitud: {0} - {1}\n-Característica experimental, no te quejes si no funciona",
+      "EffectParseFailedWithDefault": "Error al analizar argumentos de efecto. Valores posibles: {0} o dejar en blanco para {1}.",
+      "EffectNotFound": "No existen efectos con este nombre.",
+      "EffectApplied": "**{0}** aplica el efecto `{1}`",
+      "EffectRemoved": "**{0}** elimina el efecto `{1}`",
+      "Effects": "Efectos",
+      "MaxEffectsCountExceed": "El número máximo de efectos ({0}) ya ha sido aplicado al reproductor."
+    },
+    "Effects": {
+      "AddEffectTitle": "Cómo agregar un efecto",
+      "AddEffectDescription": "1. Ve al [configurador](https://tinyurl.com/enliveneffects) \n2. Introduce un nombre para el efecto \n3. Edita las opciones para el efecto \n4. Copia el texto JSON del campo \"JSON Output\" de la esquina superior derecha \n5. Ejecuta el comando `{0}effect add TEXTOJSON`, donde TEXTOJSON es el texto copiado en el paso anterior",
+      "NameLength": "La longitud de `Nombre` debe estar entre `{0}` y `{1}` caracteres",
+      "FiltersCount": "Debes seleccionar al menos un filtro",
+      "ParametersCount": "Filtro `{0}`: Debes establecer al menos un parámetro",
+      "Between": "Filtro `{0}`: `{1}` el valor debe estar entre {2} y {3}",
+      "MoreThen": "Filtro `{0}`: `{1}` el valor debe ser mayor que {2}",
+      "BandsDuplicate": "El ecualizador no puede tener bandas duplicadas ({0})",
+      "BandsNumbers": "Las bandas deben ser entre 0 y 14",
+      "ApplyEffectTitle": "Aplicar efecto",
+      "ApplyEffectDescription": "Usa el comando `{0}effect NOMBRE` donde NOMBRE es el nombre del efecto o id.\nEfectos predeterminados: {1}",
+      "AddCustomEffectTitle": "Efectos personalizados",
+      "AddCustomEffectDescription": "Use el comando `{0}effect add` para obtener instrucciones",
+      "Remove": "Eliminar:",
+      "Add": "Añadir:"
     },
     "Groups": {
       "": "Otro",
@@ -177,7 +200,11 @@
       "fixspotify0_0s": "URL de la canción deseada",
       "playnext0s": "Igual a `play`, pero añade la pista inmediatamente después de la actual, no al final de la cola",
       "playerrestart0s": "Te permite reiniciar completamente el reproductor. Atención: característica experimental",
-      "lyrics0s": "Letra de la canción (si está disponible)"
+      "lyrics0s": "Letra de la canción (si está disponible)",
+      "effect0s": "Aplica o elimina el efecto de post-procesamiento",
+      "effect0_0s": "Nombre o ID del efecto (predeterminados: `mono`, `bassboost`(`bb`), `nightcore`(`nc`), `8d`)",
+      "effect0_1s": "Parámetro del efecto aplicado. Por ejemplo, para el efecto `bassboost`: `Low`, `Medium`, `High`, `Extreme`",
+      "effects0": "Mostrar y permitir gestionar efectos de sonido"
     },
     "CommandHandler": {
       "FailedTitle": "Error al ejecutar un comando",
