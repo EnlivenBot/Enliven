@@ -8,7 +8,7 @@
 
 > Powerful music and logging bot for Discord  
 
-**Fully free** [Discord](https://discord.com/) bot with Embed music playback, buttons control, various music sources (including livestreams) and more.  
+**Fully free** [Discord](https://discord.com/) bot with Embed music playback, buttons control, various music sources (including livestreams/radio), postprocessing effects and more.  
 The best opportunities for logging messages.
 </td></tr>
 <tr><td align="center" width="9999">
@@ -26,14 +26,15 @@ The best opportunities for logging messages.
      * Progress display
      * Queue display
      * Request history
+     * Postprocessing effects (bassbost, nightcore, etc, custom user effects support)
      * This and more in one control message:  
      <img src="https://gitlab.com/enlivenbot/enliven/-/wikis/uploads/e0810f0e0e8ca07b5bb202286181ac8d/image.png" />
    * Various music sources
      * Youtube, Twitch, SoundCloud and all [supported by youtube-dl sites](https://ytdl-org.github.io/youtube-dl/supportedsites.html)
+     * Radio
      * Spotify
      * Yandex Music
      * Live streams
-   * Bass boost support
    * Custom playlists
    * Multiple player nodes
  * Logging
@@ -65,7 +66,9 @@ The best opportunities for logging messages.
 ## Contributing
 
 If you'd like to contribute, please fork the repository and use a feature
-branch. Pull requests are warmly welcome.
+branch. Pull requests are warmly welcome.  
+
+Also, you can help us with translition on Crowdin:
 
 <a href="https://crowdin.com/project/enliven?utm_source=badge&utm_medium=referral&utm_campaign=badge-add-on" rel="nofollow"><img style="width:140;height:40px" src="https://badges.crowdin.net/badge/light/crowdin-on-dark.png" srcset="https://badges.crowdin.net/badge/light/crowdin-on-dark.png 1x,https://badges.crowdin.net/badge/light/crowdin-on-dark@2x.png 2x" alt="Crowdin | Agile localization for tech companies" /></a>
 
@@ -75,6 +78,8 @@ branch. Pull requests are warmly welcome.
 - [Repository](https://gitlab.com/skprochlab/nJMaLBot)
 - [Issue tracker](https://gitlab.com/skprochlab/nJMaLBot/-/issues)
 - [Discord support server][support]
+- [Compiling sources](https://gitlab.com/enlivenbot/enliven/-/wikis/Compiling-sources)
+- [Self-hosting](https://gitlab.com/enlivenbot/enliven/-/wikis/Self-hosting)
 - Enliven on discord bots lists:
   - [top.gg](https://top.gg/bot/801159808929497208)
   - [discordbotlist.com](https://discordbotlist.com/bots/enliven)
@@ -89,64 +94,3 @@ Also, you can upvote bot on botlists:
 - [top.gg](https://top.gg/bot/801159808929497208)
 - [discordbotlist.com](https://discordbotlist.com/bots/enliven)
 - [bots.discordlabs.org](https://bots.discordlabs.org/bot/801159808929497208)
-
-## Compiling sources
-1. Clone this repo:
-```
-git clone https://gitlab.com/enlivenbot/enliven.git
-```
-2. Navigate to repo folder
-3. Fetch all submodules:
-```
-git submodule update --init --recursive
-```
-4. Install .NetCore 3.1
-5. Compile project:
-```
-dotnet build
-```
-
-## Self-hosting
-⚠️ **Are you sure you want to self-host your bot?** ⚠️  
-The version we host has no restrictions. Consider using it.
-
-If you still want to continue - please ***use the self-hosted version for personal use only***. Don't promote it. Be understanding.
-
-Also, we are not responsible for the code and its operability, updatability, backward compatibility, etc. For all questions - write to our support server.
-
-1. Compile the sources using the [Getting started section](https://gitlab.com/enliven/bot/enliven#getting-started).
-2. Install, launch and configure [lavalink](https://github.com/Frederikam/Lavalink#server-configuration)
-3. Navigate to binaries folder (typically `Enliven/bin/Release/dotnetcore3.1/`) and launch the bot (`./Enliven` for linux or `Enliven.exe` for Windows)
-4. After first launch bot would generate config file (`Config/config.json`). Edit it.
-### Self-hosting FAQ
-#### How to add lavalink nodes to bot
-Edit `LavalinkNodes` variable in `Config/config.json` file:
-```json
-"LavalinkNodes": [
-    {
-    "RestUri": "http://localhost:8081",
-    "WebSocketUri": "ws://localhost:8081",
-    "Password": "mypass",
-    "Name": "Name will be displayed in player embed"
-    },
-    {
-    "RestUri": "http://localhost:8082",
-    "WebSocketUri": "ws://localhost:8083",
-    "Password": "mypass",
-    "Name": null
-    }
-]
-```
-#### How to change text on the embeds
-1. Edit localization files in `Common/Localization/`. (Consider using document search to find what you want to change)
-2. Build project: `dotnet build` (need to be executed in repository root)
-#### How to update bot
-1. Update repo:
-```
-git pull
-git submodule update --recursive
-```
-2. Build project:
-```
-   dotnet build
-```
