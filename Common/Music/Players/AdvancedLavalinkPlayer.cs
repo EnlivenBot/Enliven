@@ -81,7 +81,7 @@ namespace Common.Music.Players {
                     ? new EntryString("{0}\n{1}", reason, new EntryLocalized("Music.ResumeViaPlaylists", GuildConfig.Prefix, parameters.StoredPlaylist!.Id))
                     : reason;
                 var header = new EntryLocalized("Music.PlaybackStopped");
-                var displayShutdownTasks = Displays.Select(async display => {
+                var displayShutdownTasks = Displays.ToList().Select(async display => {
                     try {
                         await display.ExecuteShutdown(header, body);
                     }
@@ -89,7 +89,7 @@ namespace Common.Music.Players {
                         Logger.Error(e, "Error while shutdowning {DisplayType}", display.GetType().Name);
                     }
                 });
-                await Task.WhenAll(displayShutdownTasks.ToArray());
+                await Task.WhenAll(displayShutdownTasks.ToList());
             }
 
             base.Dispose();
