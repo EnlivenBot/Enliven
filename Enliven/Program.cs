@@ -7,8 +7,8 @@ using Autofac;
 using Autofac.Extras.NLog;
 using Bot.DiscordRelated;
 using Bot.DiscordRelated.Commands;
-using Bot.DiscordRelated.Logging;
 using Bot.DiscordRelated.MessageComponents;
+using Bot.DiscordRelated.MessageHistories;
 using Bot.DiscordRelated.Music;
 using Bot.Music.Spotify;
 using Bot.Music.Yandex;
@@ -97,6 +97,9 @@ namespace Bot {
             builder.RegisterType<MessageComponentService>().As<MessageComponentService>().AsSelf().SingleInstance();
             builder.RegisterType<HtmlRendererService>().As<IService>().AsSelf().SingleInstance();
             builder.RegisterType<MessageHistoryHtmlExporter>().SingleInstance();
+            
+            // MessageHistory Printers
+            builder.RegisterType<MessageHistoryPrinter>().SingleInstance();
         }
 
         // ReSharper disable once UnusedMember.Local

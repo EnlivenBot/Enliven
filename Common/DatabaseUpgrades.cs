@@ -32,9 +32,10 @@ namespace Common {
                     var edits = doc.TryGetValue("E", out var e) ? e : null;
                     var id = doc.TryGetValue("_id", out var i) ? i : null;
 
+                    if (authorId!.AsInt64 == 0) continue;
                     var messageHistory = new MessageHistory() {
                         Id = id!.AsString,
-                        Author = new UserLink((ulong) authorId!.AsInt64),
+                        Author = new UserLink((ulong) authorId.AsInt64),
                         IsHistoryUnavailable = isHistoryUnavailable!.AsBoolean,
                         Attachments = attachments?.AsArray?.Select(value => value.AsString).ToList() ?? new List<string>(),
                     };

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Bot.DiscordRelated.Commands.Modules;
-using Bot.DiscordRelated.Logging;
+using Bot.DiscordRelated.MessageHistories;
 using Common;
 using Common.Entities;
 using Discord;

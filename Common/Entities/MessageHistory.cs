@@ -26,7 +26,6 @@ namespace Common.Entities {
 
         [BsonIgnore] public ulong MessageId => Convert.ToUInt64(Id.Split(":")[1]);
         
-        [BsonIgnore] public bool HistoryExists => Edits.Count != 0;
 
         [BsonIgnore] public bool HasAttachments => Attachments != null && Attachments.Count != 0;
 
