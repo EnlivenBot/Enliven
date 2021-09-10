@@ -15,5 +15,24 @@ namespace Bot.DiscordRelated {
             embedBuilder.WithFooter(loc.Get("Commands.RequestedBy").Format(user.Username), user.GetAvatarUrl());
             return embedBuilder;
         }
+        
+        public static EmbedBuilder WithRequester(this EmbedBuilder builder, IUser user, ILocalizationProvider loc) {
+            builder.WithFooter(loc.Get("Commands.RequestedBy").Format(user.Username), user.GetAvatarUrl());
+            return builder;
+        }
+        
+        public static EnlivenEmbedBuilder WithRequester(this EnlivenEmbedBuilder builder, IUser user, ILocalizationProvider loc) {
+            builder.WithFooter(loc.Get("Commands.RequestedBy").Format(user.Username), user.GetAvatarUrl());
+            return builder;
+        }
+
+        public static PriorityEmbedFieldBuilder ToWrapper(this EmbedFieldBuilder builder, int? priority = null, bool enabled = true) {
+            return new PriorityEmbedFieldBuilder()
+                .WithName(builder.Name)
+                .WithValue(builder.Value)
+                .WithIsInline(builder.IsInline)
+                .WithPriority(priority)
+                .WithEnabled(enabled);
+        }
     }
 }
