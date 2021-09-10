@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Common.Utils;
 using Discord;
 using DiscordChatExporter.Core.Discord;
 using DiscordChatExporter.Core.Discord.Data.Common;
@@ -41,21 +42,13 @@ namespace ChatExporter.Exporter.MessageHistories {
             
             return (await Task.WhenAll(creatingTasks)).ToList();
         }
+
+        public static DiscordHelper.NeedFetchSize FetchForAllExceptImages = format => !FileFormat.IsImage(format);
+        public static DiscordHelper.NeedFetchSize FetchForAllExceptMedia = format => !FileFormat.IsImage(format) && !FileFormat.IsAudio(format) && !FileFormat.IsVideo(format);
         
-        private static readonly Regex AttachmentParseRegex = new Regex(@"\/(\d+)\/([^\/]+\.\S+)");
         public static async Task<Attachment> CreateAttachmentFromUrl(string url, bool fetchSizeFromMedia) {
-            var match = AttachmentParseRegex.Match(url);
-            var id = ulong.Parse(match.Groups[1].Value);
-            var name = match.Groups[2].Value;
-            var format = Path.GetExtension(name);
-
-            var size = new FileSize(0);
-            if (!FileFormat.IsImage(format)
-             && (!FileFormat.IsAudio(format) || fetchSizeFromMedia)
-             && (!FileFormat.IsVideo(format) || fetchSizeFromMedia))
-                size = await ExportUtilities.GetFileSizeFromUrlAsync(url) ?? new FileSize(0);
-
-            return new Attachment(new Snowflake(id), url, name, null, null, size);
+            var needFetchPredicate = fetchSizeFromMedia ? FetchForAllExceptImages : FetchForAllExceptMedia;
+            return (await DiscordHelper.ParseAttachmentFromUrlAsync(url, needFetchPredicate)).ToAttachment();
         }
     }
 }
