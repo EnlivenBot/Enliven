@@ -100,7 +100,7 @@ namespace Bot.DiscordRelated.MessageHistories {
 
             private async Task<IUserMessage?> GetCurrentMessageInternal() {
                 var message = await _currentMessageTask;
-                return _lastMessageId != message?.Id ? null : message;
+                return _lastMessageId == null || _lastMessageId == message?.Id ? message : null;
             }
 
             private static async Task<IUserMessage> UpdateMessageInternal(IUserMessage message, string textToAppend) {
