@@ -47,7 +47,17 @@ namespace Bot.Commands {
                 return;
             }
 
-            await MessageHistoryService.PrintLog(channelId, messageId, await GetResponseChannel(), Loc, (IGuildUser) Context.User, forceImage);
+            IUserMessage? userMessage = null;
+            if (forceImage) {
+                try {
+                    userMessage = await Context.Client.GetChannelAsync(channelId).PipeAsync(channel => (channel as ITextChannel)?.GetMessageAsync(messageId)!) as IUserMessage;
+                }
+                catch (Exception) {
+                    // ignored
+                }
+            }
+
+            await MessageHistoryService.PrintLog(channelId, messageId, userMessage, await GetResponseChannel(), Loc, (IGuildUser) Context.User, forceImage);
             Context.Message.SafeDelete();
         }
     }
