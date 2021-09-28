@@ -96,8 +96,8 @@ namespace ChatExporter.Exporter.MessageHistories {
             var buffer = new StringBuilder();
             foreach (var diff in diffs) {
                 var (tagOpen, tagClose) = diff.Operation switch {
-                    Operation.Insert => ("<div style=\"background:DarkGreen;\">", "</div>"),
-                    Operation.Delete => ("<div style=\"background:DarkRed;\">", "</div>"),
+                    Operation.Insert => ("<span style=\"background:DarkGreen;\">", "</span>"),
+                    Operation.Delete => ("<span style=\"background:DarkRed;\">", "</span>"),
                     _                => (null, null)
                 };
                 buffer.Append(tagOpen);
