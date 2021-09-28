@@ -47,8 +47,7 @@ namespace Bot.Commands {
                 return;
             }
 
-            await MessageHistoryService.PrintLog(MessageHistoryProvider.Get(channelId, Convert.ToUInt64(messageId)),
-                (SocketTextChannel) await GetResponseChannel(), Loc, (IGuildUser) Context.User, forceImage);
+            await MessageHistoryService.PrintLog(channelId, messageId, await GetResponseChannel(), Loc, (IGuildUser) Context.User, forceImage);
             Context.Message.SafeDelete();
         }
     }

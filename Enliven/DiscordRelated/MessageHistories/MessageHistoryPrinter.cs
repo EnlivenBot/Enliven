@@ -6,25 +6,81 @@ using System.Threading.Tasks;
 using ChatExporter;
 using ChatExporter.Exporter.MessageHistories;
 using Common;
+using Common.Config;
 using Common.Entities;
+using Common.Localization.Entries;
 using Common.Localization.Providers;
 using Discord;
 using HarmonyLib;
 
 namespace Bot.DiscordRelated.MessageHistories {
     public class MessageHistoryPrinter {
-        private MessageHistoryHtmlExporter _messageHistoryHtmlExporter;
-        private HtmlRendererService _htmlRendererService;
+        private readonly MessageHistoryHtmlExporter _messageHistoryHtmlExporter;
+        private readonly HtmlRendererService _htmlRendererService;
         public MessageHistoryPrinter(MessageHistoryHtmlExporter messageHistoryHtmlExporter, HtmlRendererService htmlRendererService) {
             _messageHistoryHtmlExporter = messageHistoryHtmlExporter;
             _htmlRendererService = htmlRendererService;
         }
 
-        public MessageHistoryPrinterData GenerateData(MessageHistory history, bool forceImage, ILocalizationProvider loc, IUser? requester, IUserMessage? existingMessage) {
+        public IMessageSendData GenerateDataForDeleted(MessageHistory history, ILocalizationProvider loc, MessageExportType messageExportType) {
+            var title = new EntryLocalized("MessageHistory.MessageWasDeleted");
+            var description = new EntryString(GenerateDescription(history, loc, null));
+            var messageHistoryPrinterData = GenerateDataInternal(history, title, description, false, messageExportType, loc, null, null);
+            if (messageHistoryPrinterData.ImageRenderTask != null) messageHistoryPrinterData.Text = "===========================================";
+            return messageHistoryPrinterData;
+        }
+
+        public IMessageSendData GenerateDataForDeletedWithoutHistory(ITextChannel deletedInChannel, ulong messageId, ILocalizationProvider loc) {
             var embedBuilder = new EnlivenEmbedBuilder()
                 .WithCurrentTimestamp()
-                .WithTitle(loc.Get("MessageHistory.LogTitle"))
-                .WithDescription(GenerateDescription(history, loc, existingMessage));
+                .WithTitle(loc.Get("MessageHistory.MessageWasDeleted"))
+                .WithDescription($"ID: {messageId}\n"
+                               + loc.Get("MessageHistory.InChannel", deletedInChannel.Id))
+                .AddField(null, loc.Get("MessageHistory.LastContent"), loc.Get("MessageHistory.Unavailable"));
+            return new MessageHistoryPrinterData(embedBuilder.Build());
+        }
+
+        public IMessageSendData GenerateDataForLog(MessageHistory? history, bool forceImage,
+                                                   ILocalizationProvider loc, IUser? requester, IUserMessage? existingMessage) {
+            if (history != null) {
+                var title = new EntryLocalized("MessageHistory.LogTitle");
+                var description = new EntryString(GenerateDescription(history, loc, existingMessage));
+                return GenerateDataInternal(history, title, description, forceImage, MessageExportType.Image, loc, requester, existingMessage);
+            }
+            return GenerateDataWithoutHistoryInternal(loc, requester, existingMessage);
+        }
+        
+        private MessageHistoryPrinterData GenerateDataWithoutHistoryInternal(ILocalizationProvider loc, IUser? requester, IUserMessage? existingMessage) {
+            var descriptionBuilder = new StringBuilder();
+            if (existingMessage == null) {
+                descriptionBuilder.AppendLine(loc.Get("MessageHistory.MessageNull"));
+            }
+            else {
+                descriptionBuilder.AppendLine(loc.Get("MessageHistory.ViewMessageExists", existingMessage.GetJumpUrl()));
+                descriptionBuilder.AppendLine($"ID: {existingMessage.Id}");
+                descriptionBuilder.AppendLine(loc.Get("MessageHistory.InChannel", existingMessage.Channel.Id));
+                descriptionBuilder.AppendLine(loc.Get("MessageHistory.ByAuthor", existingMessage.Author.Mention));
+            }
+            var title = new EntryLocalized("MessageHistory.LogTitle");
+
+            var embedBuilder = new EnlivenEmbedBuilder()
+                .WithCurrentTimestamp()
+                .WithTitle(title.Get(loc))
+                .WithDescription(descriptionBuilder.ToString());
+            
+            if (requester != null)
+                embedBuilder.WithRequester(requester, loc);
+            
+            return new MessageHistoryPrinterData(embedBuilder.Build());
+        }
+
+        private MessageHistoryPrinterData GenerateDataInternal(MessageHistory history, IEntry title, IEntry description,
+                                                               bool forceImage, MessageExportType messageExportType,
+                                                               ILocalizationProvider loc, IUser? requester, IUserMessage? existingMessage) {
+            var embedBuilder = new EnlivenEmbedBuilder()
+                .WithCurrentTimestamp()
+                .WithTitle(title.Get(loc))
+                .WithDescription(description.Get(loc));
 
             if (requester != null)
                 embedBuilder.WithRequester(requester, loc);
@@ -37,7 +93,7 @@ namespace Bot.DiscordRelated.MessageHistories {
                         .AsFields(loc)
                         .Select((builder, i) => builder.ToWrapper(int.MaxValue - i))
                         .Do(builder => textBuilder.AddField(null, builder));
-                    return new MessageHistoryPrinterData(history, textBuilder.Build(), null);
+                    return new MessageHistoryPrinterData(textBuilder.Build());
                 }
                 catch (InvalidOperationException) {
                     // Embed too long, printing image
@@ -49,11 +105,32 @@ namespace Bot.DiscordRelated.MessageHistories {
             var existentMessage = new Optional<IMessage?>(existingMessage);
             var imageRenderTask = _messageHistoryHtmlExporter
                 .ExportToHtml(history, true, true, messageChannel, existentMessage, guild)
-                .Pipe(async task => await _htmlRendererService.RenderHtmlToStream(await task));
+                .Pipe(async task => {
+                    return messageExportType switch {
+                        MessageExportType.Image => await _htmlRendererService.RenderHtmlToStream(await task),
+                        MessageExportType.Html  => CreateStreamFromString(await task),
+                        _                       => throw new ArgumentOutOfRangeException(nameof(messageExportType), messageExportType, null)
+                    };
+                });
 
-            return new MessageHistoryPrinterData(history, embedBuilder.Build(), imageRenderTask);
+            var fileExtension = messageExportType switch {
+                MessageExportType.Image => "png",
+                MessageExportType.Html  => "html",
+                _                       => throw new ArgumentOutOfRangeException(nameof(messageExportType), messageExportType, null)
+            };
+
+            return new MessageHistoryPrinterData(embedBuilder.Build(), imageRenderTask, $"History-{history.ChannelId}-{history.MessageId}.{fileExtension}");
         }
-        
+
+        public static Stream CreateStreamFromString(string str) {
+            MemoryStream stream = new MemoryStream();
+            StreamWriter writer = new StreamWriter(stream);
+            writer.Write(str);
+            writer.Flush();
+            stream.Position = 0;
+            return stream;
+        }
+
         private static string GenerateDescription(MessageHistory history, ILocalizationProvider loc, IMessage? existingMessage) {
             var descriptionBuilder = new StringBuilder();
             if (existingMessage != null) descriptionBuilder.AppendLine(loc.Get("MessageHistory.ViewMessageExists", existingMessage.GetJumpUrl()));
@@ -67,23 +144,27 @@ namespace Bot.DiscordRelated.MessageHistories {
             return descriptionBuilder.ToString();
         }
 
-        public class MessageHistoryPrinterData {
-            private readonly MessageHistory _history;
-            private readonly Embed _embed;
-            private readonly Task<MemoryStream>? _imageRenderTask;
-            internal MessageHistoryPrinterData(MessageHistory history, Embed embed, Task<MemoryStream>? imageRenderTask) {
-                _history = history;
-                _embed = embed;
-                _imageRenderTask = imageRenderTask;
+        private class MessageHistoryPrinterData : IMessageSendData {
+            internal Embed Embed { get; }
+            internal Task<Stream>? ImageRenderTask { get; }
+            internal string? Filename { get; }
+            internal string? Text { get; set; }
+            internal MessageHistoryPrinterData(Embed embed) {
+                Embed = embed;
             }
 
-            public async Task<IUserMessage> SendAsync(IMessageChannel targetChannel) {
-                if (_imageRenderTask != null) {
-                    var filename = $"History-{_history.ChannelId}-{_history.MessageId}.png";
-                    return await targetChannel.SendFileAsync(await _imageRenderTask, filename, embed: _embed);
+            internal MessageHistoryPrinterData(Embed embed, Task<Stream> imageRenderTask, string filename) {
+                Filename = filename;
+                Embed = embed;
+                ImageRenderTask = imageRenderTask;
+            }
+
+            public async Task<IUserMessage> SendMessage(IMessageChannel targetChannel) {
+                if (ImageRenderTask != null) {
+                    return await targetChannel.SendFileAsync(await ImageRenderTask, Filename, Text, embed: Embed);
                 }
                 else {
-                    return await targetChannel.SendMessageAsync(embed: _embed);
+                    return await targetChannel.SendMessageAsync(Text, embed: Embed);
                 }
             }
         }

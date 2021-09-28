@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Threading;
 using Common.Localization.Providers;
@@ -25,7 +26,7 @@ namespace Common.Entities {
         public IImmutableList<Diff>? GetEdits() {
             return ChangeIndex switch {
                 < 0 => null,
-                0   => new ImmutableArray<Diff> {new(Operation.Equal, CurrentContent)},
+                0   => new List<Diff> {new(Operation.Equal, CurrentContent)}.ToImmutableList(),
                 _   => Diff.Compute(PreviousMessageContent ?? "", CurrentContent, true, true, CancellationToken.None).MakeHumanReadable()
             };
         }

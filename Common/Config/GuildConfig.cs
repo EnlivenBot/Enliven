@@ -47,7 +47,7 @@ namespace Common.Config {
         public bool HistoryMissingInLog { get; set; }
         public bool HistoryMissingPacks { get; set; }
         public List<ulong> LoggedChannels { get; set; } = new List<ulong>();
-        public LogExportTypes LogExportType { get; set; } = LogExportTypes.Html;
+        public MessageExportType MessageExportType { get; set; } = MessageExportType.Html;
 
         public ConcurrentDictionary<ChannelFunction, ulong> FunctionalChannels { get; set; } = new ConcurrentDictionary<ChannelFunction, ulong>();
 
@@ -55,6 +55,7 @@ namespace Common.Config {
 
         [BsonIgnore] public GuildPrefixProvider PrefixProvider => _prefixProvider ??= new GuildPrefixProvider(this);
         [BsonIgnore] public event EventHandler<ChannelFunction>? FunctionalChannelsChanged;
+        [BsonIgnore] public bool SendWithoutHistoryPacks => HistoryMissingInLog && HistoryMissingPacks;
     }
 
     public enum ChannelFunction {
@@ -62,7 +63,7 @@ namespace Common.Config {
         Music
     }
 
-    public enum LogExportTypes {
+    public enum MessageExportType {
         Image,
         Html
     }

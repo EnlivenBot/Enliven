@@ -7,6 +7,7 @@
     <AssemblyName>Enliven</AssemblyName>
     <Version>15.1</Version>
     <Nullable>enable</Nullable>
+    <LangVersion>9</LangVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">

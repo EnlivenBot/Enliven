@@ -1,6 +1,10 @@
-﻿using Common;
+﻿using System;
+using System.Threading.Tasks;
+using Common;
 using Common.Localization.Providers;
 using Discord;
+using Discord.Rest;
+using Discord.WebSocket;
 
 namespace Bot.DiscordRelated {
     public static class DiscordUtils {
@@ -33,6 +37,14 @@ namespace Bot.DiscordRelated {
                 .WithIsInline(builder.IsInline)
                 .WithPriority(priority)
                 .WithEnabled(enabled);
+        }
+
+        public static async Task<IGuildUser> GetUser(this IGuild guild, ulong id) {
+            return guild switch {
+                RestGuild restGuild     => await restGuild.GetUserAsync(id),
+                SocketGuild socketGuild => socketGuild.GetUser(id),
+                _                       => throw new ArgumentOutOfRangeException(nameof(guild))
+            };
         }
     }
 }

@@ -100,6 +100,7 @@ namespace Bot {
             
             // MessageHistory Printers
             builder.RegisterType<MessageHistoryPrinter>().SingleInstance();
+            builder.RegisterType<MessageHistoryPackPrinter>().SingleInstance();
         }
 
         // ReSharper disable once UnusedMember.Local

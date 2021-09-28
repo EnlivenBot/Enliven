@@ -8,7 +8,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bot.Config.Emoji;
 using Bot.Utilities.Collector;
-using ChatExporter;
 using Common;
 using Common.Config;
 using Common.Entities;
@@ -22,9 +21,10 @@ using Tyrrrz.Extensions;
 namespace Bot.DiscordRelated.MessageHistories {
     public class MessageHistoryService : IService {
         public MessageHistoryService(ILogger logger, MessageHistoryProvider messageHistoryProvider, IGuildConfigProvider guildConfigProvider,
-                                     IStatisticsPartProvider statisticsPartProvider, HtmlRendererService htmlRendererService, EnlivenShardedClient enlivenShardedClient, MessageHistoryPrinter messageHistoryPrinter) {
-            _htmlRendererService = htmlRendererService;
-            _enlivenShardedClient = enlivenShardedClient;
+                                     IStatisticsPartProvider statisticsPartProvider, EnlivenShardedClient enliven,
+                                     MessageHistoryPrinter messageHistoryPrinter, MessageHistoryPackPrinter messageHistoryPackPrinter) {
+            _messageHistoryPackPrinter = messageHistoryPackPrinter;
+            _enliven = enliven;
             _messageHistoryPrinter = messageHistoryPrinter;
             _statisticsPartProvider = statisticsPartProvider;
             _guildConfigProvider = guildConfigProvider;
@@ -42,16 +42,16 @@ namespace Bot.DiscordRelated.MessageHistories {
             }, OnLogEmoteReceived, CollectorFilter.IgnoreBots);
             return Task.CompletedTask;
         }
-        
+
         private async void OnLogEmoteReceived(EmoteCollectorEventArgs eventArgs) {
             await eventArgs.RemoveReason();
             var reactionChannel = eventArgs.Reaction.Channel as ITextChannel;
             var guildConfig = _guildConfigProvider.Get(reactionChannel!.GuildId);
             try {
-                await PrintLog(_messageHistoryProvider.Get(eventArgs.Reaction.Channel.Id, eventArgs.Reaction.MessageId), reactionChannel, guildConfig.Loc, (IGuildUser)eventArgs.Reaction.User.Value);
+                await PrintLog(eventArgs.Reaction.Channel.Id, eventArgs.Reaction.MessageId, reactionChannel, guildConfig.Loc, (IGuildUser)eventArgs.Reaction.User.Value);
             }
             catch (Exception e) {
-                LogManager.GetCurrentClassLogger().Error(e, "Faled to print log");
+                logger.Error(e, "Faled to print log");
             }
         }
 
@@ -72,109 +72,42 @@ namespace Bot.DiscordRelated.MessageHistories {
         private MessageHistoryProvider _messageHistoryProvider;
         private IGuildConfigProvider _guildConfigProvider;
         private IStatisticsPartProvider _statisticsPartProvider;
-        private HtmlRendererService _htmlRendererService;
-        private EnlivenShardedClient _enlivenShardedClient;
+        private EnlivenShardedClient _enliven;
         private MessageHistoryPrinter _messageHistoryPrinter;
+        private MessageHistoryPackPrinter _messageHistoryPackPrinter;
 
         private Task ClientOnMessageDeleted(Cacheable<IMessage, ulong> messageCacheable, Cacheable<IMessageChannel, ulong> channelCacheable) {
-            new Task(async o => {
+            new Task(async _ => {
                 try {
                     var channel = await channelCacheable.GetOrDownloadAsync();
-                    if (!(channel is ITextChannel textChannel)) return;
+                    if (channel is not ITextChannel textChannel) return;
 
                     var history = _messageHistoryProvider.Get(channel.Id, messageCacheable.Id);
-                    var guild = EnlivenBot.Client.GetGuild(textChannel.GuildId);
                     var guildConfig = _guildConfigProvider.Get(textChannel.GuildId);
                     if (!guildConfig.IsLoggingEnabled) return;
 
                     if (!guildConfig.GetChannel(ChannelFunction.Log, out var logChannelId) || logChannelId == channel.Id) return;
-                    var logChannel = EnlivenBot.Client.GetChannel(logChannelId);
                     if (!guildConfig.LoggedChannels.Contains(textChannel.Id)) return;
 
-                    var logPermissions = guild.GetUser(EnlivenBot.Client.CurrentUser.Id).GetPermissions((IGuildChannel)logChannel);
+                    var logChannel = _enliven.GetChannel(logChannelId) as ITextChannel;
+                    if (logChannel == null) return;
+                    var logPermissions = await _enliven
+                        .GetGuildAsync(textChannel.GuildId)
+                        .PipeAsync(guild => guild!.GetUserAsync(_enliven.CurrentUser.Id))
+                        .PipeAsync(user => user.GetPermissions(logChannel));
                     if (!logPermissions.SendMessages) return;
 
                     var loc = guildConfig.Loc;
-                    var embedBuilder = new EmbedBuilder().WithCurrentTimestamp()
-                        .WithTitle(loc.Get("MessageHistory.MessageWasDeleted"))
-                        .WithFooter(loc.Get("MessageHistory.MessageId").Format(history.MessageId))
-                        .AddField(loc.Get("MessageHistory.Channel"), $"<#{history.ChannelId}>", true);
-                    if (history.HistoryExists) {
-                        if (history.HasAttachments) {
-                            embedBuilder.AddField(loc.Get("MessageHistory.AttachmentsTitle"), await history.GetAttachmentsString());
-                        }
+                    var data = history switch {
+                        not null                                      => _messageHistoryPrinter.GenerateDataForDeleted(history, loc, guildConfig.MessageExportType),
+                        null when guildConfig.SendWithoutHistoryPacks => _messageHistoryPackPrinter.GeneratePack(textChannel, loc),
+                        null when guildConfig.HistoryMissingInLog     => _messageHistoryPrinter.GenerateDataForDeletedWithoutHistory(textChannel, messageCacheable.Id, loc),
+                        _                                             => null
+                    };
 
-                        embedBuilder.AddField(loc.Get("MessageHistory.Author"), $"{history.GetAuthor()?.Username} <@{history.AuthorId}>", true);
-
-                        if (history.CanFitToEmbed(loc)) {
-                            embedBuilder.Fields.InsertRange(0, history.GetEditsAsFields(loc));
-                            await ((ISocketMessageChannel)logChannel).SendMessageAsync(null, false, embedBuilder.Build());
-                        }
-                        else {
-                            if (!logPermissions.AttachFiles) return;
-                            embedBuilder.WithDescription(loc.Get("MessageHistory.LastContentDescription")
-                                .Format(history.GetLastContent().SafeSubstring(1900, "...")));
-                            var historyHtml = await history.ExportToHtml(loc);
-                            var uploadStream = guildConfig.LogExportType switch {
-                                LogExportTypes.Html  => new MemoryStream(Encoding.UTF8.GetBytes(historyHtml)),
-                                LogExportTypes.Image => await _htmlRendererService.RenderHtmlToStream(historyHtml),
-                                _                    => throw new SwitchExpressionException(guildConfig.LogExportType)
-                            };
-                            var fileName = guildConfig.LogExportType switch {
-                                LogExportTypes.Html  => $"History-{history.ChannelId}-{history.MessageId}.html",
-                                LogExportTypes.Image => $"History-{history.ChannelId}-{history.MessageId}.png",
-                                _                    => throw new SwitchExpressionException(guildConfig.LogExportType)
-                            };
-                            await ((ISocketMessageChannel)logChannel).SendFileAsync(uploadStream, fileName,
-                                "===========================================", false, embedBuilder.Build());
-                        }
-
-                        _statisticsPartProvider.RegisterUsage("MessagesDeleted", "Messages");
-                    }
-                    else if (guildConfig.HistoryMissingInLog) {
-                        if (guildConfig.HistoryMissingPacks) {
-                            await _packSemaphores.GetOrAdd(guildConfig.GuildId, new SemaphoreSlim(1)).WaitAsync();
-                            try {
-                                IUserMessage? packMessage = await Common.Utilities.TryAsync(async () => {
-                                    var firstOrDefault = (await ((logChannel as ITextChannel)!).GetMessagesAsync(1).FlattenAsync()).FirstOrDefault();
-                                    if (firstOrDefault.Author.Id != EnlivenBot.Client.CurrentUser.Id) return null;
-                                    if (!firstOrDefault.Embeds.First().Title.Contains("Pack")) return null;
-                                    return (IUserMessage)firstOrDefault;
-                                }, e => null);
-                                if (packMessage == null) {
-                                    await SendPackMessage();
-                                }
-                                else {
-                                    try {
-                                        var packBuilder = new EmbedBuilder().WithTitle("Deleted messages Pack")
-                                            .WithDescription(packMessage.Embeds.First().Description);
-                                        packBuilder.Description += $"\n{DateTimeOffset.UtcNow} in {textChannel.Mention}";
-                                        await packMessage.ModifyAsync(properties => properties.Embed = packBuilder.Build());
-                                    }
-                                    catch (Exception) {
-                                        await SendPackMessage();
-                                    }
-                                }
-
-                                async Task SendPackMessage() {
-                                    var packBuilder = new EmbedBuilder().WithTitle("Deleted messages Pack")
-                                        .WithDescription(loc.Get("MessageHistory.DeletedMessagesPackDescription"));
-                                    packBuilder.Description += $"\n{DateTimeOffset.UtcNow} in {textChannel.Mention}";
-                                    await (logChannel as ITextChannel)!.SendMessageAsync(null, false, packBuilder.Build());
-                                }
-                            }
-                            finally {
-                                _packSemaphores[guildConfig.GuildId].Release();
-                            }
-                        }
-                        else {
-                            embedBuilder.AddField(loc.Get("MessageHistory.LastContent"), loc.Get("MessageHistory.Unavailable"));
-                            await ((ISocketMessageChannel)logChannel).SendMessageAsync("===========================================", false,
-                                embedBuilder.Build());
-                        }
-
-                        _statisticsPartProvider.RegisterUsage("MessagesDeleted", "Messages");
-                    }
+                    if (data == null) return;
+                    await data.SendMessage(logChannel);
+                    _statisticsPartProvider.RegisterUsage("MessagesDeleted", "Messages");
                 }
                 catch (Exception e) {
                     logger.Error(e, "Failed to print log message");
@@ -207,29 +140,32 @@ namespace Bot.DiscordRelated.MessageHistories {
             return Task.CompletedTask;
         }
 
-        public async Task PrintLog(MessageHistory? history, ITextChannel outputChannel, ILocalizationProvider loc, IGuildUser requester,
+        public Task PrintLog(ulong channelId, ulong messageId, IMessageChannel outputChannel, ILocalizationProvider loc, IGuildUser requester,
+                             bool forceImage = false) {
+            return PrintLog(channelId, messageId, null, outputChannel, loc, requester, forceImage);
+        }
+
+        public Task PrintLog(IUserMessage message, IMessageChannel outputChannel, ILocalizationProvider loc, IGuildUser requester,
+                             bool forceImage = false) {
+            return PrintLog(message.Channel.Id, message.Id, message, outputChannel, loc, requester, forceImage);
+        }
+
+        public Task PrintLog(ulong channelId, ulong messageId, IUserMessage? message, IMessageChannel outputChannel, ILocalizationProvider loc, IGuildUser requester,
+                             bool forceImage = false) {
+            var messageHistory = _messageHistoryProvider.Get(channelId, messageId);
+            return PrintLog(messageHistory, message, outputChannel, loc, requester, forceImage);
+        }
+
+        public async Task PrintLog(MessageHistory? history, IUserMessage? message, IMessageChannel outputChannel, ILocalizationProvider loc, IGuildUser requester,
                                    bool forceImage = false) {
-            IUserMessage? logMessage;
-            var realMessage = await history.Pipe(messageHistory => messageHistory?.GetRealMessage(_enlivenShardedClient) ?? Task.FromResult<IMessage?>(null));
-            if (history != null) {
-                logMessage = await _messageHistoryPrinter
-                    .GenerateData(history, forceImage, loc, requester, realMessage as IUserMessage)
-                    .SendAsync(outputChannel);
+            if (history == null && message != null) {
+                var guildConfig = (message.Channel as IGuildChannel)?.Guild.Id.Pipe(_guildConfigProvider.Get);
+                if (guildConfig != null) history = TryLogCreatedMessage(message, guildConfig, null);
             }
-            else {
-                if (realMessage != null) {
-                    embedBuilder.WithDescription(loc.Get("MessageHistory.MessageWithoutHistory").Format(realMessage.GetJumpUrl()));
-                    if (EnlivenBot.Client.GetChannel(history.ChannelId) is SocketGuildChannel guildChannel)
-                        TryLogCreatedMessage(realMessage, _guildConfigProvider.Get(guildChannel.Guild.Id), null);
-                }
-                else {
-                    embedBuilder.WithDescription(loc.Get("MessageHistory.MessageNull"));
-                }
-
-                logMessage = await outputChannel.SendMessageAsync(null, false, embedBuilder.Build());
-            }
-
-            _ = logMessage?.DelayedDelete(Constants.LongTimeSpan);
+            var logMessage = await _messageHistoryPrinter
+                .GenerateDataForLog(history, forceImage, loc, requester, message)
+                .SendMessage(outputChannel);
+            _ = logMessage.DelayedDelete(Constants.LongTimeSpan);
         }
 
         public bool NeedLogMessage(IMessage arg, GuildConfig config, bool? isCommand) {
@@ -240,13 +176,14 @@ namespace Bot.DiscordRelated.MessageHistories {
             return config.LoggedChannels.Contains(textChannel.Id);
         }
 
-        public void TryLogCreatedMessage(IMessage arg, GuildConfig config, bool? isCommand) {
+        public MessageHistory? TryLogCreatedMessage(IMessage arg, GuildConfig config, bool? isCommand) {
             if (!NeedLogMessage(arg, config, isCommand))
-                return;
+                return null;
 
             var history = _messageHistoryProvider.GetAndSync(arg);
             history.Save();
             _statisticsPartProvider.RegisterUsage("MessagesCreated", "Messages");
+            return history;
         }
 
         public static string GetAttachmentString(MessageHistory history) {

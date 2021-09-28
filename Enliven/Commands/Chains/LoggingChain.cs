@@ -65,7 +65,7 @@ namespace Bot.Commands.Chains {
                             _guildConfig.HistoryMissingPacks = !_guildConfig.HistoryMissingPacks;
                         }
                         else if (args.Reaction.Emote.Equals(CommonEmoji.Printer)) {
-                            _guildConfig.LogExportType = _guildConfig.LogExportType.Next();
+                            _guildConfig.MessageExportType = _guildConfig.MessageExportType.Next();
                         }
                         else {
                             return;
@@ -114,7 +114,7 @@ namespace Bot.Commands.Chains {
 
             var historyChannelExists = _guildConfig.GetChannel(ChannelFunction.Log, out var logChannelId);
             if (historyChannelExists && _guildConfig.IsLoggingEnabled) {
-                descriptionBuilder.AppendLine(_guildConfig.LogExportType == LogExportTypes.Image
+                descriptionBuilder.AppendLine(_guildConfig.MessageExportType == MessageExportType.Image
                     ? Loc.Get("Logging.OutputToImage")
                     : Loc.Get("Logging.OutputToHtml"));
             }
