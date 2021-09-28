@@ -35,8 +35,8 @@ namespace Common.Config {
     }
 
     public partial class GuildConfig {
-        private ILocalizationProvider? _loc;
-        private GuildPrefixProvider? _prefixProvider;
+        [BsonIgnore] private ILocalizationProvider? _loc;
+        [BsonIgnore] private GuildPrefixProvider? _prefixProvider;
         [BsonId] public ulong GuildId { get; set; }
         public string Prefix { get; set; } = "&";
         public int Volume { get; set; } = 100;
@@ -48,7 +48,7 @@ namespace Common.Config {
         public bool HistoryMissingInLog { get; set; }
         public bool HistoryMissingPacks { get; set; }
         public List<ulong> LoggedChannels { get; set; } = new List<ulong>();
-        public LogExportTypes LogExportType { get; set; } = LogExportTypes.Html;
+        public MessageExportType MessageExportType { get; set; } = MessageExportType.Html;
 
         public ConcurrentDictionary<ChannelFunction, ulong> FunctionalChannels { get; set; } = new ConcurrentDictionary<ChannelFunction, ulong>();
     }
@@ -58,7 +58,7 @@ namespace Common.Config {
         Music
     }
 
-    public enum LogExportTypes {
+    public enum MessageExportType {
         Image,
         Html
     }
@@ -78,6 +78,8 @@ namespace Common.Config {
 
         [BsonIgnore] public ILocalizationProvider Loc => _loc ??= new GuildLocalizationProvider(this);
         [BsonIgnore] public GuildPrefixProvider PrefixProvider => _prefixProvider ??= new GuildPrefixProvider(this);
+        
+        [BsonIgnore] public bool SendWithoutHistoryPacks => HistoryMissingInLog && HistoryMissingPacks;
 
         public void Save() {
             _saveRequest.OnNext(this);

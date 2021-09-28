@@ -7,14 +7,17 @@ using Autofac;
 using Autofac.Extras.NLog;
 using Bot.DiscordRelated;
 using Bot.DiscordRelated.Commands;
-using Bot.DiscordRelated.Logging;
 using Bot.DiscordRelated.MessageComponents;
+using Bot.DiscordRelated.MessageHistories;
 using Bot.DiscordRelated.Music;
 using Bot.Music.Spotify;
 using Bot.Music.Yandex;
 using Bot.Patches;
+using ChatExporter;
+using ChatExporter.Exporter.MessageHistories;
 using Common;
 using Common.Config;
+using Common.Entities;
 using Common.Localization;
 using Common.Music.Controller;
 using Common.Music.Effects;
@@ -80,7 +83,7 @@ namespace Bot {
 
             // Providers
             builder.RegisterType<SpotifyAssociationProvider>().As<ISpotifyAssociationProvider>().SingleInstance();
-            builder.RegisterType<MessageHistoryProvider>().As<IMessageHistoryProvider>().SingleInstance();
+            builder.RegisterType<MessageHistoryProvider>().SingleInstance();
             builder.RegisterType<EmbedPlayerDisplayProvider>().SingleInstance();
             builder.RegisterType<EmbedPlayerQueueDisplayProvider>().SingleInstance();
             builder.RegisterType<EffectSourceProvider>().SingleInstance();
@@ -94,6 +97,12 @@ namespace Bot {
             builder.RegisterType<CommandHandlerService>().As<IService>().AsSelf().SingleInstance();
             builder.RegisterType<StatisticsService>().As<IStatisticsService>().AsSelf().SingleInstance();
             builder.RegisterType<MessageComponentService>().As<MessageComponentService>().AsSelf().SingleInstance();
+            builder.RegisterType<HtmlRendererService>().As<IService>().AsSelf().SingleInstance();
+            builder.RegisterType<MessageHistoryHtmlExporter>().SingleInstance();
+            
+            // MessageHistory Printers
+            builder.RegisterType<MessageHistoryPrinter>().SingleInstance();
+            builder.RegisterType<MessageHistoryPackPrinter>().SingleInstance();
         }
 
         // ReSharper disable once UnusedMember.Local

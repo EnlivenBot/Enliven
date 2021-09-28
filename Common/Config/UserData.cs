@@ -108,5 +108,6 @@ namespace Common.Config {
         }
 
         [BsonIgnore] public bool IsCurrentUser => UserId == 0;
+        [BsonIgnore] public string Mention => $"<@{UserId}>";
     }
 }

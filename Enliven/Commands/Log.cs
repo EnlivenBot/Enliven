@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Bot.DiscordRelated.Commands.Modules;
-using Bot.DiscordRelated.Logging;
+using Bot.DiscordRelated.MessageHistories;
 using Common;
+using Common.Entities;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -10,7 +11,7 @@ using Discord.WebSocket;
 namespace Bot.Commands {
     public class Log : AdvancedModuleBase {
         public MessageHistoryService MessageHistoryService { get; set; } = null!;
-        public IMessageHistoryProvider MessageHistoryProvider { get; set; } = null!;
+        public MessageHistoryProvider MessageHistoryProvider { get; set; } = null!;
         
         [Alias("log")]
         [Command("history", RunMode = RunMode.Async)]
@@ -46,8 +47,17 @@ namespace Bot.Commands {
                 return;
             }
 
-            await MessageHistoryService.PrintLog(MessageHistoryProvider.Get(channelId, Convert.ToUInt64(messageId)),
-                (SocketTextChannel) await GetResponseChannel(), Loc, (IGuildUser) Context.User, forceImage);
+            IUserMessage? userMessage = null;
+            if (forceImage) {
+                try {
+                    userMessage = await Context.Client.GetChannelAsync(channelId).PipeAsync(channel => (channel as ITextChannel)?.GetMessageAsync(messageId)!) as IUserMessage;
+                }
+                catch (Exception) {
+                    // ignored
+                }
+            }
+
+            await MessageHistoryService.PrintLog(channelId, messageId, userMessage, await GetResponseChannel(), Loc, (IGuildUser) Context.User, forceImage);
             Context.Message.SafeDelete();
         }
     }

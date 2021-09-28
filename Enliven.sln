@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Enliven", "Enliven\Enliven.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Common", "Common\Common.csproj", "{8EFA1F35-A824-4153-89D4-9FCD6DB4ED7B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChatExporter", "ChatExporter\ChatExporter.csproj", "{84A39CD3-5859-427B-B4DB-05E7D44DF304}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{8EFA1F35-A824-4153-89D4-9FCD6DB4ED7B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8EFA1F35-A824-4153-89D4-9FCD6DB4ED7B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8EFA1F35-A824-4153-89D4-9FCD6DB4ED7B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{84A39CD3-5859-427B-B4DB-05E7D44DF304}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{84A39CD3-5859-427B-B4DB-05E7D44DF304}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{84A39CD3-5859-427B-B4DB-05E7D44DF304}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{84A39CD3-5859-427B-B4DB-05E7D44DF304}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
