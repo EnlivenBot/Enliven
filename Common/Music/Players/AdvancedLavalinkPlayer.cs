@@ -68,6 +68,8 @@ namespace Common.Music.Players {
             await SetVolumeAsync((int) (volume * 200), force);
         }
 
+        private static readonly IEntry ConcatLines = new EntryString("{0}\n{1}");
+        private static readonly IEntry ResumeViaPlaylists = new EntryLocalized("Music.ResumeViaPlaylists");
         public virtual async Task ExecuteShutdown(IEntry reason, PlayerShutdownParameters parameters) {
             if (IsShutdowned) return;
             await GetPlayerShutdownParameters(parameters);
@@ -77,8 +79,8 @@ namespace Common.Music.Players {
             MusicController.StoreShutdownParameters(parameters);
 
             if (parameters.ShutdownDisplays) {
-                var body = parameters.NeedSave
-                    ? new EntryString("{0}\n{1}", reason, new EntryLocalized("Music.ResumeViaPlaylists", GuildConfig.Prefix, parameters.StoredPlaylist!.Id))
+                var body = parameters.SavePlaylist
+                    ? ConcatLines.WithArg(reason, ResumeViaPlaylists.WithArg(GuildConfig.Prefix, playerSnapshot.StoredPlaylist!.Id))
                     : reason;
                 var header = new EntryLocalized("Music.PlaybackStopped");
                 var displayShutdownTasks = Displays.ToList().Select(async display => {

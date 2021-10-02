@@ -3,6 +3,9 @@
 namespace Common.Localization.Entries {
     public interface IEntry {
         string Get(ILocalizationProvider provider, params object[] additionalArgs);
+        IEntry WithArg(params object[] arguments) {
+            return new EntryFormatted(this, arguments);
+        }
         public static IEntry operator +(IEntry first, IEntry second) => new EntryString("{0}{1}", first, second);
         public static IEntry operator +(IEntry first, string second) => new EntryString("{0}{1}", first, second);
     }
