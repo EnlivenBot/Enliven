@@ -50,7 +50,7 @@ namespace Bot.DiscordRelated.Music {
             _subscribers = new Disposables(
                 Player.Playlist.Changed.Subscribe(playlist => UpdatePages()),
                 Player.CurrentTrackIndexChanged.Subscribe(i => UpdatePages()),
-                Player.Shutdown.Subscribe(entry => ExecuteShutdown(null, null))
+                Player.OnShutdown.Subscribe(entry => ExecuteShutdown(null, null))
             );
             return Task.CompletedTask;
         }

@@ -75,8 +75,8 @@ namespace Bot.Commands {
         public async Task Stop() {
             if (!await IsPreconditionsValid) return;
 
-            Player.ExecuteShutdown(Loc.Get("Music.UserStopPlayback").Format(Context.User.Username),
-                new PlayerShutdownParameters {NeedSave = false, ShutdownDisplays = true});
+            Player.Shutdown(Loc.Get("Music.UserStopPlayback").Format(Context.User.Username),
+                new PlayerShutdownParameters {SavePlaylist = false, ShutdownDisplays = true});
         }
 
         [Command("jump", RunMode = RunMode.Async)]
@@ -430,8 +430,8 @@ namespace Bot.Commands {
                 return;
             }
 
-            var playerShutdownParameters = new PlayerShutdownParameters() {ShutdownDisplays = true, NeedSave = false};
-            Player.ExecuteShutdown(playerShutdownParameters);
+            var playerShutdownParameters = new PlayerShutdownParameters() {ShutdownDisplays = true, SavePlaylist = false};
+            Player.Shutdown(playerShutdownParameters);
             Player = null;
             await Task.Delay(1000);
             await RestorePlayer();

@@ -11,9 +11,9 @@ namespace Common.Music.Controller {
 
         public Task<FinalLavalinkPlayer> ProvidePlayer(ulong guildId, ulong voiceChannelId, bool recreate = false);
         
-        public Task<FinalLavalinkPlayer> CreatePlayer(PlayerShutdownParameters parameters);
+        public Task<FinalLavalinkPlayer> CreatePlayer(PlayerSnapshot parameters);
 
-        public void StoreShutdownParameters(PlayerShutdownParameters parameters);
+        public void StoreSnapshot(PlayerSnapshot parameters);
 
         /// <summary>
         /// Attempts to restore the player using the latest available PlayerShutdownParameters for a specific guild.

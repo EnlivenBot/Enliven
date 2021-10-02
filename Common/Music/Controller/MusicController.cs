@@ -21,7 +21,7 @@ using ILogger = NLog.ILogger;
 namespace Common.Music.Controller {
     public class MusicController : IMusicController, IService {
         private static readonly List<FinalLavalinkPlayer> PlaybackPlayers = new List<FinalLavalinkPlayer>();
-        private static readonly Dictionary<ulong, PlayerShutdownParameters> PlayerShutdownParametersMap = new Dictionary<ulong, PlayerShutdownParameters>();
+        private static readonly Dictionary<ulong, PlayerSnapshot> PlayerShutdownParametersMap = new();
         private static EventLogger _lavalinkLogger = new EventLogger();
         private MusicResolverService _musicResolverService;
         private IGuildConfigProvider _guildConfigProvider;
@@ -46,7 +46,7 @@ namespace Common.Music.Controller {
         public Task OnShutdown(bool isDiscordStarted) {
             var tasks = PlaybackPlayers
                 .ToList()
-                .Select(player => player.ExecuteShutdown(new PlayerShutdownParameters()))
+                .Select(player => player.Shutdown(new PlayerShutdownParameters()))
                 .ToArray();
             return Task.WhenAll(tasks);
         }
@@ -87,8 +87,8 @@ namespace Common.Music.Controller {
                         }, _lavalinkLogger);
                     inactivityTrackingService.InactivePlayer += async (sender, args) => {
                         if (args.Player is AdvancedLavalinkPlayer embedPlaybackPlayer) {
-                            await embedPlaybackPlayer.ExecuteShutdown(new EntryLocalized("Music.NoListenersLeft"),
-                                new PlayerShutdownParameters {NeedSave = false});
+                            await embedPlaybackPlayer.Shutdown(new EntryLocalized("Music.NoListenersLeft"),
+                                new PlayerShutdownParameters {SavePlaylist = false});
                         }
                     };
                 }
@@ -107,7 +107,7 @@ namespace Common.Music.Controller {
             if (oldPlayer != null) {
                 if (!recreate) return oldPlayer;
                 if (!oldPlayer.IsShutdowned) {
-                    await oldPlayer.ExecuteShutdown(new PlayerShutdownParameters());
+                    await oldPlayer.Shutdown(new PlayerShutdownParameters());
                 }
 
                 PlaybackPlayers.Remove(oldPlayer);
@@ -117,13 +117,13 @@ namespace Common.Music.Controller {
             if (finalLavalinkPlayer != null) await finalLavalinkPlayer.DestroyAsync();
             
             var player = await Cluster.JoinAsync(() => new FinalLavalinkPlayer(this, _guildConfigProvider, _playlistProvider, _trackEncoder), guildId, voiceChannelId);
-            player.Shutdown.Subscribe(entry => { PlaybackPlayers.Remove(player); });
+            player.OnShutdown.Subscribe(entry => { PlaybackPlayers.Remove(player); });
             PlaybackPlayers.Add(player);
             return player;
         }
 
         // TODO: Replace it with method inside player
-        public async Task<FinalLavalinkPlayer> CreatePlayer(PlayerShutdownParameters parameters) {
+        public async Task<FinalLavalinkPlayer> CreatePlayer(PlayerSnapshot parameters) {
             var newPlayer = await ProvidePlayer(parameters.GuildId, parameters.LastVoiceChannelId, true);
             newPlayer.Playlist.AddRange(parameters.Playlist!);
             await newPlayer.PlayAsync(parameters.LastTrack!, parameters.TrackPosition);
@@ -137,7 +137,7 @@ namespace Common.Music.Controller {
             return newPlayer;
         }
 
-        public void StoreShutdownParameters(PlayerShutdownParameters parameters) {
+        public void StoreSnapshot(PlayerSnapshot parameters) {
             PlayerShutdownParametersMap[parameters.GuildId] = parameters;
         }
 
@@ -191,7 +191,7 @@ namespace Common.Music.Controller {
                 player?.WriteToQueueHistory(new HistoryEntry(new EntryLocalized("Music.PlayerMoved")));
             }
             else {
-                player?.ExecuteShutdown(new EntryLocalized("Music.PlayerDropped"), new PlayerShutdownParameters());
+                player?.Shutdown(new EntryLocalized("Music.PlayerDropped"), new PlayerShutdownParameters());
             }
 
             return Task.CompletedTask;

@@ -139,7 +139,7 @@ namespace Common.Music.Players {
             }
 
             if (options == ExportPlaylistOptions.AllData) {
-                exportPlaylist.TrackPosition = TrackPosition;
+                exportPlaylist.TrackPosition = Position.Position;
             }
 
             return exportPlaylist;
@@ -274,15 +274,16 @@ namespace Common.Music.Players {
             }
         }
 
-        public override async Task GetPlayerShutdownParameters(PlayerShutdownParameters parameters) {
-            await base.GetPlayerShutdownParameters(parameters);
-            parameters.LoopingState = LoopingState;
-            parameters.Playlist = Playlist;
-            if (parameters.NeedSave && parameters.StoredPlaylist == null) {
-                parameters.StoredPlaylist = _playlistProvider.StorePlaylist(
-                    await ExportPlaylist(ExportPlaylistOptions.AllData),
-                    "a" + ObjectId.NewObjectId(), UserLink.Current);
+        protected override async Task<PlayerSnapshot> GetPlayerSnapshot(PlayerSnapshotParameters parameters) {
+            var snapshot = await base.GetPlayerSnapshot(parameters);
+            snapshot.LoopingState = LoopingState;
+            snapshot.Playlist = Playlist;
+            if (parameters.SavePlaylist) {
+                var playlist = await ExportPlaylist(ExportPlaylistOptions.AllData);
+                snapshot.StoredPlaylist = _playlistProvider.StorePlaylist(playlist, "a" + ObjectId.NewObjectId(), UserLink.Current);
             }
+
+            return snapshot;
         }
 
         public override async Task OnTrackExceptionAsync(TrackExceptionEventArgs eventArgs) {

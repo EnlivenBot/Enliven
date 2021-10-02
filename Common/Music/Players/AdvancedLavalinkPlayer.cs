@@ -26,8 +26,9 @@ namespace Common.Music.Players {
         public readonly HistoryCollection QueueHistory = new HistoryCollection(512, 1000, false);
         private readonly Subject<FilterMapBase> _filtersChanged = new Subject<FilterMapBase>();
         private readonly List<PlayerEffectUse> _effectsList = new List<PlayerEffectUse>();
+        private readonly Subject<IEntry> _onShutdown = new Subject<IEntry>();
 
-        public readonly Subject<IEntry> Shutdown = new Subject<IEntry>();
+        public IObservable<IEntry> OnShutdown => _onShutdown.AsObservable();
         public readonly Subject<int> VolumeChanged = new Subject<int>();
         public readonly Subject<EnlivenLavalinkClusterNode?> SocketChanged = new Subject<EnlivenLavalinkClusterNode?>();
         public readonly Subject<PlayerState> StateChanged = new Subject<PlayerState>();
@@ -70,13 +71,15 @@ namespace Common.Music.Players {
 
         private static readonly IEntry ConcatLines = new EntryString("{0}\n{1}");
         private static readonly IEntry ResumeViaPlaylists = new EntryLocalized("Music.ResumeViaPlaylists");
-        public virtual async Task ExecuteShutdown(IEntry reason, PlayerShutdownParameters parameters) {
+        public virtual async Task Shutdown(IEntry reason, PlayerShutdownParameters parameters) {
             if (IsShutdowned) return;
-            await GetPlayerShutdownParameters(parameters);
             IsShutdowned = true;
-            Shutdown.OnNext(reason);
-            Shutdown.Dispose();
-            MusicController.StoreShutdownParameters(parameters);
+
+            var playerSnapshot = await GetPlayerSnapshot(parameters);
+
+            _onShutdown.OnNext(reason);
+            _onShutdown.Dispose();
+            MusicController.StoreSnapshot(playerSnapshot);
 
             if (parameters.ShutdownDisplays) {
                 var body = parameters.SavePlaylist
@@ -97,12 +100,12 @@ namespace Common.Music.Players {
             base.Dispose();
         }
 
-        public Task ExecuteShutdown(string reason, PlayerShutdownParameters parameters) {
-            return ExecuteShutdown(new EntryString(reason), parameters);
+        public Task Shutdown(string reason, PlayerShutdownParameters parameters) {
+            return Shutdown(new EntryString(reason), parameters);
         }
 
-        public Task ExecuteShutdown(PlayerShutdownParameters parameters) {
-            return ExecuteShutdown(new EntryLocalized("Music.PlaybackStopped"), parameters);
+        public Task Shutdown(PlayerShutdownParameters parameters) {
+            return Shutdown(new EntryLocalized("Music.PlaybackStopped"), parameters);
         }
 
         public override Task ConnectAsync(ulong voiceChannelId, bool selfDeaf = false, bool selfMute = false) {
@@ -122,14 +125,15 @@ namespace Common.Music.Players {
             QueueHistory.Add(entry);
         }
 
-        public virtual Task GetPlayerShutdownParameters(PlayerShutdownParameters parameters) {
-            parameters.GuildId = GuildId;
-            parameters.LastVoiceChannelId = _lastVoiceChannelId;
-            parameters.LastTrack = CurrentTrack;
-            parameters.TrackPosition = TrackPosition;
-            parameters.PlayerState = State;
-            parameters.Effects = _effectsList.ToList();
-            return Task.CompletedTask;
+        protected virtual Task<PlayerSnapshot> GetPlayerSnapshot(PlayerSnapshotParameters parameters) {
+            return Task.FromResult(new PlayerSnapshot {
+                GuildId = GuildId,
+                LastVoiceChannelId = _lastVoiceChannelId,
+                LastTrack = CurrentTrack,
+                TrackPosition = Position.Position,
+                PlayerState = State,
+                Effects = _effectsList.ToList()
+            });
         }
 
         /// <summary>
@@ -139,20 +143,19 @@ namespace Common.Music.Players {
         public override async void Dispose() {
             if (!IsShutdowned) {
                 try {
-                    var playerShutdownParameters = new PlayerShutdownParameters {ShutdownDisplays = false, NeedSave = true};
-                    await GetPlayerShutdownParameters(playerShutdownParameters);
-                    var reason = new EntryLocalized("Music.TryReconnectAfterDispose", GuildConfig.Prefix, playerShutdownParameters.StoredPlaylist!.Id);
-                    await ExecuteShutdown(reason, playerShutdownParameters);
-                    foreach (var playerDisplay in Displays.ToList()) await playerDisplay.LeaveNotification(new EntryLocalized("Music.PlaybackStopped"), reason);
-                    if (State != PlayerState.Destroyed) {
-                        base.Dispose();
-                    }
-                    
+                    var playerShutdownParameters = new PlayerShutdownParameters {ShutdownDisplays = false, SavePlaylist = true};
+                    // BUG Fix playlist id
+                    var reason = new EntryLocalized("Music.TryReconnectAfterDispose", GuildConfig.Prefix, "");
+                    await Shutdown(reason, playerShutdownParameters);
+                    foreach (var playerDisplay in Displays.ToList()) 
+                        await playerDisplay.LeaveNotification(new EntryLocalized("Music.PlaybackStopped"), reason);
+
                     await Task.Delay(2000);
                     var newPlayer = (await MusicController.RestoreLastPlayer(GuildId))!;
-                    foreach (var playerDisplay in Displays.ToList()) await playerDisplay.ChangePlayer(newPlayer);
-                    newPlayer.WriteToQueueHistory(new HistoryEntry(
-                        new EntryLocalized("Music.ReconnectedAfterDispose", GuildConfig.Prefix, playerShutdownParameters.StoredPlaylist!.Id)));
+                    foreach (var playerDisplay in Displays.ToList()) 
+                        await playerDisplay.ChangePlayer(newPlayer);
+                    // BUG Fix playlist id
+                    newPlayer.WriteToQueueHistory(new HistoryEntry(new EntryLocalized("Music.ReconnectedAfterDispose", GuildConfig.Prefix, "")));
                 }
                 catch (Exception e) {
                     Logger.Error(e, "Error while resuming player");
