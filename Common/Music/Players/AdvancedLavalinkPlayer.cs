@@ -145,18 +145,17 @@ namespace Common.Music.Players {
             if (!IsShutdowned) {
                 try {
                     var playerShutdownParameters = new PlayerShutdownParameters {ShutdownDisplays = false, SavePlaylist = true};
-                    // BUG Fix playlist id
-                    var reason = new EntryLocalized("Music.TryReconnectAfterDispose", GuildConfig.Prefix, "");
+                    var reason = new EntryLocalized("Music.TryReconnectAfterDispose", GuildConfig.Prefix);
                     await Shutdown(reason, playerShutdownParameters);
+                    var playerSnapshot = await ShutdownTask;
                     foreach (var playerDisplay in Displays.ToList()) 
-                        await playerDisplay.LeaveNotification(new EntryLocalized("Music.PlaybackStopped"), reason);
+                        await playerDisplay.LeaveNotification(new EntryLocalized("Music.PlaybackStopped"), reason.Add(playerSnapshot.StoredPlaylist!.Id));
 
                     await Task.Delay(2000);
                     var newPlayer = (await MusicController.RestoreLastPlayer(GuildId))!;
                     foreach (var playerDisplay in Displays.ToList()) 
                         await playerDisplay.ChangePlayer(newPlayer);
-                    // BUG Fix playlist id
-                    newPlayer.WriteToQueueHistory(new HistoryEntry(new EntryLocalized("Music.ReconnectedAfterDispose", GuildConfig.Prefix, "")));
+                    newPlayer.WriteToQueueHistory(new HistoryEntry(new EntryLocalized("Music.ReconnectedAfterDispose", GuildConfig.Prefix, playerSnapshot.StoredPlaylist!.Id)));
                 }
                 catch (Exception e) {
                     Logger.Error(e, "Error while resuming player");
