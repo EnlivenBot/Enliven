@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reactive.Disposables;
+using System.Reactive.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -222,6 +223,13 @@ namespace Common {
             T item;
             while (queue.TryDequeue(out item))
                 yield return item;
+        }
+
+        public static IDisposable SubscribeAsync<T>(this IObservable<T> observable, Func<T, Task> action) {
+            return observable
+                .Select(arg => Observable.FromAsync(() => action(arg)))
+                .Concat()
+                .Subscribe();
         }
     }
 }

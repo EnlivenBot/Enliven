@@ -26,9 +26,9 @@ namespace Common.Music.Players {
         public readonly HistoryCollection QueueHistory = new HistoryCollection(512, 1000, false);
         private readonly Subject<FilterMapBase> _filtersChanged = new Subject<FilterMapBase>();
         private readonly List<PlayerEffectUse> _effectsList = new List<PlayerEffectUse>();
-        private readonly Subject<IEntry> _onShutdown = new Subject<IEntry>();
+        private readonly TaskCompletionSource<PlayerSnapshot> _shutdownTaskCompletionSource = new TaskCompletionSource<PlayerSnapshot>();
 
-        public IObservable<IEntry> OnShutdown => _onShutdown.AsObservable();
+        public Task<PlayerSnapshot> ShutdownTask => _shutdownTaskCompletionSource.Task;
         public readonly Subject<int> VolumeChanged = new Subject<int>();
         public readonly Subject<EnlivenLavalinkClusterNode?> SocketChanged = new Subject<EnlivenLavalinkClusterNode?>();
         public readonly Subject<PlayerState> StateChanged = new Subject<PlayerState>();
@@ -46,7 +46,7 @@ namespace Common.Music.Players {
         }
 
         protected GuildConfig GuildConfig => _guildConfig ??= _guildConfigProvider.Get(GuildId);
-        public bool IsShutdowned { get; private set; }
+        public bool IsShutdowned => _shutdownTaskCompletionSource.Task.IsCompleted;
 
         public override async Task OnConnectedAsync(VoiceServer voiceServer, VoiceState voiceState) {
             await SetVolumeAsync(GuildConfig.Volume);
@@ -71,33 +71,34 @@ namespace Common.Music.Players {
 
         private static readonly IEntry ConcatLines = new EntryString("{0}\n{1}");
         private static readonly IEntry ResumeViaPlaylists = new EntryLocalized("Music.ResumeViaPlaylists");
+        private static readonly IEntry PlaybackStopped = new EntryLocalized("Music.PlaybackStopped");
         public virtual async Task Shutdown(IEntry reason, PlayerShutdownParameters parameters) {
             if (IsShutdowned) return;
-            IsShutdowned = true;
 
             var playerSnapshot = await GetPlayerSnapshot(parameters);
+            if (!_shutdownTaskCompletionSource.TrySetResult(playerSnapshot)) return;
 
-            _onShutdown.OnNext(reason);
-            _onShutdown.Dispose();
-            MusicController.StoreSnapshot(playerSnapshot);
+            try {
+                MusicController.StoreSnapshot(playerSnapshot);
 
-            if (parameters.ShutdownDisplays) {
-                var body = parameters.SavePlaylist
-                    ? ConcatLines.WithArg(reason, ResumeViaPlaylists.WithArg(GuildConfig.Prefix, playerSnapshot.StoredPlaylist!.Id))
-                    : reason;
-                var header = new EntryLocalized("Music.PlaybackStopped");
-                var displayShutdownTasks = Displays.ToList().Select(async display => {
-                    try {
-                        await display.ExecuteShutdown(header, body);
-                    }
-                    catch (Exception e) {
-                        Logger.Error(e, "Error while shutdowning {DisplayType}", display.GetType().Name);
-                    }
-                });
-                await Task.WhenAll(displayShutdownTasks.ToList());
+                if (parameters.ShutdownDisplays) {
+                    var body = parameters.SavePlaylist
+                        ? ConcatLines.WithArg(reason, ResumeViaPlaylists.WithArg(GuildConfig.Prefix, playerSnapshot.StoredPlaylist!.Id))
+                        : reason;
+                    var displayShutdownTasks = Displays.ToList().Select(async display => {
+                        try {
+                            await display.ExecuteShutdown(PlaybackStopped, body);
+                        }
+                        catch (Exception e) {
+                            Logger.Error(e, "Error while shutdowning {DisplayType}", display.GetType().Name);
+                        }
+                    });
+                    await Task.WhenAll(displayShutdownTasks.ToList());
+                }
             }
-
-            base.Dispose();
+            finally {
+                base.Dispose();
+            }
         }
 
         public Task Shutdown(string reason, PlayerShutdownParameters parameters) {
