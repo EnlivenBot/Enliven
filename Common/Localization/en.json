@@ -58,6 +58,7 @@
       "UserStopPlayback": "**{0}** stopped playback\n\nHelp us by voting (`vote` command)",
       "PlaybackStopped": "Playback stopped",
       "NoListenersLeft": "Playback stopped - no listeners or tracks left\n\nHelp us by voting (`vote` command)",
+      "BotKicked": "Playback stopped - the bot was disconnected from the channel by someone\n\nHelp us by voting (`vote` command)",
       "NotFound": "No results for `{0}`",
       "Loading": "Loading",
       "Queue": "Queue - `{0}` of `{1}`  (`{2}` total)",
