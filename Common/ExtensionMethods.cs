@@ -1,10 +1,15 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reactive.Disposables;
+using System.Reactive.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Common.Config;
+using Common.Entities;
 using Common.Localization.Providers;
 using Common.Utils;
 using Discord;
@@ -165,8 +170,6 @@ namespace Common {
         {
             return new TimeSpan(source.Sum(item => func(item).Ticks));
         }
-        
-        public static TOut Pipe<TIn, TOut>(this TIn input, Func<TIn, TOut> transform) => transform(input);
 
         public static void ShouldDispose(this IDisposableBase disposableBase, IDisposable disposable) {
             if (disposableBase.IsDisposed) {
@@ -190,6 +193,43 @@ namespace Common {
                 return replacement;
             }
             return source;
+        }
+        
+        public static IEnumerable<EmbedFieldBuilder> AsFields(this IEnumerable<MessageSnapshot> snapshots, ILocalizationProvider loc) {
+            var embedFields = snapshots.Select(messageSnapshot => new EmbedFieldBuilder {
+                Name = messageSnapshot.EditTimestamp.ToString(),
+                Value = messageSnapshot.CurrentContent.IsBlank() 
+                    ? loc.Get("MessageHistory.EmptyMessage") 
+                    : $">>> {messageSnapshot.CurrentContent.SafeSubstring(1900, "...")}"
+            }).ToList();
+
+            var lastContent = embedFields.Last();
+            lastContent.Name = loc.Get("MessageHistory.LastContent").Format(lastContent.Name);
+
+            return embedFields;
+        }
+        
+        public static TOut Pipe<TIn, TOut>(this TIn input, Func<TIn, TOut> transform) => transform(input);
+        public static async Task<TOut> PipeAsync<TIn, TOut>(this Task<TIn> input, Func<TIn, TOut> transform) => transform(await input);
+        public static async Task<TOut> PipeAsync<TIn, TOut>(this Task<TIn> input, Func<TIn, Task<TOut>> transform) => await transform(await input);
+
+        public static async Task<IDisposable> WaitDisposableAsync(this SemaphoreSlim semaphore, CancellationToken? token = null) {
+            await semaphore.WaitAsync(token ?? CancellationToken.None);
+            return Disposable.Create(() => semaphore.Release());
+        }
+        
+        public static IEnumerable<T> DequeueExisting<T>(this ConcurrentQueue<T> queue)
+        {
+            T item;
+            while (queue.TryDequeue(out item))
+                yield return item;
+        }
+
+        public static IDisposable SubscribeAsync<T>(this IObservable<T> observable, Func<T, Task> action) {
+            return observable
+                .Select(arg => Observable.FromAsync(() => action(arg)))
+                .Concat()
+                .Subscribe();
         }
     }
 }

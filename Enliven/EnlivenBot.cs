@@ -10,7 +10,7 @@ using Discord;
 using NLog;
 
 namespace Bot {
-    public class EnlivenBot {
+    public class EnlivenBot : IService {
         public static EnlivenShardedClient Client = null!;
         
         // ReSharper disable once InconsistentNaming
@@ -18,6 +18,7 @@ namespace Bot {
         private IEnumerable<IService> _services;
         private IEnumerable<IPatch> _patches;
         private EnlivenConfig _config;
+        private bool _isDiscordStarted;
 
         public EnlivenBot(ILogger logger, IEnumerable<IService> services, IEnumerable<IPatch> patches,
                        EnlivenShardedClient discordShardedClient, EnlivenConfig config)
@@ -34,6 +35,9 @@ namespace Bot {
         internal async Task Run()
         {
             logger.Info("Start Initialising");
+
+            AppDomain.CurrentDomain.ProcessExit += async (sender, eventArgs) =>
+                await Task.WhenAll(_services.Select(service => service.OnShutdown(_isDiscordStarted)).ToArray());
 
             await Task.WhenAll(_patches.Select(patch => patch.Apply()).ToArray());
             await Task.WhenAll(_services.Select(service => service.OnPreDiscordLoginInitialize()).ToArray());
@@ -67,12 +71,6 @@ namespace Bot {
 
             await Task.WhenAll(_services.Select(service => service.OnPostDiscordStartInitialize()).ToArray());
 
-            AppDomain.CurrentDomain.ProcessExit += async (sender, eventArgs) =>
-            {
-                await Client.SetStatusAsync(UserStatus.AFK);
-                await Client.SetGameAsync("Reboot...");
-            };
-
             await Task.Delay(-1);
         }
         
@@ -81,6 +79,14 @@ namespace Bot {
             logger.Info("Starting client");
             await Client.StartAsync();
             await Client.SetGameAsync("mentions of itself to get started", null, ActivityType.Listening);
+            _isDiscordStarted = true;
+        }
+        
+        public async Task OnShutdown(bool isDiscordStarted) {
+            if (isDiscordStarted) {
+                await Client.SetStatusAsync(UserStatus.AFK);
+                await Client.SetGameAsync("Reboot...");
+            }
         }
 
         private Task OnClientLog(LogMessage message) {

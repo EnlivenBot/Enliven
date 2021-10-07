@@ -12,4 +12,10 @@ namespace Common.Localization.Entries {
         public static IEntry operator +(EntryBase first, IEntry second) => new EntryString("{0}{1}", first, second);
         public static IEntry operator +(EntryBase first, string second) => new EntryString("{0}{1}", first, second);
     }
+
+    public static class EntryExtensions {
+        public static IEntry WithArg(this IEntry entry, params object[] arguments) {
+            return new EntryFormatted(entry, arguments);
+        }
+    }
 }

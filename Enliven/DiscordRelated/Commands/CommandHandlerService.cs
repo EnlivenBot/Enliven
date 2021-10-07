@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Autofac;
 using Bot.Config.Emoji;
-using Bot.DiscordRelated.Logging;
+using Bot.DiscordRelated.MessageHistories;
 using Bot.Utilities;
 using Bot.Utilities.Collector;
 using Common;

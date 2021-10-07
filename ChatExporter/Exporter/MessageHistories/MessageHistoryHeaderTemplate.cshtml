@@ -1,0 +1,136 @@
+﻿@using System
+@using System.Linq
+@using System.Threading.Tasks
+@using ChatExporter.Exporter
+@using Discord
+@using DiscordChatExporter.Core.Discord
+@using DiscordChatExporter.Core.Exporting.Writers.Html;
+@using DiscordChatExporter.Core.Utils.Extensions
+
+@namespace ChatExporter.Exporter.MessageHistories
+@inherits MiniRazor.TemplateBase<ChatExporter.Exporter.MessageHistories.MessageHistoryHeaderTemplateContext>
+
+@{
+    async Task<string> GetChannelString() {
+        if (Model.Channel != null) {
+            var category = await Model.Channel.GetCategoryAsync();
+            return $"Channel: #{Model.Channel.Name} <#{Model.Channel.Id}> at {category.Name}";
+        }
+
+        return $"Channel: Unknown <#{Model.Context.MessageHistory.ChannelId}>";
+    }
+    
+    string GetCreationTimeString() {
+        var creationTime = Model.GetCreationTime();
+        return creationTime != null ? $"Created at {creationTime.Value.Format()}" : "";
+    }
+
+    string GetGuildString() {
+        if (Model.Channel is IGuildChannel guildChannel) {
+            return $"Guild: {guildChannel.Guild.Name}";
+        }
+        return "Guild: Unknown";
+    }
+
+    var userMember = Model.Context.TryGetMember(Model.Context.MessageHistory.Author);
+    string GetAuthorString() {
+        if (userMember == null || userMember.User.Name == null && userMember.Nick == null) {
+            return $"Author: Unknown <@{Model.Context.MessageHistory.Author.UserId}>";
+        }
+
+        if (userMember.Nick == null || userMember.Nick == userMember.User.Name) {
+            return $"Author: {userMember.User.Name}#{userMember.User.DiscriminatorFormatted} <@{Model.Context.MessageHistory.Author.UserId}>";
+        }
+
+        return $"Author: {userMember.Nick} ({userMember.User.Name}#{userMember.User.DiscriminatorFormatted}) <@{Model.Context.MessageHistory.Author.UserId}>";
+    }
+
+    string GetMessageString() => $"Message ID: {Model.Context.MessageHistory.MessageId}";
+
+    string GetEditsCountString() => $"Edits count: {Model.Context.MessageHistory.EditsCount}";
+}
+
+<div class="preamble">
+    <div class="preamble__entries-container">
+        <div class="preamble__entry">@GetGuildString()</div>
+        <div class="preamble__entry">@await GetChannelString()</div>
+        <div class="preamble__entry">@GetAuthorString()</div>
+
+        @if (!string.IsNullOrWhiteSpace(GetCreationTimeString())) {
+            <div class="preamble__entry preamble__entry--small">@GetCreationTimeString()</div>
+        }
+
+        <div class="preamble__entry preamble__entry--small">@GetEditsCountString()</div>
+
+        @* Attachments *@
+        @foreach (var attachment in await Model.GetAttachmentsAsync()) {
+            // If this html will be rendered to image we should remove all spoilers and music / video preview
+            if (@Model.Context.WillBeRenderedToImage) {
+                @* Attachment preview  *@
+                if (attachment.IsImage) {
+                    <a href="@attachment.Url">
+                        <img class="chatlog__attachment-media" src="@attachment.Url" alt="Image attachment" title="@($"Image: {attachment.FileName} ({attachment.FileSize})")" loading="lazy">
+                    </a>
+                }
+                else {
+                    <div class="chatlog__attachment-generic">
+                        <svg class="chatlog__attachment-generic-icon">
+                            <use href="#icon-attachment"/>
+                        </svg>
+                        <div class="chatlog__attachment-generic-name">
+                            <a href="@attachment.Url">
+                                @attachment.FileName
+                            </a>
+                        </div>
+                        <div class="chatlog__attachment-generic-size">
+                            @attachment.FileSize
+                        </div>
+                    </div>
+                }
+            }
+            else {
+                <div class="chatlog__attachment @(attachment.IsSpoiler ? "chatlog__attachment--hidden" : "")" onclick="@(attachment.IsSpoiler ? "showSpoiler(event, this)" : "")">
+                    @* Spoiler caption  *@
+                    @if (attachment.IsSpoiler) {
+                        <div class="chatlog__attachment-spoiler-caption">SPOILER</div>
+                    }
+
+                    @* Attachment preview  *@
+                    @if (attachment.IsImage) {
+                        <a href="@attachment.Url">
+                            <img class="chatlog__attachment-media" src="@attachment.Url" alt="Image attachment" title="@($"Image: {attachment.FileName} ({attachment.FileSize})")" loading="lazy">
+                        </a>
+                    }
+                    else if (attachment.IsVideo) {
+                        <video class="chatlog__attachment-media" controls>
+                            <source src="@attachment.Url" alt="Video attachment" title="@($"Video: {attachment.FileName} ({attachment.FileSize})")">
+                        </video>
+                    }
+                    else if (attachment.IsAudio) {
+                        <audio class="chatlog__attachment-media" controls>
+                            <source src="@attachment.Url" alt="Audio attachment" title="@($"Audio: {attachment.FileName} ({attachment.FileSize})")">
+                        </audio>
+                    }
+                    else {
+                        <div class="chatlog__attachment-generic">
+                            <svg class="chatlog__attachment-generic-icon">
+                                <use href="#icon-attachment"/>
+                            </svg>
+                            <div class="chatlog__attachment-generic-name">
+                                <a href="@attachment.Url">
+                                    @attachment.FileName
+                                </a>
+                            </div>
+                            <div class="chatlog__attachment-generic-size">
+                                @attachment.FileSize
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@* Preamble cuts off at this point *@
+<div class="chatlog">

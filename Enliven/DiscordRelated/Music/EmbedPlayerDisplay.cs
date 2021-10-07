@@ -273,7 +273,7 @@ namespace Bot.DiscordRelated.Music {
             if (Player.CurrentTrack != null) {
                 EmbedBuilder.Fields["State"].Name = _loc.Get("Music.RequestedBy").Format(Player.CurrentTrack.GetRequester());
 
-                var progressPercentage = Convert.ToInt32(Player.TrackPosition.TotalSeconds / Player.CurrentTrack.Duration.TotalSeconds * 100);
+                var progressPercentage = Convert.ToInt32(Player.Position.Position.TotalSeconds / Player.CurrentTrack.Duration.TotalSeconds * 100);
                 var progressBar = (_isExternalEmojiAllowed ? ProgressEmoji.CustomEmojiPack : ProgressEmoji.TextEmojiPack).GetProgress(progressPercentage);
 
                 var stateString = Player.State switch {
@@ -291,7 +291,7 @@ namespace Bot.DiscordRelated.Music {
                     ? spotifyLavalinkTrack.RelatedSpotifyTrackWrapper.Id
                     : null;
                 var spotifyEmojiExists = spotifyId != null && _isExternalEmojiAllowed;
-                var sb = new StringBuilder(Player.TrackPosition.FormattedToString());
+                var sb = new StringBuilder(Player.Position.Position.FormattedToString());
                 if (Player.CurrentTrack.IsSeekable) {
                     sb.Append(" / ");
                     sb.Append(Player.CurrentTrack.Duration.FormattedToString());

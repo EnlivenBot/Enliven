@@ -323,7 +323,7 @@ namespace Bot.DiscordRelated {
         /// <returns>
         ///     The current builder.
         /// </returns>
-        public EnlivenEmbedBuilder AddField(string id, string name, object value, bool inline = false, int? priority = null, bool isEnabled = true) {
+        public EnlivenEmbedBuilder AddField(string? id, string name, object value, bool inline = false, int? priority = null, bool isEnabled = true) {
             var field = new PriorityEmbedFieldBuilder()
                 .WithIsInline(inline)
                 .WithName(name)
@@ -343,7 +343,8 @@ namespace Bot.DiscordRelated {
         /// <returns>
         ///     The current builder.
         /// </returns>
-        public EnlivenEmbedBuilder AddField(string id, PriorityEmbedFieldBuilder field) {
+        public EnlivenEmbedBuilder AddField(string? id, PriorityEmbedFieldBuilder field) {
+            id ??= Guid.NewGuid().ToString();
             _priorityFields.Add(id, (DateTime.Now, field, SubscribeToBuilderUpdates(field)));
             return this;
         }
@@ -411,6 +412,26 @@ namespace Bot.DiscordRelated {
                 .Select(tuple => tuple.Item2);
             _embedBuilder.Fields.AddRange(fieldBuilders);
             _isFieldsUpdateRequired = false;
+        }
+
+        public EnlivenEmbedBuilder Clone() {
+            var builder = new EnlivenEmbedBuilder()
+                .WithAuthor(Author)
+                .WithDescription(Description)
+                .WithFooter(Footer)
+                .WithTitle(Title)
+                .WithUrl(Url)
+                .WithCurrentTimestamp()
+                .WithImageUrl(ImageUrl)
+                .WithThumbnailUrl(ThumbnailUrl);
+            if (Color != null) builder.WithColor((Color)Color);
+            if (Timestamp != null) builder.WithTimestamp((DateTimeOffset)Timestamp);
+            
+            _priorityFields
+                .ToList()
+                .ForEach(pair => builder.AddField(pair.Key, pair.Value.Item2));
+            
+            return builder;
         }
     }
 }

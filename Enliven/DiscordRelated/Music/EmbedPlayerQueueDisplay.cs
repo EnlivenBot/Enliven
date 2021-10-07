@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Linq;
+using System.Reactive.Threading.Tasks;
 using System.Threading.Tasks;
 using Bot.DiscordRelated.MessageComponents;
+using Common;
 using Common.Localization.Entries;
 using Common.Localization.Providers;
 using Common.Music.Controller;
@@ -50,7 +52,7 @@ namespace Bot.DiscordRelated.Music {
             _subscribers = new Disposables(
                 Player.Playlist.Changed.Subscribe(playlist => UpdatePages()),
                 Player.CurrentTrackIndexChanged.Subscribe(i => UpdatePages()),
-                Player.Shutdown.Subscribe(entry => ExecuteShutdown(null, null))
+                Player.ShutdownTask.ToObservable().SubscribeAsync(snapshot => ExecuteShutdown(null, null))
             );
             return Task.CompletedTask;
         }
