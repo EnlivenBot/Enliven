@@ -38,12 +38,10 @@ namespace Bot {
             Startup.ConfigureServices(containerBuilder);
             Container = containerBuilder.Build();
 
-            using (var scope = Container.BeginLifetimeScope()) {
-                var bot = scope.Resolve<EnlivenBot>();
-                await bot.Run();
-            }
-
-            Console.WriteLine("Execution end");
+            await using var scope = Container.BeginLifetimeScope();
+            var bot = scope.Resolve<EnlivenBot>();
+            await bot.StartAsync();
+            await Task.Delay(-1);
         }
 
         private static IContainer Container { get; set; } = null!;

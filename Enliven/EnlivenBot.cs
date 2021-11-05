@@ -12,7 +12,7 @@ using NLog;
 namespace Bot {
     public class EnlivenBot : IService {
         public static EnlivenShardedClient Client = null!;
-        
+
         // ReSharper disable once InconsistentNaming
         private readonly ILogger logger;
         private IEnumerable<IService> _services;
@@ -21,8 +21,7 @@ namespace Bot {
         private bool _isDiscordStarted;
 
         public EnlivenBot(ILogger logger, IEnumerable<IService> services, IEnumerable<IPatch> patches,
-                       EnlivenShardedClient discordShardedClient, EnlivenConfig config)
-        {
+                          EnlivenShardedClient discordShardedClient, EnlivenConfig config) {
             _config = config;
             config.Load();
 
@@ -32,8 +31,7 @@ namespace Bot {
             Client = discordShardedClient;
         }
 
-        internal async Task Run()
-        {
+        internal async Task StartAsync() {
             logger.Info("Start Initialising");
 
             AppDomain.CurrentDomain.ProcessExit += async (sender, eventArgs) =>
@@ -44,44 +42,43 @@ namespace Bot {
 
             Client.Log += OnClientLog;
 
-            logger.Info("Start logining");
-            var connectDelay = 30;
-            while (true)
-            {
-                try
-                {
-                    await Client.LoginAsync(TokenType.Bot, _config.BotToken);
-                    logger.Info("Successefully logged in");
-                    break;
-                }
-                catch (Exception e)
-                {
-                    logger.Fatal(e, "Failed to login. Probably token is incorrect - {token}", _config.BotToken);
-                    logger.Info("Waiting before next attempt - {delay}s", connectDelay);
-                    await Task.Delay(TimeSpan.FromSeconds(connectDelay));
-                    connectDelay += 10;
-                }
-            }
+            await LoginAsync();
 
             LocalizationManager.Initialize();
-            
+
             await Task.WhenAll(_services.Select(service => service.OnPreDiscordStartInitialize()).ToArray());
 
             await StartClient();
 
             await Task.WhenAll(_services.Select(service => service.OnPostDiscordStartInitialize()).ToArray());
-
-            await Task.Delay(-1);
         }
-        
-        public async Task StartClient()
-        {
+
+        private async Task LoginAsync() {
+            logger.Info("Start logining");
+            for (int connectionTryNumber = 0; connectionTryNumber < 5; connectionTryNumber++) {
+                try {
+                    await Client.LoginAsync(TokenType.Bot, _config.BotToken);
+                    logger.Info("Successefully logged in");
+                    return;
+                }
+                catch (Exception e) {
+                    logger.Fatal(e, "Failed to login. Probably token is incorrect - {token}", _config.BotToken);
+                    logger.Info("Waiting before next attempt - {delay}s", connectionTryNumber * 10);
+                    await Task.Delay(TimeSpan.FromSeconds(connectionTryNumber++ * 10));
+                }
+            }
+
+            logger.Fatal("Failed to login 5 times. Quiting");
+            throw new Exception("Failed to login 5 times");
+        }
+
+        public async Task StartClient() {
             logger.Info("Starting client");
             await Client.StartAsync();
             await Client.SetGameAsync("mentions of itself to get started", null, ActivityType.Listening);
             _isDiscordStarted = true;
         }
-        
+
         public async Task OnShutdown(bool isDiscordStarted) {
             if (isDiscordStarted) {
                 await Client.SetStatusAsync(UserStatus.AFK);
