@@ -41,6 +41,7 @@ namespace Common.Utils {
             public int Size { get; }
             public int? Height { get; }
             public int? Width { get; }
+            public bool Ephemeral { get; }
         }
     }
 }

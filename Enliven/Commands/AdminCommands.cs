@@ -53,7 +53,7 @@ namespace Bot.Commands {
                 componentBuilder.WithButton(enlivenButtonBuilder);
             }
 
-            var message = await ReplyAsync(null!, false, embedBuilder.Build(), component: componentBuilder.Build());
+            var message = await ReplyAsync(embed: embedBuilder.Build(), component: componentBuilder.Build());
             componentBuilder.AssociateWithMessage(message);
             componentBuilder.SetCallback(async (s, component, arg3) => {
                 var t = await CommandHandlerService.ExecuteCommand($"language {s}", new ComponentCommandContext(EnlivenBot.Client, component),

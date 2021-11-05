@@ -107,7 +107,7 @@ namespace Bot.DiscordRelated.Commands.Modules {
         }
 
         // ReSharper disable once InconsistentNaming
-        protected override async Task<IUserMessage> ReplyAsync(string message = null, bool isTTS = false, Embed embed = null, RequestOptions options = null, AllowedMentions allowedMentions = null, MessageReference messageReference = null, MessageComponent component = null) {
+        protected override async Task<IUserMessage> ReplyAsync(string message = null, bool isTTS = false, Embed embed = null, RequestOptions options = null, AllowedMentions allowedMentions = null, MessageReference messageReference = null, MessageComponent component = null, ISticker[] stickers = null, Embed[] embeds = null) {
             return await ResponseChannel.SendMessageAsync(message, isTTS, embed, options).ConfigureAwait(false);
         }
 

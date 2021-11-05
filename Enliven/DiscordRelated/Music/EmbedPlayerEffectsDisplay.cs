@@ -132,7 +132,7 @@ namespace Bot.DiscordRelated.Music {
 
             var addButtons = Enumerable.Range(0, 4).Select(i => _enlivenComponentBuilder.Entries[$"add{i}"]).ToList();
             addButtons.Do(builder => builder.IsVisible = effects.All(use => use.Effect.SourceName != builder.Label));
-            addButtons.Do(builder => builder.Disabled = effects.Count >= AdvancedLavalinkPlayer.MaxEffectsCount);
+            addButtons.Do(builder => builder.IsDisabled = effects.Count >= AdvancedLavalinkPlayer.MaxEffectsCount);
             _enlivenComponentBuilder.Entries["add"].IsVisible = addButtons.Any(builder => builder.IsVisible);
 
             _updateControlMessageTask.Execute();
