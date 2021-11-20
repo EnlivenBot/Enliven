@@ -13,8 +13,9 @@ namespace Bot.DiscordRelated.MessageComponents {
             _enlivenShardedClient = enlivenShardedClient;
         }
 
-        public IObservable<SocketMessageComponent> MessageComponentUse =>
-            _enlivenShardedClient.MessageComponentUse;
+        public IObservable<SocketMessageComponent> MessageComponentUse => 
+            _enlivenShardedClient.MessageComponentUse
+                .Do(component => _ = component.DeferAsync());
 
         public EnlivenComponentBuilder GetBuilder() {
             return new EnlivenComponentBuilder(this);

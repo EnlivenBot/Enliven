@@ -37,9 +37,9 @@ namespace Common {
                 _readyTaskCompletionSource.TrySetResult(true);
                 return Task.CompletedTask;
             };
-            InteractionCreated += async interaction => {
-                _ = interaction.DeferAsync();
+            InteractionCreated += interaction => {
                 _interactionCreatedSubject.OnNext(interaction);
+                return Task.CompletedTask;
             };
         }
 
