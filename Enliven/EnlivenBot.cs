@@ -55,7 +55,7 @@ namespace Bot {
 
         private async Task LoginAsync() {
             logger.Info("Start logining");
-            for (int connectionTryNumber = 0; connectionTryNumber < 5; connectionTryNumber++) {
+            for (int connectionTryNumber = 1; connectionTryNumber <= 5; connectionTryNumber++) {
                 try {
                     await Client.LoginAsync(TokenType.Bot, _config.BotToken);
                     logger.Info("Successefully logged in");
@@ -64,7 +64,7 @@ namespace Bot {
                 catch (Exception e) {
                     logger.Fatal(e, "Failed to login. Probably token is incorrect - {token}", _config.BotToken);
                     logger.Info("Waiting before next attempt - {delay}s", connectionTryNumber * 10);
-                    await Task.Delay(TimeSpan.FromSeconds(connectionTryNumber++ * 10));
+                    await Task.Delay(TimeSpan.FromSeconds(connectionTryNumber * 10));
                 }
             }
 
