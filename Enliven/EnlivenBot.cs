@@ -34,8 +34,8 @@ namespace Bot {
         internal async Task StartAsync() {
             logger.Info("Start Initialising");
 
-            AppDomain.CurrentDomain.ProcessExit += async (sender, eventArgs) =>
-                await Task.WhenAll(_services.Select(service => service.OnShutdown(_isDiscordStarted)).ToArray());
+            AppDomain.CurrentDomain.ProcessExit += (sender, eventArgs) =>
+                Task.WaitAll(_services.Select(service => service.OnShutdown(_isDiscordStarted)).ToArray());
 
             await Task.WhenAll(_patches.Select(patch => patch.Apply()).ToArray());
             await Task.WhenAll(_services.Select(service => service.OnPreDiscordLoginInitialize()).ToArray());
