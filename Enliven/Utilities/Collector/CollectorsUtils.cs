@@ -127,51 +127,6 @@ namespace Bot.Utilities.Collector {
             return collectorsGroup;
         }
 
-        #region Collect commands
-
-        private static ConcurrentDictionary<CommandInfo, ConcurrentDictionary<Guid, (Func<ICommandContext, CommandMatch, bool>,
-            Action<IMessage, KeyValuePair<CommandMatch, ParseResult>, ICommandContext>)>> ByCommand =
-            new ConcurrentDictionary<CommandInfo, ConcurrentDictionary<Guid, (Func<ICommandContext, CommandMatch, bool>,
-                Action<IMessage, KeyValuePair<CommandMatch, ParseResult>, ICommandContext>)>>();
-
-        public static CollectorController CollectCommand([NotNull] CommandInfo? info, Func<ICommandContext, CommandMatch, bool> predicate,
-                                                         Action<CommandCollectorEventArgs> action) {
-            info ??= default!;
-            var collectorController = new CollectorController();
-            var key = Guid.NewGuid();
-            collectorController.Disposed.Subscribe(@base => {
-                if (!ByCommand.TryGetValue(info!, out var value)) return;
-                value!.TryRemove(key, out _);
-                if (value.IsEmpty) {
-                    ByCommand.TryRemove(info, out _);
-                }
-            });
-            var concurrentDictionary = ByCommand.GetOrAdd(info,
-                arg =>
-                    new ConcurrentDictionary<Guid, (Func<ICommandContext, CommandMatch, bool>,
-                        Action<IMessage, KeyValuePair<CommandMatch, ParseResult>, ICommandContext>)>());
-            concurrentDictionary.TryAdd(key,
-                (predicate, (message, pair, arg3) => action(new CommandCollectorEventArgs(collectorController, message, pair, arg3))));
-            return collectorController;
-        }
-
-        /// <summary>
-        /// Method for CommandHandler, do not use!
-        /// </summary>
-        /// <returns>A value indicating whether to execute a command or not</returns>
-        [Obsolete("Method for CommandHandler, do not invoke it manually")]
-        public static bool OnCommandExecute(KeyValuePair<CommandMatch, ParseResult> info, ICommandContext context, IMessage message) {
-            if (!ByCommand.TryGetValue(info.Key.Command, out var commandRequests)) return true;
-            var keyValuePairs = commandRequests.ToList().Where(pair => pair.Value.Item1(context, info.Key)).ToList();
-            foreach (var i in keyValuePairs) {
-                logger.Swallow(() => i.Value.Item2(message, info, context));
-            }
-
-            return keyValuePairs.Count == 0;
-        }
-
-        #endregion
-
         private static Predicate<IMessage> ApplyFilters(Predicate<IMessage> initial, CollectorFilter filter) {
             return filter switch {
                 CollectorFilter.Off        => initial,

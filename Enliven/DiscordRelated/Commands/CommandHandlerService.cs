@@ -176,9 +176,7 @@ namespace Bot.DiscordRelated.Commands {
             }
             
             #pragma warning disable 618
-            IResult result = CollectorsUtils.OnCommandExecute(pair, context, message)
-                ? await pair.Key.ExecuteAsync(context, pair.Value, new ServiceProviderAdapter(_serviceProvider))
-                : ExecuteResult.FromSuccess();
+            IResult result = await pair.Key.ExecuteAsync(context, pair.Value, new ServiceProviderAdapter(_serviceProvider));
 
             if (result.Error != CommandError.UnknownCommand) {
                 var commandName = query.IndexOf(" ", StringComparison.Ordinal) > -1 ? query.Substring(0, query.IndexOf(" ", StringComparison.Ordinal)) : query;
