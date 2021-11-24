@@ -13,6 +13,7 @@ using Bot.DiscordRelated.Music;
 using Bot.Music.Spotify;
 using Bot.Music.Yandex;
 using Bot.Patches;
+using Bot.Utilities.Collector;
 using ChatExporter;
 using ChatExporter.Exporter.MessageHistories;
 using Common;
@@ -97,6 +98,7 @@ namespace Bot {
             builder.RegisterType<MessageComponentService>().As<MessageComponentService>().AsSelf().SingleInstance();
             builder.RegisterType<HtmlRendererService>().As<IService>().AsSelf().SingleInstance();
             builder.RegisterType<MessageHistoryHtmlExporter>().SingleInstance();
+            builder.RegisterType<CollectorService>().SingleInstance();
             
             // MessageHistory Printers
             builder.RegisterType<MessageHistoryPrinter>().SingleInstance();

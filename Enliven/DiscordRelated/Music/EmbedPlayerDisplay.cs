@@ -30,7 +30,6 @@ using Tyrrrz.Extensions;
 namespace Bot.DiscordRelated.Music {
     public class EmbedPlayerDisplay : PlayerDisplayBase {
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
-        private CollectorsGroup _collectorsGroup = new CollectorsGroup();
         private CommandHandlerService _commandHandlerService;
         private IUserMessage? _controlMessage;
         private bool _isExternalEmojiAllowed;
@@ -129,7 +128,6 @@ namespace Bot.DiscordRelated.Music {
             _cancellationTokenSource.Dispose();
             _controlMessageSendTask.Dispose();
             _updateControlMessageTask.Dispose();
-            _collectorsGroup.DisposeAll();
             
             if (message != null) {
                 try {

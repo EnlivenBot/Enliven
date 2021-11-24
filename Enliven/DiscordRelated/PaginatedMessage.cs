@@ -30,16 +30,18 @@ namespace Bot.DiscordRelated {
         public ILocalizationProvider Loc;
         private EnlivenComponentBuilder _enlivenComponentBuilder = null!;
         private MessageComponentService _messageComponentService;
+        private CollectorService _collectorService;
 
-        public PaginatedMessage(PaginatedAppearanceOptions options, IUserMessage message, ILocalizationProvider loc, MessageComponentService messageComponentService, MessagePage? errorPage = null)
-            : this(options, message.Channel, loc, messageComponentService, errorPage) {
+        public PaginatedMessage(PaginatedAppearanceOptions options, IUserMessage message, ILocalizationProvider loc, MessageComponentService messageComponentService, CollectorService collectorService, MessagePage? errorPage = null)
+            : this(options, message.Channel, loc, messageComponentService, collectorService, errorPage) {
             Channel = message.Channel;
             Message = message;
             if (Message.Author.Id != EnlivenBot.Client.CurrentUser.Id) throw new ArgumentException($"{nameof(message)} must be from the current user");
         }
 
-        public PaginatedMessage(PaginatedAppearanceOptions options, IMessageChannel channel, ILocalizationProvider loc, MessageComponentService messageComponentService, MessagePage? errorPage = null) {
+        public PaginatedMessage(PaginatedAppearanceOptions options, IMessageChannel channel, ILocalizationProvider loc, MessageComponentService messageComponentService, CollectorService collectorService, MessagePage? errorPage = null) {
             _messageComponentService = messageComponentService;
+            _collectorService = collectorService;
             Loc = loc;
             Channel = channel;
             Options = options;
@@ -96,7 +98,7 @@ namespace Bot.DiscordRelated {
                     _ = component.FollowupAsync(Options.InformationText).DelayedDelete(Options.InfoTimeout);
                     break;
                 case "Jump":
-                    CollectorsUtils.CollectMessage(component.Channel, message => message.Author.Id == component.User.Id, async eventArgs => {
+                    _collectorService.CollectMessage(component.Channel, message => message.Author.Id == component.User.Id, async eventArgs => {
                         eventArgs.StopCollect();
                         if (!int.TryParse(eventArgs.Message.Content, out var result)) return;
                         await eventArgs.RemoveReason();
