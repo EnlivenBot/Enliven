@@ -23,6 +23,7 @@ namespace Bot.Commands {
         public GlobalBehaviorsService GlobalBehaviorsService { get; set; } = null!;
         public CommandHandlerService CommandHandlerService { get; set; } = null!;
         public MessageComponentService MessageComponentService { get; set; } = null!;
+        public CollectorService CollectorService { get; set; } = null!;
 
         [Hidden]
         [Command("printwelcome")]
@@ -110,8 +111,7 @@ namespace Bot.Commands {
         public async Task LoggingControlPanel() {
             var botPermissions = (await Context.Guild.GetUserAsync(EnlivenBot.Client.CurrentUser.Id)).GetPermissions((IGuildChannel) Context.Channel);
             if (botPermissions.SendMessages) {
-                var loggingChainBase = LoggingChain.CreateInstance((ITextChannel) Context.Channel, Context.User, GuildConfig);
-                await loggingChainBase.Start();
+                await new LoggingChain((ITextChannel) Context.Channel, Context.User, GuildConfig, CollectorService).Start();
             }
             else {
                 await (await Context.User.CreateDMChannelAsync()).SendMessageAsync(Loc.Get("ChainsCommon.CantSend").Format($"<#{Context.Channel.Id}>"));

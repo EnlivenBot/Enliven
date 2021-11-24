@@ -34,36 +34,43 @@ namespace Bot.Commands.Chains {
         };
 
         public static IEmote AllReaction = new Emoji("⬅️");
-        
-        private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
-        private string _query = null!;
-        private IUser _requester = null!;
-        private SearchMode _searchMode;
-        private IMessageChannel _targetChannel = null!;
-        private FinalLavalinkPlayer _player = null!;
+
+        private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+        private readonly string _query;
+        private readonly IUser _requester;
+        private readonly SearchMode _searchMode;
+        private readonly IMessageChannel _targetChannel;
+        private readonly FinalLavalinkPlayer _player;
+        private readonly IMusicController _controller;
+        private readonly EnlivenComponentBuilder _componentBuilder;
+        private readonly CollectorService _collectorService;
         private CollectorsGroup? _collectorGroup;
-        private IMusicController _controller = null!;
-        private EnlivenComponentBuilder _componentBuilder = null!;
 
-
-        private AdvancedMusicSearchChain(string? uid, ILocalizationProvider loc) : base(uid, loc) { }
-
-        public static AdvancedMusicSearchChain CreateInstance(GuildConfig guildConfig, FinalLavalinkPlayer player, IMessageChannel targetChannel,
-                                                              IUser requester, SearchMode searchMode,
-                                                              string query, IMusicController controller, MessageComponentService messageComponentService) {
-            var advancedMusicSearchChain = new AdvancedMusicSearchChain(
-                $"{nameof(AdvancedMusicSearchChain)}_{guildConfig.GuildId}_{requester.Id}", guildConfig.Loc) {
-                _requester = requester, _query = query, _searchMode = searchMode, _targetChannel = targetChannel, 
-                _player = player, _controller = controller, _componentBuilder = messageComponentService.GetBuilder()
-            };
-            advancedMusicSearchChain.MainBuilder
-                                    .WithColor(Color.Gold)
-                                    .WithTitle(guildConfig.Loc.Get("Music.SearchResultsTitle"));
-            advancedMusicSearchChain.SetTimeout(Constants.VeryShortTimeSpan);
-            return advancedMusicSearchChain;
+        public AdvancedMusicSearchChain(GuildConfig guildConfig,
+                                        FinalLavalinkPlayer player,
+                                        IMessageChannel targetChannel,
+                                        IUser requester,
+                                        SearchMode searchMode,
+                                        string query,
+                                        IMusicController controller,
+                                        MessageComponentService messageComponentService,
+                                        CollectorService collectorService)
+            : base($"{nameof(AdvancedMusicSearchChain)}_{guildConfig.GuildId}_{requester.Id}", guildConfig.Loc) {
+            _player = player;
+            _targetChannel = targetChannel;
+            _requester = requester;
+            _searchMode = searchMode;
+            _query = query;
+            _controller = controller;
+            _collectorService = collectorService;
+            _componentBuilder = messageComponentService.GetBuilder();
+            MainBuilder
+                .WithColor(Color.Gold)
+                .WithTitle(guildConfig.Loc.Get("Music.SearchResultsTitle"));
         }
 
         public async Task Start() {
+            SetTimeout(Constants.VeryShortTimeSpan);
             var tracks = (await _controller.Cluster.GetTracksAsync(_query, _searchMode)).ToList();
             // Repeat search, if fail
             if (!tracks.Any()) {
@@ -84,7 +91,7 @@ namespace Bot.Commands.Chains {
                 }
 
                 MainBuilder.Description += stringBuilder.ToString();
-                
+
                 for (var index = 0; index < tracks.Count && index < 10; index++) {
                     var track = tracks[index];
                     var button = new EnlivenButtonBuilder().WithStyle(ButtonStyle.Secondary)
@@ -98,11 +105,11 @@ namespace Bot.Commands.Chains {
                 _componentBuilder.WithButton(new EnlivenButtonBuilder().WithStyle(ButtonStyle.Danger).WithEmote(CommonEmoji.LegacyStop).WithLabel(Loc.Get("Common.Stop")).WithTargetRow(controlsRow).WithCustomId("Stop"));
             }
 
-            var msg = await _targetChannel.SendMessageAsync(null, false, MainBuilder.Build(), component:_componentBuilder.Build());
+            var msg = await _targetChannel.SendMessageAsync(null, false, MainBuilder.Build(), component: _componentBuilder.Build());
             _componentBuilder.AssociateWithMessage(msg);
             if (!tracks.Any())
                 return;
-            
+
             _componentBuilder.SetCallback(async (s, component, arg3) => {
                 if (component.User.Id != _requester.Id) {
                     var embed = CommandHandlerService.GetErrorEmbed(component.User, Loc, Loc.Get("Common.OnlyRequester", component.User.Mention)).Build();
@@ -111,7 +118,7 @@ namespace Bot.Commands.Chains {
                 }
                 switch (s) {
                     case var _ when int.TryParse(s, out var index):
-                        await ProcessAdd(new[] {tracks[index]}, msg);
+                        await ProcessAdd(new[] { tracks[index] }, msg);
                         break;
                     case "All":
                         await ProcessAdd(tracks.Take(10), msg);
@@ -123,10 +130,10 @@ namespace Bot.Commands.Chains {
             });
 
             _collectorGroup = new CollectorsGroup(
-                CollectorsUtils.CollectMessage(_requester, message => message.Channel.Id == _targetChannel.Id, async args => {
+                _collectorService.CollectMessage(_requester, message => message.Channel.Id == _targetChannel.Id, async args => {
                     if (!int.TryParse(args.Message.Content, out var result)) return;
                     if (result > tracks.Count || result <= 0) return;
-                    if (await ProcessAdd(new[] {tracks[result - 1]}, msg)) {
+                    if (await ProcessAdd(new[] { tracks[result - 1] }, msg)) {
                         await args.RemoveReason();
                     }
                 })
@@ -145,7 +152,7 @@ namespace Bot.Commands.Chains {
                 });
                 await msg.RemoveAllReactionsAsync();
             };
-            
+
             SetTimeout(TimeSpan.FromMinutes(1));
         }
 

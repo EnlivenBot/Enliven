@@ -26,11 +26,13 @@ namespace Bot.DiscordRelated.Commands {
         private MessageHistoryService _messageHistoryService;
         private ILifetimeScope _serviceProvider;
         private CommandCooldownHandler _commandCooldownHandler = new CommandCooldownHandler();
+        private CollectorService _collectorService;
 
         public CommandHandlerService(DiscordShardedClient client, CustomCommandService commandService, IGuildConfigProvider guildConfigProvider,
                                      IStatisticsPartProvider statisticsPartProvider, ILogger logger, MessageHistoryService messageHistoryService,
-                                     ILifetimeScope serviceProvider) {
+                                     ILifetimeScope serviceProvider, CollectorService collectorService) {
             _serviceProvider = serviceProvider;
+            _collectorService = collectorService;
             _messageHistoryService = messageHistoryService;
             _logger = logger;
             _statisticsPartProvider = statisticsPartProvider;
@@ -114,9 +116,9 @@ namespace Bot.DiscordRelated.Commands {
             _messageHistoryService.TryLogCreatedMessage(s, guildConfig, isCommand);
         }
 
-        private static async Task AddEmojiErrorHint(SocketUserMessage targetMessage, ILocalizationProvider loc, IEmote emote, IEntry description,
+        private async Task AddEmojiErrorHint(SocketUserMessage targetMessage, ILocalizationProvider loc, IEmote emote, IEntry description,
                                                     IEnumerable<EmbedFieldBuilder>? builders = null) {
-            var collector = CollectorsUtils.CollectReaction(targetMessage, reaction => reaction.UserId == targetMessage.Author.Id, async eventArgs => {
+            var collector = _collectorService.CollectReaction(targetMessage, reaction => reaction.UserId == targetMessage.Author.Id, async eventArgs => {
                 eventArgs.Controller.Dispose();
                 _ = eventArgs.RemoveReason();
                 _ = targetMessage.RemoveReactionAsync(CommonEmoji.Help, EnlivenBot.Client.CurrentUser);

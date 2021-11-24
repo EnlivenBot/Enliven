@@ -3,6 +3,7 @@ using System.Linq;
 using System.Reactive.Threading.Tasks;
 using System.Threading.Tasks;
 using Bot.DiscordRelated.MessageComponents;
+using Bot.Utilities.Collector;
 using Common;
 using Common.Localization.Entries;
 using Common.Localization.Providers;
@@ -13,22 +14,24 @@ using Discord;
 
 namespace Bot.DiscordRelated.Music {
     public class EmbedPlayerQueueDisplay : PlayerDisplayBase {
-        private ILocalizationProvider _loc;
-        private IMessageChannel _targetChannel;
+        private readonly ILocalizationProvider _loc;
+        private readonly IMessageChannel _targetChannel;
+        private readonly MessageComponentService _messageComponentService;
+        private readonly CollectorService _collectorService;
 
-        public EmbedPlayerQueueDisplay(IMessageChannel targetChannel, ILocalizationProvider loc, MessageComponentService messageComponentService) {
+        public EmbedPlayerQueueDisplay(IMessageChannel targetChannel, ILocalizationProvider loc, MessageComponentService messageComponentService, CollectorService collectorService) {
             _loc = loc;
             _messageComponentService = messageComponentService;
+            _collectorService = collectorService;
             _targetChannel = targetChannel;
         }
 
         private PaginatedMessage _paginatedMessage = null!;
         private Disposables? _subscribers;
-        private MessageComponentService _messageComponentService;
 
         public override async Task Initialize(FinalLavalinkPlayer finalLavalinkPlayer) {
-            var paginatedAppearanceOptions = new PaginatedAppearanceOptions {Timeout = TimeSpan.FromMinutes(1)};
-            _paginatedMessage = new PaginatedMessage(paginatedAppearanceOptions, _targetChannel, _loc, _messageComponentService) {
+            var paginatedAppearanceOptions = new PaginatedAppearanceOptions { Timeout = TimeSpan.FromMinutes(1) };
+            _paginatedMessage = new PaginatedMessage(paginatedAppearanceOptions, _targetChannel, _loc, _messageComponentService, _collectorService) {
                 Title = _loc.Get("MusicQueues.QueueTitle"), Color = Color.Gold
             };
             _paginatedMessage.Disposed.Subscribe(base2 => ExecuteShutdown(null, null));
@@ -62,7 +65,7 @@ namespace Bot.DiscordRelated.Music {
             _subscribers?.Dispose();
             _paginatedMessage.Dispose();
         }
-        
+
         public override Task LeaveNotification(IEntry? header, IEntry? body) {
             return Task.CompletedTask;
         }
