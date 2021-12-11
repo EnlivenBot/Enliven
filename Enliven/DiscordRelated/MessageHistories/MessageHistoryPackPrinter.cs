@@ -11,9 +11,11 @@ using Tyrrrz.Extensions;
 
 namespace Bot.DiscordRelated.MessageHistories {
     public class MessageHistoryPackPrinter {
+        private readonly EnlivenShardedClient _discordClient;
         private ConcurrentDictionary<ulong, PackDataInChannel> _datas = new ConcurrentDictionary<ulong, PackDataInChannel>();
-        public MessageHistoryPackPrinter(EnlivenShardedClient shardedClient) {
-            shardedClient.MessageReceived += OnMessageRecieved;
+        public MessageHistoryPackPrinter(EnlivenShardedClient discordClient) {
+            _discordClient = discordClient;
+            _discordClient.MessageReceived += OnMessageRecieved;
         }
 
         public IMessageSendData GeneratePack(ITextChannel deletedInChannel, ILocalizationProvider loc) {
@@ -21,7 +23,7 @@ namespace Bot.DiscordRelated.MessageHistories {
         }
 
         private PackDataInChannel GetPackDataForChannel(IMessageChannel channel, ILocalizationProvider loc) {
-            return _datas.GetOrAdd(channel.Id, arg => new PackDataInChannel(channel, loc));
+            return _datas.GetOrAdd(channel.Id, arg => new PackDataInChannel(channel, loc, _discordClient));
         }
         
         private Task OnMessageRecieved(SocketMessage arg) {
@@ -51,13 +53,13 @@ namespace Bot.DiscordRelated.MessageHistories {
         }
 
         private class PackDataInChannel {
-            public PackDataInChannel(IMessageChannel channel, ILocalizationProvider localizationProvider) {
+            public PackDataInChannel(IMessageChannel channel, ILocalizationProvider localizationProvider, EnlivenShardedClient enlivenShardedClient) {
                 _localizationProvider = localizationProvider;
                 _channel = channel;
                 _currentMessageTask = Task.Run(async () => {
                     var messages = await _channel.GetMessagesAsync(1).FlattenAsync();
                     if (messages.FirstOrDefault() is not IUserMessage firstMessage) return null;
-                    if (firstMessage.Author.Id != EnlivenBot.Client.CurrentUser.Id) return null;
+                    if (firstMessage.Author.Id != enlivenShardedClient.CurrentUser.Id) return null;
                     if (!firstMessage.Embeds.First().Title.Contains("Pack")) return null;
                     return firstMessage;
                 });

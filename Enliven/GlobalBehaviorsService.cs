@@ -7,9 +7,11 @@ using Discord.WebSocket;
 namespace Bot {
     public class GlobalBehaviorsService : IService {
         private IGuildConfigProvider _guildConfigProvider;
+        private readonly EnlivenShardedClient _discordClient;
 
-        public GlobalBehaviorsService(IGuildConfigProvider guildConfigProvider) {
+        public GlobalBehaviorsService(IGuildConfigProvider guildConfigProvider, EnlivenShardedClient discordClient) {
             _guildConfigProvider = guildConfigProvider;
+            _discordClient = discordClient;
         }
 
         private async Task ClientOnJoinedGuild(SocketGuild arg) {
@@ -21,19 +23,21 @@ namespace Bot {
             var guildConfig = _guildConfigProvider.Get(guild.Id);
             var loc = guildConfig.Loc;
 
-            var embedBuilder = new EmbedBuilder().WithColor(Color.Gold).WithFooter($"Powered by {EnlivenBot.Client.CurrentUser.Username}");
-            embedBuilder.WithAuthor(EnlivenBot.Client.CurrentUser.Username, EnlivenBot.Client.CurrentUser.GetAvatarUrl());
-            embedBuilder.WithDescription(loc.Get("Messages.WelcomeDescription").Format(guildConfig.Prefix, EnlivenBot.Client.CurrentUser.Mention));
-            embedBuilder.AddField(loc.Get("Messages.WelcomeMusicTitle"), loc.Get("Messages.WelcomeMusic").Format(guildConfig.Prefix));
-            embedBuilder.AddField(loc.Get("Messages.WelcomeLoggingTitle"), loc.Get("Messages.WelcomeLogging").Format(guildConfig.Prefix));
-            embedBuilder.AddField(loc.Get("Messages.WelcomeLocalizationTitle"), loc.Get("Messages.WelcomeLocalization").Format(guildConfig.Prefix));
-            embedBuilder.AddField(loc.Get("Messages.WelcomeInfoTitle"), loc.Get("Messages.WelcomeInfo").Format(guildConfig.Prefix));
-            embedBuilder.AddField(loc.Get("Messages.WelcomeGithubTitle"), loc.Get("Messages.WelcomeGithub"));
+            var embedBuilder = new EmbedBuilder()
+                .WithColor(Color.Gold)
+                .WithFooter($"Powered by {_discordClient.CurrentUser.Username}")
+                .WithAuthor(_discordClient.CurrentUser.Username, _discordClient.CurrentUser.GetAvatarUrl())
+                .WithDescription(loc.Get("Messages.WelcomeDescription").Format(guildConfig.Prefix, _discordClient.CurrentUser.Mention))
+                .AddField(loc.Get("Messages.WelcomeMusicTitle"), loc.Get("Messages.WelcomeMusic").Format(guildConfig.Prefix))
+                .AddField(loc.Get("Messages.WelcomeLoggingTitle"), loc.Get("Messages.WelcomeLogging").Format(guildConfig.Prefix))
+                .AddField(loc.Get("Messages.WelcomeLocalizationTitle"), loc.Get("Messages.WelcomeLocalization").Format(guildConfig.Prefix))
+                .AddField(loc.Get("Messages.WelcomeInfoTitle"), loc.Get("Messages.WelcomeInfo").Format(guildConfig.Prefix))
+                .AddField(loc.Get("Messages.WelcomeGithubTitle"), loc.Get("Messages.WelcomeGithub"));
             return await (channel ?? guild.DefaultChannel).SendMessageAsync(null, false, embedBuilder.Build());
         }
 
         public Task OnPostDiscordStartInitialize() {
-            EnlivenBot.Client.JoinedGuild += ClientOnJoinedGuild;
+            _discordClient.JoinedGuild += ClientOnJoinedGuild;
             return Task.CompletedTask;
         }
     }

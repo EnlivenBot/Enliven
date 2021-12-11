@@ -18,11 +18,13 @@ namespace Bot.DiscordRelated.Music {
         private readonly IMessageChannel _targetChannel;
         private readonly MessageComponentService _messageComponentService;
         private readonly CollectorService _collectorService;
+        private readonly IDiscordClient _discordClient;
 
-        public EmbedPlayerQueueDisplay(IMessageChannel targetChannel, ILocalizationProvider loc, MessageComponentService messageComponentService, CollectorService collectorService) {
+        public EmbedPlayerQueueDisplay(IMessageChannel targetChannel, ILocalizationProvider loc, MessageComponentService messageComponentService, CollectorService collectorService, IDiscordClient discordClient) {
             _loc = loc;
             _messageComponentService = messageComponentService;
             _collectorService = collectorService;
+            _discordClient = discordClient;
             _targetChannel = targetChannel;
         }
 
@@ -31,7 +33,7 @@ namespace Bot.DiscordRelated.Music {
 
         public override async Task Initialize(FinalLavalinkPlayer finalLavalinkPlayer) {
             var paginatedAppearanceOptions = new PaginatedAppearanceOptions { Timeout = TimeSpan.FromMinutes(1) };
-            _paginatedMessage = new PaginatedMessage(paginatedAppearanceOptions, _targetChannel, _loc, _messageComponentService, _collectorService) {
+            _paginatedMessage = new PaginatedMessage(paginatedAppearanceOptions, _targetChannel, _loc, _messageComponentService, _collectorService, _discordClient) {
                 Title = _loc.Get("MusicQueues.QueueTitle"), Color = Color.Gold
             };
             _paginatedMessage.Disposed.Subscribe(base2 => ExecuteShutdown(null, null));

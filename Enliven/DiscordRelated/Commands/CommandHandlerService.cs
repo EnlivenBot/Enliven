@@ -53,11 +53,8 @@ namespace Bot.DiscordRelated.Commands {
         }
 
         private async Task HandleCommand(SocketMessage s) {
-            if (!(s is SocketUserMessage msg)
-             || msg.Source != MessageSource.User
-             || !(s.Channel is SocketGuildChannel guildChannel)) {
-                return;
-            }
+            if (s is not SocketUserMessage { Source: MessageSource.User } msg) return;
+            if (s.Channel is not SocketGuildChannel guildChannel) return;
 
             var context = new CommandContext(_client, msg);
             var argPos = 0;
@@ -117,20 +114,22 @@ namespace Bot.DiscordRelated.Commands {
         }
 
         private async Task AddEmojiErrorHint(SocketUserMessage targetMessage, ILocalizationProvider loc, IEmote emote, IEntry description,
-                                                    IEnumerable<EmbedFieldBuilder>? builders = null) {
-            var collector = _collectorService.CollectReaction(targetMessage, reaction => reaction.UserId == targetMessage.Author.Id, async eventArgs => {
-                eventArgs.Controller.Dispose();
-                _ = eventArgs.RemoveReason();
-                _ = targetMessage.RemoveReactionAsync(CommonEmoji.Help, EnlivenBot.Client.CurrentUser);
+                                             IEnumerable<EmbedFieldBuilder>? builders = null) {
+            var collector = _collectorService.CollectReaction(targetMessage,
+                reaction => reaction.UserId == targetMessage.Author.Id,
+                async eventArgs => {
+                    eventArgs.Controller.Dispose();
+                    _ = eventArgs.RemoveReason();
+                    _ = targetMessage.RemoveReactionAsync(CommonEmoji.Help, _client.CurrentUser);
 
-                await SendErrorMessage(targetMessage, loc, description.Get(loc), builders);
-            });
+                    await SendErrorMessage(targetMessage, loc, description.Get(loc), builders);
+                });
             try {
                 var addReactionAsync = targetMessage.AddReactionAsync(emote);
                 _ = addReactionAsync.ContinueWith(async _ => {
                     await Task.Delay(TimeSpan.FromSeconds(20));
                     try {
-                        await targetMessage.RemoveReactionAsync(CommonEmoji.Help, EnlivenBot.Client.CurrentUser);
+                        await targetMessage.RemoveReactionAsync(CommonEmoji.Help, _client.CurrentUser);
                     }
                     finally {
                         collector.Dispose();
@@ -176,7 +175,7 @@ namespace Bot.DiscordRelated.Commands {
                 await SendErrorMessage(message, localizationProvider, new EntryLocalized("CommandHandler.CommandOnCooldown").Get(localizationProvider));
                 return ExecuteResult.FromSuccess();
             }
-            
+
             #pragma warning disable 618
             IResult result = await pair.Key.ExecuteAsync(context, pair.Value, new ServiceProviderAdapter(_serviceProvider));
 
@@ -220,9 +219,9 @@ namespace Bot.DiscordRelated.Commands {
         public static EmbedBuilder GetErrorEmbed(IUser user, ILocalizationProvider loc, string description) {
             var builder = new EmbedBuilder();
             builder.WithFooter(loc.Get("Commands.RequestedBy").Format(user.Username), user.GetAvatarUrl())
-                   .WithColor(Color.Orange);
+                .WithColor(Color.Orange);
             builder.WithTitle(loc.Get("CommandHandler.FailedTitle"))
-                   .WithDescription(description);
+                .WithDescription(description);
             return builder;
         }
 
@@ -232,7 +231,7 @@ namespace Bot.DiscordRelated.Commands {
                 return false;
             var num = content.IndexOf('>');
             if (num == -1 || !MentionUtils.TryParseUser(content.Substring(0, num + 1), out var userId) ||
-                (long) userId != (long) user.Id)
+                (long)userId != (long)user.Id)
                 return false;
             argPos = num + 2;
             return true;

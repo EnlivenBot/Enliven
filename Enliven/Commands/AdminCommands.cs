@@ -24,6 +24,7 @@ namespace Bot.Commands {
         public CommandHandlerService CommandHandlerService { get; set; } = null!;
         public MessageComponentService MessageComponentService { get; set; } = null!;
         public CollectorService CollectorService { get; set; } = null!;
+        public EnlivenShardedClient EnlivenShardedClient { get; set; } = null!;
 
         [Hidden]
         [Command("printwelcome")]
@@ -57,7 +58,7 @@ namespace Bot.Commands {
             var message = await ReplyAsync(embed: embedBuilder.Build(), component: componentBuilder.Build());
             componentBuilder.AssociateWithMessage(message);
             componentBuilder.SetCallback(async (s, component, arg3) => {
-                var t = await CommandHandlerService.ExecuteCommand($"language {s}", new ComponentCommandContext(EnlivenBot.Client, component),
+                var t = await CommandHandlerService.ExecuteCommand($"language {s}", new ComponentCommandContext(Context.Client, component),
                     component.User.Id.ToString());
                 if (t.IsSuccess) message.SafeDelete();
             });
@@ -109,9 +110,9 @@ namespace Bot.Commands {
         [Command("logging")]
         [Summary("logging0s")]
         public async Task LoggingControlPanel() {
-            var botPermissions = (await Context.Guild.GetUserAsync(EnlivenBot.Client.CurrentUser.Id)).GetPermissions((IGuildChannel) Context.Channel);
+            var botPermissions = (await Context.Guild.GetUserAsync(Context.Client.CurrentUser.Id)).GetPermissions((IGuildChannel) Context.Channel);
             if (botPermissions.SendMessages) {
-                await new LoggingChain((ITextChannel) Context.Channel, Context.User, GuildConfig, CollectorService).Start();
+                await new LoggingChain((ITextChannel) Context.Channel, Context.User, GuildConfig, CollectorService, EnlivenShardedClient).Start();
             }
             else {
                 await (await Context.User.CreateDMChannelAsync()).SendMessageAsync(Loc.Get("ChainsCommon.CantSend").Format($"<#{Context.Channel.Id}>"));

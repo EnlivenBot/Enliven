@@ -13,27 +13,25 @@ using Tyrrrz.Extensions;
 
 namespace Bot.DiscordRelated.Commands {
     public class StatisticsService : IStatisticsService {
-        private Temporary<int> _textChannelsCount =
-            new Temporary<int>(() => EnlivenBot.Client.Guilds.Sum(guild => guild.TextChannels.Count), Constants.LongTimeSpan);
+        private readonly Temporary<int> _textChannelsCount;
+        private readonly Temporary<int> _voiceChannelsCount;
+        private readonly Temporary<int> _usersCount;
+        private readonly Temporary<int> _commandUsagesCount;
+        private readonly Temporary<int> _commandUsersCount;
 
-        private Temporary<int> _voiceChannelsCount =
-            new Temporary<int>(() => EnlivenBot.Client.Guilds.Sum(guild => guild.VoiceChannels.Count), Constants.LongTimeSpan);
+        private readonly ILogger _logger;
+        private readonly IStatisticsPartProvider _statisticPartProvider;
+        private readonly CommandHandlerService _commandHandlerService;
+        private readonly EnlivenShardedClient _enlivenShardedClient;
 
-        private Temporary<int> _usersCount =
-            new Temporary<int>(() => EnlivenBot.Client.Guilds.Sum(guild => guild.MemberCount), Constants.LongTimeSpan);
-
-        private Temporary<int> _commandUsagesCount;
-
-        private Temporary<int> _commandUsersCount;
-
-        private ILogger logger;
-        private IStatisticsPartProvider _statisticPartProvider;
-        private CommandHandlerService _commandHandlerService;
-
-        public StatisticsService(ILogger logger, IStatisticsPartProvider statisticPartProvider, CommandHandlerService commandHandlerService) {
+        public StatisticsService(ILogger logger, IStatisticsPartProvider statisticPartProvider, CommandHandlerService commandHandlerService, EnlivenShardedClient enlivenShardedClient) {
             _commandHandlerService = commandHandlerService;
             _statisticPartProvider = statisticPartProvider;
-            this.logger = logger;
+            _enlivenShardedClient = enlivenShardedClient;
+            _logger = logger;
+            _usersCount = new Temporary<int>(() => enlivenShardedClient.Guilds.Sum(guild => guild.MemberCount), Constants.LongTimeSpan);
+            _voiceChannelsCount = new Temporary<int>(() => enlivenShardedClient.Guilds.Sum(guild => guild.VoiceChannels.Count), Constants.LongTimeSpan);
+            _textChannelsCount = new Temporary<int>(() => enlivenShardedClient.Guilds.Sum(guild => guild.TextChannels.Count), Constants.LongTimeSpan);
             _commandUsersCount = new Temporary<int>(() => _statisticPartProvider.Count(), Constants.LongTimeSpan);
             _commandUsagesCount = new Temporary<int>(() => _statisticPartProvider.Get("Global").UsagesList.Sum(pair => pair.Value), Constants.LongTimeSpan);
         }
@@ -63,7 +61,7 @@ namespace Bot.DiscordRelated.Commands {
                 }
                 catch (InvalidOperationException e) {
                     if (valueTuples != null) {
-                        logger.Error(e, "Exception while printing stats");
+                        _logger.Error(e, "Exception while printing stats");
                         throw;
                     }
 
@@ -100,7 +98,7 @@ namespace Bot.DiscordRelated.Commands {
             embedBuilder.Fields.Insert(0, new EmbedFieldBuilder {
                 Name = loc.Get("Statistics.ByGlobal"),
                 Value = loc.Get("Statistics.ByGlobalFormatted0")
-                           .Format(EnlivenBot.Client.Guilds.Count, _textChannelsCount.Value, _voiceChannelsCount.Value, _usersCount.Value) +
+                           .Format(_enlivenShardedClient.Guilds.Count, _textChannelsCount.Value, _voiceChannelsCount.Value, _usersCount.Value) +
                         loc.Get("Statistics.ByGlobalFormatted1").Format(_commandUsagesCount.Value, _commandUsersCount.Value)
             });
             return embedBuilder;

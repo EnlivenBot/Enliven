@@ -23,31 +23,32 @@ namespace Bot.DiscordRelated.Commands {
             _typeReaders = typeReaders;
         }
 
-        public async Task OnPostDiscordStartInitialize() {
+        public async Task OnPreDiscordStartInitialize() { 
             await AddModulesAsync(Assembly.GetEntryAssembly(), new ServiceProviderAdapter(_serviceContainer));
             foreach (var customTypeReader in _typeReaders) {
                 AddTypeReader(customTypeReader.GetTargetType(), customTypeReader);
             }
 
-            var items = new List<(string, CommandInfo)>();
-            foreach (var command in Commands) {
-                items.AddRange(command.Aliases.Select(commandAlias => (commandAlias, command)));
-            }
-
-            
-            Aliases = items.ToLookup(tuple => tuple.Item1, tuple => tuple.Item2);
+            Aliases = Commands
+                .SelectMany(info => info.Aliases.Select(s => (s, info)))
+                .ToLookup(tuple => tuple.s, tuple => tuple.info);
             
             CommandsGroups = new Lazy<Dictionary<string, CommandGroup>>(() => {
-                return Commands.Where(info => !info.IsHiddenCommand())
-                               .GroupBy(info => info.GetGroup()?.GroupName ?? "")
-                               .Where(grouping => !string.IsNullOrWhiteSpace(grouping.Key)).Select(infos =>
-                                    new CommandGroup {
-                                        Commands = infos.ToList(), GroupId = infos.Key,
-                                        GroupNameTemplate = $"{{0}} ({{1}}help {infos.Key}):",
-                                        GroupTextTemplate = string.Join(' ', infos.Select(info => info.Name)
-                                                                                  .GroupBy(s => s).Select(grouping => grouping.First())
-                                                                                  .Select(s => $"`{{0}}{s}`"))
-                                    }).ToDictionary(group => @group.GroupId);
+                return Commands
+                    .Where(info => !info.IsHiddenCommand())
+                    .GroupBy(info => info.GetGroup()?.GroupName ?? "")
+                    .Where(grouping => !grouping.Key.IsBlank())
+                    .Select(infos =>
+                        new CommandGroup {
+                            Commands = infos.ToList(), 
+                            GroupId = infos.Key,
+                            GroupNameTemplate = $"{{0}} ({{1}}help {infos.Key}):",
+                            GroupTextTemplate = string.Join(' ', infos
+                                .Select(info => info.Name)
+                                .GroupBy(s => s).Select(grouping => grouping.First())
+                                .Select(s => $"`{{0}}{s}`")
+                            )
+                        }).ToDictionary(group => @group.GroupId);
             });
         }
 

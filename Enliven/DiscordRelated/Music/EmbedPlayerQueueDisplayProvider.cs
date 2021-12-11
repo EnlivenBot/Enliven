@@ -17,11 +17,13 @@ namespace Bot.DiscordRelated.Music {
         private readonly ConcurrentDictionary<IMessageChannel, EmbedPlayerQueueDisplay> _cache = new();
         private readonly IGuildConfigProvider _guildConfigProvider;
         private readonly CollectorService _collectorService;
+        private readonly IDiscordClient _discordClient;
         private readonly MessageComponentService _messageComponentService;
 
-        public EmbedPlayerQueueDisplayProvider(IGuildConfigProvider guildConfigProvider, MessageComponentService messageComponentService, CollectorService collectorService) {
+        public EmbedPlayerQueueDisplayProvider(IGuildConfigProvider guildConfigProvider, MessageComponentService messageComponentService, CollectorService collectorService, IDiscordClient discordClient) {
             _messageComponentService = messageComponentService;
             _collectorService = collectorService;
+            _discordClient = discordClient;
             _guildConfigProvider = guildConfigProvider;
         }
 
@@ -43,7 +45,7 @@ namespace Bot.DiscordRelated.Music {
                 else {
                     loc = LangLocalizationProvider.EnglishLocalizationProvider;
                 }
-                var embedPlayerQueueDisplay = new EmbedPlayerQueueDisplay(channel, loc, _messageComponentService, _collectorService);
+                var embedPlayerQueueDisplay = new EmbedPlayerQueueDisplay(channel, loc, _messageComponentService, _collectorService, _discordClient);
                 _ = embedPlayerQueueDisplay.Initialize(finalLavalinkPlayer);
                 return embedPlayerQueueDisplay;
             });

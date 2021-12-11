@@ -39,6 +39,7 @@ namespace Bot.DiscordRelated.Music {
         private IPrefixProvider _prefixProvider;
 
         private IMessageChannel _targetChannel;
+        private readonly IDiscordClient _discordClient;
         private IGuild? _targetGuild;
         private SingleTask _updateControlMessageTask;
         private SingleTask _controlMessageSendTask;
@@ -63,6 +64,7 @@ namespace Bot.DiscordRelated.Music {
             _commandHandlerService = commandHandlerService;
             _prefixProvider = prefixProvider;
             _targetChannel = targetChannel;
+            _discordClient = discordClient;
             _updateControlMessageTask = new SingleTask(async () => {
                 if (_controlMessage != null) {
                     try {
@@ -219,7 +221,7 @@ namespace Bot.DiscordRelated.Music {
                 };
 
                 if (!string.IsNullOrEmpty(command)) {
-                    await _commandHandlerService.ExecuteCommand(command, new ComponentCommandContext(EnlivenBot.Client, component),
+                    await _commandHandlerService.ExecuteCommand(command, new ComponentCommandContext(_discordClient, component),
                         component.User.Id.ToString());
                 }
             });
@@ -254,7 +256,7 @@ namespace Bot.DiscordRelated.Music {
 
         private async Task CheckRestrictions() {
             if (_targetGuild != null) {
-                var guildUser = await _targetGuild.GetUserAsync(EnlivenBot.Client.CurrentUser.Id);
+                var guildUser = await _targetGuild.GetUserAsync(_discordClient.CurrentUser.Id);
                 var channelPerms = guildUser.GetPermissions((IGuildChannel) _targetChannel);
                 _isExternalEmojiAllowed = channelPerms.UseExternalEmojis;
                 var text = "";
@@ -404,7 +406,7 @@ namespace Bot.DiscordRelated.Music {
         }
 
         private Task UpdateNode() {
-            EmbedBuilder.WithFooter($"Powered by {EnlivenBot.Client.CurrentUser.Username} | {(Player.LavalinkSocket as EnlivenLavalinkClusterNode)?.Label}");
+            EmbedBuilder.WithFooter($"Powered by {_discordClient.CurrentUser.Username} | {(Player.LavalinkSocket as EnlivenLavalinkClusterNode)?.Label}");
             return Task.CompletedTask;
         }
 

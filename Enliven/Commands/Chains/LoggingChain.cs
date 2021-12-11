@@ -21,9 +21,11 @@ namespace Bot.Commands.Chains {
         private readonly ITextChannel _channel;
         private IUserMessage? _message;
         private CollectorsGroup? _collectorsGroup;
+        private EnlivenShardedClient _discordClient;
 
-        public LoggingChain(ITextChannel channel, IUser user, GuildConfig guildConfig, CollectorService collectorService)
+        public LoggingChain(ITextChannel channel, IUser user, GuildConfig guildConfig, CollectorService collectorService, EnlivenShardedClient enlivenShardedClient)
             : base($"{nameof(LoggingChain)}_{guildConfig.GuildId}", guildConfig.Loc) {
+            _discordClient = enlivenShardedClient;
             _channel = channel;
             _user = user;
             _guildConfig = guildConfig;
@@ -42,7 +44,7 @@ namespace Bot.Commands.Chains {
                     var match = ChannelRegex.Match(args.Message.Content.Trim());
                     if (!match.Success) return;
                     SetTimeout(Constants.StandardTimeSpan);
-                    var targetChannel = EnlivenBot.Client.GetChannel(Convert.ToUInt64(match.Groups[1].Value));
+                    var targetChannel = await _discordClient.GetChannelAsync(Convert.ToUInt64(match.Groups[1].Value));
                     if (targetChannel is not ITextChannel targetTextChannel || targetTextChannel.Guild.Id != _guildConfig.GuildId) return;
                     _guildConfig.ToggleChannelLogging(targetChannel.Id);
                     _guildConfig.Save();

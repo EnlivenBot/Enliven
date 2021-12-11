@@ -56,7 +56,7 @@ namespace Bot {
             builder.RegisterModule<NLogModule>();
             builder.RegisterType<EnlivenBot>().SingleInstance();
             builder.Register(context => new EnlivenShardedClient(new DiscordSocketConfig {MessageCacheSize = 100}))
-                .AsSelf().As<DiscordShardedClient>().SingleInstance();
+                .AsSelf().AsImplementedInterfaces().As<DiscordShardedClient>().SingleInstance();
 
             builder.Register(context => context.Resolve<EnlivenConfig>().LavalinkNodes);
 

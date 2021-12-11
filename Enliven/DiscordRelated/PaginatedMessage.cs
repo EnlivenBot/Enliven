@@ -31,17 +31,19 @@ namespace Bot.DiscordRelated {
         private EnlivenComponentBuilder _enlivenComponentBuilder = null!;
         private MessageComponentService _messageComponentService;
         private CollectorService _collectorService;
+        private IDiscordClient _discordClient;
 
-        public PaginatedMessage(PaginatedAppearanceOptions options, IUserMessage message, ILocalizationProvider loc, MessageComponentService messageComponentService, CollectorService collectorService, MessagePage? errorPage = null)
-            : this(options, message.Channel, loc, messageComponentService, collectorService, errorPage) {
+        public PaginatedMessage(PaginatedAppearanceOptions options, IUserMessage message, ILocalizationProvider loc, MessageComponentService messageComponentService, CollectorService collectorService, IDiscordClient discordClient, MessagePage? errorPage = null)
+            : this(options, message.Channel, loc, messageComponentService, collectorService, discordClient, errorPage) {
             Channel = message.Channel;
             Message = message;
-            if (Message.Author.Id != EnlivenBot.Client.CurrentUser.Id) throw new ArgumentException($"{nameof(message)} must be from the current user");
+            if (Message.Author.Id != _discordClient.CurrentUser.Id) throw new ArgumentException($"{nameof(message)} must be from the current user");
         }
 
-        public PaginatedMessage(PaginatedAppearanceOptions options, IMessageChannel channel, ILocalizationProvider loc, MessageComponentService messageComponentService, CollectorService collectorService, MessagePage? errorPage = null) {
+        public PaginatedMessage(PaginatedAppearanceOptions options, IMessageChannel channel, ILocalizationProvider loc, MessageComponentService messageComponentService, CollectorService collectorService, IDiscordClient discordClient, MessagePage? errorPage = null) {
             _messageComponentService = messageComponentService;
             _collectorService = collectorService;
+            _discordClient = discordClient;
             Loc = loc;
             Channel = channel;
             Options = options;
@@ -73,7 +75,7 @@ namespace Bot.DiscordRelated {
             _jumpEnabled = Options.JumpDisplayOptions == JumpDisplayOptions.Always ||
                            Options.JumpDisplayOptions == JumpDisplayOptions.WithManageMessages &&
                            Channel is IGuildChannel guildChannel &&
-                           (await guildChannel.GetUserAsync(EnlivenBot.Client.CurrentUser.Id)).GetPermissions(guildChannel).ManageMessages;
+                           (await guildChannel.GetUserAsync(_discordClient.CurrentUser.Id)).GetPermissions(guildChannel).ManageMessages;
             if (_jumpEnabled) _enlivenComponentBuilder.WithButton(builder.Clone().WithEmote(Options.Jump).WithCustomId("Jump").WithPriority(0));
         }
 

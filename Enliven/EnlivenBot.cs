@@ -11,7 +11,7 @@ using NLog;
 
 namespace Bot {
     public class EnlivenBot : IService {
-        public static EnlivenShardedClient Client = null!;
+        public EnlivenShardedClient Client;
 
         // ReSharper disable once InconsistentNaming
         private readonly ILogger logger;

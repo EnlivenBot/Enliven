@@ -27,33 +27,30 @@ namespace Bot.Commands.Chains {
         private readonly IUser _requester;
         private readonly IMusicController _musicController;
         private readonly IUserDataProvider _userDataProvider;
-        private readonly ISpotifyAssociationProvider _spotifyAssociationProvider;
         private readonly ISpotifyAssociationCreator _spotifyAssociationCreator;
-        private readonly SpotifyMusicResolver _resolver;
         private readonly SpotifyClientResolver _spotifyClientResolver;
         private readonly MessageComponentService _messageComponentService;
         private readonly CollectorService _collectorService;
+        private readonly IDiscordClient _discordClient;
         private CollectorsGroup? _collectorController;
         private PaginatedMessage? _paginatedMessage;
         private IUserMessage? _controlMessage;
 
         public FixSpotifyChain(IUser requester, IMessageChannel channel, ILocalizationProvider loc, string request,
-                               IMusicController musicController, IUserDataProvider userDataProvider,
-                               ISpotifyAssociationProvider spotifyAssociationProvider, ISpotifyAssociationCreator spotifyAssociationCreator,
-                               SpotifyMusicResolver resolver, SpotifyClientResolver spotifyClientResolver,
-                               MessageComponentService service, CollectorService collectorService)
+                               IMusicController musicController, IUserDataProvider userDataProvider, 
+                               ISpotifyAssociationCreator spotifyAssociationCreator, SpotifyClientResolver spotifyClientResolver,
+                               MessageComponentService service, CollectorService collectorService, IDiscordClient discordClient)
             : base($"{nameof(FixSpotifyChain)}_{requester.Id}", loc) {
             _request = new SpotifyUrl(request);
             _requester = requester;
             _channel = channel;
             _musicController = musicController;
             _userDataProvider = userDataProvider;
-            _spotifyAssociationProvider = spotifyAssociationProvider;
             _spotifyAssociationCreator = spotifyAssociationCreator;
-            _resolver = resolver;
             _spotifyClientResolver = spotifyClientResolver;
             _messageComponentService = service;
             _collectorService = collectorService;
+            _discordClient = discordClient;
         }
 
         public async Task Start() {
@@ -108,7 +105,7 @@ namespace Bot.Commands.Chains {
                     stringBuilder.AppendLine($"{index + 1}. [{fullTrack.Name}]({fullTrack.Uri}) *by {fullTrack.Artists.First().Name}*");
                 }
 
-                _paginatedMessage = new PaginatedMessage(PaginatedAppearanceOptions.Default, _controlMessage!, Loc, _messageComponentService, _collectorService);
+                _paginatedMessage = new PaginatedMessage(PaginatedAppearanceOptions.Default, _controlMessage!, Loc, _messageComponentService, _collectorService, _discordClient);
                 _paginatedMessage.SetPages(stringBuilder.ToString(), "{0}", Int32.MaxValue,
                     new List<EmbedFieldBuilder> {
                         new EmbedFieldBuilder { Name = Loc.Get("Chains.FixSpotifyPlaylistChooseName"), Value = Loc.Get("Chains.FixSpotifyPlaylistChooseValue") }
@@ -219,10 +216,10 @@ namespace Bot.Commands.Chains {
                                 (data.DownvotedUsers.Contains(_requester.Id) ? $"**{data.DownvotedUsers.Count} 👎**" : $"{data.DownvotedUsers.Count} 👎")
                     }).ToList();
 
-                _paginatedMessage ??= new PaginatedMessage(PaginatedAppearanceOptions.Default, _controlMessage!, Loc, _messageComponentService, _collectorService);
-                _paginatedMessage.SetPages(Loc.Get("Chains.FixSpotifyAssociationChoose", $"***{fullTrack.Name}*** - **{fullTrack.Artists.First().Name}**"),
+                _paginatedMessage ??= new PaginatedMessage(PaginatedAppearanceOptions.Default, _controlMessage!, Loc, _messageComponentService, _collectorService, _discordClient);
+                _paginatedMessage!.SetPages(Loc.Get("Chains.FixSpotifyAssociationChoose", $"***{fullTrack.Name}*** - **{fullTrack.Artists.First().Name}**"),
                     fields, Int32.MaxValue);
-                _paginatedMessage.Disposed.Subscribe(base1 => End());
+                _paginatedMessage!.Disposed.Subscribe(base1 => End());
             }
         }
 

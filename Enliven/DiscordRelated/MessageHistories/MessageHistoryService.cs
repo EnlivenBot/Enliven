@@ -130,7 +130,7 @@ namespace Bot.DiscordRelated.MessageHistories {
                     var guild = _guildConfigProvider.Get(arg.Id);
                     if (!guild.GetChannel(ChannelFunction.Log, out var logChannelId)) return;
                     var loc = new GuildLocalizationProvider(guild);
-                    var logChannel = EnlivenBot.Client.GetChannel(logChannelId);
+                    var logChannel = _enliven.GetChannel(logChannelId);
                     ((SocketTextChannel)logChannel)!.SendMessageAsync(loc.Get("MessageHistory.GuildLogCleared").Format(
                         arg.Name, arg.Id, deletesCount));
                 }
