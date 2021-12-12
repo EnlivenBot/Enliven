@@ -21,13 +21,13 @@ namespace Bot.DiscordRelated.Commands {
 
         private readonly ILogger _logger;
         private readonly IStatisticsPartProvider _statisticPartProvider;
-        private readonly CommandHandlerService _commandHandlerService;
+        private readonly CustomCommandService _customCommandService;
         private readonly EnlivenShardedClient _enlivenShardedClient;
 
-        public StatisticsService(ILogger logger, IStatisticsPartProvider statisticPartProvider, CommandHandlerService commandHandlerService, EnlivenShardedClient enlivenShardedClient) {
-            _commandHandlerService = commandHandlerService;
+        public StatisticsService(ILogger logger, IStatisticsPartProvider statisticPartProvider, EnlivenShardedClient enlivenShardedClient, CustomCommandService customCommandService) {
             _statisticPartProvider = statisticPartProvider;
             _enlivenShardedClient = enlivenShardedClient;
+            _customCommandService = customCommandService;
             _logger = logger;
             _usersCount = new Temporary<int>(() => enlivenShardedClient.Guilds.Sum(guild => guild.MemberCount), Constants.LongTimeSpan);
             _voiceChannelsCount = new Temporary<int>(() => enlivenShardedClient.Guilds.Sum(guild => guild.VoiceChannels.Count), Constants.LongTimeSpan);
@@ -39,24 +39,21 @@ namespace Bot.DiscordRelated.Commands {
         [SuppressMessage("ReSharper", "ConditionIsAlwaysTrueOrFalse")]
         public EmbedBuilder BuildStats(IUser? user, ILocalizationProvider loc) {
             var stats = _statisticPartProvider.Get(user?.Id.ToString() ?? "Global");
-            var embedBuilder = new EmbedBuilder().WithColor(Color.Gold)
-                                                 .WithTitle(loc.Get("Statistics.Title"))
-                                                 .WithDescription(user == null
-                                                      ? loc.Get("Statistics.GlobalStats")
-                                                      : loc.Get("Statistics.UserStats").Format(user.Username));
-            if (stats == null) {
-                embedBuilder.WithColor(Color.Red)
-                            .WithDescription(user == null ? loc.Get("Statistics.NoGlobalStats") : loc.Get("Statistics.NoUserStats").Format(user.Username));
-                return embedBuilder;
-            }
+            var embedBuilder = new EmbedBuilder()
+                .WithColor(Color.Gold)
+                .WithTitle(loc.Get("Statistics.Title"))
+                .WithDescription(user == null
+                    ? loc.Get("Statistics.GlobalStats")
+                    : loc.Get("Statistics.UserStats").Format(user.Username));
 
             List<(CommandInfo Key, double)>? valueTuples = null;
             while (true) {
                 try {
-                    valueTuples = stats.UsagesList.GroupBy(pair => _commandHandlerService.CommandService.Aliases[pair.Key].First())
-                                       .Where(pairs => !pairs.Key.IsHiddenCommand())
-                                       .Select(pairs => (pairs.Key, pairs.Sum(pair => (double) pair.Value)))
-                                       .OrderBy(tuple => tuple.Item1.GetGroup()?.GroupName).ToList();
+                    valueTuples = stats.UsagesList
+                        .GroupBy(pair => _customCommandService.Aliases[pair.Key].First())
+                        .Where(pairs => !pairs.Key.IsHiddenCommand())
+                        .Select(pairs => (pairs.Key, pairs.Sum(pair => (double)pair.Value)))
+                        .OrderBy(tuple => tuple.Item1.GetGroup()?.GroupName).ToList();
                     break;
                 }
                 catch (InvalidOperationException e) {
@@ -66,8 +63,9 @@ namespace Bot.DiscordRelated.Commands {
                     }
 
                     // This exception appears that an element has appeared in ours that is not in the commands
-                    stats.UsagesList = stats.UsagesList.Where(pair => _commandHandlerService.CommandService.Aliases.Contains(pair.Key))
-                                            .ToDictionary(pair => pair.Key, pair => pair.Value);
+                    stats.UsagesList = stats.UsagesList
+                        .Where(pair => _customCommandService.Aliases.Contains(pair.Key))
+                        .ToDictionary(pair => pair.Key, pair => pair.Value);
                     stats.Save();
                     // Assigning non null value to avoid endless cycle
                     valueTuples = new List<(CommandInfo, double)>();
@@ -90,16 +88,15 @@ namespace Bot.DiscordRelated.Commands {
             if (!musicStatistics.UsagesList.TryGetValue("PlaybackTime", out var userUsageCount)) {
                 userUsageCount = 0;
             }
-            var musicTime =  TimeSpan.FromSeconds(userUsageCount);
-            
-            embedBuilder.AddField(loc.Get("Statistics.ByMusic"),
-                loc.Get("Statistics.ByMusicFormatted").Format((int) musicTime.TotalDays, musicTime.Hours, musicTime.Minutes));
+
+            var musicTime = TimeSpan.FromSeconds(userUsageCount);
+            var byMusicValue = loc.Get("Statistics.ByMusicFormatted", (int)musicTime.TotalDays, musicTime.Hours, musicTime.Minutes);
+            embedBuilder.AddField(loc.Get("Statistics.ByMusic"), byMusicValue);
 
             embedBuilder.Fields.Insert(0, new EmbedFieldBuilder {
                 Name = loc.Get("Statistics.ByGlobal"),
-                Value = loc.Get("Statistics.ByGlobalFormatted0")
-                           .Format(_enlivenShardedClient.Guilds.Count, _textChannelsCount.Value, _voiceChannelsCount.Value, _usersCount.Value) +
-                        loc.Get("Statistics.ByGlobalFormatted1").Format(_commandUsagesCount.Value, _commandUsersCount.Value)
+                Value = loc.Get("Statistics.ByGlobalFormatted0", _enlivenShardedClient.Guilds.Count, _textChannelsCount.Value, _voiceChannelsCount.Value, _usersCount.Value)
+                      + loc.Get("Statistics.ByGlobalFormatted1", _commandUsagesCount.Value, _commandUsersCount.Value)
             });
             return embedBuilder;
         }
