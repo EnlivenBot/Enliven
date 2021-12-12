@@ -101,7 +101,7 @@ namespace Bot.Utilities.Collector {
 
         public CollectorsGroup CollectReactions<T>(Predicate<SocketReaction> predicate, Action<EmoteMultiCollectorEventArgs, T> action,
                                                    params (IEmote, Func<T>)[] selectors) {
-            var logger = _logger.WithProperty("Collector registered\n", new StackTrace());
+            var logger = _logger.WithProperty("collectorRegistrationStacktrace", $"\nCollector registration\n{new StackTrace(true)}");
             var collectorsGroup = new CollectorsGroup();
             foreach (var selector in selectors.ToList()) {
                 var collectorController = new CollectorController();
