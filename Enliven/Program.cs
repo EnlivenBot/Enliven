@@ -52,7 +52,6 @@ namespace Bot {
             builder.AddEnlivenConfig();
             builder.RegisterType<MusicResolverService>().AsSelf().SingleInstance();
             builder.RegisterType<MusicController>().As<IMusicController>().SingleInstance();
-            builder.RegisterType<ReliabilityService>().AsSelf();
             builder.RegisterModule<NLogModule>();
             builder.RegisterType<EnlivenBot>().SingleInstance();
             builder.Register(context => new EnlivenShardedClient(new DiscordSocketConfig {MessageCacheSize = 100}))
