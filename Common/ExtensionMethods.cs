@@ -231,5 +231,14 @@ namespace Common {
                 .Concat()
                 .Subscribe();
         }
+
+        public static async Task WhenEnd(this Task tsk) {
+            try {
+                await tsk;
+            }
+            catch (Exception) {
+                // ignored
+            }
+        }
     }
 }

@@ -6,26 +6,25 @@ using Bot.Patches;
 using Common;
 using Common.Config;
 using Common.Localization;
+using Common.Utils;
 using Discord;
 using NLog;
 
 namespace Bot {
-    public class EnlivenBot : IService {
+    public class EnlivenBot : IService, IAsyncDisposable, IDisposable {
         public EnlivenShardedClient Client;
 
         // ReSharper disable once InconsistentNaming
         private readonly ILogger logger;
         private IEnumerable<IService> _services;
-        private IEnumerable<IPatch> _patches;
         private EnlivenConfig _config;
         private bool _isDiscordStarted;
 
-        public EnlivenBot(ILogger logger, IEnumerable<IService> services, IEnumerable<IPatch> patches,
+        public EnlivenBot(ILogger logger, IEnumerable<IService> services,
                           EnlivenShardedClient discordShardedClient, EnlivenConfig config) {
             _config = config;
             config.Load();
 
-            _patches = patches;
             _services = services;
             this.logger = logger;
             Client = discordShardedClient;
@@ -34,10 +33,6 @@ namespace Bot {
         internal async Task StartAsync() {
             logger.Info("Start Initialising");
 
-            AppDomain.CurrentDomain.ProcessExit += (sender, eventArgs) =>
-                Task.WaitAll(_services.Select(service => service.OnShutdown(_isDiscordStarted)).ToArray());
-
-            await Task.WhenAll(_patches.Select(patch => patch.Apply()).ToArray());
             await Task.WhenAll(_services.Select(service => service.OnPreDiscordLoginInitialize()).ToArray());
 
             Client.Log += OnClientLog;
@@ -93,6 +88,18 @@ namespace Bot {
 
             logger.Log(message.Severity, message.Exception, "{message} from {source}", message.Message!, message.Source);
             return Task.CompletedTask;
+        }
+
+        private bool _isDisposed;
+        public async ValueTask DisposeAsync() {
+            if (_isDisposed) return;
+            await Task.WhenAll(_services.Select(service => service.OnShutdown(_isDiscordStarted)).ToArray()).WhenEnd();
+            Client.Dispose();
+            _isDisposed = true;
+        }
+
+        public void Dispose() {
+            DisposeAsync().AsTask().Wait();
         }
     }
 }

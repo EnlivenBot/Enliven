@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Autofac;
 using Common;
 using Discord;
 using Discord.WebSocket;
@@ -103,6 +104,20 @@ namespace Bot.DiscordRelated {
 
         public Task OnPostDiscordStartInitialize() {
             return Task.CompletedTask;
+        }
+    }
+
+    public class ScopedReliabilityService : ReliabilityService {
+        private readonly ILifetimeScope _lifetimeScope;
+        public ScopedReliabilityService(DiscordSocketClient mainDiscord, ILogger logger, ILifetimeScope lifetimeScope) : base(mainDiscord, logger) {
+            _lifetimeScope = lifetimeScope;
+        }
+        public ScopedReliabilityService(DiscordShardedClient mainDiscord, ILogger logger, ILifetimeScope lifetimeScope) : base(mainDiscord, logger) {
+            _lifetimeScope = lifetimeScope;
+        }
+
+        protected override void FailFast() {
+            _lifetimeScope.Dispose();
         }
     }
 }
