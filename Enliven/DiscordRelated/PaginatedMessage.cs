@@ -354,7 +354,6 @@ namespace Bot.DiscordRelated {
         }
 
         protected override void DisposeInternal() {
-            base.DisposeInternal();
             _timeoutTimer.Dispose();
             _resendTask.Dispose();
             _updateTask.Dispose();

@@ -11,13 +11,11 @@ using Discord;
 using NLog;
 
 namespace Bot {
-    public class EnlivenBot : IService, IAsyncDisposable, IDisposable {
-        public EnlivenShardedClient Client;
-
-        // ReSharper disable once InconsistentNaming
-        private readonly ILogger logger;
-        private IEnumerable<IService> _services;
-        private EnlivenConfig _config;
+    public class EnlivenBot : AsyncDisposableBase, IService {
+        private readonly EnlivenShardedClient _client;
+        private readonly ILogger _logger;
+        private readonly IEnumerable<IService> _services;
+        private readonly EnlivenConfig _config;
         private bool _isDiscordStarted;
 
         public EnlivenBot(ILogger logger, IEnumerable<IService> services,
@@ -26,16 +24,16 @@ namespace Bot {
             config.Load();
 
             _services = services;
-            this.logger = logger;
-            Client = discordShardedClient;
+            _logger = logger;
+            _client = discordShardedClient;
         }
 
         internal async Task StartAsync() {
-            logger.Info("Start Initialising");
+            _logger.Info("Start Initialising");
 
             await Task.WhenAll(_services.Select(service => service.OnPreDiscordLoginInitialize()).ToArray());
 
-            Client.Log += OnClientLog;
+            _client.Log += OnClientLog;
 
             await LoginAsync();
 
@@ -49,35 +47,35 @@ namespace Bot {
         }
 
         private async Task LoginAsync() {
-            logger.Info("Start logining");
+            _logger.Info("Start logining");
             for (int connectionTryNumber = 1; connectionTryNumber <= 5; connectionTryNumber++) {
                 try {
-                    await Client.LoginAsync(TokenType.Bot, _config.BotToken);
-                    logger.Info("Successefully logged in");
+                    await _client.LoginAsync(TokenType.Bot, _config.BotToken);
+                    _logger.Info("Successefully logged in");
                     return;
                 }
                 catch (Exception e) {
-                    logger.Fatal(e, "Failed to login. Probably token is incorrect - {token}", _config.BotToken);
-                    logger.Info("Waiting before next attempt - {delay}s", connectionTryNumber * 10);
+                    _logger.Fatal(e, "Failed to login. Probably token is incorrect - {token}", _config.BotToken);
+                    _logger.Info("Waiting before next attempt - {delay}s", connectionTryNumber * 10);
                     await Task.Delay(TimeSpan.FromSeconds(connectionTryNumber * 10));
                 }
             }
 
-            logger.Fatal("Failed to login 5 times. Quiting");
+            _logger.Fatal("Failed to login 5 times. Quiting");
             throw new Exception("Failed to login 5 times");
         }
 
         public async Task StartClient() {
-            logger.Info("Starting client");
-            await Client.StartAsync();
-            await Client.SetGameAsync("mentions of itself to get started", null, ActivityType.Listening);
+            _logger.Info("Starting client");
+            await _client.StartAsync();
+            await _client.SetGameAsync("mentions of itself to get started", null, ActivityType.Listening);
             _isDiscordStarted = true;
         }
 
         public async Task OnShutdown(bool isDiscordStarted) {
             if (isDiscordStarted) {
-                await Client.SetStatusAsync(UserStatus.AFK);
-                await Client.SetGameAsync("Reboot...");
+                await _client.SetStatusAsync(UserStatus.AFK);
+                await _client.SetGameAsync("Reboot...");
             }
         }
 
@@ -86,20 +84,13 @@ namespace Bot {
                 return Task.CompletedTask;
             }
 
-            logger.Log(message.Severity, message.Exception, "{message} from {source}", message.Message!, message.Source);
+            _logger.Log(message.Severity, message.Exception, "{message} from {source}", message.Message!, message.Source);
             return Task.CompletedTask;
         }
 
-        private bool _isDisposed;
-        public async ValueTask DisposeAsync() {
-            if (_isDisposed) return;
+        protected override async Task DisposeInternalAsync() {
             await Task.WhenAll(_services.Select(service => service.OnShutdown(_isDiscordStarted)).ToArray()).WhenEnd();
-            Client.Dispose();
-            _isDisposed = true;
-        }
-
-        public void Dispose() {
-            DisposeAsync().AsTask().Wait();
+            _client.Dispose();
         }
     }
 }
