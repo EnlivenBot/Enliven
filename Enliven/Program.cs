@@ -45,8 +45,7 @@ namespace Bot {
             await using var scope = Container.BeginLifetimeScope();
             AppDomain.CurrentDomain.ProcessExit += OnCurrentDomainOnProcessExit;
             var bot = scope.Resolve<EnlivenBot>();
-            await bot.StartAsync();
-            await Task.Delay(-1);
+            await bot.RunAsync();
         }
 
         private static void OnCurrentDomainOnProcessExit(object? o, EventArgs eventArgs) {

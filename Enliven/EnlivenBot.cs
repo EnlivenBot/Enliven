@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reactive.Threading.Tasks;
+using System.Threading;
 using System.Threading.Tasks;
 using Bot.Patches;
 using Common;
@@ -26,6 +28,12 @@ namespace Bot {
             _services = services;
             _logger = logger;
             _client = discordShardedClient;
+        }
+
+        public async Task RunAsync(CancellationToken cancellationToken = default) {
+            await StartAsync();
+            cancellationToken.Register(Dispose);
+            await Disposed.ToTask(CancellationToken.None);
         }
 
         internal async Task StartAsync() {
