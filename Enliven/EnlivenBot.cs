@@ -33,7 +33,10 @@ namespace Bot {
         public async Task RunAsync(CancellationToken cancellationToken = default) {
             await StartAsync();
             cancellationToken.Register(Dispose);
-            await Disposed.ToTask(CancellationToken.None);
+            try { await Disposed.ToTask(CancellationToken.None); }
+            catch (Exception) {
+                // ignored
+            }
         }
 
         internal async Task StartAsync() {

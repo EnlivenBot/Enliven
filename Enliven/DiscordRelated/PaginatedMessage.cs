@@ -146,7 +146,7 @@ namespace Bot.DiscordRelated {
             try {
                 Message?.SafeDelete();
                 Message = null;
-                Message = await Channel.SendMessageAsync(null, false, GenerateEmbed(), component: _enlivenComponentBuilder.Build());
+                Message = await Channel.SendMessageAsync(null, false, GenerateEmbed(), components: _enlivenComponentBuilder.Build());
                 _enlivenComponentBuilder.AssociateWithMessage(Message);
                 return Message;
             }

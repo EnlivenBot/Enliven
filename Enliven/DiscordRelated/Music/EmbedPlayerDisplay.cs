@@ -229,7 +229,7 @@ namespace Bot.DiscordRelated.Music {
             UpdateMessageComponents();
 
             _messageComponent = _messageComponentManager.Build();
-            _controlMessage = await _targetChannel.SendMessageAsync(null, false, EmbedBuilder.Build(), component: _messageComponent);
+            _controlMessage = await _targetChannel.SendMessageAsync(null, false, EmbedBuilder.Build(), components: _messageComponent);
             _messageComponentManager.AssociateWithMessage(_controlMessage);
         }
 

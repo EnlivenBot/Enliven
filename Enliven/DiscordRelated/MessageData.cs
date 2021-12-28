@@ -16,10 +16,10 @@ namespace Bot.DiscordRelated {
 
         public new async Task<IUserMessage> SendMessage(IMessageChannel targetChannel) {
             if (File != null) {
-                return await targetChannel.SendFileAsync(File, Filename, Text, embed: Embed, messageReference: ReferencedMessage, allowedMentions: AllowedMentions, component: Component);
+                return await targetChannel.SendFileAsync(File, Filename, Text, embed: Embed, messageReference: ReferencedMessage, allowedMentions: AllowedMentions, components: Component);
             }
             else {
-                return await targetChannel.SendMessageAsync(Text, embed: Embed, messageReference: ReferencedMessage, allowedMentions: AllowedMentions, component: Component);
+                return await targetChannel.SendMessageAsync(Text, embed: Embed, messageReference: ReferencedMessage, allowedMentions: AllowedMentions, components: Component);
             }
         }
     }

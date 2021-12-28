@@ -85,7 +85,7 @@ namespace Bot.DiscordRelated.Music {
 
         public override async Task Initialize(FinalLavalinkPlayer finalLavalinkPlayer) {
             await base.Initialize(finalLavalinkPlayer);
-            _controlMessage = await _targetChannel.SendMessageAsync("", embed: _enlivenEmbedBuilder.Build(), component: _enlivenComponentBuilder.Build());
+            _controlMessage = await _targetChannel.SendMessageAsync("", embed: _enlivenEmbedBuilder.Build(), components: _enlivenComponentBuilder.Build());
         }
 
         private void AddEffect(SocketInteraction interaction, IPlayerEffectSource playerEffectSource) {

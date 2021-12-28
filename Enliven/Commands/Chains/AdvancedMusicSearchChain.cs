@@ -105,7 +105,7 @@ namespace Bot.Commands.Chains {
                 _componentBuilder.WithButton(new EnlivenButtonBuilder().WithStyle(ButtonStyle.Danger).WithEmote(CommonEmoji.LegacyStop).WithLabel(Loc.Get("Common.Stop")).WithTargetRow(controlsRow).WithCustomId("Stop"));
             }
 
-            var msg = await _targetChannel.SendMessageAsync(null, false, MainBuilder.Build(), component: _componentBuilder.Build());
+            var msg = await _targetChannel.SendMessageAsync(null, false, MainBuilder.Build(), components: _componentBuilder.Build());
             _componentBuilder.AssociateWithMessage(msg);
             if (!tracks.Any())
                 return;

@@ -62,23 +62,21 @@ namespace Bot {
         {
             builder.AddEnlivenConfig();
             builder.RegisterType<MusicResolverService>().AsSelf().SingleInstance();
-            builder.RegisterType<MusicController>().As<IMusicController>().SingleInstance();
+            builder.RegisterType<MusicController>().As<IMusicController>().InstancePerLifetimeScope();
             builder.RegisterModule<NLogModule>();
-            builder.RegisterType<EnlivenBot>().SingleInstance();
+            builder.RegisterType<EnlivenBot>().InstancePerLifetimeScope();
             builder.Register(context => new EnlivenShardedClient(new DiscordSocketConfig {MessageCacheSize = 100}))
-                .AsSelf().AsImplementedInterfaces().As<DiscordShardedClient>().SingleInstance();
+                .AsSelf().AsImplementedInterfaces().As<DiscordShardedClient>().InstancePerLifetimeScope();
 
-            builder.Register(context => context.Resolve<EnlivenConfig>().LavalinkNodes);
+            builder.Register(context => context.Resolve<EnlivenConfig>().LavalinkNodes).InstancePerLifetimeScope();
 
             // Discord type readers
-            builder.RegisterType<ChannelFunctionTypeReader>().As<CustomTypeReader>();
-            builder.RegisterType<LoopingStateTypeReader>().As<CustomTypeReader>();
+            builder.RegisterType<ChannelFunctionTypeReader>().As<CustomTypeReader>().SingleInstance();
+            builder.RegisterType<LoopingStateTypeReader>().As<CustomTypeReader>().SingleInstance();
 
             // Database types
-            builder.Register(context => context.Resolve<LiteDatabaseProvider>().ProvideDatabase().GetAwaiter().GetResult()
-                .GetCollection<SpotifyAssociation>(@"SpotifyAssociations")).SingleInstance();
-            builder.Register(context => context.Resolve<LiteDatabaseProvider>().ProvideDatabase().GetAwaiter().GetResult()
-                .GetCollection<MessageHistory>(@"MessageHistory")).SingleInstance();
+            builder.Register(context => context.GetDatabase().GetCollection<SpotifyAssociation>(@"SpotifyAssociations")).SingleInstance();
+            builder.Register(context => context.GetDatabase().GetCollection<MessageHistory>(@"MessageHistory")).SingleInstance();
 
             // Music resolvers
             builder.RegisterType<SpotifyMusicResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
@@ -87,32 +85,33 @@ namespace Bot {
             builder.RegisterType<YandexClientResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<Music.Yandex.YandexMusicResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
             
-            builder.RegisterType<SpotifyTrackEncoder>().AsSelf().AsImplementedInterfaces().PropertiesAutowired(PropertyWiringOptions.AllowCircularDependencies).SingleInstance();
+            builder.RegisterType<SpotifyTrackEncoder>().PropertiesAutowired(PropertyWiringOptions.AllowCircularDependencies)
+                .AsSelf().AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<YandexTrackEncoder>().AsSelf().AsImplementedInterfaces().SingleInstance();
 
             // Providers
             builder.RegisterType<SpotifyAssociationProvider>().As<ISpotifyAssociationProvider>().SingleInstance();
             builder.RegisterType<MessageHistoryProvider>().SingleInstance();
-            builder.RegisterType<EmbedPlayerDisplayProvider>().SingleInstance();
-            builder.RegisterType<EmbedPlayerQueueDisplayProvider>().SingleInstance();
+            builder.RegisterType<EmbedPlayerDisplayProvider>().InstancePerLifetimeScope();
+            builder.RegisterType<EmbedPlayerQueueDisplayProvider>().InstancePerLifetimeScope();
+            builder.RegisterType<EmbedPlayerEffectsDisplayProvider>().InstancePerLifetimeScope();
             builder.RegisterType<EffectSourceProvider>().SingleInstance();
-            builder.RegisterType<EmbedPlayerEffectsDisplayProvider>().SingleInstance();
 
             // Services
-            builder.RegisterType<CustomCommandService>().As<IService>().AsSelf().SingleInstance();
-            builder.RegisterType<MessageHistoryService>().As<IService>().AsSelf().SingleInstance();
-            builder.RegisterType<GlobalBehaviorsService>().As<IService>().AsSelf().SingleInstance();
-            builder.RegisterType<ScopedReliabilityService>().As<IService>().AsSelf().SingleInstance();
-            builder.RegisterType<CommandHandlerService>().As<IService>().AsSelf().SingleInstance();
-            builder.RegisterType<StatisticsService>().As<IStatisticsService>().AsSelf().SingleInstance();
-            builder.RegisterType<MessageComponentService>().As<MessageComponentService>().AsSelf().SingleInstance();
+            builder.RegisterType<CustomCommandService>().As<IService>().AsSelf().InstancePerLifetimeScope();
+            builder.RegisterType<MessageHistoryService>().As<IService>().AsSelf().InstancePerLifetimeScope();
+            builder.RegisterType<GlobalBehaviorsService>().As<IService>().AsSelf().InstancePerLifetimeScope();
+            builder.RegisterType<ScopedReliabilityService>().As<IService>().AsSelf().InstancePerLifetimeScope();
+            builder.RegisterType<CommandHandlerService>().As<IService>().AsSelf().InstancePerLifetimeScope();
+            builder.RegisterType<StatisticsService>().As<IStatisticsService>().AsSelf().InstancePerLifetimeScope();
+            builder.RegisterType<MessageComponentService>().As<MessageComponentService>().AsSelf().InstancePerLifetimeScope();
             builder.RegisterType<HtmlRendererService>().As<IService>().AsSelf().SingleInstance();
-            builder.RegisterType<MessageHistoryHtmlExporter>().SingleInstance();
-            builder.RegisterType<CollectorService>().SingleInstance();
+            builder.RegisterType<MessageHistoryHtmlExporter>().InstancePerLifetimeScope();
+            builder.RegisterType<CollectorService>().InstancePerLifetimeScope();
             
             // MessageHistory Printers
-            builder.RegisterType<MessageHistoryPrinter>().SingleInstance();
-            builder.RegisterType<MessageHistoryPackPrinter>().SingleInstance();
+            builder.RegisterType<MessageHistoryPrinter>().InstancePerLifetimeScope();
+            builder.RegisterType<MessageHistoryPackPrinter>().InstancePerLifetimeScope();
         }
 
         // ReSharper disable once UnusedMember.Local
