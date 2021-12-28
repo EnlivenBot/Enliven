@@ -62,7 +62,7 @@ namespace Bot.Music.Yandex {
         }
 
 
-        public Task OnPreDiscordStartInitialize() {
+        public Task OnPreDiscordStart() {
             return _initializeClientTask ??= InitializeClientInternal();
         }
 

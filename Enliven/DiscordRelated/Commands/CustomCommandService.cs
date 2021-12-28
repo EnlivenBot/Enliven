@@ -23,7 +23,7 @@ namespace Bot.DiscordRelated.Commands {
             _typeReaders = typeReaders;
         }
 
-        public async Task OnPreDiscordStartInitialize() {
+        public async Task OnPreDiscordStart() {
             await AddModulesAsync(Assembly.GetEntryAssembly()!, new ServiceProviderAdapter(_serviceContainer));
             foreach (var customTypeReader in _typeReaders) {
                 AddTypeReader(customTypeReader.GetTargetType(), customTypeReader);

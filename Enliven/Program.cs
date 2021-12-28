@@ -19,6 +19,7 @@ using ChatExporter.Exporter.MessageHistories;
 using Common;
 using Common.Config;
 using Common.Entities;
+using Common.Localization;
 using Common.Music.Controller;
 using Common.Music.Effects;
 using Common.Music.Resolvers;
@@ -32,6 +33,8 @@ namespace Bot {
             #if !DEBUG
             InstallErrorHandlers();
             #endif
+            
+            LocalizationManager.Initialize();
 
             var containerBuilder = new ContainerBuilder();
             ConfigureServices(containerBuilder);

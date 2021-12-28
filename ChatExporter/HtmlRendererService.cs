@@ -13,7 +13,7 @@ namespace ChatExporter {
         private Browser? _browser;
         private readonly SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1);
 
-        public Task OnPostDiscordStartInitialize() {
+        public Task OnPostDiscordStart() {
             Logger.Info("Starting Chrome downloading");
             _browserDownloadingTask = new BrowserFetcher().DownloadAsync(BrowserFetcher.DefaultChromiumRevision);
             _browserDownloadingTask.ContinueWith(task => {
@@ -32,7 +32,7 @@ namespace ChatExporter {
 
         private async Task<Browser> InitializeBrowser() {
             if (_browserDownloadingTask == null) {
-                throw new Exception("HtmlRendererService start initialization only after OnPostDiscordStartInitialize call (after starting Discord client)");
+                throw new Exception("HtmlRendererService start initialization only after OnPostDiscordStart call (after starting Discord client)");
             }
 
             await _semaphoreSlim.WaitAsync();

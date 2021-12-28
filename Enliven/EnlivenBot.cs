@@ -30,25 +30,21 @@ namespace Bot {
 
         internal async Task StartAsync() {
             _logger.Info("Start Initialising");
-
-            await Task.WhenAll(_services.Select(service => service.OnPreDiscordLoginInitialize()).ToArray());
-
+            await IService.ProcessEventAsync(_services, ServiceEventType.PreDiscordLogin);
             _client.Log += OnClientLog;
 
             await LoginAsync();
+            await IService.ProcessEventAsync(_services, ServiceEventType.PreDiscordStart);
 
-            LocalizationManager.Initialize();
-
-            await Task.WhenAll(_services.Select(service => service.OnPreDiscordStartInitialize()).ToArray());
-
-            await StartClient();
-
-            await Task.WhenAll(_services.Select(service => service.OnPostDiscordStartInitialize()).ToArray());
+            _logger.Info("Starting client");
+            await _client.StartAsync();
+            _isDiscordStarted = true;
+            await IService.ProcessEventAsync(_services, ServiceEventType.PostDiscordStart);
         }
 
         private async Task LoginAsync() {
             _logger.Info("Start logining");
-            for (int connectionTryNumber = 1; connectionTryNumber <= 5; connectionTryNumber++) {
+            for (var connectionTryNumber = 1; connectionTryNumber <= 5; connectionTryNumber++) {
                 try {
                     await _client.LoginAsync(TokenType.Bot, _config.BotToken);
                     _logger.Info("Successefully logged in");
@@ -65,18 +61,15 @@ namespace Bot {
             throw new Exception("Failed to login 5 times");
         }
 
-        public async Task StartClient() {
-            _logger.Info("Starting client");
-            await _client.StartAsync();
-            await _client.SetGameAsync("mentions of itself to get started", null, ActivityType.Listening);
-            _isDiscordStarted = true;
-        }
-
         public async Task OnShutdown(bool isDiscordStarted) {
             if (isDiscordStarted) {
                 await _client.SetStatusAsync(UserStatus.AFK);
                 await _client.SetGameAsync("Reboot...");
             }
+        }
+
+        public async Task OnPostDiscordStart() {
+            await _client.SetGameAsync("mentions of itself to get started", null, ActivityType.Listening);
         }
 
         private Task OnClientLog(LogMessage message) {
@@ -89,7 +82,7 @@ namespace Bot {
         }
 
         protected override async Task DisposeInternalAsync() {
-            await Task.WhenAll(_services.Select(service => service.OnShutdown(_isDiscordStarted)).ToArray()).WhenEnd();
+            await IService.ProcessEventAsync(_services, _isDiscordStarted ? ServiceEventType.ShutdownStarted : ServiceEventType.ShutdownNotStarted);
             _client.Dispose();
         }
     }

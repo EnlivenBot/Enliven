@@ -56,7 +56,7 @@ namespace Bot.Music.Spotify
             }
         }
         
-        public Task OnPreDiscordStartInitialize() {
+        public Task OnPreDiscordStart() {
             return _getSpotifyInternal ??= InitializeSpotifyInternal();
         }
     }

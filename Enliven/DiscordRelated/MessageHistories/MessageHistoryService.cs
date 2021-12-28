@@ -44,7 +44,7 @@ namespace Bot.DiscordRelated.MessageHistories {
             this._logger = logger;
         }
 
-        public Task OnPostDiscordStartInitialize() {
+        public Task OnPostDiscordStart() {
             // Message created handled located in CommandHandler
             _enliven.MessageUpdated += ClientOnMessageUpdated;
             _enliven.MessageDeleted += ClientOnMessageDeleted;

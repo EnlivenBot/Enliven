@@ -41,7 +41,7 @@ namespace Bot.DiscordRelated.Commands {
         }
 
 
-        public Task OnPostDiscordStartInitialize() {
+        public Task OnPostDiscordStart() {
             _fuzzySearch.AddData(_commandService.Aliases.Select(infos => infos.Key));
 
             _client.MessageReceived += HandleCommand;

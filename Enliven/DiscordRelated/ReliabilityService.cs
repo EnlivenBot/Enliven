@@ -102,7 +102,7 @@ namespace Bot.DiscordRelated {
         protected virtual void FailFast()
             => Environment.Exit(1);
 
-        public Task OnPostDiscordStartInitialize() {
+        public Task OnPostDiscordStart() {
             return Task.CompletedTask;
         }
     }

@@ -54,7 +54,7 @@ namespace Common.Music.Controller {
         public bool IsMusicEnabled { get; set; }
         public EnlivenLavalinkCluster Cluster { get; set; } = null!;
 
-        public async Task OnPostDiscordStartInitialize() {
+        public async Task OnPostDiscordStart() {
             var nodes = _lavalinkNodeInfos.Select(info => info.ToOptions()).ToList();
             var wrapper = new DiscordClientWrapper(_discordShardedClient);
             _logger.Info("Starting music module");
