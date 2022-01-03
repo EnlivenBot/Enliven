@@ -8,8 +8,8 @@ using Lavalink4NET.Lyrics;
 using LiteDB;
 
 namespace Common {
-    public static class Startup {
-        public static void ConfigureServices(ContainerBuilder builder) {
+    public static class CommonDiHelpers {
+        public static ContainerBuilder AddCommonServices(this ContainerBuilder builder) {
             // Database related
             builder.RegisterType<LiteDatabaseProvider>().SingleInstance();
 
@@ -35,6 +35,8 @@ namespace Common {
             builder.RegisterType<StatisticsPartProvider>().As<IStatisticsPartProvider>().SingleInstance();
             builder.RegisterType<GuildConfigProvider>().As<IGuildConfigProvider>().SingleInstance();
             builder.RegisterType<PlaylistProvider>().As<IPlaylistProvider>().SingleInstance();
+
+            return builder;
         }
 
         public static LiteDatabase GetDatabase(this IComponentContext context) {
