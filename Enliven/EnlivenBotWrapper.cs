@@ -38,6 +38,9 @@ namespace Bot {
             while (!cancellationToken.IsCancellationRequested) {
                 try {
                     await using var lifetimeScope = container.BeginLifetimeScope(builder => {
+                        builder.Register(context => _configProvider)
+                            .AsSelf()
+                            .SingleInstance();
                         builder.Register(context => instanceConfig)
                             .AsSelf().AsImplementedInterfaces()
                             .SingleInstance();

@@ -15,6 +15,7 @@ namespace Common.Config {
 
         public string ConfigPath { get; set; }
         public string FullConfigPath => Path.GetFullPath(ConfigPath);
+        public string ConfigFileName => Path.GetFileNameWithoutExtension(ConfigPath);
 
         public bool IsConfigExists() {
             return File.Exists(Path.GetFullPath(ConfigPath));

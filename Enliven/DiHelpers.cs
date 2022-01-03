@@ -1,5 +1,4 @@
 ﻿using Autofac;
-using Autofac.Extras.NLog;
 using Bot.DiscordRelated;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.MessageComponents;
@@ -8,6 +7,7 @@ using Bot.DiscordRelated.Music;
 using Bot.Music.Spotify;
 using Bot.Music.Yandex;
 using Bot.Utilities.Collector;
+using Bot.Utilities.Logging;
 using ChatExporter;
 using ChatExporter.Exporter.MessageHistories;
 using Common;
@@ -46,7 +46,7 @@ namespace Bot {
 
         public static ContainerBuilder AddEnlivenServices(this ContainerBuilder builder) {
             builder.RegisterType<MusicResolverService>().AsSelf().SingleInstance();
-            builder.RegisterModule<NLogModule>();
+            builder.RegisterModule<BotInstanceNlogModule>();
             builder.RegisterType<EnlivenBot>().InstancePerLifetimeScope();
             builder.Register(context => new EnlivenShardedClient(new DiscordSocketConfig { MessageCacheSize = 100 }))
                 .AsSelf().AsImplementedInterfaces().As<DiscordShardedClient>().InstancePerLifetimeScope();
