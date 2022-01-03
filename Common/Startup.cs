@@ -25,7 +25,6 @@ namespace Common {
 
             // Music
             builder.RegisterType<MusicResolverService>().SingleInstance();
-            builder.RegisterType<MusicController>().AsSelf().AsImplementedInterfaces().InstancePerLifetimeScope();
             builder.RegisterType<LyricsOptions>().SingleInstance();
             builder.RegisterType<LyricsService>().SingleInstance();
             builder.RegisterType<TrackEncoder>().SingleInstance();

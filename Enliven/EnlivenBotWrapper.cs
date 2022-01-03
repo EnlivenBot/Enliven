@@ -41,6 +41,9 @@ namespace Bot {
                         builder.Register(context => instanceConfig)
                             .AsSelf().AsImplementedInterfaces()
                             .SingleInstance();
+                        builder.RegisterType<MusicController>()
+                            .AsSelf().AsImplementedInterfaces()
+                            .SingleInstance();
                     });
                     var bot = lifetimeScope.Resolve<EnlivenBot>();
                     await bot.StartAsync();

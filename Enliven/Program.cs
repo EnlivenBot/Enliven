@@ -109,13 +109,10 @@ namespace Bot {
         public static void ConfigureServices(ContainerBuilder builder)
         {
             builder.RegisterType<MusicResolverService>().AsSelf().SingleInstance();
-            builder.RegisterType<MusicController>().As<IMusicController>().InstancePerLifetimeScope();
             builder.RegisterModule<NLogModule>();
             builder.RegisterType<EnlivenBot>().InstancePerLifetimeScope();
             builder.Register(context => new EnlivenShardedClient(new DiscordSocketConfig {MessageCacheSize = 100}))
                 .AsSelf().AsImplementedInterfaces().As<DiscordShardedClient>().InstancePerLifetimeScope();
-
-            builder.Register(context => context.Resolve<EnlivenConfig>().LavalinkNodes).InstancePerLifetimeScope();
 
             // Discord type readers
             builder.RegisterType<ChannelFunctionTypeReader>().As<CustomTypeReader>().SingleInstance();

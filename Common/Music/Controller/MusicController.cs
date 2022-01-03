@@ -33,9 +33,10 @@ namespace Common.Music.Controller {
 
         public MusicController(MusicResolverService musicResolverService, IGuildConfigProvider guildConfigProvider, 
                                IPlaylistProvider playlistProvider, TrackEncoder trackEncoder,
-                               EnlivenShardedClient discordShardedClient, ILogger logger, List<LavalinkNodeInfo> lavalinkNodeInfos) {
+                               EnlivenShardedClient discordShardedClient, ILogger logger,
+                               InstanceConfig instanceConfig) {
             _trackEncoder = trackEncoder;
-            _lavalinkNodeInfos = lavalinkNodeInfos;
+            _lavalinkNodeInfos = instanceConfig.LavalinkNodes;
             _logger = logger;
             _discordShardedClient = discordShardedClient;
             _playlistProvider = playlistProvider;
