@@ -1,13 +1,15 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Newtonsoft.Json;
 
 namespace Common.Config {
     public class EnlivenConfigProvider {
         private EnlivenConfig? _config;
-        private object _lockObject = new object();
+        private readonly object _lockObject = new object();
 
-        public EnlivenConfigProvider(string configPath = "Config/config.json") {
+        public EnlivenConfigProvider(string configPath) {
             ConfigPath = configPath;
         }
 
@@ -45,7 +47,20 @@ namespace Common.Config {
             configText = configText.Insert(0,
                 "/* Properties description can be found here: " +
                 "https://gitlab.com/enlivenbot/enliven/-/blob/master/Common/Config/EnlivenConfig.cs */\n");
-            File.WriteAllText(path, configText);
+
+            if (!File.Exists(path) || File.ReadAllText(path) != configText) {
+                File.WriteAllText(path, configText);
+            }
+        }
+
+        public static IEnumerable<EnlivenConfigProvider> GetConfigs(string configsFolder) {
+            var configsPath = Path.GetFullPath(configsFolder);
+            if (!Directory.Exists(configsPath)) throw new DirectoryNotFoundException("Configs directory not exists");
+            
+            var configFiles = Directory.GetFiles(configsPath, "*.json");
+            if (configFiles.Length == 0) throw new FileNotFoundException("Config files does not exists");
+
+            return configFiles.Select(s => new EnlivenConfigProvider(s));
         }
     }
 }

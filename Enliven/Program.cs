@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -41,11 +42,37 @@ namespace Bot {
             Startup.ConfigureServices(containerBuilder);
             Container = containerBuilder.Build();
             await Task.WhenAll(Container.Resolve<IEnumerable<IPatch>>().Select(patch => patch.Apply()).ToArray());
-
-            await using var scope = Container.BeginLifetimeScope();
             AppDomain.CurrentDomain.ProcessExit += OnCurrentDomainOnProcessExit;
-            var bot = scope.Resolve<EnlivenBot>();
-            await bot.RunAsync();
+
+            var configs = PrepareConfigs();
+            var enlivenBotWrappers = configs.Select(provider => new EnlivenBotWrapper(provider));
+            var startTasks = enlivenBotWrappers.Select(wrapper => wrapper.StartAsync(Container, CancellationToken.None)).ToList();
+
+            var whenAll = await Task.WhenAll(startTasks);
+            if (whenAll.All(b => !b)) {
+                // If all failed - exit
+                Logger.Fatal("All bot instances failed to start. Check configs, logs and try again");
+                Environment.Exit(-1);
+            }
+
+            await Task.Delay(-1);
+        }
+
+        private static IEnumerable<EnlivenConfigProvider> PrepareConfigs() {
+            try {
+                return EnlivenConfigProvider.GetConfigs("Config/Instances/");
+            }
+            catch (Exception) when (File.Exists("Config/config.json")) {
+                // Migrate old config to new folder
+                Directory.CreateDirectory("Config/Instances/");
+                File.Move("Config/config.json", "Config/Instances/MainBot.json");
+                return PrepareConfigs();
+            }
+            catch (Exception) {
+                var enlivenConfigProvider = new EnlivenConfigProvider("Config/Instances/MainBot.json");
+                enlivenConfigProvider.Load();
+                throw new Exception($"New config file generated at {enlivenConfigProvider.FullConfigPath}. Consider check it.");
+            }
         }
 
         private static void OnCurrentDomainOnProcessExit(object? o, EventArgs eventArgs) {
@@ -60,7 +87,6 @@ namespace Bot {
 
         public static void ConfigureServices(ContainerBuilder builder)
         {
-            builder.AddEnlivenConfig();
             builder.RegisterType<MusicResolverService>().AsSelf().SingleInstance();
             builder.RegisterType<MusicController>().As<IMusicController>().InstancePerLifetimeScope();
             builder.RegisterModule<NLogModule>();
