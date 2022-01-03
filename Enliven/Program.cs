@@ -29,6 +29,7 @@ using NLog;
 
 namespace Bot {
     internal static class Program {
+        private static IContainer Container { get; set; } = null!;
         private static readonly ILogger Logger = LogManager.GetCurrentClassLogger();
         private static async Task Main(string[] args) {
             #if !DEBUG
@@ -38,13 +39,14 @@ namespace Bot {
             LocalizationManager.Initialize();
 
             var containerBuilder = new ContainerBuilder();
+            SetupMainConfig(containerBuilder);
             ConfigureServices(containerBuilder);
             Startup.ConfigureServices(containerBuilder);
             Container = containerBuilder.Build();
             await Task.WhenAll(Container.Resolve<IEnumerable<IPatch>>().Select(patch => patch.Apply()).ToArray());
             AppDomain.CurrentDomain.ProcessExit += OnCurrentDomainOnProcessExit;
 
-            var configs = PrepareConfigs();
+            var configs = PrepareInstanceConfigs();
             var enlivenBotWrappers = configs.Select(provider => new EnlivenBotWrapper(provider));
             var startTasks = enlivenBotWrappers.Select(wrapper => wrapper.StartAsync(Container, CancellationToken.None)).ToList();
 
@@ -58,21 +60,42 @@ namespace Bot {
             await Task.Delay(-1);
         }
 
-        private static IEnumerable<EnlivenConfigProvider> PrepareConfigs() {
+        private static IEnumerable<ConfigProvider<InstanceConfig>> PrepareInstanceConfigs() {
             try {
-                return EnlivenConfigProvider.GetConfigs("Config/Instances/");
+                return ConfigProvider<InstanceConfig>.GetConfigs("Config/Instances/");
             }
             catch (Exception) when (File.Exists("Config/config.json")) {
                 // Migrate old config to new folder
                 Directory.CreateDirectory("Config/Instances/");
                 File.Move("Config/config.json", "Config/Instances/MainBot.json");
-                return PrepareConfigs();
+                return PrepareInstanceConfigs();
             }
             catch (Exception) {
-                var enlivenConfigProvider = new EnlivenConfigProvider("Config/Instances/MainBot.json");
+                var enlivenConfigProvider = new ConfigProvider<InstanceConfig>("Config/Instances/MainBot.json");
                 enlivenConfigProvider.Load();
                 throw new Exception($"New config file generated at {enlivenConfigProvider.FullConfigPath}. Consider check it.");
             }
+        }
+
+        private static void SetupMainConfig(ContainerBuilder builder) {
+            var configProvider = new ConfigProvider<GlobalConfig>("Config/MainConfig.json");
+            // Hook old config if possible
+            if (!configProvider.IsConfigExists()) {
+                var oldConfigProvider = new ConfigProvider<GlobalConfig>("Config/config.json");
+                if (oldConfigProvider.IsConfigExists()) {
+                    oldConfigProvider.Load();
+                    oldConfigProvider.ConfigPath = "Config/MainConfig.json";
+                    oldConfigProvider.Save();
+                    configProvider = oldConfigProvider;
+                }
+                else {
+                    Logger.Warn("Main config created from scratch. Consider check it!");
+                }
+            }
+
+            builder.Register(context => configProvider.Load())
+                .AsSelf().AsImplementedInterfaces()
+                .SingleInstance();
         }
 
         private static void OnCurrentDomainOnProcessExit(object? o, EventArgs eventArgs) {
@@ -82,8 +105,6 @@ namespace Bot {
             LogManager.Shutdown();
             Environment.Exit(0);
         }
-
-        private static IContainer Container { get; set; } = null!;
 
         public static void ConfigureServices(ContainerBuilder builder)
         {

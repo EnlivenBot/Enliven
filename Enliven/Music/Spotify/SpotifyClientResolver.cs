@@ -9,11 +9,11 @@ namespace Bot.Music.Spotify
 {
     public class SpotifyClientResolver : IService
     {
-        private EnlivenConfig _config;
+        private GlobalConfig _config;
         private ILogger _logger;
         private Task<SpotifyClient?>? _getSpotifyInternal;
 
-        public SpotifyClientResolver(EnlivenConfig config, ILogger logger)
+        public SpotifyClientResolver(GlobalConfig config, ILogger logger)
         {
             _logger = logger;
             _config = config;

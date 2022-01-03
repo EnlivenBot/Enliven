@@ -17,11 +17,11 @@ namespace Bot {
         private readonly EnlivenShardedClient _client;
         private readonly ILogger _logger;
         private readonly IEnumerable<IService> _services;
-        private readonly EnlivenConfig _config;
+        private readonly InstanceConfig _config;
         private bool _isDiscordStarted;
 
         public EnlivenBot(ILogger logger, IEnumerable<IService> services,
-                          EnlivenShardedClient discordShardedClient, EnlivenConfig config) {
+                          EnlivenShardedClient discordShardedClient, InstanceConfig config) {
             _config = config;
             config.Load();
 

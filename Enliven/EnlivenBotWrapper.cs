@@ -6,15 +6,16 @@ using System.Threading.Tasks;
 using Autofac;
 using Common;
 using Common.Config;
+using Common.Music.Controller;
 using NLog;
 
 namespace Bot {
     public class EnlivenBotWrapper {
         private static ILogger Logger = LogManager.GetCurrentClassLogger();
         private TaskCompletionSource<bool>? _firstStartResult;
-        private readonly EnlivenConfigProvider _enlivenConfigProvider;
-        public EnlivenBotWrapper(EnlivenConfigProvider enlivenConfigProvider) {
-            _enlivenConfigProvider = enlivenConfigProvider;
+        private readonly ConfigProvider<InstanceConfig> _configProvider;
+        public EnlivenBotWrapper(ConfigProvider<InstanceConfig> configProvider) {
+            _configProvider = configProvider;
         }
 
         /// <summary>
@@ -25,7 +26,6 @@ namespace Bot {
             if (_firstStartResult != null) throw new Exception("Current instance already started");
 
             _firstStartResult = new TaskCompletionSource<bool>();
-            _enlivenConfigProvider.Load();
 
             _ = RunLoopAsync(container, cancellationToken);
 
@@ -34,11 +34,12 @@ namespace Bot {
 
         private async Task RunLoopAsync(IContainer container, CancellationToken cancellationToken) {
             var isFirst = true;
+            var instanceConfig = _configProvider.Load();
             while (!cancellationToken.IsCancellationRequested) {
                 try {
                     await using var lifetimeScope = container.BeginLifetimeScope(builder => {
-                        builder.Register(context => _enlivenConfigProvider.Load())
-                            .AsSelf().AsImplementedInterfaces().As<EnlivenConfig>()
+                        builder.Register(context => instanceConfig)
+                            .AsSelf().AsImplementedInterfaces()
                             .SingleInstance();
                     });
                     var bot = lifetimeScope.Resolve<EnlivenBot>();
@@ -53,7 +54,7 @@ namespace Bot {
                     }
                 }
                 catch (Exception e) {
-                    Logger.Fatal(e, $"Failed to start bot instance with config {Path.GetFileName(_enlivenConfigProvider.ConfigPath)}");
+                    Logger.Fatal(e, $"Failed to start bot instance with config {Path.GetFileName(_configProvider.ConfigPath)}");
                     _firstStartResult!.TrySetResult(false);
                     if (isFirst) return;
                 }

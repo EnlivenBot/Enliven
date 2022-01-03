@@ -5,32 +5,32 @@ using System.Linq;
 using Newtonsoft.Json;
 
 namespace Common.Config {
-    public class EnlivenConfigProvider {
-        private EnlivenConfig? _config;
+    public class ConfigProvider<TConfig> where TConfig : ConfigBase, new() {
+        private TConfig? _config;
         private readonly object _lockObject = new object();
 
-        public EnlivenConfigProvider(string configPath) {
+        public ConfigProvider(string configPath) {
             ConfigPath = configPath;
         }
 
-        public string ConfigPath { get; }
+        public string ConfigPath { get; set; }
         public string FullConfigPath => Path.GetFullPath(ConfigPath);
 
         public bool IsConfigExists() {
             return File.Exists(Path.GetFullPath(ConfigPath));
         }
 
-        public EnlivenConfig Load() {
+        public TConfig Load() {
             lock (_lockObject) {
                 if (_config != null) return _config;
 
                 var path = Path.GetFullPath(ConfigPath);
                 if (File.Exists(path)) {
                     var configText = File.ReadAllText(path);
-                    _config = JsonConvert.DeserializeObject<EnlivenConfig>(configText);
+                    _config = JsonConvert.DeserializeObject<TConfig>(configText);
                 }
                 else {
-                    _config = new EnlivenConfig();
+                    _config = new TConfig();
                     Save();
                 }
 
@@ -46,21 +46,21 @@ namespace Common.Config {
             var configText = JsonConvert.SerializeObject(_config, Formatting.Indented);
             configText = configText.Insert(0,
                 "/* Properties description can be found here: " +
-                "https://gitlab.com/enlivenbot/enliven/-/blob/master/Common/Config/EnlivenConfig.cs */\n");
+                $"https://gitlab.com/enlivenbot/enliven/-/blob/master/Common/Config/{typeof(TConfig).Name}.cs */\n");
 
             if (!File.Exists(path) || File.ReadAllText(path) != configText) {
                 File.WriteAllText(path, configText);
             }
         }
 
-        public static IEnumerable<EnlivenConfigProvider> GetConfigs(string configsFolder) {
+        public static IEnumerable<ConfigProvider<TConfig>> GetConfigs(string configsFolder) {
             var configsPath = Path.GetFullPath(configsFolder);
             if (!Directory.Exists(configsPath)) throw new DirectoryNotFoundException("Configs directory not exists");
             
             var configFiles = Directory.GetFiles(configsPath, "*.json");
             if (configFiles.Length == 0) throw new FileNotFoundException("Config files does not exists");
 
-            return configFiles.Select(s => new EnlivenConfigProvider(s));
+            return configFiles.Select(s => new ConfigProvider<TConfig>(s));
         }
     }
 }

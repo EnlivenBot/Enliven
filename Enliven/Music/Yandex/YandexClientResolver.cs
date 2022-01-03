@@ -10,7 +10,7 @@ using YandexMusicResolver;
 
 namespace Bot.Music.Yandex {
     public class YandexClientResolver : IService {
-        private readonly EnlivenConfig _config;
+        private readonly GlobalConfig _config;
         private readonly ILogger _logger;
         private readonly YandexMusicMainResolver _resolver;
         private readonly SingleTask _retryAuthTask;
@@ -18,7 +18,7 @@ namespace Bot.Music.Yandex {
         private bool _isAuthFailed;
         private bool _isWrongCredentials;
         private Task? _initializeClientTask;
-        public YandexClientResolver(EnlivenConfig config, ILogger logger) {
+        public YandexClientResolver(GlobalConfig config, ILogger logger) {
             _logger = logger;
             _config = config;
             _retryAuthTask = new SingleTask(async () => {
