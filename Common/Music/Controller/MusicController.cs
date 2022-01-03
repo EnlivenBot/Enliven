@@ -19,17 +19,17 @@ using Lavalink4NET.Tracking;
 using ILogger = NLog.ILogger;
 
 namespace Common.Music.Controller {
-    public class MusicController : IMusicController, IService {
-        private static readonly List<FinalLavalinkPlayer> PlaybackPlayers = new List<FinalLavalinkPlayer>();
-        private static readonly Dictionary<ulong, PlayerSnapshot> PlayerShutdownParametersMap = new();
-        private static EventLogger _lavalinkLogger = new EventLogger();
-        private MusicResolverService _musicResolverService;
-        private IGuildConfigProvider _guildConfigProvider;
-        private IPlaylistProvider _playlistProvider;
-        private EnlivenShardedClient _discordShardedClient;
-        private ILogger _logger;
-        private List<LavalinkNodeInfo> _lavalinkNodeInfos;
-        private TrackEncoder _trackEncoder;
+    public class MusicController : IMusicController {
+        private readonly List<FinalLavalinkPlayer> PlaybackPlayers = new();
+        private readonly Dictionary<ulong, PlayerSnapshot> PlayerShutdownParametersMap = new();
+        private readonly EventLogger _lavalinkLogger = new();
+        private readonly MusicResolverService _musicResolverService;
+        private readonly IGuildConfigProvider _guildConfigProvider;
+        private readonly IPlaylistProvider _playlistProvider;
+        private readonly EnlivenShardedClient _discordShardedClient;
+        private readonly ILogger _logger;
+        private readonly List<LavalinkNodeInfo> _lavalinkNodeInfos;
+        private readonly TrackEncoder _trackEncoder;
 
         public MusicController(MusicResolverService musicResolverService, IGuildConfigProvider guildConfigProvider, 
                                IPlaylistProvider playlistProvider, TrackEncoder trackEncoder,

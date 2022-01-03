@@ -9,7 +9,7 @@ using NLog;
 using YandexMusicResolver;
 
 namespace Bot.Music.Yandex {
-    public class YandexClientResolver : IService {
+    public class YandexClientResolver {
         private readonly GlobalConfig _config;
         private readonly ILogger _logger;
         private readonly YandexMusicMainResolver _resolver;
@@ -35,6 +35,7 @@ namespace Bot.Music.Yandex {
                 }
             }) {BetweenExecutionsDelay = TimeSpan.FromMinutes(10), CanBeDirty = false};
             _resolver = new YandexMusicMainResolver(_config);
+            _initializeClientTask = InitializeClientInternal();
         }
 
         public async Task<YandexMusicMainResolver> GetClient() {
@@ -59,11 +60,6 @@ namespace Bot.Music.Yandex {
                 _logger.Error(e, "Yandex Music auth failed due to unknown reasons. We will try again later.");
                 _isAuthFailed = true;
             }
-        }
-
-
-        public Task OnPreDiscordStart() {
-            return _initializeClientTask ??= InitializeClientInternal();
         }
 
         public void SetAuthFailed()

@@ -86,7 +86,7 @@ namespace Bot {
             builder.RegisterType<CommandHandlerService>().As<IService>().AsSelf().InstancePerLifetimeScope();
             builder.RegisterType<StatisticsService>().As<IStatisticsService>().AsSelf().InstancePerLifetimeScope();
             builder.RegisterType<MessageComponentService>().As<MessageComponentService>().AsSelf().InstancePerLifetimeScope();
-            builder.RegisterType<HtmlRendererService>().As<IService>().AsSelf().SingleInstance();
+            builder.RegisterType<HtmlRendererService>().AsSelf().SingleInstance();
             builder.RegisterType<MessageHistoryHtmlExporter>().InstancePerLifetimeScope();
             builder.RegisterType<CollectorService>().InstancePerLifetimeScope();
 
