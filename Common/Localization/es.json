@@ -195,7 +195,7 @@
       "move0_0s": "Índice de pista",
       "move0_1s": "Posición nueva",
       "changenode0s": "Intenta mover la reproducción a otro nodo. Puede ayudar si hay interrupciones en la reproducción",
-      "invite0s": "Enlace para añadir el bot a otro servidor",
+      "invite0s": "Te ayuda a añadir este bot a otro servidor",
       "logging0s": "Muestra el panel de control del logging",
       "fixspotify0s": "¿Orden incorrecto para las pistas de Spotify? Hay que poner un fin a esto. Juntos.",
       "fixspotify0_0s": "URL de la canción deseada",
@@ -267,7 +267,7 @@
     },
     "Common": {
       "Invite": "Invitación",
-      "InviteDescription": "Aquí está [tu enlace]({0}) para invitarme a otro servidor. ¡Espero verte allí! 😀",
+      "InviteDescription": "Abre este perfil de bot y usa el botón \"Añadir al servidor\" para invitar al bot a otro servidor. ¡Espero verte allí! 😀\nTambién puedes encontrar un enlace de invitación en [nuestro GitLab](https://gitlab.com/enlivenbot/enlivenven)",
       "Vote": "**Ayúdanos**",
       "VoteDescription": "Puedes ayudarnos **gratis** en:\n[top.gg](https://top.gg/bot/606760964183949314) (vota [1 voto cada 12 horas] o escribe un comentario)\n[discordbotlist.com](https://discordbotlist.com/bots/enliven) (vota [1 voto cada 12 horas])\n[bots.ondiscord.xyz](https://bots.ondiscord.xyz/bots/606760964183949314) (escribe un comentario)\n O visítanos en [discord.bots.gg](https://discord.bots.gg/bots/606760964183949314)\n\nNo te olvides de [nuestro GitLab](https://gitlab.com/enlivenbot/enliven), donde puedes enviar errores y sugerencias (en inglés/ruso)\nPuedes unirte también a nuestro [Discord de soporte](https://discord.gg/zfBffbBbCp)",
       "All": "Todo",
