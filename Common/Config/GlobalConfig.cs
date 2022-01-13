@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Collections.Generic;
+using System.Net;
 using Newtonsoft.Json;
 using YandexMusicResolver.Config;
 
@@ -45,7 +46,20 @@ namespace Common.Config {
         /// </summary>
         /// <seealso cref="YandexLogin"/>
         public string? YandexPassword { get; set; }
-        
+
+        /// <summary>
+        /// Common lavalink nodes credentials
+        /// </summary>
+        /// <example>
+        /// {  
+        ///      "Password": "youshallnotpass",  
+        ///      "RestUri": "http://localhost:8080/",  
+        ///      "WebSocketUri": "ws://localhost:8080/"
+        ///      "Name": "Name will be displayed at player embed"
+        ///  }
+        /// </example>
+        public List<LavalinkNodeInfo> LavalinkNodes { get; set; } = new();
+
         [JsonIgnore]
         string? IYandexTokenHolder.YandexToken {
             get => IsTokenValid ? YandexToken : null;
@@ -59,6 +73,7 @@ namespace Common.Config {
         public bool IsTokenValid { get; set; }
 
         private IWebProxy? _yandexProxy;
+
         [JsonIgnore]
         public IWebProxy? YandexProxy {
             get => _yandexProxy ?? (YandexProxyAddress != null ? _yandexProxy = new WebProxy(YandexProxyAddress) : null);
