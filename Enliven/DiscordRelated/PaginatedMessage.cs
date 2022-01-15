@@ -30,16 +30,20 @@ namespace Bot.DiscordRelated {
         public ILocalizationProvider Loc;
         private EnlivenComponentBuilder _enlivenComponentBuilder = null!;
         private MessageComponentService _messageComponentService;
+        private CollectorService _collectorService;
+        private IDiscordClient _discordClient;
 
-        public PaginatedMessage(PaginatedAppearanceOptions options, IUserMessage message, ILocalizationProvider loc, MessageComponentService messageComponentService, MessagePage? errorPage = null)
-            : this(options, message.Channel, loc, messageComponentService, errorPage) {
+        public PaginatedMessage(PaginatedAppearanceOptions options, IUserMessage message, ILocalizationProvider loc, MessageComponentService messageComponentService, CollectorService collectorService, IDiscordClient discordClient, MessagePage? errorPage = null)
+            : this(options, message.Channel, loc, messageComponentService, collectorService, discordClient, errorPage) {
             Channel = message.Channel;
             Message = message;
-            if (Message.Author.Id != EnlivenBot.Client.CurrentUser.Id) throw new ArgumentException($"{nameof(message)} must be from the current user");
+            if (Message.Author.Id != _discordClient.CurrentUser.Id) throw new ArgumentException($"{nameof(message)} must be from the current user");
         }
 
-        public PaginatedMessage(PaginatedAppearanceOptions options, IMessageChannel channel, ILocalizationProvider loc, MessageComponentService messageComponentService, MessagePage? errorPage = null) {
+        public PaginatedMessage(PaginatedAppearanceOptions options, IMessageChannel channel, ILocalizationProvider loc, MessageComponentService messageComponentService, CollectorService collectorService, IDiscordClient discordClient, MessagePage? errorPage = null) {
             _messageComponentService = messageComponentService;
+            _collectorService = collectorService;
+            _discordClient = discordClient;
             Loc = loc;
             Channel = channel;
             Options = options;
@@ -71,7 +75,7 @@ namespace Bot.DiscordRelated {
             _jumpEnabled = Options.JumpDisplayOptions == JumpDisplayOptions.Always ||
                            Options.JumpDisplayOptions == JumpDisplayOptions.WithManageMessages &&
                            Channel is IGuildChannel guildChannel &&
-                           (await guildChannel.GetUserAsync(EnlivenBot.Client.CurrentUser.Id)).GetPermissions(guildChannel).ManageMessages;
+                           (await guildChannel.GetUserAsync(_discordClient.CurrentUser.Id)).GetPermissions(guildChannel).ManageMessages;
             if (_jumpEnabled) _enlivenComponentBuilder.WithButton(builder.Clone().WithEmote(Options.Jump).WithCustomId("Jump").WithPriority(0));
         }
 
@@ -96,7 +100,7 @@ namespace Bot.DiscordRelated {
                     _ = component.FollowupAsync(Options.InformationText).DelayedDelete(Options.InfoTimeout);
                     break;
                 case "Jump":
-                    CollectorsUtils.CollectMessage(component.Channel, message => message.Author.Id == component.User.Id, async eventArgs => {
+                    _collectorService.CollectMessage(component.Channel, message => message.Author.Id == component.User.Id, async eventArgs => {
                         eventArgs.StopCollect();
                         if (!int.TryParse(eventArgs.Message.Content, out var result)) return;
                         await eventArgs.RemoveReason();
@@ -142,7 +146,7 @@ namespace Bot.DiscordRelated {
             try {
                 Message?.SafeDelete();
                 Message = null;
-                Message = await Channel.SendMessageAsync(null, false, GenerateEmbed(), component: _enlivenComponentBuilder.Build());
+                Message = await Channel.SendMessageAsync(null, false, GenerateEmbed(), components: _enlivenComponentBuilder.Build());
                 _enlivenComponentBuilder.AssociateWithMessage(Message);
                 return Message;
             }
@@ -350,7 +354,6 @@ namespace Bot.DiscordRelated {
         }
 
         protected override void DisposeInternal() {
-            base.DisposeInternal();
             _timeoutTimer.Dispose();
             _resendTask.Dispose();
             _updateTask.Dispose();

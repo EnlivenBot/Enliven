@@ -7,17 +7,18 @@ using SpotifyAPI.Web;
 
 namespace Bot.Music.Spotify
 {
-    public class SpotifyClientResolver : IService
+    public class SpotifyClientResolver
     {
-        private EnlivenConfig _config;
+        private GlobalConfig _config;
         private ILogger _logger;
         private Task<SpotifyClient?>? _getSpotifyInternal;
 
-        public SpotifyClientResolver(EnlivenConfig config, ILogger logger)
+        public SpotifyClientResolver(GlobalConfig config, ILogger logger)
         {
             _logger = logger;
             _config = config;
             _config.Load();
+            _ = GetSpotify();
         }
         
         public Task<SpotifyClient?> GetSpotify()
@@ -54,10 +55,6 @@ namespace Bot.Music.Spotify
                 _logger.Error(e, "Spotify auth failed due to unknown reasons. We will try again later.");
                 return null;
             }
-        }
-        
-        public Task OnPreDiscordStartInitialize() {
-            return _getSpotifyInternal ??= InitializeSpotifyInternal();
         }
     }
 }

@@ -12,9 +12,10 @@ namespace Common.Music
 {
     public class EnlivenLavalinkClusterNode : LavalinkClusterNode
     {
+        private IDiscordClientWrapper _client;
         public EnlivenLavalinkClusterNode(LavalinkNodeOptions options, IDiscordClientWrapper client,
-            ILogger? logger = null, ILavalinkCache? cache = null) : base(options, client, logger, cache)
-        {
+            ILogger? logger = null, ILavalinkCache? cache = null) : base(options, client, logger, cache) {
+            _client = client;
             if (options.Label != null)
             {
                 var strings = options.Label.Split("|");
@@ -36,11 +37,13 @@ namespace Common.Music
 
         private static readonly IEntry BotKickedEntry = new EntryLocalized("Music.BotKicked");
         protected override async Task VoiceStateUpdated(object sender, VoiceStateUpdateEventArgs args) {
-            if (Players.TryGetValue(args.VoiceState.GuildId, out var p) && p is FinalLavalinkPlayer player) {
-                var voiceState = args.VoiceState;
-                if (player.VoiceChannelId != null && voiceState.VoiceChannelId is null) {
-                    var parameters = new PlayerShutdownParameters(){SavePlaylist = false, ShutdownDisplays = true};
-                    await player.Shutdown(BotKickedEntry, parameters);
+            if (args.UserId == _client.CurrentUserId) {
+                if (Players.TryGetValue(args.VoiceState.GuildId, out var p) && p is FinalLavalinkPlayer player) {
+                    var voiceState = args.VoiceState;
+                    if (player.VoiceChannelId != null && voiceState.VoiceChannelId is null) {
+                        var parameters = new PlayerShutdownParameters(){SavePlaylist = false, ShutdownDisplays = true};
+                        await player.Shutdown(BotKickedEntry, parameters);
+                    }
                 }
             }
 

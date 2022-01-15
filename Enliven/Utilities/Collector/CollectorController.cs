@@ -15,7 +15,6 @@ namespace Bot.Utilities.Collector {
         }
 
         protected override void DisposeInternal() {
-            base.DisposeInternal();
             _timer?.Dispose();
         }
 

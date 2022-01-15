@@ -47,6 +47,7 @@ namespace Common.Localization.Entries {
                 var formatArgs = FormatArgs
                     .Select(func => func().Pipe(o => o is IEntry loc ? loc.Get(provider) : o))
                     .Concat(additionalArgs)
+                    .Select(o => o is IEntry entry ? entry.Get(provider) : o)
                     .ToArray();
                 _cache = GetFormatString(provider).Pipe(s => formatArgs.Length == 0 ? s : string.Format(s, formatArgs));
                 _lastProvider = provider;

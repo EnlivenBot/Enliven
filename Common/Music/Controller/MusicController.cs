@@ -10,6 +10,7 @@ using Common.Music.Encoders;
 using Common.Music.Players;
 using Common.Music.Resolvers;
 using Discord;
+using Lavalink4NET;
 using Lavalink4NET.Cluster;
 using Lavalink4NET.DiscordNet;
 using Lavalink4NET.Events;
@@ -19,23 +20,24 @@ using Lavalink4NET.Tracking;
 using ILogger = NLog.ILogger;
 
 namespace Common.Music.Controller {
-    public class MusicController : IMusicController, IService {
-        private static readonly List<FinalLavalinkPlayer> PlaybackPlayers = new List<FinalLavalinkPlayer>();
-        private static readonly Dictionary<ulong, PlayerSnapshot> PlayerShutdownParametersMap = new();
-        private static EventLogger _lavalinkLogger = new EventLogger();
-        private MusicResolverService _musicResolverService;
-        private IGuildConfigProvider _guildConfigProvider;
-        private IPlaylistProvider _playlistProvider;
-        private EnlivenShardedClient _discordShardedClient;
-        private ILogger _logger;
-        private List<LavalinkNodeInfo> _lavalinkNodeInfos;
-        private TrackEncoder _trackEncoder;
+    public class MusicController : IMusicController {
+        private readonly List<FinalLavalinkPlayer> PlaybackPlayers = new();
+        private readonly Dictionary<ulong, PlayerSnapshot> PlayerShutdownParametersMap = new();
+        private readonly EventLogger _lavalinkLogger = new();
+        private readonly MusicResolverService _musicResolverService;
+        private readonly IGuildConfigProvider _guildConfigProvider;
+        private readonly IPlaylistProvider _playlistProvider;
+        private readonly EnlivenShardedClient _discordShardedClient;
+        private readonly ILogger _logger;
+        private readonly IEnumerable<LavalinkNodeInfo> _lavalinkNodeInfos;
+        private readonly TrackEncoder _trackEncoder;
 
         public MusicController(MusicResolverService musicResolverService, IGuildConfigProvider guildConfigProvider, 
                                IPlaylistProvider playlistProvider, TrackEncoder trackEncoder,
-                               EnlivenShardedClient discordShardedClient, ILogger logger, List<LavalinkNodeInfo> lavalinkNodeInfos) {
+                               EnlivenShardedClient discordShardedClient, ILogger logger,
+                               InstanceConfig instanceConfig, GlobalConfig globalConfig) {
             _trackEncoder = trackEncoder;
-            _lavalinkNodeInfos = lavalinkNodeInfos;
+            _lavalinkNodeInfos = globalConfig.LavalinkNodes.Concat(instanceConfig.LavalinkNodes).Distinct();
             _logger = logger;
             _discordShardedClient = discordShardedClient;
             _playlistProvider = playlistProvider;
@@ -54,8 +56,8 @@ namespace Common.Music.Controller {
         public bool IsMusicEnabled { get; set; }
         public EnlivenLavalinkCluster Cluster { get; set; } = null!;
 
-        public async Task OnPostDiscordStartInitialize() {
-            var nodes = _lavalinkNodeInfos.Select(info => info.ToOptions()).ToList();
+        public async Task OnPostDiscordStart() {
+            var nodes = _lavalinkNodeInfos.Select(ConvertNodeInfoToOptions).ToList();
             var wrapper = new DiscordClientWrapper(_discordShardedClient);
             _logger.Info("Starting music module");
 
@@ -100,6 +102,23 @@ namespace Common.Music.Controller {
             else {
                 _logger.Warn("Nodes not found, music disabled!");
             }
+        }
+
+        private int _nodeIdCounter;
+        private LavalinkNodeOptions ConvertNodeInfoToOptions(LavalinkNodeInfo info) {
+            var label = info.Name;
+            if (string.IsNullOrWhiteSpace(label)) {
+                label = $"Node №{++_nodeIdCounter}";
+                _logger.Info("Name {NodeName} assingned to node with url {NodeUrl} ({NodeWsUrl})", label, info.RestUri, info.WebSocketUri);
+            }
+                
+            return new LavalinkNodeOptions {
+                RestUri = info.RestUri,
+                WebSocketUri = info.WebSocketUri,
+                Password = info.Password,
+                DisconnectOnStop = false,
+                Label = label
+            };
         }
 
         public async Task<FinalLavalinkPlayer> ProvidePlayer(ulong guildId, ulong voiceChannelId, bool recreate = false) {

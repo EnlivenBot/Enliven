@@ -5,23 +5,25 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Bot.DiscordRelated.MessageComponents;
+using Bot.Utilities.Collector;
 using Common.Config;
 using Common.Localization.Providers;
 using Common.Music.Players;
 using Discord;
 using Newtonsoft.Json;
-using NLog;
 
 namespace Bot.DiscordRelated.Music {
     public class EmbedPlayerQueueDisplayProvider {
-        private ConcurrentDictionary<IMessageChannel, EmbedPlayerQueueDisplay> _cache = new ConcurrentDictionary<IMessageChannel, EmbedPlayerQueueDisplay>();
-        private IGuildConfigProvider _guildConfigProvider;
-        private ILogger _logger;
-        private MessageComponentService _messageComponentService;
+        private readonly ConcurrentDictionary<IMessageChannel, EmbedPlayerQueueDisplay> _cache = new();
+        private readonly IGuildConfigProvider _guildConfigProvider;
+        private readonly CollectorService _collectorService;
+        private readonly IDiscordClient _discordClient;
+        private readonly MessageComponentService _messageComponentService;
 
-        public EmbedPlayerQueueDisplayProvider(IGuildConfigProvider guildConfigProvider, MessageComponentService messageComponentService, ILogger logger) {
+        public EmbedPlayerQueueDisplayProvider(IGuildConfigProvider guildConfigProvider, MessageComponentService messageComponentService, CollectorService collectorService, IDiscordClient discordClient) {
             _messageComponentService = messageComponentService;
-            _logger = logger;
+            _collectorService = collectorService;
+            _discordClient = discordClient;
             _guildConfigProvider = guildConfigProvider;
         }
 
@@ -43,7 +45,7 @@ namespace Bot.DiscordRelated.Music {
                 else {
                     loc = LangLocalizationProvider.EnglishLocalizationProvider;
                 }
-                var embedPlayerQueueDisplay = new EmbedPlayerQueueDisplay(channel, loc, _messageComponentService);
+                var embedPlayerQueueDisplay = new EmbedPlayerQueueDisplay(channel, loc, _messageComponentService, _collectorService, _discordClient);
                 _ = embedPlayerQueueDisplay.Initialize(finalLavalinkPlayer);
                 return embedPlayerQueueDisplay;
             });

@@ -22,35 +22,35 @@ using SpotifyAPI.Web;
 
 namespace Bot.Commands.Chains {
     public class FixSpotifyChain : ChainBase {
-        private IMessageChannel _channel = null!;
-        private SpotifyUrl _request = null!;
-        private IUser _requester = null!;
-        private IUserMessage? _controlMessage;
-        private PaginatedMessage? _paginatedMessage;
+        private readonly IMessageChannel _channel;
+        private readonly SpotifyUrl _request;
+        private readonly IUser _requester;
+        private readonly IMusicController _musicController;
+        private readonly IUserDataProvider _userDataProvider;
+        private readonly ISpotifyAssociationCreator _spotifyAssociationCreator;
+        private readonly SpotifyClientResolver _spotifyClientResolver;
+        private readonly MessageComponentService _messageComponentService;
+        private readonly CollectorService _collectorService;
+        private readonly IDiscordClient _discordClient;
         private CollectorsGroup? _collectorController;
-        private IMusicController _musicController = null!;
-        private IUserDataProvider _userDataProvider = null!;
-        private ISpotifyAssociationProvider _spotifyAssociationProvider = null!;
-        private ISpotifyAssociationCreator _spotifyAssociationCreator = null!;
-        private SpotifyMusicResolver _resolver = null!;
-        private SpotifyClientResolver _spotifyClientResolver = null!;
-        private MessageComponentService _messageComponentService = null!;
+        private PaginatedMessage? _paginatedMessage;
+        private IUserMessage? _controlMessage;
 
-        private FixSpotifyChain(string? uid, ILocalizationProvider loc) : base(uid, loc) { }
-
-        public static FixSpotifyChain CreateInstance(IUser requester, IMessageChannel channel, ILocalizationProvider loc, string request,
-                                                     IMusicController musicController, IUserDataProvider userDataProvider, 
-                                                     ISpotifyAssociationProvider spotifyAssociationProvider, ISpotifyAssociationCreator spotifyAssociationCreator, 
-                                                     SpotifyMusicResolver resolver, SpotifyClientResolver spotifyClientResolver,
-                                                     MessageComponentService service) {
-            var fixSpotifyChain = new FixSpotifyChain($"{nameof(FixSpotifyChain)}_{requester.Id}", loc) {
-                _request = new SpotifyUrl(request), _requester = requester, _channel = channel,
-                _musicController = musicController, _userDataProvider = userDataProvider, 
-                _spotifyAssociationProvider = spotifyAssociationProvider, _spotifyAssociationCreator = spotifyAssociationCreator, 
-                _resolver = resolver, _spotifyClientResolver = spotifyClientResolver, _messageComponentService = service
-            };
-
-            return fixSpotifyChain;
+        public FixSpotifyChain(IUser requester, IMessageChannel channel, ILocalizationProvider loc, string request,
+                               IMusicController musicController, IUserDataProvider userDataProvider, 
+                               ISpotifyAssociationCreator spotifyAssociationCreator, SpotifyClientResolver spotifyClientResolver,
+                               MessageComponentService service, CollectorService collectorService, IDiscordClient discordClient)
+            : base($"{nameof(FixSpotifyChain)}_{requester.Id}", loc) {
+            _request = new SpotifyUrl(request);
+            _requester = requester;
+            _channel = channel;
+            _musicController = musicController;
+            _userDataProvider = userDataProvider;
+            _spotifyAssociationCreator = spotifyAssociationCreator;
+            _spotifyClientResolver = spotifyClientResolver;
+            _messageComponentService = service;
+            _collectorService = collectorService;
+            _discordClient = discordClient;
         }
 
         public async Task Start() {
@@ -63,7 +63,7 @@ namespace Bot.Commands.Chains {
                 var controlMessage = _controlMessage;
                 _controlMessage = null;
                 var propertiesEmbed = new EmbedBuilder().WithColor(Color.Orange).WithTitle(Loc.Get("ChainsCommon.Ended"))
-                                                        .WithDescription(localized.Get(Loc)).Build();
+                    .WithDescription(localized.Get(Loc)).Build();
                 try {
                     controlMessage.ModifyAsync(properties => { properties.Embed = propertiesEmbed; });
                 }
@@ -94,9 +94,9 @@ namespace Bot.Commands.Chains {
             try {
                 var playlist = await spotify.Playlists.Get(_request.Id);
                 var tracks = (await spotify.PaginateAll(playlist!.Tracks!))
-                            .Select(track => track.Track as FullTrack)
-                            .Where(track => track != null)
-                            .Select(track => new SpotifyTrackWrapper(track!.Id, track)).ToList()!;
+                    .Select(track => track.Track as FullTrack)
+                    .Where(track => track != null)
+                    .Select(track => new SpotifyTrackWrapper(track!.Id, track)).ToList()!;
 
                 var stringBuilder = new StringBuilder();
                 for (var index = 0; index < tracks.Count; index++) {
@@ -105,16 +105,16 @@ namespace Bot.Commands.Chains {
                     stringBuilder.AppendLine($"{index + 1}. [{fullTrack.Name}]({fullTrack.Uri}) *by {fullTrack.Artists.First().Name}*");
                 }
 
-                _paginatedMessage = new PaginatedMessage(PaginatedAppearanceOptions.Default, _controlMessage!, Loc, _messageComponentService);
+                _paginatedMessage = new PaginatedMessage(PaginatedAppearanceOptions.Default, _controlMessage!, Loc, _messageComponentService, _collectorService, _discordClient);
                 _paginatedMessage.SetPages(stringBuilder.ToString(), "{0}", Int32.MaxValue,
                     new List<EmbedFieldBuilder> {
-                        new EmbedFieldBuilder {Name = Loc.Get("Chains.FixSpotifyPlaylistChooseName"), Value = Loc.Get("Chains.FixSpotifyPlaylistChooseValue")}
+                        new EmbedFieldBuilder { Name = Loc.Get("Chains.FixSpotifyPlaylistChooseName"), Value = Loc.Get("Chains.FixSpotifyPlaylistChooseValue") }
                     });
                 await _paginatedMessage.Update();
                 ResetTimeout();
 
                 _collectorController?.DisposeAll();
-                _collectorController = CollectorsUtils.CollectMessage(_requester, message => true, args => {
+                _collectorController = _collectorService.CollectMessage(_requester, message => true, args => {
                     if (int.TryParse(args.Message.Content, out var index) && index >= 0 && index <= tracks.Count) {
                         args.StopCollect();
                         _paginatedMessage.Dispose();
@@ -145,7 +145,7 @@ namespace Bot.Commands.Chains {
             UpdateMessage();
 
             _collectorController?.DisposeAll();
-            _collectorController = CollectorsUtils.CollectMessage(_requester, message => _channel.Id == message.Channel.Id, async args => {
+            _collectorController = _collectorService.CollectMessage(_requester, message => _channel.Id == message.Channel.Id, async args => {
                 var voteMatch = Regex.Match(args.Message.Content, @"^(\d+) (\+|\-)$");
                 if (voteMatch.Success && int.TryParse(voteMatch.Groups[1].Value, out var voteMatchIndex)) {
                     try {
@@ -177,7 +177,7 @@ namespace Bot.Commands.Chains {
                 var addMatch = Regex.Match(args.Message.Content, @"^(new|add) (.*)$");
                 if (addMatch.Success) {
                     var searchResults = (await (await new LavalinkMusicResolver().Resolve(_musicController.Cluster, addMatch.Groups[2].Value)).Resolve())
-                                       .Where(track => track != null).ToList();
+                        .Where(track => track != null).ToList();
                     try {
                         var resultTrack = searchResults.Single();
 
@@ -189,7 +189,7 @@ namespace Bot.Commands.Chains {
                         }
                         else {
                             association.Associations.Add(new SpotifyAssociation.TrackAssociationData(resultTrack.Identifier, _requester.ToLink())
-                                {UpvotedUsers = new List<ulong> {_requester.Id}});
+                                { UpvotedUsers = new List<ulong> { _requester.Id } });
                         }
 
                         association.Save();
@@ -216,10 +216,10 @@ namespace Bot.Commands.Chains {
                                 (data.DownvotedUsers.Contains(_requester.Id) ? $"**{data.DownvotedUsers.Count} 👎**" : $"{data.DownvotedUsers.Count} 👎")
                     }).ToList();
 
-                _paginatedMessage ??= new PaginatedMessage(PaginatedAppearanceOptions.Default, _controlMessage!, Loc, _messageComponentService);
-                _paginatedMessage.SetPages(Loc.Get("Chains.FixSpotifyAssociationChoose", $"***{fullTrack.Name}*** - **{fullTrack.Artists.First().Name}**"),
+                _paginatedMessage ??= new PaginatedMessage(PaginatedAppearanceOptions.Default, _controlMessage!, Loc, _messageComponentService, _collectorService, _discordClient);
+                _paginatedMessage!.SetPages(Loc.Get("Chains.FixSpotifyAssociationChoose", $"***{fullTrack.Name}*** - **{fullTrack.Artists.First().Name}**"),
                     fields, Int32.MaxValue);
-                _paginatedMessage.Disposed.Subscribe(base1 => End());
+                _paginatedMessage!.Disposed.Subscribe(base1 => End());
             }
         }
 
@@ -235,10 +235,10 @@ namespace Bot.Commands.Chains {
                 // TODO Warning implementation
                 // CommonEmoji.Warning,
                 CommonEmoji.LegacyStop
-            }, new RequestOptions {CancelToken = emojiCancellation.Token});
+            }, new RequestOptions { CancelToken = emojiCancellation.Token });
 
             _collectorController?.DisposeAll();
-            _collectorController = CollectorsUtils.CollectReaction(_requester, reaction => true, async args => {
+            _collectorController = _collectorService.CollectReaction(_requester, reaction => true, async args => {
                 if (args.Reaction.Emote.Equals(CommonEmoji.LegacyReverse)) {
                     emojiCancellation.Cancel();
                     try {
@@ -273,15 +273,17 @@ namespace Bot.Commands.Chains {
             });
 
             void UpdateBuilder() {
-                MainBuilder.WithDescription($"{fullTrack.Name} - {fullTrack.Artists[0].Name}\n\n" +
-                                            $"[{data.Association.Title.SafeSubstring(200)}]({data.Association.Source}) *by {data.Author.GetData(_userDataProvider).GetMentionWithUsername()}*\n" +
-                                            $"Score: `{data.Score}` | " +
-                                            (data.UpvotedUsers.Contains(_requester.Id)
-                                                ? $"**{data.UpvotedUsers.Count} 👍** | "
-                                                : $"{data.UpvotedUsers.Count} 👍 | ") +
-                                            (data.DownvotedUsers.Contains(_requester.Id)
-                                                ? $"**{data.DownvotedUsers.Count} 👎** | "
-                                                : $"{data.DownvotedUsers.Count} 👎"));
+                var description =
+                    $"{fullTrack.Name} - {fullTrack.Artists[0].Name}\n\n" +
+                    $"[{data.Association.Title.SafeSubstring(200)}]({data.Association.Source}) *by {data.Author.GetData(_userDataProvider).GetMentionWithUsername()}*\n" +
+                    $"Score: `{data.Score}` | " +
+                    (data.UpvotedUsers.Contains(_requester.Id)
+                        ? $"**{data.UpvotedUsers.Count} 👍** | "
+                        : $"{data.UpvotedUsers.Count} 👍 | ") +
+                    (data.DownvotedUsers.Contains(_requester.Id)
+                        ? $"**{data.DownvotedUsers.Count} 👎** | "
+                        : $"{data.DownvotedUsers.Count} 👎");
+                MainBuilder.WithDescription(description);
             }
         }
     }

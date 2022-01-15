@@ -14,48 +14,43 @@ using Common.Localization.Providers;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
-using NLog;
 using Tyrrrz.Extensions;
 
 namespace Bot.DiscordRelated.Commands {
     public class CommandHandlerService : IService {
-        private DiscordShardedClient _client;
-        private IGuildConfigProvider _guildConfigProvider;
-        private IStatisticsPartProvider _statisticsPartProvider;
-        private ILogger _logger;
-        private MessageHistoryService _messageHistoryService;
-        private ILifetimeScope _serviceProvider;
-        private CommandCooldownHandler _commandCooldownHandler = new CommandCooldownHandler();
+        private readonly DiscordShardedClient _client;
+        private readonly IGuildConfigProvider _guildConfigProvider;
+        private readonly IStatisticsPartProvider _statisticsPartProvider;
+        private readonly MessageHistoryService _messageHistoryService;
+        private readonly ILifetimeScope _serviceProvider;
+        private readonly CollectorService _collectorService;
+        private readonly CustomCommandService _commandService;
+        private readonly CommandCooldownHandler _commandCooldownHandler = new();
+        private readonly FuzzySearch _fuzzySearch = new();
 
         public CommandHandlerService(DiscordShardedClient client, CustomCommandService commandService, IGuildConfigProvider guildConfigProvider,
-                                     IStatisticsPartProvider statisticsPartProvider, ILogger logger, MessageHistoryService messageHistoryService,
-                                     ILifetimeScope serviceProvider) {
+                                     IStatisticsPartProvider statisticsPartProvider, MessageHistoryService messageHistoryService,
+                                     ILifetimeScope serviceProvider, CollectorService collectorService) {
             _serviceProvider = serviceProvider;
+            _collectorService = collectorService;
             _messageHistoryService = messageHistoryService;
-            _logger = logger;
             _statisticsPartProvider = statisticsPartProvider;
             _guildConfigProvider = guildConfigProvider;
             _client = client;
-            CommandService = commandService;
+            _commandService = commandService;
         }
 
-        public CustomCommandService CommandService { get; private set; }
-        public static FuzzySearch FuzzySearch { get; set; } = new FuzzySearch();
-        public List<CommandInfo> AllCommands { get; } = new List<CommandInfo>();
 
-        public Task OnPostDiscordStartInitialize() {
-            FuzzySearch.AddData(CommandService.Aliases.Select(infos => infos.Key));
+        public Task OnPostDiscordStart() {
+            _fuzzySearch.AddData(_commandService.Aliases.Select(infos => infos.Key));
 
             _client.MessageReceived += HandleCommand;
             return Task.CompletedTask;
         }
 
         private async Task HandleCommand(SocketMessage s) {
-            if (!(s is SocketUserMessage msg)
-             || msg.Source != MessageSource.User
-             || !(s.Channel is SocketGuildChannel guildChannel)) {
-                return;
-            }
+            if (s is not SocketUserMessage { Source: MessageSource.User } msg) return;
+            if (s.Channel is not SocketGuildChannel guildChannel) return;
 
             var context = new CommandContext(_client, msg);
             var argPos = 0;
@@ -80,7 +75,7 @@ namespace Bot.DiscordRelated.Commands {
                     else {
                         await AddEmojiErrorHint(msg, guildConfig.Loc, CommonEmoji.Help,
                             new EntryLocalized("CommandHandler.UnknownCommand").Add(query.SafeSubstring(40, "...")!,
-                                FuzzySearch.Search(query).GetBestMatches(3).Select(match => $"`{match.SimilarTo}`").JoinToString(", "),
+                                _fuzzySearch.Search(query).GetBestMatches(3).Select(match => $"`{match.SimilarTo}`").JoinToString(", "),
                                 guildConfig.Prefix));
                     }
 
@@ -95,11 +90,11 @@ namespace Bot.DiscordRelated.Commands {
                     switch (result.Error) {
                         case CommandError.ParseFailed:
                             await AddEmojiErrorHint(msg, guildConfig.Loc, CommonEmoji.Help, new EntryLocalized("CommandHandler.ParseFailed"),
-                                CommandService.BuildHelpFields(command.Item1.Value.Key.Alias, guildConfig.Prefix, guildConfig.Loc));
+                                _commandService.BuildHelpFields(command.Item1.Value.Key.Alias, guildConfig.Prefix, guildConfig.Loc));
                             break;
                         case CommandError.BadArgCount:
                             await AddEmojiErrorHint(msg, guildConfig.Loc, CommonEmoji.Help, new EntryLocalized("CommandHandler.BadArgCount"),
-                                CommandService.BuildHelpFields(command.Item1.Value.Key.Alias, guildConfig.Prefix, guildConfig.Loc));
+                                _commandService.BuildHelpFields(command.Item1.Value.Key.Alias, guildConfig.Prefix, guildConfig.Loc));
                             break;
                         case CommandError.ObjectNotFound:
                             await SendErrorMessage(msg, guildConfig.Loc, result.ErrorReason);
@@ -114,21 +109,23 @@ namespace Bot.DiscordRelated.Commands {
             _messageHistoryService.TryLogCreatedMessage(s, guildConfig, isCommand);
         }
 
-        private static async Task AddEmojiErrorHint(SocketUserMessage targetMessage, ILocalizationProvider loc, IEmote emote, IEntry description,
-                                                    IEnumerable<EmbedFieldBuilder>? builders = null) {
-            var collector = CollectorsUtils.CollectReaction(targetMessage, reaction => reaction.UserId == targetMessage.Author.Id, async eventArgs => {
-                eventArgs.Controller.Dispose();
-                _ = eventArgs.RemoveReason();
-                _ = targetMessage.RemoveReactionAsync(CommonEmoji.Help, EnlivenBot.Client.CurrentUser);
+        private async Task AddEmojiErrorHint(SocketUserMessage targetMessage, ILocalizationProvider loc, IEmote emote, IEntry description,
+                                             IEnumerable<EmbedFieldBuilder>? builders = null) {
+            var collector = _collectorService.CollectReaction(targetMessage,
+                reaction => reaction.UserId == targetMessage.Author.Id,
+                async eventArgs => {
+                    eventArgs.Controller.Dispose();
+                    _ = eventArgs.RemoveReason();
+                    _ = targetMessage.RemoveReactionAsync(CommonEmoji.Help, _client.CurrentUser);
 
-                await SendErrorMessage(targetMessage, loc, description.Get(loc), builders);
-            });
+                    await SendErrorMessage(targetMessage, loc, description.Get(loc), builders);
+                });
             try {
                 var addReactionAsync = targetMessage.AddReactionAsync(emote);
                 _ = addReactionAsync.ContinueWith(async _ => {
                     await Task.Delay(TimeSpan.FromSeconds(20));
                     try {
-                        await targetMessage.RemoveReactionAsync(CommonEmoji.Help, EnlivenBot.Client.CurrentUser);
+                        await targetMessage.RemoveReactionAsync(CommonEmoji.Help, _client.CurrentUser);
                     }
                     finally {
                         collector.Dispose();
@@ -142,7 +139,7 @@ namespace Bot.DiscordRelated.Commands {
         }
 
         private async Task<(KeyValuePair<CommandMatch, ParseResult>?, IResult)> GetCommand(string query, ICommandContext context) {
-            var (commandMatch, result) = await CommandService.FindAsync(context, query, null);
+            var (commandMatch, result) = await _commandService.FindAsync(context, query, null);
             if (result.IsSuccess) return (commandMatch, result);
 
             if (result.Error != CommandError.UnknownCommand) return (commandMatch, result);
@@ -155,7 +152,7 @@ namespace Bot.DiscordRelated.Commands {
                 args = "";
             }
 
-            var searchResult = FuzzySearch.Search(command);
+            var searchResult = _fuzzySearch.Search(command);
             var bestMatch = searchResult.GetFullMatch();
 
             // Check for a another keyboard layout
@@ -163,7 +160,7 @@ namespace Bot.DiscordRelated.Commands {
 
             command = bestMatch.SimilarTo;
             query = $"{command} {args}";
-            var (commandMatch2, result2) = await CommandService.FindAsync(context, query, null);
+            var (commandMatch2, result2) = await _commandService.FindAsync(context, query, null);
             return result2.IsSuccess ? (commandMatch2, result2) : (commandMatch, result);
         }
 
@@ -174,11 +171,9 @@ namespace Bot.DiscordRelated.Commands {
                 await SendErrorMessage(message, localizationProvider, new EntryLocalized("CommandHandler.CommandOnCooldown").Get(localizationProvider));
                 return ExecuteResult.FromSuccess();
             }
-            
+
             #pragma warning disable 618
-            IResult result = CollectorsUtils.OnCommandExecute(pair, context, message)
-                ? await pair.Key.ExecuteAsync(context, pair.Value, new ServiceProviderAdapter(_serviceProvider))
-                : ExecuteResult.FromSuccess();
+            IResult result = await pair.Key.ExecuteAsync(context, pair.Value, new ServiceProviderAdapter(_serviceProvider));
 
             if (result.Error != CommandError.UnknownCommand) {
                 var commandName = query.IndexOf(" ", StringComparison.Ordinal) > -1 ? query.Substring(0, query.IndexOf(" ", StringComparison.Ordinal)) : query;
@@ -191,7 +186,7 @@ namespace Bot.DiscordRelated.Commands {
         }
 
         public async Task<IResult> ExecuteCommand(string query, ICommandContext context, string authorId) {
-            var result = await CommandService.ExecuteAsync(context, query, new ServiceProviderAdapter(_serviceProvider));
+            var result = await _commandService.ExecuteAsync(context, query, new ServiceProviderAdapter(_serviceProvider));
             if (result.Error != CommandError.UnknownCommand) {
                 var commandName = query.IndexOf(" ", StringComparison.Ordinal) > -1 ? query.Substring(0, query.IndexOf(" ", StringComparison.Ordinal)) : query;
                 _statisticsPartProvider.RegisterUsage(commandName, authorId);
@@ -220,9 +215,9 @@ namespace Bot.DiscordRelated.Commands {
         public static EmbedBuilder GetErrorEmbed(IUser user, ILocalizationProvider loc, string description) {
             var builder = new EmbedBuilder();
             builder.WithFooter(loc.Get("Commands.RequestedBy").Format(user.Username), user.GetAvatarUrl())
-                   .WithColor(Color.Orange);
+                .WithColor(Color.Orange);
             builder.WithTitle(loc.Get("CommandHandler.FailedTitle"))
-                   .WithDescription(description);
+                .WithDescription(description);
             return builder;
         }
 
@@ -232,14 +227,14 @@ namespace Bot.DiscordRelated.Commands {
                 return false;
             var num = content.IndexOf('>');
             if (num == -1 || !MentionUtils.TryParseUser(content.Substring(0, num + 1), out var userId) ||
-                (long) userId != (long) user.Id)
+                (long)userId != (long)user.Id)
                 return false;
             argPos = num + 2;
             return true;
         }
 
         public CommandInfo GetCommandByName(string commandName) {
-            return CommandService.Aliases[commandName].First();
+            return _commandService.Aliases[commandName].First();
         }
     }
 }

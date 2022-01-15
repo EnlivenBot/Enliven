@@ -9,8 +9,8 @@ using NLog;
 using YandexMusicResolver;
 
 namespace Bot.Music.Yandex {
-    public class YandexClientResolver : IService {
-        private readonly EnlivenConfig _config;
+    public class YandexClientResolver {
+        private readonly GlobalConfig _config;
         private readonly ILogger _logger;
         private readonly YandexMusicMainResolver _resolver;
         private readonly SingleTask _retryAuthTask;
@@ -18,7 +18,7 @@ namespace Bot.Music.Yandex {
         private bool _isAuthFailed;
         private bool _isWrongCredentials;
         private Task? _initializeClientTask;
-        public YandexClientResolver(EnlivenConfig config, ILogger logger) {
+        public YandexClientResolver(GlobalConfig config, ILogger logger) {
             _logger = logger;
             _config = config;
             _retryAuthTask = new SingleTask(async () => {
@@ -35,6 +35,7 @@ namespace Bot.Music.Yandex {
                 }
             }) {BetweenExecutionsDelay = TimeSpan.FromMinutes(10), CanBeDirty = false};
             _resolver = new YandexMusicMainResolver(_config);
+            _initializeClientTask = InitializeClientInternal();
         }
 
         public async Task<YandexMusicMainResolver> GetClient() {
@@ -59,11 +60,6 @@ namespace Bot.Music.Yandex {
                 _logger.Error(e, "Yandex Music auth failed due to unknown reasons. We will try again later.");
                 _isAuthFailed = true;
             }
-        }
-
-
-        public Task OnPreDiscordStartInitialize() {
-            return _initializeClientTask ??= InitializeClientInternal();
         }
 
         public void SetAuthFailed()

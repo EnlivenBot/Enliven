@@ -2,112 +2,75 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
-using Autofac.Extras.NLog;
-using Bot.DiscordRelated;
-using Bot.DiscordRelated.Commands;
-using Bot.DiscordRelated.MessageComponents;
-using Bot.DiscordRelated.MessageHistories;
-using Bot.DiscordRelated.Music;
-using Bot.Music.Spotify;
-using Bot.Music.Yandex;
 using Bot.Patches;
-using ChatExporter;
-using ChatExporter.Exporter.MessageHistories;
 using Common;
 using Common.Config;
-using Common.Entities;
 using Common.Localization;
-using Common.Music.Controller;
-using Common.Music.Effects;
-using Common.Music.Resolvers;
-using Discord;
-using Discord.WebSocket;
 using NLog;
 
 namespace Bot {
     internal static class Program {
+        private static IContainer Container { get; set; } = null!;
+        private static readonly ILogger Logger = LogManager.GetCurrentClassLogger();
         private static async Task Main(string[] args) {
-            #if !DEBUG
+#if !DEBUG
             InstallErrorHandlers();
-            #endif
+#endif
 
-            var containerBuilder = new ContainerBuilder();
-            ConfigureServices(containerBuilder);
-            Startup.ConfigureServices(containerBuilder);
+            LocalizationManager.Initialize();
+
+            var containerBuilder = new ContainerBuilder()
+                .AddGlobalConfig()
+                .AddEnlivenServices()
+                .AddCommonServices();
             Container = containerBuilder.Build();
+            await Task.WhenAll(Container.Resolve<IEnumerable<IPatch>>().Select(patch => patch.Apply()).ToArray());
 
-            using (var scope = Container.BeginLifetimeScope()) {
-                var bot = scope.Resolve<EnlivenBot>();
-                await bot.Run();
+            var configs = PrepareInstanceConfigs();
+            var enlivenBotWrappers = configs.Select(provider => new EnlivenBotWrapper(provider));
+            var startTasks = enlivenBotWrappers.Select(wrapper => wrapper.StartAsync(Container, CancellationToken.None)).ToList();
+
+            var whenAll = await Task.WhenAll(startTasks);
+            if (whenAll.All(b => !b)) {
+                // If all failed - exit
+                Logger.Fatal("All bot instances failed to start. Check configs, logs and try again");
+                Environment.Exit(-1);
             }
 
-            Console.WriteLine("Execution end");
+            AppDomain.CurrentDomain.ProcessExit += OnCurrentDomainOnProcessExit;
+            await Task.Delay(-1);
         }
 
-        private static IContainer Container { get; set; } = null!;
+        private static IEnumerable<ConfigProvider<InstanceConfig>> PrepareInstanceConfigs() {
+            try {
+                return ConfigProvider<InstanceConfig>.GetConfigs("Config/Instances/");
+            }
+            catch (Exception) when (File.Exists("Config/config.json")) {
+                // Migrate old config to new folder
+                Directory.CreateDirectory("Config/Instances/");
+                File.Move("Config/config.json", "Config/Instances/MainBot.json");
+                return PrepareInstanceConfigs();
+            }
+            catch (Exception) {
+                var enlivenConfigProvider = new ConfigProvider<InstanceConfig>("Config/Instances/MainBot.json");
+                enlivenConfigProvider.Load();
+                throw new Exception($"New config file generated at {enlivenConfigProvider.FullConfigPath}. Consider check it.");
+            }
+        }
 
-        public static void ConfigureServices(ContainerBuilder builder)
-        {
-            builder.AddEnlivenConfig();
-            builder.RegisterType<MusicResolverService>().AsSelf().SingleInstance();
-            builder.RegisterType<MusicController>().As<IMusicController>().SingleInstance();
-            builder.RegisterType<ReliabilityService>().AsSelf();
-            builder.RegisterModule<NLogModule>();
-            builder.RegisterType<EnlivenBot>().SingleInstance();
-            builder.Register(context => new EnlivenShardedClient(new DiscordSocketConfig {MessageCacheSize = 100}))
-                .AsSelf().As<DiscordShardedClient>().SingleInstance();
-
-            builder.Register(context => context.Resolve<EnlivenConfig>().LavalinkNodes);
-
-            // Discord type readers
-            builder.RegisterType<ChannelFunctionTypeReader>().As<CustomTypeReader>();
-            builder.RegisterType<LoopingStateTypeReader>().As<CustomTypeReader>();
-
-            // Database types
-            builder.Register(context => context.Resolve<LiteDatabaseProvider>().ProvideDatabase().GetAwaiter().GetResult()
-                .GetCollection<SpotifyAssociation>(@"SpotifyAssociations")).SingleInstance();
-            builder.Register(context => context.Resolve<LiteDatabaseProvider>().ProvideDatabase().GetAwaiter().GetResult()
-                .GetCollection<MessageHistory>(@"MessageHistory")).SingleInstance();
-
-            // Music resolvers
-            builder.RegisterType<SpotifyMusicResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
-            builder.RegisterType<SpotifyClientResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
-            
-            builder.RegisterType<YandexClientResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
-            builder.RegisterType<Music.Yandex.YandexMusicResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
-            
-            builder.RegisterType<SpotifyTrackEncoder>().AsSelf().AsImplementedInterfaces().PropertiesAutowired(PropertyWiringOptions.AllowCircularDependencies).SingleInstance();
-            builder.RegisterType<YandexTrackEncoder>().AsSelf().AsImplementedInterfaces().SingleInstance();
-
-            // Providers
-            builder.RegisterType<SpotifyAssociationProvider>().As<ISpotifyAssociationProvider>().SingleInstance();
-            builder.RegisterType<MessageHistoryProvider>().SingleInstance();
-            builder.RegisterType<EmbedPlayerDisplayProvider>().SingleInstance();
-            builder.RegisterType<EmbedPlayerQueueDisplayProvider>().SingleInstance();
-            builder.RegisterType<EffectSourceProvider>().SingleInstance();
-            builder.RegisterType<EmbedPlayerEffectsDisplayProvider>().SingleInstance();
-
-            // Services
-            builder.RegisterType<CustomCommandService>().As<IService>().AsSelf().SingleInstance();
-            builder.RegisterType<MessageHistoryService>().As<IService>().AsSelf().SingleInstance();
-            builder.RegisterType<GlobalBehaviorsService>().As<IService>().AsSelf().SingleInstance();
-            builder.RegisterType<ReliabilityService>().As<IService>().AsSelf().SingleInstance();
-            builder.RegisterType<CommandHandlerService>().As<IService>().AsSelf().SingleInstance();
-            builder.RegisterType<StatisticsService>().As<IStatisticsService>().AsSelf().SingleInstance();
-            builder.RegisterType<MessageComponentService>().As<MessageComponentService>().AsSelf().SingleInstance();
-            builder.RegisterType<HtmlRendererService>().As<IService>().AsSelf().SingleInstance();
-            builder.RegisterType<MessageHistoryHtmlExporter>().SingleInstance();
-            
-            // MessageHistory Printers
-            builder.RegisterType<MessageHistoryPrinter>().SingleInstance();
-            builder.RegisterType<MessageHistoryPackPrinter>().SingleInstance();
+        private static void OnCurrentDomainOnProcessExit(object? o, EventArgs eventArgs) {
+            Logger.Info("Application shutdown requested");
+            Container.DisposeAsync().AsTask().Wait();
+            Logger.Info("Application shutdowned");
+            LogManager.Shutdown();
+            Environment.Exit(0);
         }
 
         // ReSharper disable once UnusedMember.Local
-        private static void InstallErrorHandlers()
-        {
+        private static void InstallErrorHandlers() {
             var logger = LogManager.GetLogger("Global");
             AppDomain.CurrentDomain.UnhandledException += (sender, args) =>
                 logger.Fatal(args.ExceptionObject as Exception, "Global uncaught exception");

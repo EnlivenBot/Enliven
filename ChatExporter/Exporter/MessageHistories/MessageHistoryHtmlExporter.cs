@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Common;
 using Common.Entities;
@@ -45,7 +46,7 @@ namespace ChatExporter.Exporter.MessageHistories {
 
                 var snapshotsRenderTasks = messageHistory.GetSnapshots(LangLocalizationProvider.EnglishLocalizationProvider)
                     .Select(snapshot => new MessageHistorySnapshotContext(exportContext, snapshot))
-                    .Select(MessageHistorySnapshot.RenderAsync);
+                    .Select(context => MessageHistorySnapshot.RenderAsync(context, CancellationToken.None));
 
                 var postambleTemplateContext = new PostambleTemplateContext(exportContext);
                 var postambleRenderTask = PostambleTemplate.RenderAsync(postambleTemplateContext);

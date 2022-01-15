@@ -28,8 +28,8 @@ namespace Bot.DiscordRelated.Commands.Modules {
             GuildConfig = GuildConfigProvider.Get(Context.Guild.Id);
         }
 
-        protected override async Task<IUserMessage> ReplyAsync(string? message = null, bool isTTS = false, Embed embed = null, RequestOptions options = null, AllowedMentions allowedMentions = null, MessageReference messageReference = null, MessageComponent component = null) {
-            return await (await GetResponseChannel()).SendMessageAsync(message, isTTS, embed, options, component:component).ConfigureAwait(false);
+        protected override async Task<IUserMessage> ReplyAsync(string message = null, bool isTTS = false, Embed embed = null, RequestOptions options = null, AllowedMentions allowedMentions = null, MessageReference messageReference = null, MessageComponent component = null, ISticker[] stickers = null, Embed[] embeds = null) {
+            return await (await GetResponseChannel()).SendMessageAsync(message, isTTS, embed, options, allowedMentions, messageReference, component, stickers, embeds).ConfigureAwait(false);
         }
 
         protected async Task<IUserMessage> ReplyFormattedAsync(string title, string description) {

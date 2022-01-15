@@ -23,32 +23,45 @@ namespace Bot.DiscordRelated.Commands {
             _typeReaders = typeReaders;
         }
 
-        public async Task OnPostDiscordStartInitialize() {
-            await AddModulesAsync(Assembly.GetEntryAssembly(), new ServiceProviderAdapter(_serviceContainer));
+        public async Task OnPreDiscordStart() {
+            await AddModulesAsync(Assembly.GetEntryAssembly()!, new ServiceProviderAdapter(_serviceContainer));
             foreach (var customTypeReader in _typeReaders) {
                 AddTypeReader(customTypeReader.GetTargetType(), customTypeReader);
             }
 
-            var items = new List<(string, CommandInfo)>();
-            foreach (var command in Commands) {
-                items.AddRange(command.Aliases.Select(commandAlias => (commandAlias, command)));
-            }
+            Aliases = Commands
+                .SelectMany(info => info.Aliases.Select(s => (s, info)))
+                .ToLookup(tuple => tuple.s, tuple => tuple.info);
 
-            
-            Aliases = items.ToLookup(tuple => tuple.Item1, tuple => tuple.Item2);
-            
             CommandsGroups = new Lazy<Dictionary<string, CommandGroup>>(() => {
-                return Commands.Where(info => !info.IsHiddenCommand())
-                               .GroupBy(info => info.GetGroup()?.GroupName ?? "")
-                               .Where(grouping => !string.IsNullOrWhiteSpace(grouping.Key)).Select(infos =>
-                                    new CommandGroup {
-                                        Commands = infos.ToList(), GroupId = infos.Key,
-                                        GroupNameTemplate = $"{{0}} ({{1}}help {infos.Key}):",
-                                        GroupTextTemplate = string.Join(' ', infos.Select(info => info.Name)
-                                                                                  .GroupBy(s => s).Select(grouping => grouping.First())
-                                                                                  .Select(s => $"`{{0}}{s}`"))
-                                    }).ToDictionary(group => @group.GroupId);
+                return Commands
+                    .Where(info => !info.IsHiddenCommand())
+                    .GroupBy(info => info.GetGroup()?.GroupName ?? "")
+                    .Where(grouping => !grouping.Key.IsBlank())
+                    .Select(infos =>
+                        new CommandGroup {
+                            Commands = infos.ToList(),
+                            GroupId = infos.Key,
+                            GroupNameTemplate = $"{{0}} ({{1}}help {infos.Key}):",
+                            GroupTextTemplate = string.Join(' ', infos
+                                .Select(info => info.Name)
+                                .GroupBy(s => s).Select(grouping => grouping.First())
+                                .Select(s => $"`{{0}}{s}`")
+                            )
+                        }).ToDictionary(group => @group.GroupId);
             });
+        }
+
+        private new async Task AddModulesAsync(Assembly assembly, IServiceProvider services) {
+            foreach (var definedType in assembly.DefinedTypes) {
+                if (!definedType.IsPublic
+                 && !definedType.IsNestedPublic
+                 || !typeof(IModuleBase).IsAssignableFrom(definedType)
+                 || definedType.IsAbstract
+                 || definedType.ContainsGenericParameters
+                 || definedType.IsDefined(typeof(DontAutoLoadAttribute))) continue;
+                await AddModuleAsync(definedType, services).ConfigureAwait(false);
+            }
         }
 
         public Task<(KeyValuePair<CommandMatch, ParseResult>?, IResult)> FindAsync(ICommandContext context, int argPos, IServiceProvider services,
@@ -64,7 +77,6 @@ namespace Bot.DiscordRelated.Commands {
                 return (null, searchResult);
             }
 
-
             var commands = searchResult.Commands;
             var preconditionResults = new Dictionary<CommandMatch, PreconditionResult>();
 
@@ -73,14 +85,14 @@ namespace Bot.DiscordRelated.Commands {
             }
 
             var successfulPreconditions = preconditionResults
-                                         .Where(x => x.Value.IsSuccess)
-                                         .ToArray();
+                .Where(x => x.Value.IsSuccess)
+                .ToArray();
 
             if (successfulPreconditions.Length == 0) {
                 //All preconditions failed, return the one from the highest priority command
                 var bestCandidate = preconditionResults
-                                   .OrderByDescending(x => x.Key.Command.Priority)
-                                   .FirstOrDefault(x => !x.Value.IsSuccess);
+                    .OrderByDescending(x => x.Key.Command.Priority)
+                    .FirstOrDefault(x => !x.Value.IsSuccess);
 
                 return (null, bestCandidate.Value);
             }
@@ -123,16 +135,16 @@ namespace Bot.DiscordRelated.Commands {
 
             //Order the parse results by their score so that we choose the most likely result to execute
             var parseResults = parseResultsDict
-                              .OrderByDescending(x => CalculateScore(x.Key, x.Value)).ToList();
+                .OrderByDescending(x => CalculateScore(x.Key, x.Value)).ToList();
 
             var successfulParses = parseResults
-                                  .Where(x => x.Value.IsSuccess)
-                                  .ToArray();
+                .Where(x => x.Value.IsSuccess)
+                .ToArray();
 
             if (successfulParses.Length == 0) {
                 //All parses failed, return the one from the highest priority command, using score as a tie breaker
                 var bestMatch = parseResults
-                   .FirstOrDefault(x => !x.Value.IsSuccess);
+                    .FirstOrDefault(x => !x.Value.IsSuccess);
 
                 return (bestMatch, bestMatch.Value);
             }

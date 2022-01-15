@@ -7,32 +7,24 @@ using NLog;
 using PuppeteerSharp;
 
 namespace ChatExporter {
-    public class HtmlRendererService : IService {
-        private ILogger Logger = LogManager.GetCurrentClassLogger();
+    public class HtmlRendererService : IDisposable, IAsyncDisposable {
         private Task<RevisionInfo>? _browserDownloadingTask;
         private Browser? _browser;
-        private readonly SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1);
-
-        public Task OnPostDiscordStartInitialize() {
-            Logger.Info("Starting Chrome downloading");
+        private readonly SemaphoreSlim _semaphoreSlim = new(1);
+        public HtmlRendererService(ILogger logger) {
+            logger.Info("Starting Chrome downloading");
             _browserDownloadingTask = new BrowserFetcher().DownloadAsync(BrowserFetcher.DefaultChromiumRevision);
             _browserDownloadingTask.ContinueWith(task => {
-                Logger.Fatal(task.Exception?.Flatten(), "Chrome downloaded failed");
+                logger.Fatal(task.Exception?.Flatten(), "Chrome downloaded failed");
             }, TaskContinuationOptions.OnlyOnFaulted);
             _browserDownloadingTask.ContinueWith(task => {
-                Logger.Info("Chrome downloaded");
+                logger.Info("Chrome downloaded");
             }, TaskContinuationOptions.OnlyOnRanToCompletion);
-
-            return Task.CompletedTask;
-        }
-
-        public Task OnShutdown(bool isDiscordStarted) {
-            return _browser?.CloseAsync() ?? Task.CompletedTask;
         }
 
         private async Task<Browser> InitializeBrowser() {
             if (_browserDownloadingTask == null) {
-                throw new Exception("HtmlRendererService start initialization only after OnPostDiscordStartInitialize call (after starting Discord client)");
+                throw new Exception("HtmlRendererService start initialization only after OnPostDiscordStart call (after starting Discord client)");
             }
 
             await _semaphoreSlim.WaitAsync();
@@ -65,6 +57,14 @@ namespace ChatExporter {
             finally {
                 File.Delete(tempFileName);
             }
+        }
+
+        public void Dispose() {
+            _browser?.Dispose();
+        }
+
+        public ValueTask DisposeAsync() {
+            return _browser?.DisposeAsync() ?? new ValueTask();
         }
     }
 }

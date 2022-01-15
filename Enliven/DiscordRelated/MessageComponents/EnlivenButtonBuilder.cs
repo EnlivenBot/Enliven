@@ -51,7 +51,7 @@ namespace Bot.DiscordRelated.MessageComponents {
                 .WithPriority(Priority)
                 .WithIsVisible(IsVisible)
                 .WithTargetRow(TargetRow)
-                .WithDisabled(Disabled)
+                .WithDisabled(IsDisabled)
                 .WithCustomId(CustomId)
                 .WithEmote(Emote)
                 .WithLabel(Label)
@@ -105,7 +105,7 @@ namespace Bot.DiscordRelated.MessageComponents {
         /// <param name="disabled">Whether the current button is disabled or not.</param>
         /// <returns>The current builder.</returns>
         public new EnlivenButtonBuilder WithDisabled(bool disabled) {
-            this.Disabled = disabled;
+            this.IsDisabled = disabled;
             return this;
         }
     }

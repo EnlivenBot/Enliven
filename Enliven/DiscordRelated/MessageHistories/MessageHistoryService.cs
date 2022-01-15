@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Bot.Config.Emoji;
 using Bot.Utilities.Collector;
@@ -20,26 +18,39 @@ using Tyrrrz.Extensions;
 
 namespace Bot.DiscordRelated.MessageHistories {
     public class MessageHistoryService : IService {
-        public MessageHistoryService(ILogger logger, MessageHistoryProvider messageHistoryProvider, IGuildConfigProvider guildConfigProvider,
-                                     IStatisticsPartProvider statisticsPartProvider, EnlivenShardedClient enliven,
-                                     MessageHistoryPrinter messageHistoryPrinter, MessageHistoryPackPrinter messageHistoryPackPrinter) {
+        private readonly ILogger _logger;
+        private readonly MessageHistoryProvider _messageHistoryProvider;
+        private readonly IGuildConfigProvider _guildConfigProvider;
+        private readonly IStatisticsPartProvider _statisticsPartProvider;
+        private readonly EnlivenShardedClient _enliven;
+        private readonly MessageHistoryPrinter _messageHistoryPrinter;
+        private readonly MessageHistoryPackPrinter _messageHistoryPackPrinter;
+        private readonly CollectorService _collectorService;
+        public MessageHistoryService(ILogger logger,
+                                     MessageHistoryProvider messageHistoryProvider,
+                                     IGuildConfigProvider guildConfigProvider,
+                                     IStatisticsPartProvider statisticsPartProvider,
+                                     EnlivenShardedClient enliven,
+                                     MessageHistoryPrinter messageHistoryPrinter,
+                                     MessageHistoryPackPrinter messageHistoryPackPrinter,
+                                     CollectorService collectorService) {
             _messageHistoryPackPrinter = messageHistoryPackPrinter;
+            _collectorService = collectorService;
             _enliven = enliven;
             _messageHistoryPrinter = messageHistoryPrinter;
             _statisticsPartProvider = statisticsPartProvider;
             _guildConfigProvider = guildConfigProvider;
             _messageHistoryProvider = messageHistoryProvider;
-            this.logger = logger;
+            this._logger = logger;
         }
 
-        public Task OnPostDiscordStartInitialize() {
+        public Task OnPostDiscordStart() {
             // Message created handled located in CommandHandler
-            EnlivenBot.Client.MessageUpdated += ClientOnMessageUpdated;
-            EnlivenBot.Client.MessageDeleted += ClientOnMessageDeleted;
-            CollectorsUtils.CollectReaction(CommonEmoji.LegacyBook, reaction => {
-                if (!(reaction.Channel is ITextChannel textChannel)) return false;
-                return _guildConfigProvider.Get(textChannel.GuildId).IsLoggingEnabled;
-            }, OnLogEmoteReceived, CollectorFilter.IgnoreBots);
+            _enliven.MessageUpdated += ClientOnMessageUpdated;
+            _enliven.MessageDeleted += ClientOnMessageDeleted;
+            _collectorService.CollectReaction(CommonEmoji.LegacyBook,
+                reaction => reaction.Channel is ITextChannel textChannel && _guildConfigProvider.Get(textChannel.GuildId).IsLoggingEnabled,
+                OnLogEmoteReceived, CollectorFilter.IgnoreBots);
             return Task.CompletedTask;
         }
 
@@ -51,13 +62,13 @@ namespace Bot.DiscordRelated.MessageHistories {
                 await PrintLog(eventArgs.Reaction.Channel.Id, eventArgs.Reaction.MessageId, reactionChannel, guildConfig.Loc, (IGuildUser)eventArgs.Reaction.User.Value);
             }
             catch (Exception e) {
-                logger.Error(e, "Faled to print log");
+                _logger.Error(e, "Faled to print log");
             }
         }
 
         private Task ClientOnMessageUpdated(Cacheable<IMessage, ulong> arg1, SocketMessage message, ISocketMessageChannel arg3) {
             Task.Run(() => {
-                if (!(message.Channel is ITextChannel textChannel)) return;
+                if (message.Channel is not ITextChannel textChannel) return;
                 var history = _messageHistoryProvider.Get(message);
                 if (history == null && !NeedLogMessage(message, _guildConfigProvider.Get(textChannel.GuildId), null)) return;
                 _messageHistoryProvider.GetAndSync(message);
@@ -66,15 +77,6 @@ namespace Bot.DiscordRelated.MessageHistories {
 
             return Task.CompletedTask;
         }
-
-        private ConcurrentDictionary<ulong, SemaphoreSlim> _packSemaphores = new ConcurrentDictionary<ulong, SemaphoreSlim>();
-        private ILogger logger;
-        private MessageHistoryProvider _messageHistoryProvider;
-        private IGuildConfigProvider _guildConfigProvider;
-        private IStatisticsPartProvider _statisticsPartProvider;
-        private EnlivenShardedClient _enliven;
-        private MessageHistoryPrinter _messageHistoryPrinter;
-        private MessageHistoryPackPrinter _messageHistoryPackPrinter;
 
         private Task ClientOnMessageDeleted(Cacheable<IMessage, ulong> messageCacheable, Cacheable<IMessageChannel, ulong> channelCacheable) {
             new Task(async _ => {
@@ -110,7 +112,7 @@ namespace Bot.DiscordRelated.MessageHistories {
                     _statisticsPartProvider.RegisterUsage("MessagesDeleted", "Messages");
                 }
                 catch (Exception e) {
-                    logger.Error(e, "Failed to print log message");
+                    _logger.Error(e, "Failed to print log message");
                 }
                 finally {
                     _messageHistoryProvider.Delete($"{channelCacheable.Id}:{messageCacheable.Id}");
@@ -128,12 +130,12 @@ namespace Bot.DiscordRelated.MessageHistories {
                     var guild = _guildConfigProvider.Get(arg.Id);
                     if (!guild.GetChannel(ChannelFunction.Log, out var logChannelId)) return;
                     var loc = new GuildLocalizationProvider(guild);
-                    var logChannel = EnlivenBot.Client.GetChannel(logChannelId);
+                    var logChannel = _enliven.GetChannel(logChannelId);
                     ((SocketTextChannel)logChannel)!.SendMessageAsync(loc.Get("MessageHistory.GuildLogCleared").Format(
                         arg.Name, arg.Id, deletesCount));
                 }
                 finally {
-                    logger.Info("The bot cleared the message history of the guild {guildName} ({guildId}). Cleared {postNumber} posts",
+                    _logger.Info("The bot cleared the message history of the guild {guildName} ({guildId}). Cleared {postNumber} posts",
                         arg.Name, arg.Id, deletesCount);
                 }
             }, TaskCreationOptions.LongRunning).Start();
