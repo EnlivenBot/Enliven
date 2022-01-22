@@ -5,9 +5,7 @@ using Bot.Commands.Chains;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
 using Bot.DiscordRelated.MessageComponents;
-using Bot.DiscordRelated.MessageHistories;
 using Bot.Utilities;
-using Bot.Utilities.Collector;
 using Common;
 using Common.Config;
 using Common.Localization;
@@ -19,12 +17,9 @@ namespace Bot.Commands {
     [Grouping("admin")]
     [RequireUserPermission(GuildPermission.Administrator)]
     public class AdminCommands : AdvancedModuleBase {
-        public MessageHistoryService MessageHistoryService { get; set; } = null!;
         public GlobalBehaviorsService GlobalBehaviorsService { get; set; } = null!;
         public CommandHandlerService CommandHandlerService { get; set; } = null!;
         public MessageComponentService MessageComponentService { get; set; } = null!;
-        public CollectorService CollectorService { get; set; } = null!;
-        public EnlivenShardedClient EnlivenShardedClient { get; set; } = null!;
 
         [Hidden]
         [Command("printwelcome")]
@@ -98,25 +93,6 @@ namespace Bot.Commands {
         [Summary("setchannel0s")]
         public async Task SetThisChannel([Summary("setchannel0_0s")] ChannelFunction func) {
             await SetChannel(func, Context.Channel);
-        }
-
-        [Command("clearhistories", RunMode = RunMode.Async)]
-        [Summary("clearhistories0s")]
-        public async Task ClearHistories() {
-            await ReplyAsync("Start clearing message histories");
-            await MessageHistoryService.ClearGuildLogs((SocketGuild) Context.Guild);
-        }
-
-        [Command("logging")]
-        [Summary("logging0s")]
-        public async Task LoggingControlPanel() {
-            var botPermissions = (await Context.Guild.GetUserAsync(Context.Client.CurrentUser.Id)).GetPermissions((IGuildChannel) Context.Channel);
-            if (botPermissions.SendMessages) {
-                await new LoggingChain((ITextChannel) Context.Channel, Context.User, GuildConfig, CollectorService, EnlivenShardedClient).Start();
-            }
-            else {
-                await (await Context.User.CreateDMChannelAsync()).SendMessageAsync(Loc.Get("ChainsCommon.CantSend").Format($"<#{Context.Channel.Id}>"));
-            }
         }
     }
 }

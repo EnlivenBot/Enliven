@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Autofac;
 using Bot.Utilities;
 using Common;
+using Common.Config;
 using Common.Localization.Providers;
 using Discord;
 using Discord.Commands;
@@ -15,11 +16,16 @@ using Discord.Commands;
 namespace Bot.DiscordRelated.Commands {
     public class CustomCommandService : CommandService, IService {
         public ILookup<string, CommandInfo> Aliases { get; private set; } = null!;
-        private IEnumerable<CustomTypeReader> _typeReaders;
-        private ILifetimeScope _serviceContainer;
+        private readonly IEnumerable<CustomTypeReader> _typeReaders;
+        private readonly ILifetimeScope _serviceContainer;
+        private readonly GlobalConfig _globalConfig;
+        private readonly InstanceConfig _instanceConfig;
 
-        public CustomCommandService(IEnumerable<CustomTypeReader> typeReaders, ILifetimeScope serviceContainer) {
+        public CustomCommandService(IEnumerable<CustomTypeReader> typeReaders, ILifetimeScope serviceContainer,
+                                    GlobalConfig globalConfig, InstanceConfig instanceConfig) {
             _serviceContainer = serviceContainer;
+            _globalConfig = globalConfig;
+            _instanceConfig = instanceConfig;
             _typeReaders = typeReaders;
         }
 
@@ -59,7 +65,9 @@ namespace Bot.DiscordRelated.Commands {
                  || !typeof(IModuleBase).IsAssignableFrom(definedType)
                  || definedType.IsAbstract
                  || definedType.ContainsGenericParameters
-                 || definedType.IsDefined(typeof(DontAutoLoadAttribute))) continue;
+                 || definedType.IsDefined(typeof(DontAutoLoadAttribute))
+                 || definedType.GetCustomAttribute<RegisterIf>()?.CanBeRegistered(_globalConfig, _instanceConfig, definedType) == false)
+                    continue;
                 await AddModuleAsync(definedType, services).ConfigureAwait(false);
             }
         }
