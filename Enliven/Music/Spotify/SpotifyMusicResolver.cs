@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Common;
 using Common.Music;
 using Common.Music.Resolvers;
 using Lavalink4NET.Cluster;
@@ -45,7 +46,11 @@ namespace Bot.Music.Spotify {
             if (cachedTrack != null) return cachedTrack;
 
             try {
-                var lavalinkTracks = await (await new LavalinkMusicResolver().Resolve(lavalinkCluster, await spotifyTrackWrapper.GetTrackInfo(await _resolver.GetSpotify()))).Resolve();
+                var spotifyClient = (await _resolver.GetSpotify())!;
+                var trackInfo = await spotifyTrackWrapper.GetTrackInfo(spotifyClient);
+                var lavalinkTracks = await new LavalinkMusicResolver()
+                    .Pipe(resolver => resolver.Resolve(lavalinkCluster, trackInfo))
+                    .PipeAsync(result => result.Resolve());
                 var spotifyTrackAssociation = _spotifyAssociationProvider.Create(spotifyTrackWrapper.Id, lavalinkTracks[0].Identifier);
                 spotifyTrackAssociation.Save();
                 return spotifyTrackAssociation;
@@ -59,11 +64,14 @@ namespace Bot.Music.Spotify {
 
         private async Task<List<LavalinkTrack>> Resolve(SpotifyUrl url, LavalinkCluster cluster) {
             try {
-                var spotify = await _resolver.GetSpotify();
+                var spotify = (await _resolver.GetSpotify())!;
                 var spotifyTracks = await url.Resolve(spotify);
-                var enumerable = spotifyTracks.Select(async s =>
-                    new SpotifyLavalinkTrack(s, (await ResolveAssociation(s, cluster)).GetBestAssociation().Association)).ToList();
-                return (await Task.WhenAll(enumerable)).Cast<LavalinkTrack>().ToList();
+                var enumerable = spotifyTracks.Select(async s => {
+                        var association = await ResolveAssociation(s, cluster);
+                        return new SpotifyLavalinkTrack(s, association.GetBestAssociation().Association);
+                    }
+                ).ToList();
+                return await Task.WhenAll(enumerable).PipeAsync(tracks => tracks.Cast<LavalinkTrack>().ToList());
             }
             catch (Exception) {
                 throw new TrackNotFoundException(false);
