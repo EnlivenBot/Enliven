@@ -4,6 +4,7 @@ using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.MessageComponents;
 using Bot.DiscordRelated.MessageHistories;
 using Bot.DiscordRelated.Music;
+using Bot.Music.Deezer;
 using Bot.Music.Spotify;
 using Bot.Music.Yandex;
 using Bot.Utilities.Collector;
@@ -60,6 +61,8 @@ namespace Bot {
             builder.Register(context => context.GetDatabase().GetCollection<MessageHistory>(@"MessageHistory")).SingleInstance();
 
             // Music resolvers
+            builder.RegisterType<DeezerMusicResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
+
             builder.RegisterType<SpotifyMusicResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<SpotifyClientResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
 
