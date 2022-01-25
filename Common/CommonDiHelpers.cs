@@ -29,6 +29,7 @@ namespace Common {
             builder.RegisterType<LyricsService>().SingleInstance();
             builder.RegisterType<TrackEncoder>().SingleInstance();
             builder.RegisterType<LavalinkTrackEncoder>().AsSelf().AsImplementedInterfaces().SingleInstance();
+            builder.RegisterType<LavalinkMusicResolver>().AsSelf().SingleInstance();
 
             // Data providers
             builder.RegisterType<UserDataProvider>().As<IUserDataProvider>().SingleInstance();
