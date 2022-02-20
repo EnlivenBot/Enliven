@@ -68,12 +68,19 @@ namespace Bot.Music.Spotify {
             try {
                 var spotify = (await _spotifyClientResolver.GetSpotify())!;
                 var spotifyTracks = await url.Resolve(spotify);
-                var enumerable = spotifyTracks.Select(async s => {
-                        var association = await ResolveAssociation(s, cluster);
-                        return new SpotifyLavalinkTrack(s, association.GetBestAssociation().Association);
-                    }
-                ).ToList();
-                return await Task.WhenAll(enumerable).PipeAsync(tracks => tracks.Cast<LavalinkTrack>().ToList());
+                var enumerable = spotifyTracks
+                    .Select(async s => {
+                            var association = await ResolveAssociation(s, cluster);
+                            return association != null ? new SpotifyLavalinkTrack(s, association.GetBestAssociation().Association) : null;
+                        }
+                    ).ToList();
+                return await Task.WhenAll(enumerable)
+                    .PipeAsync(tracks => tracks
+                        .Where(track => track != null)
+                        // ReSharper disable once SuspiciousTypeConversion.Global
+                        .Cast<LavalinkTrack>()
+                        .ToList()
+                    );
             }
             catch (Exception) {
                 throw new TrackNotFoundException(false);
