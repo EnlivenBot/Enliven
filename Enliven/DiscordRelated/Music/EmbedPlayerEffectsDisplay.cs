@@ -13,7 +13,6 @@ using Common.Music.Players;
 using Common.Utils;
 using Discord;
 using Discord.WebSocket;
-using HarmonyLib;
 using Tyrrrz.Extensions;
 
 namespace Bot.DiscordRelated.Music {

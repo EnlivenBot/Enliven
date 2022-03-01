@@ -4,7 +4,6 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using HarmonyLib;
 using LiteDB;
 using NLog;
 
@@ -73,17 +72,17 @@ namespace Common.Config {
             logger.Info("Looking for database upgrades");
             var liteDatabaseCheckpointSize = db.CheckpointSize;
             db.CheckpointSize = 0;
-            var upgrades = Assembly.GetExecutingAssembly().GetTypes()
-                                   .SelectMany(AccessTools.GetDeclaredMethods)
-                                   .Where(m => m.GetCustomAttributes(typeof(DbUpgradeAttribute), false).Length > 0)
-                                    // ReSharper disable once PossibleNullReferenceException
-                                   .Select(info => ((DbUpgradeAttribute) info.GetCustomAttribute(typeof(DbUpgradeAttribute))!, info))
-                                   .OrderBy(tuple => tuple.Item1.Version)
-                                   .ToList();
-            foreach (var upgrade in upgrades.SkipWhile((tuple, i) => tuple.Item1.Version <= db.UserVersion)) {
-                logger.Info("Upgrading database to version {version}", upgrade.Item1.Version);
+            var upgrades = Assembly.GetExecutingAssembly()
+                .GetTypes()
+                .SelectMany(t => t.GetMethods())
+                .Select(info => (info.GetCustomAttribute<DbUpgradeAttribute>(), info))
+                .Where(tuple => tuple.Item1 != null)
+                .OrderBy(tuple => tuple.Item1!.Version)
+                .ToList();
+            foreach (var (dbUpgradeAttribute, method) in upgrades.SkipWhile((tuple, i) => tuple.Item1!.Version <= db.UserVersion)) {
+                logger.Info("Upgrading database to version {version}", dbUpgradeAttribute!.Version);
 
-                if (upgrade.Item1.TransactionsFriendly) {
+                if (dbUpgradeAttribute.TransactionsFriendly) {
                     db.BeginTrans();
                 }
                 else {
@@ -96,17 +95,17 @@ namespace Common.Config {
                 }
 
                 try {
-                    var upgradeResult = upgrade.info.Invoke(null, new object?[] {db});
+                    var upgradeResult = method.Invoke(null, new object?[] {db});
                     if (upgradeResult is Task upgradeTask)
                         await upgradeTask;
-                    if (upgrade.Item1.TransactionsFriendly) {
+                    if (dbUpgradeAttribute.TransactionsFriendly) {
                         db.Commit();
                     }
                 }
                 catch (Exception e) {
                     logger.Fatal(e, "Error while upgrading database");
                     logger.Fatal("Rollbacking changes");
-                    if (upgrade.Item1.TransactionsFriendly) {
+                    if (dbUpgradeAttribute.TransactionsFriendly) {
                         db.Rollback();
                     }
                     else {
@@ -118,7 +117,7 @@ namespace Common.Config {
                     throw;
                 }
                 finally {
-                    if (!upgrade.Item1.TransactionsFriendly) {
+                    if (!dbUpgradeAttribute.TransactionsFriendly) {
                         try {
                             File.Delete(Path.ChangeExtension(GetDatabasePath(), ".bak"));
                         }
@@ -167,8 +166,8 @@ namespace Common.Config {
                 }
 
                 logger.Info("Checkpoint done");
-                logger.Info("LiteDatabase upgraded to version {version}", upgrade.Item1.Version);
-                db.UserVersion = upgrade.Item1.Version;
+                logger.Info("LiteDatabase upgraded to version {version}", dbUpgradeAttribute.Version);
+                db.UserVersion = dbUpgradeAttribute.Version;
             }
 
             db.CheckpointSize = liteDatabaseCheckpointSize;
