@@ -4,7 +4,6 @@ using System.Linq;
 using System.Reactive.Threading.Tasks;
 using System.Threading;
 using System.Threading.Tasks;
-using Bot.Patches;
 using Common;
 using Common.Config;
 using Common.Localization;

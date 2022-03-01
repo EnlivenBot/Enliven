@@ -5,7 +5,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
-using Bot.Patches;
 using Common;
 using Common.Config;
 using Common.Localization;
@@ -27,7 +26,6 @@ namespace Bot {
                 .AddEnlivenServices()
                 .AddCommonServices();
             Container = containerBuilder.Build();
-            await Task.WhenAll(Container.Resolve<IEnumerable<IPatch>>().Select(patch => patch.Apply()).ToArray());
 
             var configs = PrepareInstanceConfigs();
             var enlivenBotWrappers = configs.Select(provider => new EnlivenBotWrapper(provider));
