@@ -21,7 +21,6 @@ namespace Bot.Commands {
         
         [Command("clearhistories", RunMode = RunMode.Async)]
         [Summary("clearhistories0s")]
-        [RegisterIf(typeof(RegisterIf.LoggingEnabled))]
         public async Task ClearHistories() {
             await ReplyAsync("Start clearing message histories");
             await MessageHistoryService.ClearGuildLogs((SocketGuild) Context.Guild);
@@ -29,7 +28,6 @@ namespace Bot.Commands {
 
         [Command("logging")]
         [Summary("logging0s")]
-        [RegisterIf(typeof(RegisterIf.LoggingEnabled))]
         public async Task LoggingControlPanel() {
             var botPermissions = (await Context.Guild.GetUserAsync(Context.Client.CurrentUser.Id)).GetPermissions((IGuildChannel) Context.Channel);
             if (botPermissions.SendMessages) {

@@ -66,7 +66,7 @@ namespace Bot.DiscordRelated.Commands {
                  || definedType.IsAbstract
                  || definedType.ContainsGenericParameters
                  || definedType.IsDefined(typeof(DontAutoLoadAttribute))
-                 || definedType.GetCustomAttribute<RegisterIf>()?.CanBeRegistered(_globalConfig, _instanceConfig, definedType) == false)
+                 || definedType.GetCustomAttribute<RegisterIf>()?.CanBeRegistered(_globalConfig, _instanceConfig) == false)
                     continue;
                 await AddModuleAsync(definedType, services).ConfigureAwait(false);
             }
