@@ -7,7 +7,7 @@ using Newtonsoft.Json;
 using NLog;
 
 namespace Common.Localization {
-    public class LocalizationManager {
+    public static class LocalizationManager {
         private static Logger logger = LogManager.GetCurrentClassLogger();
 
         public static readonly Dictionary<string, LocalizationPack> Languages;
@@ -53,10 +53,19 @@ namespace Common.Localization {
             // Dummy method to call static constructor
         }
 
+        public static bool IsLocalizationExists(string groupId) {
+            var split = groupId.Split(".");
+            // English always contains more than other languages
+            return Languages.TryGetValue("en", out var pack) 
+                 && pack.Data.TryGetValue(split[0], out var reqGroup) 
+                 && reqGroup.ContainsKey(split[1]);
+        }
+
         public static string Get(string lang, string id, params object[]? args) {
             var split = id.Split(".");
 
-            var s = Get(lang, split[0], split[1]);
+            var s = GetLocalizationValue(lang, split[0], split[1]);
+            if (s == null) return id;
             try {
                 return args == null || args.Length == 0 ? s : string.Format(s, args);
             }
@@ -66,7 +75,7 @@ namespace Common.Localization {
             }
         }
 
-        public static string Get(string lang, string group, string id) {
+        public static string? GetLocalizationValue(string lang, string group, string id) {
             logger.Trace("Requested {group}.{id} in {lang} localization", group, id, lang);
             if (Languages.TryGetValue(lang, out var pack) &&
                 pack.Data.TryGetValue(group, out var reqGroup) &&
@@ -77,12 +86,12 @@ namespace Common.Localization {
             if (string.IsNullOrWhiteSpace(pack?.FallbackLanguage)) {
                 logger.Error(new Exception($"Failed to load {group}.{id} in en localization"),
                     "Failed to load {group}.{id} in {lang} localization", group, id, "en");
-                return $"{group}.{id}";
+                return null;
             }
 
             logger.Warn("Failed to load {group}.{id} in {lang} localization", group, id, lang);
             // ReSharper disable once TailRecursiveCall
-            return Get(pack.FallbackLanguage, group, id);
+            return GetLocalizationValue(pack.FallbackLanguage, group, id);
         }
     }
 }

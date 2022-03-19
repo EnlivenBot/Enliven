@@ -8,6 +8,14 @@ namespace Common.Localization.Entries {
         public EntryLocalized(string id, params object[] args) : base(id, args) { }
         public EntryLocalized(string id, params Func<object>[] args) : base(id, args) { }
 
+        public static EntryLocalized Create(string group, string id) {
+            return new EntryLocalized($"{group}.{id}");
+        }
+
+        public override bool CanGet() {
+            return LocalizationManager.IsLocalizationExists(Content);
+        }
+
         private protected override string GetFormatString(ILocalizationProvider provider) {
             return provider.Get(Content);
         }
