@@ -1,17 +1,21 @@
 using System;
 using System.Threading.Tasks;
+using Bot.DiscordRelated.Interactions;
 using Bot.Utilities;
 using Common;
 using Common.Config;
 using Common.Localization.Providers;
 using Discord;
 using Discord.Commands;
+using Discord.Interactions;
+using ModuleInfo = Discord.Interactions.ModuleInfo;
 
 namespace Bot.DiscordRelated.Commands.Modules {
-    public class AdvancedModuleBase : PatchableModuleBase {
+    public class AdvancedModuleBase : ModuleBase, IInteractionModuleBase {
         private GuildLocalizationProvider? _loc;
+        private GuildConfig? _guildConfig;
         [DontInject] public GuildLocalizationProvider Loc => _loc ??= new GuildLocalizationProvider(GuildConfig);
-        [DontInject] public GuildConfig GuildConfig { get; private set; } = null!;
+        [DontInject] public GuildConfig GuildConfig => _guildConfig ??= GuildConfigProvider.Get(Context.Guild.Id);
         
         public IGuildConfigProvider GuildConfigProvider { get; set; } = null!;
 
@@ -21,11 +25,6 @@ namespace Bot.DiscordRelated.Commands.Modules {
             return bot.SendMessages && (!fileSupport || bot.AttachFiles) && (!fileSupport || user.AttachFiles)
                 ? Context.Channel
                 : await Context.User.CreateDMChannelAsync();
-        }
-
-        protected override void BeforeExecute(CommandInfo command) {
-            base.BeforeExecute(command);
-            GuildConfig = GuildConfigProvider.Get(Context.Guild.Id);
         }
 
         protected override async Task<IUserMessage> ReplyAsync(string message = null, bool isTTS = false, Embed embed = null, RequestOptions options = null, AllowedMentions allowedMentions = null, MessageReference messageReference = null, MessageComponent component = null, ISticker[] stickers = null, Embed[] embeds = null) {
@@ -43,5 +42,14 @@ namespace Bot.DiscordRelated.Commands.Modules {
             _ = message.DelayedDelete(delayedDeleteTime);
             return message;
         }
+
+        public void SetContext(IInteractionContext context) {
+            (this as IModuleBase).SetContext(new InteractionFallbackCommandContext(context));
+        }
+        public Task BeforeExecuteAsync(ICommandInfo command) => Task.CompletedTask;
+        public void BeforeExecute(ICommandInfo command) { }
+        public Task AfterExecuteAsync(ICommandInfo command) => Task.CompletedTask;
+        public void AfterExecute(ICommandInfo command) { }
+        public void OnModuleBuilding(InteractionService commandService, ModuleInfo module) { }
     }
 }
