@@ -84,7 +84,8 @@ namespace Bot.DiscordRelated.Interactions {
                 .WithName(command!.Text.ToLower())
                 .WithDescription(description)
                 .WithDefaultPermission(true)
-                .WithPreconditions(preconditions);
+                .WithPreconditions(preconditions)
+                .WithAttributes(methodInfo.GetCustomAttributes().ToArray());
             CallbackProperty.SetValue(builder, CreateCallback(createLambdaBuilder, methodInfo, this));
 
             foreach (var parameterInfo in methodInfo.GetParameters()) {

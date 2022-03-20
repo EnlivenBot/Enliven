@@ -10,6 +10,7 @@ using Common.Music.Controller;
 using Common.Music.Players;
 using Discord;
 using Discord.Commands;
+using Discord.Interactions;
 using Discord.WebSocket;
 using Lavalink4NET.Lyrics;
 using Lavalink4NET.Player;
@@ -33,10 +34,18 @@ namespace Bot.DiscordRelated.Commands.Modules {
         protected override void BeforeExecute(CommandInfo command) {
             base.BeforeExecute(command);
             GetChannel(out ResponseChannel);
-            IsPreconditionsValid = InitialSetup(command);
+            var needSummon = command.Attributes.FirstOrDefault(attribute => attribute is SummonToUserAttribute) != null;
+            IsPreconditionsValid = InitialSetup(needSummon);
         }
 
-        private async Task<bool> InitialSetup(CommandInfo command) {
+        public override void BeforeExecute(ICommandInfo command) {
+            base.BeforeExecute(command);
+            GetChannel(out ResponseChannel);
+            var needSummon = command.Attributes.FirstOrDefault(attribute => attribute is SummonToUserAttribute) != null;
+            IsPreconditionsValid = InitialSetup(needSummon);
+        }
+
+        private async Task<bool> InitialSetup(bool needSummon) {
             if (!ErrorsMessagesControllers.TryGetValue(Context.Channel.Id, out var nonSpamMessageController)) {
                 nonSpamMessageController = new NonSpamMessageController(Context.Channel, Loc.Get("Music.Fail"))
                                           .AddChannel(await Context.User.CreateDMChannelAsync()).UpdateTimeout(Constants.StandardTimeSpan);
@@ -71,8 +80,6 @@ namespace Bot.DiscordRelated.Commands.Modules {
                 MainDisplay = EmbedPlayerDisplayProvider.Get((ITextChannel) musicChannel);
                 if (user?.VoiceChannel?.Id == Player?.VoiceChannelId && user?.VoiceChannel?.Id != null &&
                     Player!.State != PlayerState.NotConnected && Player.State != PlayerState.Destroyed) return true;
-
-                var needSummon = command.Attributes.FirstOrDefault(attribute => attribute is SummonToUserAttribute) != null;
 
                 if (Player != null && Player.State != PlayerState.NotConnected && Player.State != PlayerState.Destroyed && !needSummon) {
                     nonSpamMessageController.AddEntry(Loc.Get("Music.OtherVoiceChannel").Format(Context.User.Mention)).Update();

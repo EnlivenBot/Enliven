@@ -62,7 +62,7 @@ namespace Bot.Commands {
 
             MainDisplay?.ControlMessageResend();
             try {
-                await Player!.TryEnqueue(await MusicController.ResolveQueries(queries), Context.Message?.Author?.Username ?? "Unknown", position);
+                await Player!.TryEnqueue(await MusicController.ResolveQueries(queries), Context.User?.Username ?? "Unknown", position);
             }
             catch (TrackNotFoundException) {
                 ErrorMessageController.AddEntry(Loc.Get("Music.NotFound", query!.SafeSubstring(100, "...")!))

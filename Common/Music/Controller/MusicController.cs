@@ -223,15 +223,17 @@ namespace Common.Music.Controller {
             return track;
         }
 
-        public static List<string> GetMusicQueries(IUserMessage message, string query) {
+        public static List<string> GetMusicQueries(IUserMessage? message, string query) {
             var list = new List<string>();
             list.AddRange(ParseByLines(query));
-            if (message.Attachments.Count != 0 && message.Attachments.First().Filename == "message.txt") {
-                using WebClient webClient = new WebClient();
-                list.AddRange(ParseByLines(webClient.DownloadString(message.Attachments.First().Url)));
-            }
-            else {
-                list.AddRange(message.Attachments.Select(attachment => attachment.Url));
+            if (message != null) {
+                if (message.Attachments.Count != 0 && message.Attachments.First().Filename == "message.txt") {
+                    using WebClient webClient = new WebClient();
+                    list.AddRange(ParseByLines(webClient.DownloadString(message.Attachments.First().Url)));
+                }
+                else {
+                    list.AddRange(message.Attachments.Select(attachment => attachment.Url));
+                }
             }
 
             return list;
