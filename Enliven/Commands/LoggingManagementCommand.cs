@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Bot.Commands.Chains;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
+using Bot.DiscordRelated.Interactions;
 using Bot.DiscordRelated.MessageHistories;
 using Bot.Utilities.Collector;
 using Common;
@@ -11,6 +12,7 @@ using Discord.Commands;
 using Discord.WebSocket;
 
 namespace Bot.Commands {
+    [SlashCommandAdapter]
     [Grouping("admin")]
     [RequireUserPermission(GuildPermission.Administrator)]
     [RegisterIf(typeof(RegisterIf.LoggingEnabled))]

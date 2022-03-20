@@ -1,11 +1,13 @@
 ﻿using System.Threading.Tasks;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
+using Bot.DiscordRelated.Interactions;
 using Common;
 using Discord;
 using Discord.Commands;
 
 namespace Bot.Commands {
+    [SlashCommandAdapter]
     public class Statistics : AdvancedModuleBase {
         public IStatisticsService StatisticsService { get; set; } = null!;
 
@@ -19,16 +21,11 @@ namespace Bot.Commands {
 
         [Command("userstats", RunMode = RunMode.Async)]
         [Summary("userstats0s")]
-        public Task UserStats([Summary("userstats0_0s")] IUser user) {
+        public Task UserStats([Summary("userstats0_0s")] IUser? user) {
             Context.Message.SafeDelete();
-            _ = ReplyAsync(null, false, StatisticsService.BuildStats(user, Loc).Build()).DelayedDelete(Constants.StandardTimeSpan);
+            var u = user ?? Context.User;
+            _ = ReplyAsync(null, false, StatisticsService.BuildStats(u, Loc).Build()).DelayedDelete(Constants.StandardTimeSpan);
             return Task.CompletedTask;
-        }
-
-        [Command("userstats", RunMode = RunMode.Async)]
-        [Summary("userstats1s")]
-        public async Task UserStats() {
-            await UserStats(Context.User);
         }
     }
 }

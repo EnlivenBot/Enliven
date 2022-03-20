@@ -1,11 +1,13 @@
 ﻿using System.Threading.Tasks;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
+using Bot.DiscordRelated.Interactions;
 using Common.Config;
 using Discord.Commands;
 
 namespace Bot.Commands {
     [Hidden]
+    [SlashCommandAdapter]
     public class Properties : AdvancedModuleBase {
         [Command("enablelogging")]
         public async Task EnableLogging(bool b) {

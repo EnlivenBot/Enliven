@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Bot.Commands.Chains;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
+using Bot.DiscordRelated.Interactions;
 using Bot.DiscordRelated.MessageComponents;
 using Bot.Utilities;
 using Common;
@@ -14,6 +15,7 @@ using Discord.Commands;
 using Discord.WebSocket;
 
 namespace Bot.Commands {
+    [SlashCommandAdapter]
     [Grouping("admin")]
     [RequireUserPermission(GuildPermission.Administrator)]
     public class AdminCommands : AdvancedModuleBase {
@@ -28,6 +30,7 @@ namespace Bot.Commands {
             _ = GlobalBehaviorsService.PrintWelcomeMessage((SocketGuild) Context.Guild, Context.Channel).DelayedDelete(Constants.LongTimeSpan);
         }
         
+        [SlashCommandAdapter(false)]
         [Command("setprefix")]
         [Summary("setprefix0s")]
         public async Task SetPrefix([Summary("setrefix0_0s")] string prefix) {
@@ -89,6 +92,7 @@ namespace Bot.Commands {
             Context.Message.SafeDelete();
         }
 
+        [SlashCommandAdapter(false)]
         [Command("setchannel")]
         [Summary("setchannel0s")]
         public async Task SetThisChannel([Summary("setchannel0_0s")] ChannelFunction func) {
