@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Autofac;
 using Common.Config;
 using Common.Music.Controller;
+using Common.Utils;
 using NLog;
 
 namespace Bot {
@@ -53,6 +54,9 @@ namespace Bot {
                             .SingleInstance();
                         builder.RegisterType<MusicController>()
                             .AsSelf().AsImplementedInterfaces()
+                            .SingleInstance();
+                        builder.RegisterType<ServiceScopeFactoryAdapter>()
+                            .AsImplementedInterfaces()
                             .SingleInstance();
                     });
                     var bot = lifetimeScope.Resolve<EnlivenBot>();
