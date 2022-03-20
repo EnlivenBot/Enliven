@@ -1,6 +1,7 @@
 ﻿using Autofac;
 using Bot.DiscordRelated;
 using Bot.DiscordRelated.Commands;
+using Bot.DiscordRelated.Interactions;
 using Bot.DiscordRelated.MessageComponents;
 using Bot.DiscordRelated.MessageHistories;
 using Bot.DiscordRelated.Music;
@@ -83,6 +84,7 @@ namespace Bot {
 
             // Services
             builder.RegisterType<CustomCommandService>().As<IService>().AsSelf().InstancePerLifetimeScope();
+            builder.RegisterType<CustomInteractionService>().As<IService>().AsSelf().InstancePerLifetimeScope();
             builder.RegisterType<MessageHistoryService>().As<IService>().AsSelf().InstancePerLifetimeScope();
             builder.RegisterType<GlobalBehaviorsService>().As<IService>().AsSelf().InstancePerLifetimeScope();
             builder.RegisterType<ScopedReliabilityService>().As<IService>().AsSelf().InstancePerLifetimeScope();
