@@ -29,45 +29,6 @@ namespace Bot.Commands {
     public sealed class MusicCommands : MusicModuleBase {
         public MessageComponentService ComponentService { get; set; } = null!;
         public CollectorService CollectorService { get; set; } = null!;
-
-        [SummonToUser]
-        [Command("play", RunMode = RunMode.Async)]
-        [Alias("p")]
-        [Summary("play0s")]
-        public async Task Play([Remainder] [Summary("play0_0s")] string? query = null) {
-            if (!await IsPreconditionsValid)
-                return;
-            await PlayInternal(query);
-        }
-
-        [SummonToUser]
-        [Command("playnext", RunMode = RunMode.Async)]
-        [Alias("pn")]
-        [Summary("playnext0s")]
-        public async Task PlayNext([Remainder] [Summary("play0_0s")] string? query = null) {
-            if (!await IsPreconditionsValid)
-                return;
-            await PlayInternal(query, Player!.Playlist.Count == 0 ? -1 : Player.CurrentTrackIndex + 1);
-        }
-
-        private async Task PlayInternal(string? query, int position = -1) {
-            var queries = Common.Music.Controller.MusicController.GetMusicQueries(Context.Message, query.IsBlank(""));
-            if (queries.Count == 0) {
-                Context.Message?.SafeDelete();
-                if (MainDisplay != null) MainDisplay.NextResendForced = true;
-                return;
-            }
-
-            MainDisplay?.ControlMessageResend();
-            try {
-                await Player!.TryEnqueue(await MusicController.ResolveQueries(queries), Context.Message?.Author?.Username ?? "Unknown", position);
-            }
-            catch (TrackNotFoundException) {
-                ErrorMessageController.AddEntry(Loc.Get("Music.NotFound", query!.SafeSubstring(100, "...")!))
-                                      .UpdateTimeout(Constants.StandardTimeSpan).Update();
-            }
-        }
-
         [Command("stop", RunMode = RunMode.Async)]
         [Alias("st")]
         [Summary("stop0s")]
