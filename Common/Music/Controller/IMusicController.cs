@@ -8,8 +8,6 @@ namespace Common.Music.Controller {
         public EnlivenLavalinkCluster Cluster { get; set; }
 
         public Task<FinalLavalinkPlayer> ProvidePlayer(ulong guildId, ulong voiceChannelId, bool recreate = false);
-        
-        public Task<FinalLavalinkPlayer> CreatePlayer(PlayerSnapshot parameters);
 
         public void StoreSnapshot(PlayerSnapshot parameters);
 
