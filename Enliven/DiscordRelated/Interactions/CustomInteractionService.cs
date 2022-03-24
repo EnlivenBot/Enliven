@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using System.Reactive.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Autofac;
@@ -14,24 +13,21 @@ using Discord;
 using Discord.Commands;
 using Discord.Interactions;
 using Discord.Interactions.Builders;
-using Microsoft.Extensions.DependencyInjection;
+using Discord.WebSocket;
 using PreconditionAttribute = Discord.Interactions.PreconditionAttribute;
 using RequireUserPermissionAttribute = Discord.Commands.RequireUserPermissionAttribute;
 using SlashCommandBuilder = Discord.Interactions.Builders.SlashCommandBuilder;
 using SummaryAttribute = Discord.Commands.SummaryAttribute;
 
 namespace Bot.DiscordRelated.Interactions {
-    public class CustomInteractionService : InteractionService, IService, IDisposable {
-        private readonly EnlivenShardedClient _discordClient;
+    public class CustomInteractionService : InteractionService, IService {
         private readonly IServiceProvider _serviceProvider;
         private readonly GlobalConfig _globalConfig;
         private readonly InstanceConfig _instanceConfig;
 
-        private IDisposable? _disposable;
-        public CustomInteractionService(EnlivenShardedClient discordClient, ILifetimeScope serviceContainer,
+        public CustomInteractionService(DiscordShardedClient discordClient, ILifetimeScope serviceContainer,
                                         GlobalConfig globalConfig, InstanceConfig instanceConfig)
             : base(discordClient, new InteractionServiceConfig { UseCompiledLambda = true }) {
-            _discordClient = discordClient;
             _serviceProvider = new ServiceProviderAdapter(serviceContainer);
             _globalConfig = globalConfig;
             _instanceConfig = instanceConfig;
@@ -122,29 +118,5 @@ namespace Bot.DiscordRelated.Interactions {
             return (ExecuteCallback)_moduleClassBuilderCreateCallbackMethod.Invoke(null, new object[] { createInstance, methodInfo, commandService })!;
         }
         #endregion
-
-        public async Task OnDiscordReady() {
-            await RegisterCommandsGloballyAsync();
-            _disposable = _discordClient.InteractionCreate
-                .Select(interaction => new ShardedInteractionContext(_discordClient, interaction))
-                .SubscribeAsync(OnInteractionCreated);
-        }
-
-        private async Task OnInteractionCreated(ShardedInteractionContext context) {
-            try {
-                var result = await ExecuteCommandAsync(context, _serviceProvider);
-                if (!result.IsSuccess) {
-                    Console.WriteLine(result.ErrorReason);
-                }
-            }
-            catch (Exception e) {
-                Console.WriteLine(e);
-            }
-        }
-
-        public new void Dispose() {
-            _disposable?.Dispose();
-            base.Dispose();
-        }
     }
 }
