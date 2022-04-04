@@ -24,12 +24,10 @@ namespace Bot.Commands {
         [Alias("spotify, fs")]
         [Summary("fixspotify0s")]
         public async Task FixSpotify() {
-            if (!await IsPreconditionsValid) return;
-
             if (Player.CurrentTrack is SpotifyLavalinkTrack spotifyLavalinkTrack) {
                 var request = $"spotify:track:{spotifyLavalinkTrack.RelatedSpotifyTrackWrapper.Id}";
                 var fixSpotifyChain = new FixSpotifyChain(Context.User, Context.Channel, Loc,
-                    request, MusicController, UserDataProvider, SpotifyAssociationCreator, SpotifyClientResolver, 
+                    request, MusicController, UserDataProvider, SpotifyAssociationCreator, SpotifyClientResolver,
                     MessageComponentService, CollectorService, Context.Client);
                 await fixSpotifyChain.Start();
             }
@@ -42,8 +40,8 @@ namespace Bot.Commands {
         [Alias("spotify, fs")]
         [Summary("fixspotify0s")]
         public async Task FixSpotify([Remainder] [Summary("fixspotify0_0s")] string s) {
-            var fixSpotifyChain = new FixSpotifyChain(Context.User, Context.Channel, Loc, s, 
-                MusicController, UserDataProvider, SpotifyAssociationCreator, SpotifyClientResolver, 
+            var fixSpotifyChain = new FixSpotifyChain(Context.User, Context.Channel, Loc, s,
+                MusicController, UserDataProvider, SpotifyAssociationCreator, SpotifyClientResolver,
                 MessageComponentService, CollectorService, Context.Client);
             await fixSpotifyChain.Start();
         }

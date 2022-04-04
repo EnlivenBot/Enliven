@@ -18,8 +18,6 @@ namespace Bot.Commands {
         [Alias("sp")]
         [Summary("saveplaylist0s")]
         public async Task SavePlaylist() {
-            if (!await IsPreconditionsValid) return;
-
             var playlist = await Player.ExportPlaylist(ExportPlaylistOptions.IgnoreTrackIndex);
             var storedPlaylist = PlaylistProvider.StorePlaylist(playlist, "u" + ObjectId.NewObjectId(), Context.User.ToLink());
             await ReplyFormattedAsync(Loc.Get("Music.PlaylistSaved", storedPlaylist.Id, GuildConfig.Prefix));
@@ -50,8 +48,6 @@ namespace Bot.Commands {
         }
 
         private async Task ExecutePlaylist(string id, ImportPlaylistOptions options) {
-            if (!await IsPreconditionsValid) return;
-
             var playlist = PlaylistProvider.Get(id);
             if (playlist == null) {
                 await ErrorMessageController.AddEntry(Loc.Get("Music.PlaylistNotFound", id.SafeSubstring(100, "...") ?? "")).Update();

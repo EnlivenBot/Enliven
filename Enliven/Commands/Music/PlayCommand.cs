@@ -19,8 +19,6 @@ namespace Bot.Commands.Music {
         [Alias("p")]
         [Summary("play0s")]
         public async Task Play([Remainder] [Summary("play0_0s")] string? query = null) {
-            if (!await IsPreconditionsValid)
-                return;
             await PlayInternal(query);
         }
 
@@ -29,8 +27,6 @@ namespace Bot.Commands.Music {
         [Alias("pn")]
         [Summary("playnext0s")]
         public async Task PlayNext([Remainder] [Summary("play0_0s")] string? query = null) {
-            if (!await IsPreconditionsValid)
-                return;
             await PlayInternal(query, Player!.Playlist.Count == 0 ? -1 : Player.CurrentTrackIndex + 1);
         }
 

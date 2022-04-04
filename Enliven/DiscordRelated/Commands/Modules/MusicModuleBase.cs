@@ -18,7 +18,6 @@ using Lavalink4NET.Lyrics;
 namespace Bot.DiscordRelated.Commands.Modules {
     public partial class MusicModuleBase : AdvancedModuleBase {
         public FinalLavalinkPlayer Player = null!;
-        public Task<bool> IsPreconditionsValid = Task.FromResult<bool>(true);
         protected static Dictionary<ulong, NonSpamMessageController> ErrorsMessagesControllers = new();
         public NonSpamMessageController ErrorMessageController = null!;
         internal EmbedPlayerDisplay? MainDisplay;

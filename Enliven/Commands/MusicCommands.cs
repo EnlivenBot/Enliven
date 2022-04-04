@@ -36,8 +36,6 @@ namespace Bot.Commands {
         [Alias("st")]
         [Summary("stop0s")]
         public async Task Stop() {
-            if (!await IsPreconditionsValid) return;
-
             Player.Shutdown(Loc.Get("Music.UserStopPlayback").Format(Context.User.Username),
                 new PlayerShutdownParameters { SavePlaylist = false, ShutdownDisplays = true });
         }
@@ -47,8 +45,6 @@ namespace Bot.Commands {
         [Alias("j", "skip", "next", "n", "s", "jmp")]
         [Summary("jump0s")]
         public async Task Jump([Summary("jump0_0s")] int index = 1) {
-            if (!await IsPreconditionsValid) return;
-
             await Player.SkipAsync(index, true);
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.Jumped", Context.User.Username,
                 Player.CurrentTrackIndex + 1,
@@ -60,8 +56,6 @@ namespace Bot.Commands {
         [Alias("g", "go", "gt")]
         [Summary("goto0s")]
         public async Task Goto([Summary("goto0_0s")] int index) {
-            if (!await IsPreconditionsValid) return;
-
             //For programmers who count from 0
             if (index == 0) index = 1;
 
@@ -81,9 +75,7 @@ namespace Bot.Commands {
         [Alias("v")]
         [Summary("volume0s")]
         public async Task Volume([Summary("volume0_0s")] int volume = 100) {
-            if (!await IsPreconditionsValid) return;
-
-            if (volume > 200 || volume < 10) {
+            if (volume is > 200 or < 10) {
                 ErrorMessageController.AddEntry(Loc.Get("Music.VolumeOutOfRange")).Update();
                 return;
             }
@@ -98,8 +90,6 @@ namespace Bot.Commands {
         [Alias("r", "loop", "l")]
         [Summary("repeat0s")]
         public async Task Repeat(LoopingState state) {
-            if (!await IsPreconditionsValid) return;
-
             Player.LoopingState = state;
             // Player.UpdateProgress();
             Player.WriteToQueueHistory(new HistoryEntry(
@@ -118,8 +108,6 @@ namespace Bot.Commands {
         [Command("pause", RunMode = RunMode.Async)]
         [Summary("pause0s")]
         public async Task Pause() {
-            if (!await IsPreconditionsValid) return;
-
             if (Player.State != PlayerState.Playing) return;
 
             Player.PauseAsync();
@@ -131,7 +119,6 @@ namespace Bot.Commands {
         [Alias("unpause")]
         [Summary("resume0s")]
         public async Task Resume() {
-            if (!await IsPreconditionsValid) return;
             if (Player.Playlist.IsEmpty) {
                 await RestorePlayer();
 
@@ -161,8 +148,6 @@ namespace Bot.Commands {
         [Alias("random", "shuf", "shuff", "randomize", "randomise")]
         [Summary("shuffle0s")]
         public async Task Shuffle() {
-            if (!await IsPreconditionsValid) return;
-
             Player.Playlist.Shuffle();
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.Shuffle").Format(Context.User.Username));
         }
@@ -172,8 +157,6 @@ namespace Bot.Commands {
         [Alias("l", "q", "queue")]
         [Summary("list0s")]
         public async Task List() {
-            if (!await IsPreconditionsValid) return;
-
             EmbedPlayerQueueDisplayProvider.CreateOrUpdateQueueDisplay(Context.Channel, Player);
         }
 
@@ -182,7 +165,6 @@ namespace Bot.Commands {
         [Alias("y", "yt")]
         [Summary("youtube0s")]
         public async Task SearchYoutube([Summary("play0_0s")] [Remainder] string query) {
-            if (!await IsPreconditionsValid) return;
             new AdvancedMusicSearchChain(GuildConfig, Player!, Context.Channel, Context.User, SearchMode.YouTube, query, MusicController, ComponentService, CollectorService).Start();
         }
 
@@ -191,7 +173,6 @@ namespace Bot.Commands {
         [Alias("sc")]
         [Summary("soundcloud0s")]
         public async Task SearchSoundCloud([Summary("play0_0s")] [Remainder] string query) {
-            if (!await IsPreconditionsValid) return;
             new AdvancedMusicSearchChain(GuildConfig, Player!, Context.Channel, Context.User, SearchMode.SoundCloud, query, MusicController, ComponentService, CollectorService).Start();
         }
 
@@ -200,7 +181,6 @@ namespace Bot.Commands {
         [Alias("ff", "fwd")]
         [Summary("fastforward0s")]
         public async Task FastForward([Summary("fastforward0_0s")] TimeSpan? timeSpan = null) {
-            if (!await IsPreconditionsValid) return;
             if (!Player.CurrentTrack!.IsSeekable) {
                 _ = ReplyFormattedAsync(Loc.Get("Music.TrackNotSeekable").Format(GuildConfig.Prefix), true).DelayedDelete(Constants.ShortTimeSpan);
                 return;
@@ -217,7 +197,6 @@ namespace Bot.Commands {
         [Alias("rw")]
         [Summary("rewind0s")]
         public async Task Rewind([Summary("fastforward0_0s")] TimeSpan? timeSpan = null) {
-            if (!await IsPreconditionsValid) return;
             if (!Player.CurrentTrack!.IsSeekable) {
                 _ = ReplyFormattedAsync(Loc.Get("Music.TrackNotSeekable").Format(GuildConfig.Prefix), true).DelayedDelete(Constants.ShortTimeSpan);
                 return;
@@ -234,7 +213,6 @@ namespace Bot.Commands {
         [Alias("sk", "se")]
         [Summary("seek0s")]
         public async Task Seek([Summary("seek0_0s")] TimeSpan position) {
-            if (!await IsPreconditionsValid) return;
             if (!Player.CurrentTrack!.IsSeekable) {
                 _ = ReplyFormattedAsync(Loc.Get("Music.TrackNotSeekable").Format(GuildConfig.Prefix), true).DelayedDelete(Constants.ShortTimeSpan);
                 return;
@@ -250,8 +228,6 @@ namespace Bot.Commands {
         [Alias("rr", "delr", "dr")]
         [Summary("remove0s")]
         public async Task RemoveRange([Summary("remove0_0s")] int start, [Summary("remove0_1s")] int end = -1) {
-            if (!await IsPreconditionsValid) return;
-
             start = start.Normalize(1, Player.Playlist.Count);
             end = end.Normalize(start, Player.Playlist.Count);
             var countToRemove = end - start + 1;
@@ -285,8 +261,6 @@ namespace Bot.Commands {
         [Alias("m", "mv")]
         [Summary("move0s")]
         public async Task Move([Summary("move0_0s")] int trackIndex, [Summary("move0_1s")] int newIndex = 1) {
-            if (!await IsPreconditionsValid) return;
-
             // For programmers
             if (trackIndex == 0) trackIndex = 1;
             if (trackIndex < 1 || trackIndex > Player.Playlist.Count) {
@@ -304,8 +278,6 @@ namespace Bot.Commands {
         [Summary("changenode0s")]
         [CommandCooldown(GuildDelayMilliseconds = 5000)]
         public async Task ChangeNode() {
-            if (!await IsPreconditionsValid) return;
-
             var cluster = await MusicController.ClusterTask;
             if (cluster.Nodes.Count <= 1) {
                 ReplyFormattedAsync(Loc.Get("Music.OnlyOneNode"), true);
@@ -331,8 +303,6 @@ namespace Bot.Commands {
         [Summary("playerrestart0s")]
         [CommandCooldown(GuildDelayMilliseconds = 60000)]
         public async Task RestartPlayer() {
-            if (!await IsPreconditionsValid) return;
-
             var playerShutdownParameters = new PlayerShutdownParameters() { ShutdownDisplays = true, SavePlaylist = false };
             Player.Shutdown(playerShutdownParameters);
             Player = null;
@@ -346,8 +316,6 @@ namespace Bot.Commands {
         [Command("lyrics", RunMode = RunMode.Async)]
         [Summary("lyrics0s")]
         public async Task DisplayLyrics() {
-            if (!await IsPreconditionsValid) return;
-
             var match = _lyricsRegex.Match(Player.CurrentTrack!.Title);
             string? lyrics = null;
             string artist = "";
