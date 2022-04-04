@@ -17,8 +17,7 @@ using Lavalink4NET.Lyrics;
 
 namespace Bot.DiscordRelated.Commands.Modules {
     public partial class MusicModuleBase : AdvancedModuleBase {
-        // Actually it can be null but only if IsPreconditionsValid is false
-        public FinalLavalinkPlayer? Player;
+        public FinalLavalinkPlayer Player = null!;
         public Task<bool> IsPreconditionsValid = Task.FromResult<bool>(true);
         protected static Dictionary<ulong, NonSpamMessageController> ErrorsMessagesControllers = new();
         public NonSpamMessageController ErrorMessageController = null!;
@@ -68,8 +67,10 @@ namespace Bot.DiscordRelated.Commands.Modules {
             await ReplyAndThrowIfAsync(userVoiceChannelId == null, NotInVoiceChannelEntry);
 
             var player = MusicController.GetPlayer(Context.Guild.Id);
+            var requireNonEmptyPlaylist = command.Attributes.Any(attribute => attribute is RequireNonEmptyPlaylistAttribute);
             if (player == null) {
                 await ReplyAndThrowIfAsync(!shouldCreatePlayer, NothingPlayingEntry);
+                await ReplyAndThrowIfAsync(requireNonEmptyPlaylist, NothingPlayingEntry);
 
                 var perms = (await Context.Guild.GetCurrentUserAsync()).GetPermissions(userVoiceChannel);
                 await ReplyAndThrowIfAsync(!perms.Connect, CantConnectEntry.WithArg($"<#{userVoiceChannelId}>"));
@@ -77,7 +78,10 @@ namespace Bot.DiscordRelated.Commands.Modules {
                 player = await MusicController.ProvidePlayer(Context.Guild.Id, userVoiceChannelId!.Value);
             }
             else {
-                await ReplyAndThrowIfAsync(userVoiceChannelId != player?.VoiceChannelId, OtherVoiceChannelEntry);
+                var requirePlayingTrack = command.Attributes.Any(attribute => (attribute as RequireNonEmptyPlaylistAttribute)?.RequirePlayingTrack == true);
+                await ReplyAndThrowIfAsync(requirePlayingTrack && player.CurrentTrack == null, NothingPlayingEntry);
+                await ReplyAndThrowIfAsync(requireNonEmptyPlaylist && player.Playlist.IsEmpty, NothingPlayingEntry);
+                await ReplyAndThrowIfAsync(userVoiceChannelId != player.VoiceChannelId, OtherVoiceChannelEntry);
             }
             Player = player;
 
@@ -88,7 +92,7 @@ namespace Bot.DiscordRelated.Commands.Modules {
 
         private async Task ReplyAndThrowIfAsync(bool condition, IEntry entry) {
             if (!condition) return;
-            await ReplyFormattedAsync(entry.Get(Loc), true);
+            _ = await ReplyEntryAsync(entry, Constants.ShortTimeSpan);
             throw new InvalidOperationException();
         }
 

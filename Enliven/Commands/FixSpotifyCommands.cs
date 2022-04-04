@@ -25,10 +25,6 @@ namespace Bot.Commands {
         [Summary("fixspotify0s")]
         public async Task FixSpotify() {
             if (!await IsPreconditionsValid) return;
-            if (Player == null) {
-                await ErrorMessageController.AddEntry(String.Format(GuildConfig.Prefix)).Update();
-                return;
-            }
 
             if (Player.CurrentTrack is SpotifyLavalinkTrack spotifyLavalinkTrack) {
                 var request = $"spotify:track:{spotifyLavalinkTrack.RelatedSpotifyTrackWrapper.Id}";

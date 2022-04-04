@@ -13,15 +13,12 @@ namespace Bot.Commands {
         public IPlaylistProvider PlaylistProvider { get; set; } = null!;
 
         [Hidden]
+        [RequireNonEmptyPlaylist]
         [Command("saveplaylist", RunMode = RunMode.Async)]
         [Alias("sp")]
         [Summary("saveplaylist0s")]
         public async Task SavePlaylist() {
             if (!await IsPreconditionsValid) return;
-            if (Player == null || Player.Playlist.IsEmpty) {
-                await ErrorMessageController.AddEntry(String.Format(GuildConfig.Prefix)).Update();
-                return;
-            }
 
             var playlist = await Player.ExportPlaylist(ExportPlaylistOptions.IgnoreTrackIndex);
             var storedPlaylist = PlaylistProvider.StorePlaylist(playlist, "u" + ObjectId.NewObjectId(), Context.User.ToLink());
