@@ -71,8 +71,6 @@
       "DecodingErrorRemove": "**Decoding error** - `{0}`. Track removed.",
       "ChannelNotAllowed": "{0}, you can’t play music in this channel. Use <#{1}> for this, or ask an administrator to change this through the server setup.",
       "MusicDisabled": "The bot does not have access to any Lavalink server and cannot play anything. Write to the host owner about this problem.",
-      "ClusterInitializing": "The playback cluster is initializing. Please wait.",
-      "NoNodesAvailable": "There are currently no nodes available for playback. You will most likely need to wait.",
       "PlayerDropped": "Unfortunately, the node that served your playback has crashed.",
       "PlayerMoved": "The node that served your playback has crashed. We resumed it on another node.",
       "PlaylistSaved": "Playlist saved. ID: `{0}`\n Use `{1}loadplaylist {0}`\n Or `{1}addplaylist {0}`\n Or `{1}runplaylist {0}`\n Details about these commands can be viewed through `{1}help`",
@@ -108,7 +106,10 @@
       "EffectApplied": "**{0}** applies `{1}` effect",
       "EffectRemoved": "**{0}** removes `{1}` effect",
       "Effects": "Effects",
-      "MaxEffectsCountExceed": "The maximum number of effects ({0}) has already been applied to the player."
+      "MaxEffectsCountExceed": "The maximum number of effects ({0}) has already been applied to the player.",
+      "ClusterNotReadyCommandIgnored": "Cluster not ready yet. Since this command does not add anything to the queue, it will be ignored.",
+      "AwaitingClusterInitializing": "Awaiting for music cluster initialization",
+      "AwaitingNodeConnection": "Awaiting for any music node becomes available. If it takes a long time, it might be worth contacting the bot owner"
     },
     "Effects": {
       "AddEffectTitle": "How to add effect",

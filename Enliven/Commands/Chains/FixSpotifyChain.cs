@@ -132,7 +132,8 @@ namespace Bot.Commands.Chains {
 
         private async Task StartWithTrack(SpotifyTrackWrapper spotifyTrackWrapper) {
             SetTimeout(Constants.StandardTimeSpan);
-            var association = await _spotifyAssociationCreator.ResolveAssociation(spotifyTrackWrapper, _musicController.Cluster);
+            var cluster = await _musicController.ClusterTask;
+            var association = await _spotifyAssociationCreator.ResolveAssociation(spotifyTrackWrapper, cluster);
             if (association == null) {
                 OnEnd.Invoke(new EntryLocalized("Chains.FixSpotifyAssociationCreationError"));
                 return;
@@ -176,7 +177,7 @@ namespace Bot.Commands.Chains {
 
                 var addMatch = Regex.Match(args.Message.Content, @"^(new|add) (.*)$");
                 if (addMatch.Success) {
-                    var searchResults = (await (await new LavalinkMusicResolver().Resolve(_musicController.Cluster, addMatch.Groups[2].Value)).Resolve())
+                    var searchResults = (await (await new LavalinkMusicResolver().Resolve(cluster, addMatch.Groups[2].Value)).Resolve())
                         .Where(track => track != null).ToList();
                     try {
                         var resultTrack = searchResults.Single();

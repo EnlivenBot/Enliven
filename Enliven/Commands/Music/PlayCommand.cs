@@ -1,13 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Autofac;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
-using Bot.DiscordRelated.MessageComponents;
-using Bot.Utilities.Collector;
 using Common;
 using Common.Music;
 using Discord;
@@ -17,7 +14,7 @@ namespace Bot.Commands.Music {
     [Grouping("music")]
     [RequireContext(ContextType.Guild)]
     public sealed class PlayCommand : MusicModuleBase {
-        [SummonToUser]
+        [ShouldCreatePlayer]
         [Command("play", RunMode = RunMode.Async)]
         [Alias("p")]
         [Summary("play0s")]
@@ -27,7 +24,7 @@ namespace Bot.Commands.Music {
             await PlayInternal(query);
         }
 
-        [SummonToUser]
+        [ShouldCreatePlayer]
         [Command("playnext", RunMode = RunMode.Async)]
         [Alias("pn")]
         [Summary("playnext0s")]
@@ -54,7 +51,6 @@ namespace Bot.Commands.Music {
             catch (TrackNotFoundException) {
                 _ = ErrorMessageController
                     .AddEntry(Loc.Get("Music.NotFound", query!.SafeSubstring(100, "...")!))
-                    .UpdateTimeout(Constants.StandardTimeSpan)
                     .Update();
             }
         }

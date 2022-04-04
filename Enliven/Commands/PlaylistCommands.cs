@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Bot.DiscordRelated;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
 using Common;
@@ -18,7 +19,7 @@ namespace Bot.Commands {
         public async Task SavePlaylist() {
             if (!await IsPreconditionsValid) return;
             if (Player == null || Player.Playlist.IsEmpty) {
-                await ErrorMessageController.AddEntry(String.Format(GuildConfig.Prefix)).UpdateTimeout(Constants.StandardTimeSpan).Update();
+                await ErrorMessageController.AddEntry(String.Format(GuildConfig.Prefix)).Update();
                 return;
             }
 
@@ -27,7 +28,7 @@ namespace Bot.Commands {
             await ReplyFormattedAsync(Loc.Get("Music.PlaylistSaved", storedPlaylist.Id, GuildConfig.Prefix));
         }
 
-        [SummonToUser]
+        [ShouldCreatePlayer]
         [Command("loadplaylist", RunMode = RunMode.Async)]
         [Alias("lp")]
         [Summary("loadplaylist0s")]
@@ -35,7 +36,7 @@ namespace Bot.Commands {
             await ExecutePlaylist(id, ImportPlaylistOptions.Replace);
         }
 
-        [SummonToUser]
+        [ShouldCreatePlayer]
         [Command("addplaylist", RunMode = RunMode.Async)]
         [Alias("ap")]
         [Summary("addplaylist0s")]
@@ -43,7 +44,7 @@ namespace Bot.Commands {
             await ExecutePlaylist(id, ImportPlaylistOptions.JustAdd);
         }
 
-        [SummonToUser]
+        [ShouldCreatePlayer]
         [Command("runplaylist", RunMode = RunMode.Async)]
         [Alias("rp")]
         [Summary("runplaylist0s")]
@@ -56,8 +57,7 @@ namespace Bot.Commands {
 
             var playlist = PlaylistProvider.Get(id);
             if (playlist == null) {
-                await ErrorMessageController.AddEntry(Loc.Get("Music.PlaylistNotFound", id.SafeSubstring(100, "...") ?? ""))
-                                            .UpdateTimeout(Constants.StandardTimeSpan).Update();
+                await ErrorMessageController.AddEntry(Loc.Get("Music.PlaylistNotFound", id.SafeSubstring(100, "...") ?? "")).Update();
                 return;
             }
 

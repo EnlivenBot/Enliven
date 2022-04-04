@@ -31,4 +31,14 @@
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
     </ItemGroup>
+
+    <ItemGroup>
+      <Compile Remove="Config\Emoji\ProgressEmojiList.cs" />
+      <Compile Remove="Config\Emoji\ProgressEmoji.cs" />
+      <Compile Remove="Config\Emoji\CommonEmojiStrings.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Config\Emoji" />
+    </ItemGroup>
 </Project>

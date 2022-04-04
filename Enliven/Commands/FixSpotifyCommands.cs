@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Bot.Commands.Chains;
+using Bot.DiscordRelated;
 using Bot.DiscordRelated.Commands.Modules;
 using Bot.DiscordRelated.MessageComponents;
 using Bot.Music.Spotify;
@@ -25,8 +26,7 @@ namespace Bot.Commands {
         public async Task FixSpotify() {
             if (!await IsPreconditionsValid) return;
             if (Player == null) {
-                await ErrorMessageController.AddEntry(String.Format(GuildConfig.Prefix))
-                                            .UpdateTimeout(Constants.StandardTimeSpan).Update();
+                await ErrorMessageController.AddEntry(String.Format(GuildConfig.Prefix)).Update();
                 return;
             }
 
@@ -38,8 +38,7 @@ namespace Bot.Commands {
                 await fixSpotifyChain.Start();
             }
             else {
-                await ErrorMessageController.AddEntry(Loc.Get("Music.CurrentTrackNonSpotify"))
-                                            .UpdateTimeout(Constants.StandardTimeSpan).Update();
+                await ErrorMessageController.AddEntry(Loc.Get("Music.CurrentTrackNonSpotify")).Update();
             }
         }
 

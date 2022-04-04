@@ -5,7 +5,8 @@ using Common.Music.Resolvers;
 
 namespace Common.Music.Controller {
     public interface IMusicController : IService {
-        public EnlivenLavalinkCluster Cluster { get; set; }
+        public bool IsMusicEnabled { get; }
+        public Task<EnlivenLavalinkCluster> ClusterTask { get; }
 
         public Task<FinalLavalinkPlayer> ProvidePlayer(ulong guildId, ulong voiceChannelId, bool recreate = false);
 

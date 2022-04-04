@@ -74,8 +74,12 @@ namespace Common.Music.Players {
 
             if (LoadFailedRemoves > 2) {
                 try {
-                    var currentNode = MusicController.Cluster.GetServingNode(GuildId);
-                    var newNode = MusicController.Cluster.Nodes.Where(node => node.IsConnected).Where(node => node != currentNode).RandomOrDefault();
+                    var cluster = await MusicController.ClusterTask;
+                    var currentNode = cluster.GetServingNode(GuildId);
+                    var newNode = cluster.Nodes
+                        .Where(node => node.IsConnected)
+                        .Where(node => node != currentNode)
+                        .RandomOrDefault();
                     if (newNode != null) {
                         await currentNode.MovePlayerAsync(this, newNode);
                         WriteToQueueHistory(new HistoryEntry(new EntryLocalized("MusicQueues.NodeChanged", "SYSTEM", newNode.Label ?? "")));

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Autofac;
 using Common.Config;
 using Common.History;
 using Common.Localization.Entries;
@@ -15,6 +16,7 @@ using Lavalink4NET.Cluster;
 using Lavalink4NET.DiscordNet;
 using Lavalink4NET.Events;
 using Lavalink4NET.Logging;
+using Lavalink4NET.Player;
 using Lavalink4NET.Tracking;
 using ILogger = NLog.ILogger;
 
@@ -28,16 +30,19 @@ namespace Common.Music.Controller {
         private readonly IPlaylistProvider _playlistProvider;
         private readonly EnlivenShardedClient _discordShardedClient;
         private readonly ILogger _logger;
+        private readonly ILifetimeScope _lifetimeScope;
         private readonly IEnumerable<LavalinkNodeInfo> _lavalinkNodeInfos;
         private readonly TrackEncoder _trackEncoder;
 
         public MusicController(MusicResolverService musicResolverService, IGuildConfigProvider guildConfigProvider,
                                IPlaylistProvider playlistProvider, TrackEncoder trackEncoder,
                                EnlivenShardedClient discordShardedClient, ILogger logger,
-                               InstanceConfig instanceConfig, GlobalConfig globalConfig) {
+                               InstanceConfig instanceConfig, GlobalConfig globalConfig,
+                               ILifetimeScope lifetimeScope) {
             _trackEncoder = trackEncoder;
             _lavalinkNodeInfos = globalConfig.LavalinkNodes.Concat(instanceConfig.LavalinkNodes).Distinct();
             _logger = logger;
+            _lifetimeScope = lifetimeScope;
             _discordShardedClient = discordShardedClient;
             _playlistProvider = playlistProvider;
             _guildConfigProvider = guildConfigProvider;
@@ -52,15 +57,24 @@ namespace Common.Music.Controller {
             return Task.WhenAll(tasks);
         }
 
-        public EnlivenLavalinkCluster Cluster { get; set; } = null!;
+        public bool IsMusicEnabled { get; private set; }
 
-        public async Task OnDiscordReady() {
+        private Task<EnlivenLavalinkCluster>? _clusterTask;
+        public Task<EnlivenLavalinkCluster> ClusterTask => _clusterTask ?? throw new InvalidOperationException("This task initialized after Ready event in DiscordClient");
+        protected EnlivenLavalinkCluster Cluster => ClusterTask.GetAwaiter().GetResult();
+
+        public Task OnDiscordReady() {
+            _clusterTask = InitializeCluster();
+            return _clusterTask;
+        }
+        private async Task<EnlivenLavalinkCluster> InitializeCluster() {
             _lavalinkLogger.LogMessage += (sender, e) => LavalinkLoggerOnLogMessage(e, _logger);
 
             var nodes = _lavalinkNodeInfos.Select(ConvertNodeInfoToOptions).ToList();
             var wrapper = new DiscordClientWrapper(_discordShardedClient);
 
-            if (nodes.Count != 0) {
+            IsMusicEnabled = nodes.Count != 0;
+            if (IsMusicEnabled) {
                 _logger.Info("Start building music cluster");
                 try {
                     EnlivenLavalinkClusterNode NodeFactory(LavalinkNodeOptions options, IDiscordClientWrapper clientWrapper, Lavalink4NET.Logging.ILogger? arg3, ILavalinkCache? arg4)
@@ -69,11 +83,11 @@ namespace Common.Music.Controller {
                     var lavalinkClusterOptions = new CustomLavalinkClusterOptions<EnlivenLavalinkClusterNode>(NodeFactory) {
                         Nodes = nodes.ToArray(), StayOnline = true, LoadBalacingStrategy = LoadBalancingStrategy
                     };
-                    Cluster = new EnlivenLavalinkCluster(lavalinkClusterOptions, wrapper, _lavalinkLogger);
-                    Cluster.PlayerMoved += ClusterOnPlayerMoved;
+                    var cluster = new EnlivenLavalinkCluster(lavalinkClusterOptions, wrapper, _lavalinkLogger);
+                    cluster.PlayerMoved += ClusterOnPlayerMoved;
 
                     _logger.Info("Trying to connect to nodes");
-                    await Cluster.InitializeAsync();
+                    await cluster.InitializeAsync();
                     _logger.Info("Cluster initialized");
 
                     _logger.Info("Initializing InactivityTrackingService instance with default options");
@@ -82,17 +96,20 @@ namespace Common.Music.Controller {
                         DisconnectDelay = TimeSpan.FromSeconds(60),
                         PollInterval = TimeSpan.FromSeconds(4)
                     };
-                    var inactivityTrackingService = new InactivityTrackingService(Cluster, wrapper, inactivityTrackingOptions, _lavalinkLogger);
+                    var inactivityTrackingService = new InactivityTrackingService(cluster, wrapper, inactivityTrackingOptions, _lavalinkLogger);
                     inactivityTrackingService.InactivePlayer += InactivityTracking_OnInactivePlayer;
+                    return cluster;
                 }
                 catch (Exception e) {
                     _logger.Fatal(e, "Exception while initializing music cluster");
-                    Cluster = null!;
+                    await _lifetimeScope.DisposeAsync();
+                    throw new Exception("MusicController failed to initialize");
                 }
             }
             else {
                 _logger.Warn("Nodes not found, music disabled!");
             }
+            return null!;
         }
 
         private async Task InactivityTracking_OnInactivePlayer(object sender, InactivePlayerEventArgs args) {
@@ -134,10 +151,14 @@ namespace Common.Music.Controller {
             var finalLavalinkPlayer = Cluster.GetPlayer<FinalLavalinkPlayer>(guildId);
             if (finalLavalinkPlayer != null) await finalLavalinkPlayer.DestroyAsync();
 
-            var player = await Cluster.JoinAsync(() => new FinalLavalinkPlayer(this, _guildConfigProvider, _playlistProvider, _trackEncoder), guildId, voiceChannelId);
+            var player = await Cluster.JoinAsync(PlayerFactory, guildId, voiceChannelId);
             _ = player.ShutdownTask.ContinueWith(_ => _playbackPlayers.Remove(player));
             _playbackPlayers.Add(player);
             return player;
+        }
+
+        private FinalLavalinkPlayer PlayerFactory() {
+            return new FinalLavalinkPlayer(this, _guildConfigProvider, _playlistProvider, _trackEncoder);
         }
 
         public void StoreSnapshot(PlayerSnapshot parameters) {
@@ -155,8 +176,10 @@ namespace Common.Music.Controller {
         }
 
         public FinalLavalinkPlayer? GetPlayer(ulong guildId) {
-            var embedPlaybackPlayer = _playbackPlayers.FirstOrDefault(player => player.GuildId == guildId);
-            return embedPlaybackPlayer?.IsShutdowned == true ? null : embedPlaybackPlayer;
+            return _playbackPlayers.FirstOrDefault(player =>
+                player.GuildId == guildId
+             && !player.IsShutdowned
+             && player.State is not (PlayerState.NotConnected or PlayerState.Destroyed));
         }
 
         public Task<IEnumerable<MusicResolver>> ResolveQueries(IEnumerable<string> queries) {
