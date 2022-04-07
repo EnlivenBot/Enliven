@@ -18,7 +18,8 @@ namespace Common.Config.Emoji {
         public static CommonEmojiStrings Instance => _lazy.Value;
 
         public string GetEmoji(string name) {
-            return this.GetType().GetField("name")?.GetValue(this)?.ToString() ?? throw new ArgumentException("No emoji with this name found"); 
+            return this.GetType().GetProperty(name)?.GetValue(this)?.ToString() 
+                ?? throw new ArgumentException("No emoji with this name found"); 
         }
 
         public string RepeatOne { get; set; } = "<:repeatonce:682469899351621648>";
