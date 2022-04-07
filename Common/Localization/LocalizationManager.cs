@@ -13,7 +13,7 @@ namespace Common.Localization {
     public static class LocalizationManager {
         private static Logger _logger = LogManager.GetCurrentClassLogger();
         private static Regex _locLayoutRegex = new Regex(@"{loc:(\w+)\.(\w+)}");
-        private static Regex _emojiLayoutRegex = new Regex(@"{emoji:(\w+)\.(\w+)}");
+        private static Regex _emojiLayoutRegex = new Regex(@"{emoji:(\w+)}");
 
         public static readonly Dictionary<string, LocalizationPack> Languages;
 

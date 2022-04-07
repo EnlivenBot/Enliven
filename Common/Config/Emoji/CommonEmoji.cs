@@ -41,5 +41,8 @@ namespace Common.Config.Emoji {
         public static global::Discord.Emoji NoEntry { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.NoEntry);
         public static global::Discord.Emoji Level { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.Level);
         public static global::Discord.Emoji E { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.E);
+        
+        // Animated
+        public static global::Discord.Emoji LoadingAnimated { get; set; } = new global::Discord.Emoji(CommonEmojiStrings.Instance.LoadingAnimated);
     }
 }

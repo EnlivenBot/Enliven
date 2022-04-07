@@ -61,5 +61,10 @@ namespace Common.Config.Emoji {
         public string NoEntry { get; set; } = "⛔";
         public string Level { get; set; } = "🎚️";
         public string E { get; set; } = "🇪";
+        
+        // Animated
+        
+        // https://cdn.discordapp.com/emojis/961698515694805022.gif?quality=lossless
+        public string LoadingAnimated { get; set; } = "<a:loading:961698515694805022>";
     }
 }
