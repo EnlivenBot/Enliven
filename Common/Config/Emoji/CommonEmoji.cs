@@ -1,6 +1,6 @@
 ﻿using Discord;
 
-namespace Bot.Config.Emoji {
+namespace Common.Config.Emoji {
     public static class CommonEmoji {
         public static Emote RepeatOne { get; set; } = Emote.Parse(CommonEmojiStrings.Instance.RepeatOne);
         public static Emote RepeatOff { get; set; } = Emote.Parse(CommonEmojiStrings.Instance.RepeatOff);
