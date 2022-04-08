@@ -165,14 +165,8 @@ namespace Common.Music.Controller {
             _playerShutdownParametersMap[parameters.GuildId] = parameters;
         }
 
-        public async Task<FinalLavalinkPlayer?> RestoreLastPlayer(ulong guildId) {
-            var finalLavalinkPlayer = GetPlayer(guildId);
-            if (finalLavalinkPlayer != null) return finalLavalinkPlayer;
-            if (!_playerShutdownParametersMap.TryGetValue(guildId, out var playerSnapshot)) return null;
-
-            var newPlayer = await ProvidePlayer(playerSnapshot.GuildId, playerSnapshot.LastVoiceChannelId, true);
-            await newPlayer.ApplyStateSnapshot(playerSnapshot);
-            return newPlayer;
+        public PlayerSnapshot? GetPlayerLastSnapshot(ulong guildId) {
+            return _playerShutdownParametersMap.TryGetValue(guildId, out var playerSnapshot) ? playerSnapshot : null;
         }
 
         public FinalLavalinkPlayer? GetPlayer(ulong guildId) {

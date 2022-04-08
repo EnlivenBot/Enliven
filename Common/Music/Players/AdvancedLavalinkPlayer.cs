@@ -148,8 +148,8 @@ namespace Common.Music.Players {
                         await playerDisplay.LeaveNotification(new EntryLocalized("Music.PlaybackStopped"), reason.Add(playerSnapshot.StoredPlaylist!.Id));
 
                     await Task.Delay(2000);
-                    var newPlayer = await MusicController.RestoreLastPlayer(GuildId);
-                    if (newPlayer == null) return;
+                    var newPlayer = await MusicController.ProvidePlayer(playerSnapshot.GuildId, playerSnapshot.LastVoiceChannelId, true);
+                    await newPlayer.ApplyStateSnapshot(playerSnapshot);
                     foreach (var playerDisplay in Displays.ToList()) 
                         await playerDisplay.ChangePlayer(newPlayer);
                     newPlayer.WriteToQueueHistory(new HistoryEntry(new EntryLocalized("Music.ReconnectedAfterDispose", GuildConfig.Prefix, playerSnapshot.StoredPlaylist!.Id)));

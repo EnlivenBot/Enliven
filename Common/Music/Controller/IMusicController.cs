@@ -12,16 +12,9 @@ namespace Common.Music.Controller {
 
         public void StoreSnapshot(PlayerSnapshot parameters);
 
-        /// <summary>
-        /// Attempts to restore the player using the latest available PlayerShutdownParameters for a specific guild.
-        /// If the player already exists, return it
-        /// </summary>
-        /// <param name="guildId">Target guild id</param>
-        /// <returns>Player instance or null if error</returns>
-        public Task<FinalLavalinkPlayer?> RestoreLastPlayer(ulong guildId);
-
         public FinalLavalinkPlayer? GetPlayer(ulong guildId);
 
         public Task<IEnumerable<MusicResolver>> ResolveQueries(IEnumerable<string> queries);
+        PlayerSnapshot? GetPlayerLastSnapshot(ulong guildId);
     }
 }

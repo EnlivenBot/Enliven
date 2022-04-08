@@ -120,8 +120,13 @@ namespace Bot.Commands {
         [Summary("resume0s")]
         public async Task Resume() {
             if (Player.Playlist.IsEmpty) {
-                await RestorePlayer();
-
+                var playerSnapshot = MusicController.GetPlayerLastSnapshot(Context.Guild.Id);
+                if (playerSnapshot == null) {
+                    await ReplyFormattedAsync(Loc.Get("Music.NoSnapshotFoundToResume"), true);
+                    return;
+                }
+                await Player.ApplyStateSnapshot(playerSnapshot);
+                Player.WriteToQueueHistory(new EntryLocalized("Music.PlayerRestored", Context.User.Username));
                 return;
             }
 
@@ -129,18 +134,6 @@ namespace Bot.Commands {
 
             Player.ResumeAsync();
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.Resume").Format(Context.User.Username));
-        }
-
-        private async Task RestorePlayer() {
-            var newPlayer = await MusicController.RestoreLastPlayer(Context.Guild.Id);
-            if (newPlayer == null) {
-                ErrorMessageController.AddEntry(Loc.Get("Music.NothingPlaying").Format(GuildConfig.Prefix)).Update();
-            }
-            else {
-                var targetChannel = await GetChannelInfo().GetTargetChannelAsync();
-                MainDisplay = EmbedPlayerDisplayProvider.Provide(targetChannel, newPlayer);
-                newPlayer.WriteToQueueHistory(new EntryLocalized("Music.PlayerRestored", Context.User.Username));
-            }
         }
 
         [RequireNonEmptyPlaylist]
@@ -303,11 +296,16 @@ namespace Bot.Commands {
         [Summary("playerrestart0s")]
         [CommandCooldown(GuildDelayMilliseconds = 60000)]
         public async Task RestartPlayer() {
-            var playerShutdownParameters = new PlayerShutdownParameters() { ShutdownDisplays = true, SavePlaylist = false };
-            Player.Shutdown(playerShutdownParameters);
-            Player = null;
+            var playerShutdownParameters = new PlayerShutdownParameters() { ShutdownDisplays = false, SavePlaylist = false };
+            await Player.Shutdown(playerShutdownParameters);
             await Task.Delay(1000);
-            await RestorePlayer();
+            
+            var playerSnapshot = MusicController.GetPlayerLastSnapshot(Context.Guild.Id)!;
+            var newPlayer = await MusicController.ProvidePlayer(Context.Guild.Id, playerSnapshot.LastVoiceChannelId, true);
+            await newPlayer.ApplyStateSnapshot(playerSnapshot);
+            foreach (var playerDisplay in Player.Displays.ToList()) 
+                await playerDisplay.ChangePlayer(newPlayer);
+            newPlayer.WriteToQueueHistory(new EntryLocalized("Music.PlayerRestored", Context.User.Username));
         }
 
         private static Regex _lyricsRegex = new Regex(@"([\p{L} ]+) - ([\p{L} ]+)");

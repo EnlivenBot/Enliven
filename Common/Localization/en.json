@@ -110,7 +110,8 @@
       "MaxEffectsCountExceed": "The maximum number of effects ({0}) has already been applied to the player.",
       "ClusterNotReadyCommandIgnored": "Cluster not ready yet. Since this command does not add anything to the queue, it will be ignored.",
       "AwaitingClusterInitializing": "{emoji:LoadingAnimated} Awaiting for music cluster initialization",
-      "AwaitingNodeConnection": "{emoji:LoadingAnimated} Awaiting for any music node becomes available. If it takes a long time, it might be worth contacting the bot owner"
+      "AwaitingNodeConnection": "{emoji:LoadingAnimated} Awaiting for any music node becomes available. If it takes a long time, it might be worth contacting the bot owner",
+      "NoSnapshotFoundToResume": "Apparently the player has never stopped - there is nothing to restore. {loc:Music.RequestTracks}"
     },
     "Effects": {
       "AddEffectTitle": "How to add effect",
