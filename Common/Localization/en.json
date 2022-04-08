@@ -49,10 +49,11 @@
     },
     "Music": {
       "RequestHistory": "Request history",
-      "QueueEmpty": "The queue is empty. Request tracks via `{0}play [request]`",
+      "RequestTracks": "Request tracks via `{0}play [request]`",
+      "QueueEmpty": "The queue is empty. {loc:Music.RequestTracks}",
       "VolumeOutOfRange": "Volume out of range: 10% - 200%!",
       "RequestedBy": "Requested by: {0}",
-      "NothingPlaying": "Nothing playing. Request tracks via `{0}play [request]`",
+      "NothingPlaying": "Nothing playing. {loc:Music.RequestTracks}",
       "Fail": "Error",
       "Playback": "Playback",
       "UserStopPlayback": "**{0}** stopped playback\n\nHelp us by voting (`vote` command)",
