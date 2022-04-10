@@ -47,9 +47,7 @@ namespace Bot.Commands.Music {
                 await Player!.TryEnqueue(resolvedQueries, username, position);
             }
             catch (TrackNotFoundException) {
-                _ = ErrorMessageController
-                    .AddEntry(Loc.Get("Music.NotFound", query!.SafeSubstring(100, "...")!))
-                    .Update();
+                await ReplyFormattedAsync(Loc.Get("Music.NotFound", query!.SafeSubstring(100, "...")!), true);
             }
         }
         

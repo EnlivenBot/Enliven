@@ -50,7 +50,7 @@ namespace Bot.Commands {
         private async Task ExecutePlaylist(string id, ImportPlaylistOptions options) {
             var playlist = PlaylistProvider.Get(id);
             if (playlist == null) {
-                await ErrorMessageController.AddEntry(Loc.Get("Music.PlaylistNotFound", id.SafeSubstring(100, "...") ?? "")).Update();
+                await ReplyFormattedAsync(Loc.Get("Music.PlaylistNotFound", id.SafeSubstring(100, "...") ?? ""), true);
                 return;
             }
 

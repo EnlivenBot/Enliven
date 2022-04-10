@@ -32,7 +32,7 @@ namespace Bot.Commands {
                 await fixSpotifyChain.Start();
             }
             else {
-                await ErrorMessageController.AddEntry(Loc.Get("Music.CurrentTrackNonSpotify")).Update();
+                await ReplyFormattedAsync(Loc.Get("Music.CurrentTrackNonSpotify"), true);
             }
         }
 

@@ -17,13 +17,14 @@ using Lavalink4NET.Lyrics;
 
 namespace Bot.DiscordRelated.Commands.Modules {
     public partial class MusicModuleBase : AdvancedModuleBase {
-        public FinalLavalinkPlayer Player = null!;
-        protected static Dictionary<ulong, NonSpamMessageController> ErrorsMessagesControllers = new();
-        public NonSpamMessageController ErrorMessageController = null!;
+        private static Dictionary<ulong, NonSpamMessageController> ErrorsMessagesControllers = new();
+        
         public IMusicController MusicController { get; set; } = null!;
         public EmbedPlayerDisplayProvider EmbedPlayerDisplayProvider { get; set; } = null!;
         public LyricsService LyricsService { get; set; } = null!;
-        public EmbedPlayerQueueDisplayProvider EmbedPlayerQueueDisplayProvider { get; set; } = null;
+        public EmbedPlayerQueueDisplayProvider EmbedPlayerQueueDisplayProvider { get; set; } = null!;
+        
+        public FinalLavalinkPlayer Player { get; private set; } = null!;
 
         protected override void BeforeExecute(CommandInfo command) {
             base.BeforeExecute(command);

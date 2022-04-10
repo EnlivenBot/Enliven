@@ -76,7 +76,7 @@ namespace Bot.Commands {
         [Summary("volume0s")]
         public async Task Volume([Summary("volume0_0s")] int volume = 100) {
             if (volume is > 200 or < 10) {
-                ErrorMessageController.AddEntry(Loc.Get("Music.VolumeOutOfRange")).Update();
+                await ReplyFormattedAsync(Loc.Get("Music.VolumeOutOfRange"), true);
                 return;
             }
 
