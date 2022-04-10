@@ -32,13 +32,15 @@ namespace Bot.Commands.Music {
 
         private async Task PlayInternal(string? query, int position = -1) {
             var queries = await GetMusicQueries(Context.Message, query.IsBlank(""));
+            var mainPlayerDisplay = await GetMainPlayerDisplay();
             if (queries.Count == 0) {
                 Context.Message?.SafeDelete();
-                if (MainDisplay != null) MainDisplay.NextResendForced = true;
+                mainPlayerDisplay.NextResendForced = true;
+                _ = mainPlayerDisplay.ControlMessageResend();
                 return;
             }
 
-            MainDisplay?.ControlMessageResend();
+            _ = mainPlayerDisplay.ControlMessageResend();
             try {
                 var resolvedQueries = await MusicController.ResolveQueries(queries);
                 var username = Context.User?.Username ?? "Unknown";

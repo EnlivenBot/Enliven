@@ -57,7 +57,8 @@ namespace Bot.Commands {
             Player!.WriteToQueueHistory(Loc.Get("Music.LoadPlaylist", Context.User.Username,
                 id.SafeSubstring(100, "...") ?? ""));
             await Player.ImportPlaylist(playlist, options, Context.User.Username);
-            MainDisplay?.ControlMessageResend();
+            var mainPlayerDisplay = await GetMainPlayerDisplay();
+            _ = mainPlayerDisplay.ControlMessageResend();
             Context?.Message?.SafeDelete();
         }
     }

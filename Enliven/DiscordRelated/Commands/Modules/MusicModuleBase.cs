@@ -20,7 +20,6 @@ namespace Bot.DiscordRelated.Commands.Modules {
         public FinalLavalinkPlayer Player = null!;
         protected static Dictionary<ulong, NonSpamMessageController> ErrorsMessagesControllers = new();
         public NonSpamMessageController ErrorMessageController = null!;
-        internal EmbedPlayerDisplay? MainDisplay;
         public IMusicController MusicController { get; set; } = null!;
         public EmbedPlayerDisplayProvider EmbedPlayerDisplayProvider { get; set; } = null!;
         public LyricsService LyricsService { get; set; } = null!;
@@ -75,6 +74,7 @@ namespace Bot.DiscordRelated.Commands.Modules {
                 await ReplyAndThrowIfAsync(!perms.Connect, CantConnectEntry.WithArg($"<#{userVoiceChannelId}>"));
 
                 player = await MusicController.ProvidePlayer(Context.Guild.Id, userVoiceChannelId!.Value);
+                EmbedPlayerDisplayProvider.Provide(await channelInfo.GetTargetChannelAsync(), player);
             }
             else {
                 var requirePlayingTrack = command.Attributes.Any(attribute => (attribute as RequireNonEmptyPlaylistAttribute)?.RequirePlayingTrack == true);
@@ -114,6 +114,11 @@ namespace Bot.DiscordRelated.Commands.Modules {
                 ErrorsMessagesControllers[Context.Channel.Id] = nonSpamMessageController;
             }
             return nonSpamMessageController;
+        }
+
+        protected async Task<EmbedPlayerDisplay> GetMainPlayerDisplay() {
+            var channelInfo = GetChannelInfo();
+            return EmbedPlayerDisplayProvider.Provide(await channelInfo.GetTargetChannelAsync(), Player);
         }
 
         protected async Task<IUserMessage> ReplyFormattedAsync(string description, bool isFail = false, IUserMessage? previous = null,
