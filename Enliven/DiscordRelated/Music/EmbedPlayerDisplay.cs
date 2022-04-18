@@ -132,17 +132,18 @@ namespace Bot.DiscordRelated.Music {
             _updateControlMessageTask.Dispose();
             
             if (message != null) {
-                try {
-                    message.RemoveAllReactionsAsync();
-                }
-                catch (Exception) {
-                    // ignored
-                }
-
+                var embed = new EmbedBuilder()
+                    .WithColor(Color.Gold)
+                    .WithTitle(header.Get(_loc))
+                    .WithDescription(body.Get(_loc))
+                    .Build();
+                var components = new ComponentBuilder()
+                    .WithButton(_loc.Get("Music.RestoreStoppedPlayerButton"), "restoreStoppedPlayer")
+                    .Build();
                 await message.ModifyAsync(properties => {
                     properties.Content = Optional<string>.Unspecified;
-                    properties.Embed = new EmbedBuilder().WithColor(Color.Gold).WithTitle(header.Get(_loc)).WithDescription(body.Get(_loc)).Build();
-                    properties.Components = new ComponentBuilder().Build();
+                    properties.Embed = embed;
+                    properties.Components = components;
                 });
             }
             else {

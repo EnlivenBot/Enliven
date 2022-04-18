@@ -63,7 +63,7 @@ namespace Bot.DiscordRelated.Commands.Modules {
 
             var userVoiceChannel = (Context.User as IVoiceState)?.VoiceChannel;
             var userVoiceChannelId = userVoiceChannel?.Id;
-            await ReplyAndThrowIfAsync(userVoiceChannelId == null, NotInVoiceChannelEntry);
+            await ReplyAndThrowIfAsync(userVoiceChannelId == null, NotInVoiceChannelEntry.WithArg(Context.User.Mention));
 
             var player = MusicController.GetPlayer(Context.Guild.Id);
             var requireNonEmptyPlaylist = command.Attributes.Any(attribute => attribute is RequireNonEmptyPlaylistAttribute);
