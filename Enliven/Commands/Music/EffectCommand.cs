@@ -16,16 +16,14 @@ namespace Bot.Commands.Music {
         [Command("effect", RunMode = RunMode.Async)]
         [Alias("ef")]
         [Summary("effect0s")]
-        public async Task Effect([Summary("effect0_0s")]string effectName, [Summary("effect0_1s")][Remainder]string? args = "") {
-            if (!await IsPreconditionsValid) return;
-
+        public async Task Effect([Summary("effect0_0s")] string effectName, [Summary("effect0_1s")] [Remainder] string? args = "") {
             if (await TryRemoveEffect(effectName)) return;
 
             if (!EffectSourceProvider.TryResolve(Context.User.ToLink(), effectName, out var effectSource)) {
                 await ReplyFormattedAsync(Loc.Get("Music.EffectNotFound"), true);
                 return;
             }
-            
+
             if (await TryRemoveEffect(effectSource.GetSourceName())) return;
 
             if (Player!.Effects.Count >= AdvancedLavalinkPlayer.MaxEffectsCount) {

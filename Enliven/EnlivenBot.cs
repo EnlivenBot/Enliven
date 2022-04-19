@@ -50,6 +50,8 @@ namespace Bot {
             await _client.StartAsync();
             _isDiscordStarted = true;
             await IService.ProcessEventAsync(_services, ServiceEventType.PostDiscordStart);
+
+            _ = _client.Ready.ContinueWith(async _ => await IService.ProcessEventAsync(_services, ServiceEventType.DiscordReady));
         }
 
         private async Task LoginAsync() {

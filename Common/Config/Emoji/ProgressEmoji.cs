@@ -4,7 +4,7 @@ using System.Text;
 using Newtonsoft.Json;
 using NLog;
 
-namespace Bot.Config.Emoji {
+namespace Common.Config.Emoji {
     public static class ProgressEmoji {
         private static Logger logger = LogManager.GetCurrentClassLogger();
 

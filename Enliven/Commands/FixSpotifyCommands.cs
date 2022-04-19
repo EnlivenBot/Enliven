@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Bot.Commands.Chains;
+using Bot.DiscordRelated;
 using Bot.DiscordRelated.Commands.Modules;
 using Bot.DiscordRelated.MessageComponents;
 using Bot.Music.Spotify;
@@ -23,23 +24,15 @@ namespace Bot.Commands {
         [Alias("spotify, fs")]
         [Summary("fixspotify0s")]
         public async Task FixSpotify() {
-            if (!await IsPreconditionsValid) return;
-            if (Player == null) {
-                await ErrorMessageController.AddEntry(String.Format(GuildConfig.Prefix))
-                                            .UpdateTimeout(Constants.StandardTimeSpan).Update();
-                return;
-            }
-
             if (Player.CurrentTrack is SpotifyLavalinkTrack spotifyLavalinkTrack) {
                 var request = $"spotify:track:{spotifyLavalinkTrack.RelatedSpotifyTrackWrapper.Id}";
                 var fixSpotifyChain = new FixSpotifyChain(Context.User, Context.Channel, Loc,
-                    request, MusicController, UserDataProvider, SpotifyAssociationCreator, SpotifyClientResolver, 
+                    request, MusicController, UserDataProvider, SpotifyAssociationCreator, SpotifyClientResolver,
                     MessageComponentService, CollectorService, Context.Client);
                 await fixSpotifyChain.Start();
             }
             else {
-                await ErrorMessageController.AddEntry(Loc.Get("Music.CurrentTrackNonSpotify"))
-                                            .UpdateTimeout(Constants.StandardTimeSpan).Update();
+                await ReplyFormattedAsync(Loc.Get("Music.CurrentTrackNonSpotify"), true);
             }
         }
 
@@ -47,8 +40,8 @@ namespace Bot.Commands {
         [Alias("spotify, fs")]
         [Summary("fixspotify0s")]
         public async Task FixSpotify([Remainder] [Summary("fixspotify0_0s")] string s) {
-            var fixSpotifyChain = new FixSpotifyChain(Context.User, Context.Channel, Loc, s, 
-                MusicController, UserDataProvider, SpotifyAssociationCreator, SpotifyClientResolver, 
+            var fixSpotifyChain = new FixSpotifyChain(Context.User, Context.Channel, Loc, s,
+                MusicController, UserDataProvider, SpotifyAssociationCreator, SpotifyClientResolver,
                 MessageComponentService, CollectorService, Context.Client);
             await fixSpotifyChain.Start();
         }
