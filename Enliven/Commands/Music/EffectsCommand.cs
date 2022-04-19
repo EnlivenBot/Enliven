@@ -18,7 +18,6 @@ namespace Bot.Commands.Music {
         [Alias("efs")]
         [Summary("effects0s")]
         public async Task Effects() {
-            if (!await IsPreconditionsValid) return;
             if (Player == null || Player.Playlist.IsEmpty) {
                 await ReplyFormattedAsync(Loc.Get("Music.QueueEmpty").Format(GuildConfig.Prefix), true);
                 return;

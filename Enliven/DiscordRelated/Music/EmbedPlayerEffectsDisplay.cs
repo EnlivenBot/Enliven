@@ -2,10 +2,10 @@
 using System.Linq;
 using System.Reactive.Disposables;
 using System.Threading.Tasks;
-using Bot.Config.Emoji;
 using Bot.DiscordRelated.MessageComponents;
 using Common;
 using Common.Config;
+using Common.Config.Emoji;
 using Common.Localization.Entries;
 using Common.Localization.Providers;
 using Common.Music.Effects;

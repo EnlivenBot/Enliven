@@ -112,6 +112,7 @@ namespace Common.Utils {
 
         public void Dispose() {
             IsDisposed = true;
+            _betweenExecutionsDelay.Dispose();
         }
     }
 

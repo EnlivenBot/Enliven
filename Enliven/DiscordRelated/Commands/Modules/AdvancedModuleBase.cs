@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Autofac;
 using Bot.DiscordRelated.Interactions;
 using Bot.Utilities;
 using Common;
@@ -12,6 +13,8 @@ using ModuleInfo = Discord.Interactions.ModuleInfo;
 
 namespace Bot.DiscordRelated.Commands.Modules {
     public class AdvancedModuleBase : ModuleBase, IInteractionModuleBase {
+        protected IComponentContext ComponentContext { get; set; } = null!;
+        
         private GuildLocalizationProvider? _loc;
         private GuildConfig? _guildConfig;
         [DontInject] public GuildLocalizationProvider Loc => _loc ??= new GuildLocalizationProvider(GuildConfig);

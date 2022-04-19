@@ -2,5 +2,5 @@
 
 namespace Bot.DiscordRelated.Commands.Modules {
     [AttributeUsage(AttributeTargets.Method, Inherited = false, AllowMultiple = true)]
-    sealed class SummonToUserAttribute : Attribute { }
+    internal sealed class ShouldCreatePlayerAttribute : Attribute { }
 }

@@ -1,4 +1,5 @@
-﻿using Autofac;
+﻿using System.Net.Http;
+using Autofac;
 using Common.Config;
 using Common.Music;
 using Common.Music.Controller;
@@ -10,6 +11,8 @@ using LiteDB;
 namespace Common {
     public static class CommonDiHelpers {
         public static ContainerBuilder AddCommonServices(this ContainerBuilder builder) {
+            builder.RegisterType<HttpClient>().SingleInstance();
+
             // Database related
             builder.RegisterType<LiteDatabaseProvider>().SingleInstance();
 

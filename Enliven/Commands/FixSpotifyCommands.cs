@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Bot.Commands.Chains;
+using Bot.DiscordRelated;
 using Bot.DiscordRelated.Commands.Modules;
 using Bot.DiscordRelated.Interactions;
 using Bot.DiscordRelated.MessageComponents;
@@ -26,13 +27,6 @@ namespace Bot.Commands {
         [Summary("fixspotify0s")]
         public async Task FixSpotify([Remainder] [Summary("fixspotify0_0s")] string? s) {
             if (s == null) {
-                if (!await IsPreconditionsValid) return;
-                if (Player == null) {
-                    await ErrorMessageController.AddEntry(String.Format(GuildConfig.Prefix))
-                        .UpdateTimeout(Constants.StandardTimeSpan).Update();
-                    return;
-                }
-
                 if (Player.CurrentTrack is SpotifyLavalinkTrack spotifyLavalinkTrack) {
                     var request = $"spotify:track:{spotifyLavalinkTrack.RelatedSpotifyTrackWrapper.Id}";
                     var fixSpotifyChain = new FixSpotifyChain(Context.User, Context.Channel, Loc,
@@ -41,8 +35,7 @@ namespace Bot.Commands {
                     await fixSpotifyChain.Start();
                 }
                 else {
-                    await ErrorMessageController.AddEntry(Loc.Get("Music.CurrentTrackNonSpotify"))
-                        .UpdateTimeout(Constants.StandardTimeSpan).Update();
+                    await ReplyFormattedAsync(Loc.Get("Music.CurrentTrackNonSpotify"), true);
                 }
             }
             else {

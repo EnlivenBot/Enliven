@@ -1,5 +1,5 @@
 ﻿using System;
-using Bot.Config.Emoji;
+using Common.Config.Emoji;
 using Common.Localization.Entries;
 using Discord;
 

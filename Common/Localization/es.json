@@ -71,8 +71,6 @@
       "DecodingErrorRemove": "**Error de decodificación** - `{0}`. Pista eliminada.",
       "ChannelNotAllowed": "{0}, No puedes reproducir música en este canal. Usa <#{1}> para hacerlo o pide al administrador que cambie esto a través de la configuración del servidor.",
       "MusicDisabled": "No tengo acceso a ningún servidor Lavalink y no puedo reproducir nada. Informa al propietario del host sobre este problema.",
-      "ClusterInitializing": "El clúster de reproducción se está inicializando. Espera un poquito",
-      "NoNodesAvailable": "No hay nodos de reproducción disponibles. Posiblemente tengas que esperar un poco",
       "PlayerDropped": "Por desgracia, el nodo que estaba reproduciendo tu música ha fallado",
       "PlayerMoved": "El nodo que estaba reproduciendo tu música ha fallado. He movido la reproducción a otro nodo.",
       "PlaylistSaved": "Playlist guardada. ID: `{0}`\n Usa `{1}loadplaylist {0}`\n o `{1}addplaylist {0}`\n o `{1}runplaylist {0}` para usarla.\n Puedes ver más detalles sobre los comandos escribiendo: `{1}help`",
