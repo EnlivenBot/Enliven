@@ -49,9 +49,9 @@ namespace Bot.DiscordRelated.Commands.Modules {
         public void SetContext(IInteractionContext context) {
             (this as IModuleBase).SetContext(new InteractionFallbackCommandContext(context));
         }
-        public Task BeforeExecuteAsync(ICommandInfo command) => Task.CompletedTask;
+        public virtual Task BeforeExecuteAsync(ICommandInfo command) => Task.CompletedTask;
         public virtual void BeforeExecute(ICommandInfo command) { }
-        public Task AfterExecuteAsync(ICommandInfo command) => Task.CompletedTask;
+        public virtual Task AfterExecuteAsync(ICommandInfo command) => Task.CompletedTask;
         public virtual void AfterExecute(ICommandInfo command) { }
         public void OnModuleBuilding(InteractionService commandService, ModuleInfo module) { }
     }
