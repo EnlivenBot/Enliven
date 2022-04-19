@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Bot.DiscordRelated.MessageComponents;
@@ -27,6 +28,7 @@ namespace Bot.DiscordRelated.Music {
         }
 
         private async Task<EmbedPlayerEffectsDisplay> ProvideInternal(IMessageChannel channel, FinalLavalinkPlayer finalLavalinkPlayer) {
+            if (finalLavalinkPlayer.IsShutdowned) throw new InvalidOperationException("You try to provide display for shutdowned player");
             var display = _cache.GetOrAdd(channel, messageChannel => {
                 ILocalizationProvider loc;
                 if (channel is ITextChannel textChannel) {

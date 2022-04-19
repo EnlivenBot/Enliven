@@ -6,7 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 namespace Common.Utils {
-    public class HandyTimer : IDisposable {
+    public class HandyTimer : DisposableBase {
         private TaskCompletionSource<bool> _taskCompletionSource = new();
         private Subject<Unit> _completedSubject = new();
         private bool _taskCompleted;
@@ -19,12 +19,14 @@ namespace Common.Utils {
         }
 
         private void SetCompleted() {
+            if (IsDisposed) return;
             if (!_taskCompleted) _completedSubject.OnNext(Unit.Default);
             _taskCompleted = true;
             _taskCompletionSource.TrySetResult(true);
         }
 
         private void Reset() {
+            if (IsDisposed) return;
             if (!_taskCompleted) return;
             _taskCompleted = false;
             _taskCompletionSource = new TaskCompletionSource<bool>();
@@ -37,7 +39,7 @@ namespace Common.Utils {
             else {
                 Reset();
                 _timer?.Dispose();
-                _timer = new Timer(state => SetCompleted(), null, span, TimeSpan.FromMilliseconds(-1));
+                _timer = new Timer(_ => SetCompleted(), null, span, TimeSpan.FromMilliseconds(-1));
             }
         }
 
@@ -45,9 +47,9 @@ namespace Common.Utils {
             SetDelay(time - DateTime.Now);
         }
 
-        public void Dispose() {
-            _completedSubject.Dispose();
+        protected override void DisposeInternal() {
             _timer?.Dispose();
+            _completedSubject.Dispose();
         }
     }
 
