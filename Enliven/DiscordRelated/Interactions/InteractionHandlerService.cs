@@ -39,7 +39,8 @@ namespace Bot.DiscordRelated.Interactions {
                 _ = context.Interaction.DeferAsync();
                 var result = await _customInteractionService.ExecuteCommandAsync(context, _serviceProvider);
                 if (!result.IsSuccess) {
-                    _logger.Error("Interaction execution {result}: {Reason}", result.Error!.Value, result.ErrorReason);
+                    var exception = result is ExecuteResult executeResult ? executeResult.Exception : null;
+                    _logger.Error(exception, "Interaction execution {Result}: {Reason}", result.Error!.Value, result.ErrorReason);
                 }
 
                 try {
