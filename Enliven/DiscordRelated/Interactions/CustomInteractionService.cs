@@ -72,8 +72,8 @@ namespace Bot.DiscordRelated.Interactions {
                 .Pipe(localized => localized?.CanGet() == true ? localized.Get(LangLocalizationProvider.EnglishLocalizationProvider) : null)
                 .Pipe(s => s ?? command!.Text);
 
-            var adminCommand = (methodInfo.GetCustomAttribute<RequireUserPermissionAttribute>()?.GuildPermission & GuildPermission.Administrator) != 0
-                            || (methodInfo.DeclaringType?.GetCustomAttribute<RequireUserPermissionAttribute>()?.GuildPermission & GuildPermission.Administrator) != 0;
+            var adminCommand = (methodInfo.GetCustomAttribute<RequireUserPermissionAttribute>()?.GuildPermission ?? 0 & GuildPermission.Administrator) != 0
+                            || (methodInfo.DeclaringType?.GetCustomAttribute<RequireUserPermissionAttribute>()?.GuildPermission ?? 0 & GuildPermission.Administrator) != 0;
             var preconditions = adminCommand ? new[] { new Discord.Interactions.RequireUserPermissionAttribute(GuildPermission.Administrator) } : Array.Empty<PreconditionAttribute>();
             
             builder
