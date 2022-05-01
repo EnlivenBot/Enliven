@@ -1,7 +1,7 @@
 ﻿using System;
 using Autofac;
 
-namespace Bot.DiscordRelated.Commands {
+namespace Common.Utils {
     public class ServiceProviderAdapter : IServiceProvider {
         private IComponentContext _context;
         public ServiceProviderAdapter(IComponentContext context) {

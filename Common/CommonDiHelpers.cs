@@ -1,5 +1,9 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Linq;
+using System.Net.Http;
 using Autofac;
+using Autofac.Builder;
+using Autofac.Core.Lifetime;
 using Common.Config;
 using Common.Music;
 using Common.Music.Controller;
@@ -45,6 +49,15 @@ namespace Common {
 
         public static LiteDatabase GetDatabase(this IComponentContext context) {
             return context.Resolve<LiteDatabaseProvider>().ProvideDatabase().GetAwaiter().GetResult();
+        }
+
+        public static IRegistrationBuilder<TLimit, TActivatorData, TStyle> InstancePerBot<TLimit, TActivatorData, TStyle>(
+            this IRegistrationBuilder<TLimit, TActivatorData, TStyle> registration, params object[] lifetimeScopeTags) {
+            if (registration == null)
+                throw new ArgumentNullException(nameof(registration));
+
+            var tags = new[] { Constants.BotLifetimeScopeTag }.Concat(lifetimeScopeTags).ToArray();
+            return registration.InstancePerMatchingLifetimeScope(tags);
         }
     }
 }

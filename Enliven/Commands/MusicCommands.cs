@@ -6,6 +6,7 @@ using Bot.Commands.Chains;
 using Bot.DiscordRelated;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
+using Bot.DiscordRelated.Interactions;
 using Bot.DiscordRelated.MessageComponents;
 using Bot.Utilities.Collector;
 using Common;
@@ -25,6 +26,7 @@ using Tyrrrz.Extensions;
 #pragma warning disable 4014
 
 namespace Bot.Commands {
+    [SlashCommandAdapter]
     [Grouping("music")]
     [RequireContext(ContextType.Guild)]
     public sealed class MusicCommands : MusicModuleBase {
@@ -89,19 +91,12 @@ namespace Bot.Commands {
         [Command("repeat", RunMode = RunMode.Async)]
         [Alias("r", "loop", "l")]
         [Summary("repeat0s")]
-        public async Task Repeat(LoopingState state) {
-            Player.LoopingState = state;
+        public async Task Repeat(LoopingState? state) {
+            Player.LoopingState = state ?? Player.LoopingState.Next();
             // Player.UpdateProgress();
             Player.WriteToQueueHistory(new HistoryEntry(
                 new EntryLocalized("MusicQueues.RepeatSet", Context.User.Username, Player.LoopingState.ToString()),
                 $"{Context.User.Id}repeat"));
-        }
-
-        [Command("repeat", RunMode = RunMode.Async)]
-        [Alias("r", "loop", "l")]
-        [Summary("repeat0s")]
-        public async Task Repeat() {
-            await Repeat(Player!.LoopingState.Next());
         }
 
         [RequireNonEmptyPlaylist]

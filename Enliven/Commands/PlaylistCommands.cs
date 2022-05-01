@@ -3,12 +3,14 @@ using System.Threading.Tasks;
 using Bot.DiscordRelated;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
+using Bot.DiscordRelated.Interactions;
 using Common;
 using Common.Music;
 using Discord.Commands;
 using LiteDB;
 
 namespace Bot.Commands {
+    [SlashCommandAdapter]
     public sealed class PlaylistCommands : MusicModuleBase {
         public IPlaylistProvider PlaylistProvider { get; set; } = null!;
 

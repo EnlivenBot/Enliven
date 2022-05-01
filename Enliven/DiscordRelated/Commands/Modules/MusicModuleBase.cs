@@ -11,6 +11,8 @@ using Common.Music.Controller;
 using Common.Music.Players;
 using Discord;
 using Discord.Commands;
+using Discord.Interactions;
+using Discord.WebSocket;
 using Lavalink4NET.Lyrics;
 
 #pragma warning disable 4014
@@ -28,7 +30,18 @@ namespace Bot.DiscordRelated.Commands.Modules {
 
         protected override void BeforeExecute(CommandInfo command) {
             base.BeforeExecute(command);
-            BeforeExecuteAsync(command).GetAwaiter().GetResult();
+            var shouldCreatePlayer = command.Attributes.Any(attribute => attribute is ShouldCreatePlayerAttribute);
+            var requireNonEmptyPlaylist = command.Attributes.Any(attribute => attribute is RequireNonEmptyPlaylistAttribute);
+            var requirePlayingTrack = command.Attributes.Any(attribute => (attribute as RequireNonEmptyPlaylistAttribute)?.RequirePlayingTrack == true);
+            BeforeExecuteAsync(shouldCreatePlayer, requireNonEmptyPlaylist, requirePlayingTrack).GetAwaiter().GetResult();
+        }
+
+        public override async Task BeforeExecuteAsync(ICommandInfo command) {
+            await base.BeforeExecuteAsync(command);
+            var shouldCreatePlayer = command.Attributes.Any(attribute => attribute is ShouldCreatePlayerAttribute);
+            var requireNonEmptyPlaylist = command.Attributes.Any(attribute => attribute is RequireNonEmptyPlaylistAttribute);
+            var requirePlayingTrack = command.Attributes.Any(attribute => (attribute as RequireNonEmptyPlaylistAttribute)?.RequirePlayingTrack == true);
+            await BeforeExecuteAsync(shouldCreatePlayer, requireNonEmptyPlaylist, requirePlayingTrack);
         }
 
         private static readonly IEntry MusicDisabledEntry = new EntryLocalized("Music.MusicDisabled");
@@ -40,13 +53,12 @@ namespace Bot.DiscordRelated.Commands.Modules {
         private static readonly IEntry OtherVoiceChannelEntry = new EntryLocalized("Music.OtherVoiceChannel");
         private static readonly IEntry NothingPlayingEntry = new EntryLocalized("Music.NothingPlaying");
         private static readonly IEntry CantConnectEntry = new EntryLocalized("Music.CantConnect");
-        protected virtual async Task BeforeExecuteAsync(CommandInfo command) {
+        protected virtual async Task BeforeExecuteAsync(bool shouldCreatePlayer, bool requireNonEmptyPlaylist, bool requirePlayingTrack) {
             await ReplyAndThrowIfAsync(!MusicController.IsMusicEnabled, MusicDisabledEntry);
 
             var channelInfo = GetChannelInfo();
             await ReplyAndThrowIfAsync(!channelInfo.IsCommandAllowed, ChannelNotAllowedEntry.WithArg(Context.User.Mention, channelInfo.MusicChannel!));
 
-            var shouldCreatePlayer = command.Attributes.Any(attribute => attribute is ShouldCreatePlayerAttribute);
             if (!MusicController.ClusterTask.IsCompleted) {
                 await ReplyAndThrowIfAsync(!shouldCreatePlayer, ClusterNotReadyCommandIgnoredEntry);
                 var loadingEntry = await ReplyEntryAsync(AwaitingClusterInitializingEntry, TimeSpan.FromDays(1));
@@ -66,7 +78,6 @@ namespace Bot.DiscordRelated.Commands.Modules {
             await ReplyAndThrowIfAsync(userVoiceChannelId == null, NotInVoiceChannelEntry.WithArg(Context.User.Mention));
 
             var player = MusicController.GetPlayer(Context.Guild.Id);
-            var requireNonEmptyPlaylist = command.Attributes.Any(attribute => attribute is RequireNonEmptyPlaylistAttribute);
             if (player == null) {
                 await ReplyAndThrowIfAsync(!shouldCreatePlayer, NothingPlayingEntry);
                 await ReplyAndThrowIfAsync(requireNonEmptyPlaylist, NothingPlayingEntry);
@@ -78,7 +89,6 @@ namespace Bot.DiscordRelated.Commands.Modules {
                 EmbedPlayerDisplayProvider.Provide(await channelInfo.GetTargetChannelAsync(), player);
             }
             else {
-                var requirePlayingTrack = command.Attributes.Any(attribute => (attribute as RequireNonEmptyPlaylistAttribute)?.RequirePlayingTrack == true);
                 await ReplyAndThrowIfAsync(requirePlayingTrack && player.CurrentTrack == null, NothingPlayingEntry);
                 await ReplyAndThrowIfAsync(requireNonEmptyPlaylist && player.Playlist.IsEmpty, NothingPlayingEntry);
                 await ReplyAndThrowIfAsync(userVoiceChannelId != player.VoiceChannelId, OtherVoiceChannelEntry);

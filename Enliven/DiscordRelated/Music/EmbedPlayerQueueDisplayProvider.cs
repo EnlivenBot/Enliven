@@ -36,6 +36,7 @@ namespace Bot.DiscordRelated.Music {
         }
 
         private EmbedPlayerQueueDisplay ProvideInternal(IMessageChannel channel, FinalLavalinkPlayer finalLavalinkPlayer) {
+            if (finalLavalinkPlayer.IsShutdowned) throw new InvalidOperationException("You try to provide display for shutdowned player");
             var display = _cache.GetOrAdd(channel, messageChannel => {
                 ILocalizationProvider loc;
                 if (channel is ITextChannel textChannel) {

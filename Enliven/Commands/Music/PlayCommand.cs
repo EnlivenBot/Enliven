@@ -5,12 +5,14 @@ using System.Threading.Tasks;
 using Autofac;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
+using Bot.DiscordRelated.Interactions;
 using Common;
 using Common.Music;
 using Discord;
 using Discord.Commands;
 
 namespace Bot.Commands.Music {
+    [SlashCommandAdapter]
     [Grouping("music")]
     [RequireContext(ContextType.Guild)]
     public sealed class PlayCommand : MusicModuleBase {
@@ -27,7 +29,7 @@ namespace Bot.Commands.Music {
         [Alias("pn")]
         [Summary("playnext0s")]
         public async Task PlayNext([Remainder] [Summary("play0_0s")] string? query = null) {
-            await PlayInternal(query, Player!.Playlist.Count == 0 ? -1 : Player.CurrentTrackIndex + 1);
+            await PlayInternal(query, Player.Playlist.Count == 0 ? -1 : Player.CurrentTrackIndex + 1);
         }
 
         private async Task PlayInternal(string? query, int position = -1) {
@@ -44,23 +46,25 @@ namespace Bot.Commands.Music {
             try {
                 var resolvedQueries = await MusicController.ResolveQueries(queries);
                 var username = Context.User?.Username ?? "Unknown";
-                await Player!.TryEnqueue(resolvedQueries, username, position);
+                await Player.TryEnqueue(resolvedQueries, username, position);
             }
             catch (TrackNotFoundException) {
                 await ReplyFormattedAsync(Loc.Get("Music.NotFound", query!.SafeSubstring(100, "...")!), true);
             }
         }
         
-        private async Task<List<string>> GetMusicQueries(IMessage message, string query) {
+        private async Task<List<string>> GetMusicQueries(IMessage? message, string query) {
             var list = new List<string>();
             list.AddRange(ParseByLines(query));
-            if (message.Attachments.Count != 0 && message.Attachments.First().Filename == "message.txt") {
-                var httpClient = ComponentContext.Resolve<HttpClient>();
-                var messageTxtContext = await httpClient.GetStringAsync(message.Attachments.First().Url);
-                list.AddRange(ParseByLines(messageTxtContext));
-            }
-            else {
-                list.AddRange(message.Attachments.Select(attachment => attachment.Url));
+            if (message != null) {
+                if (message.Attachments.Count != 0 && message.Attachments.First().Filename == "message.txt") {
+                    var httpClient = ComponentContext.Resolve<HttpClient>();
+                    var messageTxtContext = await httpClient.GetStringAsync(message.Attachments.First().Url);
+                    list.AddRange(ParseByLines(messageTxtContext));
+                }
+                else {
+                    list.AddRange(message.Attachments.Select(attachment => attachment.Url));
+                }
             }
 
             return list;

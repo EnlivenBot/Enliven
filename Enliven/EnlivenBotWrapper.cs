@@ -4,8 +4,10 @@ using System.Reactive.Threading.Tasks;
 using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
+using Common;
 using Common.Config;
 using Common.Music.Controller;
+using Common.Utils;
 using NLog;
 
 namespace Bot {
@@ -41,20 +43,10 @@ namespace Bot {
 
         private async Task RunLoopAsync(IContainer container, CancellationToken cancellationToken) {
             var isFirst = true;
-            
+
             while (!cancellationToken.IsCancellationRequested) {
                 try {
-                    await using var lifetimeScope = container.BeginLifetimeScope(builder => {
-                        builder.Register(context => _configProvider)
-                            .AsSelf()
-                            .SingleInstance();
-                        builder.Register(context => _instanceConfig)
-                            .AsSelf().AsImplementedInterfaces()
-                            .SingleInstance();
-                        builder.RegisterType<MusicController>()
-                            .AsSelf().AsImplementedInterfaces()
-                            .SingleInstance();
-                    });
+                    await using var lifetimeScope = container.BeginLifetimeScope(Constants.BotLifetimeScopeTag, ConfigureBotLifetime);
                     var bot = lifetimeScope.Resolve<EnlivenBot>();
                     await bot.StartAsync();
                     _firstStartResult!.TrySetResult(true);
@@ -71,9 +63,26 @@ namespace Bot {
                     _firstStartResult!.TrySetResult(false);
                     if (isFirst) return;
                 }
-                
+
                 isFirst = false;
             }
+        }
+
+        private void ConfigureBotLifetime(ContainerBuilder builder) {
+            builder.Register(context => _configProvider)
+                .AsSelf()
+                .SingleInstance();
+            builder.Register(context => _instanceConfig)
+                .AsSelf()
+                .AsImplementedInterfaces()
+                .SingleInstance();
+            builder.RegisterType<MusicController>()
+                .AsSelf()
+                .AsImplementedInterfaces()
+                .SingleInstance();
+            builder.RegisterType<ServiceScopeFactoryAdapter>()
+                .AsImplementedInterfaces()
+                .SingleInstance();
         }
     }
 }

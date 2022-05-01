@@ -1,6 +1,7 @@
 ﻿using Autofac;
 using Bot.DiscordRelated;
 using Bot.DiscordRelated.Commands;
+using Bot.DiscordRelated.Interactions;
 using Bot.DiscordRelated.MessageComponents;
 using Bot.DiscordRelated.MessageHistories;
 using Bot.DiscordRelated.Music;
@@ -48,9 +49,9 @@ namespace Bot {
         public static ContainerBuilder AddEnlivenServices(this ContainerBuilder builder) {
             builder.RegisterType<MusicResolverService>().AsSelf().SingleInstance();
             builder.RegisterModule<BotInstanceNlogModule>();
-            builder.RegisterType<EnlivenBot>().InstancePerLifetimeScope();
+            builder.RegisterType<EnlivenBot>().InstancePerBot();
             builder.Register(context => new EnlivenShardedClient(new DiscordSocketConfig { MessageCacheSize = 100 }))
-                .AsSelf().AsImplementedInterfaces().As<DiscordShardedClient>().InstancePerLifetimeScope();
+                .AsSelf().AsImplementedInterfaces().As<DiscordShardedClient>().InstancePerBot();
 
             // Discord type readers
             builder.RegisterType<ChannelFunctionTypeReader>().As<CustomTypeReader>().SingleInstance();
@@ -76,26 +77,28 @@ namespace Bot {
             // Providers
             builder.RegisterType<SpotifyAssociationProvider>().As<ISpotifyAssociationProvider>().SingleInstance();
             builder.RegisterType<MessageHistoryProvider>().SingleInstance();
-            builder.RegisterType<EmbedPlayerDisplayProvider>().InstancePerLifetimeScope();
-            builder.RegisterType<EmbedPlayerQueueDisplayProvider>().InstancePerLifetimeScope();
-            builder.RegisterType<EmbedPlayerEffectsDisplayProvider>().InstancePerLifetimeScope();
+            builder.RegisterType<EmbedPlayerDisplayProvider>().InstancePerBot();
+            builder.RegisterType<EmbedPlayerQueueDisplayProvider>().InstancePerBot();
+            builder.RegisterType<EmbedPlayerEffectsDisplayProvider>().InstancePerBot();
             builder.RegisterType<EffectSourceProvider>().SingleInstance();
 
             // Services
-            builder.RegisterType<CustomCommandService>().As<IService>().AsSelf().InstancePerLifetimeScope();
-            builder.RegisterType<MessageHistoryService>().As<IService>().AsSelf().InstancePerLifetimeScope();
-            builder.RegisterType<GlobalBehaviorsService>().As<IService>().AsSelf().InstancePerLifetimeScope();
-            builder.RegisterType<ScopedReliabilityService>().As<IService>().AsSelf().InstancePerLifetimeScope();
-            builder.RegisterType<CommandHandlerService>().As<IService>().AsSelf().InstancePerLifetimeScope();
-            builder.RegisterType<StatisticsService>().As<IStatisticsService>().AsSelf().InstancePerLifetimeScope();
-            builder.RegisterType<MessageComponentService>().As<MessageComponentService>().AsSelf().InstancePerLifetimeScope();
+            builder.RegisterType<CustomCommandService>().As<IService>().AsSelf().InstancePerBot();
+            builder.RegisterType<CustomInteractionService>().As<IService>().AsSelf().InstancePerBot();
+            builder.RegisterType<MessageHistoryService>().As<IService>().AsSelf().InstancePerBot();
+            builder.RegisterType<GlobalBehaviorsService>().As<IService>().AsSelf().InstancePerBot();
+            builder.RegisterType<ScopedReliabilityService>().As<IService>().AsSelf().InstancePerBot();
+            builder.RegisterType<InteractionHandlerService>().As<IService>().AsSelf().InstancePerBot();
+            builder.RegisterType<CommandHandlerService>().As<IService>().AsSelf().InstancePerBot();
+            builder.RegisterType<StatisticsService>().As<IStatisticsService>().AsSelf().InstancePerBot();
+            builder.RegisterType<MessageComponentService>().As<MessageComponentService>().AsSelf().InstancePerBot();
             builder.RegisterType<HtmlRendererService>().AsSelf().SingleInstance();
-            builder.RegisterType<MessageHistoryHtmlExporter>().InstancePerLifetimeScope();
-            builder.RegisterType<CollectorService>().InstancePerLifetimeScope();
+            builder.RegisterType<MessageHistoryHtmlExporter>().InstancePerBot();
+            builder.RegisterType<CollectorService>().InstancePerBot();
 
             // MessageHistory Printers
-            builder.RegisterType<MessageHistoryPrinter>().InstancePerLifetimeScope();
-            builder.RegisterType<MessageHistoryPackPrinter>().InstancePerLifetimeScope();
+            builder.RegisterType<MessageHistoryPrinter>().InstancePerBot();
+            builder.RegisterType<MessageHistoryPackPrinter>().InstancePerBot();
 
             return builder;
         }

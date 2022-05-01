@@ -2,12 +2,14 @@
 using System.Threading.Tasks;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
+using Bot.DiscordRelated.Interactions;
 using Bot.DiscordRelated.MessageHistories;
 using Common;
 using Discord;
 using Discord.Commands;
 
 namespace Bot.Commands {
+    [SlashCommandAdapter]
     [RegisterIf(typeof(RegisterIf.LoggingEnabled))]
     public class LoggingCommands : AdvancedModuleBase {
         public MessageHistoryService MessageHistoryService { get; set; } = null!;

@@ -2,12 +2,14 @@
 using System.Threading.Tasks;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
+using Bot.DiscordRelated.Interactions;
 using Common;
 using Common.Music.Effects;
 using Common.Music.Players;
 using Discord.Commands;
 
 namespace Bot.Commands.Music {
+    [SlashCommandAdapter]
     [Grouping("music")]
     [RequireContext(ContextType.Guild)]
     public class EffectCommand : MusicModuleBase {
