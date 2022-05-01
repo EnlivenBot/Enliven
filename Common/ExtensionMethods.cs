@@ -246,5 +246,10 @@ namespace Common {
             using var enumerator = sequence.GetEnumerator();
             while (enumerator.MoveNext()) action(enumerator.Current);
         }
+
+        public static Task ObserveException(this Task task)
+        {
+            return task.ContinueWith(_ =>  task.Exception?.Handle(_ => true), TaskContinuationOptions.OnlyOnFaulted);
+        }
     }
 }

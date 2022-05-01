@@ -72,8 +72,10 @@ namespace Bot {
             var logger = LogManager.GetLogger("Global");
             AppDomain.CurrentDomain.UnhandledException += (sender, args) =>
                 logger.Fatal(args.ExceptionObject as Exception, "Global uncaught exception");
-            TaskScheduler.UnobservedTaskException += (sender, args) =>
+            TaskScheduler.UnobservedTaskException += (sender, args) => {
                 logger.Fatal(args.Exception?.Flatten(), "Global uncaught task exception");
+                args.SetObserved();
+            };
         }
     }
 }
