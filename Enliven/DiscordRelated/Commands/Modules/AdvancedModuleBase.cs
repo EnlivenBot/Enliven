@@ -9,6 +9,7 @@ using Common.Localization.Providers;
 using Discord;
 using Discord.Commands;
 using Discord.Interactions;
+using Discord.Interactions.Builders;
 using ModuleInfo = Discord.Interactions.ModuleInfo;
 
 namespace Bot.DiscordRelated.Commands.Modules {
@@ -54,5 +55,6 @@ namespace Bot.DiscordRelated.Commands.Modules {
         public virtual Task AfterExecuteAsync(ICommandInfo command) => Task.CompletedTask;
         public virtual void AfterExecute(ICommandInfo command) { }
         public void OnModuleBuilding(InteractionService commandService, ModuleInfo module) { }
+        public void Construct(ModuleBuilder builder, InteractionService commandService) { }
     }
 }

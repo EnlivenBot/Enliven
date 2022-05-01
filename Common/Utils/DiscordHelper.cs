@@ -42,6 +42,8 @@ namespace Common.Utils {
             public int? Height { get; }
             public int? Width { get; }
             public bool Ephemeral { get; }
+            public string Description { get; }
+            public string ContentType { get; }
         }
     }
 }
