@@ -36,8 +36,15 @@ namespace Bot.DiscordRelated.Interactions {
 
         private async Task OnInteractionCreated(ShardedInteractionContext context) {
             try {
+                var interactionSearchResult = SearchInteraction(context);
+                if (!interactionSearchResult.IsSuccess) {
+                    _logger.Warn("Interaction not found. Id: {InteractionId}. Reason: {Reason}", interactionSearchResult.Text, interactionSearchResult.ErrorReason);
+                    return;
+                }
+
                 _ = context.Interaction.DeferAsync();
-                var result = await _customInteractionService.ExecuteCommandAsync(context, _serviceProvider);
+
+                var result = await interactionSearchResult.Command.ExecuteAsync(context, _serviceProvider).ConfigureAwait(false);
                 if (!result.IsSuccess) {
                     var exception = result is ExecuteResult executeResult ? executeResult.Exception : null;
                     _logger.Error(exception, "Interaction execution {Result}: {Reason}", result.Error!.Value, result.ErrorReason);
@@ -54,8 +61,25 @@ namespace Bot.DiscordRelated.Interactions {
                 }
             }
             catch (Exception e) {
-                Console.WriteLine(e);
+                _logger.Error(e, "Error while handling interaction");
             }
+        }
+
+        private SearchResult<ICommandInfo> SearchInteraction(ShardedInteractionContext context) {
+            return context.Interaction switch {
+                ISlashCommandInteraction slashCommandInteraction => ParseSearchResultToCommon(_customInteractionService.SearchSlashCommand(slashCommandInteraction)),
+                IComponentInteraction messageComponent           => ParseSearchResultToCommon(_customInteractionService.SearchComponentCommand(messageComponent)),
+                IUserCommandInteraction userCommand              => ParseSearchResultToCommon(_customInteractionService.SearchUserCommand(userCommand)),
+                IMessageCommandInteraction messageCommand        => ParseSearchResultToCommon(_customInteractionService.SearchMessageCommand(messageCommand)),
+                IAutocompleteInteraction autocomplete            => ParseSearchResultToCommon(_customInteractionService.SearchAutocompleteCommand(autocomplete)),
+                _                                                => throw new ArgumentOutOfRangeException()
+            };
+        }
+
+        private static SearchResult<ICommandInfo> ParseSearchResultToCommon<T>(SearchResult<T> result) where T : class, ICommandInfo {
+            return result.IsSuccess
+                ? SearchResult<ICommandInfo>.FromSuccess(result.Text, result.Command, result.RegexCaptureGroups)
+                : SearchResult<ICommandInfo>.FromError(result.Text, result.Error!.Value, result.ErrorReason);
         }
     }
 }
