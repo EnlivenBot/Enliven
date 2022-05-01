@@ -36,7 +36,7 @@ namespace Bot.DiscordRelated.Music {
         }
 
         public Task OnPreDiscordStart() {
-            _restoreStoppedHandled = _client.MessageComponentUse
+            _restoreStoppedHandled = _messageComponentService.MessageComponentUse
                 .Where(component => component.Data.CustomId == "restoreStoppedPlayer")
                 .SubscribeAsync(component => {
                     var guild = (component.Channel as IGuildChannel)?.Guild;

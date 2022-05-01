@@ -6,16 +6,14 @@ using NLog;
 
 namespace Bot.DiscordRelated.MessageComponents {
     public class MessageComponentService {
-        private EnlivenShardedClient _enlivenShardedClient;
         private ILogger _logger;
         public MessageComponentService(EnlivenShardedClient enlivenShardedClient, ILogger logger) {
             _logger = logger;
-            _enlivenShardedClient = enlivenShardedClient;
+            MessageComponentUse = enlivenShardedClient.MessageComponentUse
+                .Do(component => _ = component.DeferAsync());
         }
 
-        public IObservable<SocketMessageComponent> MessageComponentUse => 
-            _enlivenShardedClient.MessageComponentUse
-                .Do(component => _ = component.DeferAsync());
+        public IObservable<SocketMessageComponent> MessageComponentUse { get; }
 
         public EnlivenComponentBuilder GetBuilder() {
             return new EnlivenComponentBuilder(this);
