@@ -5,7 +5,6 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Bot.Config.Emoji;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Criteria;
 using Bot.DiscordRelated.MessageComponents;
@@ -13,6 +12,7 @@ using Bot.Music.Spotify;
 using Bot.Utilities.Collector;
 using Common;
 using Common.Config;
+using Common.Config.Emoji;
 using Common.Criteria;
 using Common.Localization.Entries;
 using Common.Localization.Providers;
@@ -132,17 +132,18 @@ namespace Bot.DiscordRelated.Music {
             _updateControlMessageTask.Dispose();
             
             if (message != null) {
-                try {
-                    message.RemoveAllReactionsAsync();
-                }
-                catch (Exception) {
-                    // ignored
-                }
-
+                var embed = new EmbedBuilder()
+                    .WithColor(Color.Gold)
+                    .WithTitle(header.Get(_loc))
+                    .WithDescription(body.Get(_loc))
+                    .Build();
+                var components = new ComponentBuilder()
+                    .WithButton(_loc.Get("Music.RestoreStoppedPlayerButton"), "restoreStoppedPlayer")
+                    .Build();
                 await message.ModifyAsync(properties => {
                     properties.Content = Optional<string>.Unspecified;
-                    properties.Embed = new EmbedBuilder().WithColor(Color.Gold).WithTitle(header.Get(_loc)).WithDescription(body.Get(_loc)).Build();
-                    properties.Components = new ComponentBuilder().Build();
+                    properties.Embed = embed;
+                    properties.Components = components;
                 });
             }
             else {

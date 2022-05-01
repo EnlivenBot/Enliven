@@ -7,26 +7,30 @@ using Lavalink4NET.Player;
 
 namespace Common.Music.Resolvers {
     public class MusicResolverService {
-        private IEnumerable<IMusicResolver> _musicResolvers;
+        private readonly IEnumerable<IMusicResolver> _musicResolvers;
+        private readonly LavalinkMusicResolver _lavalinkMusicResolver;
 
-        public MusicResolverService(IEnumerable<IMusicResolver> musicResolvers) {
+        public MusicResolverService(IEnumerable<IMusicResolver> musicResolvers, LavalinkMusicResolver lavalinkMusicResolver) {
             _musicResolvers = musicResolvers;
+            _lavalinkMusicResolver = lavalinkMusicResolver;
         }
 
         public MusicResolver GetResolver(string query, LavalinkCluster lavalinkCluster) {
-            return new MusicResolver(_musicResolvers, lavalinkCluster, query);
+            return new MusicResolver(_musicResolvers, lavalinkCluster, _lavalinkMusicResolver, query);
         }
     }
     
 
     public class MusicResolver {
-        private IEnumerable<IMusicResolver> _musicResolvers;
-        private LavalinkCluster _cluster;
-        private string _query;
+        private readonly IEnumerable<IMusicResolver> _musicResolvers;
+        private readonly LavalinkCluster _cluster;
+        private readonly LavalinkMusicResolver _lavalinkMusicResolver;
+        private readonly string _query;
 
-        public MusicResolver(IEnumerable<IMusicResolver> musicResolvers, LavalinkCluster cluster, string query) {
+        public MusicResolver(IEnumerable<IMusicResolver> musicResolvers, LavalinkCluster cluster, LavalinkMusicResolver lavalinkMusicResolver, string query) {
             _query = query;
             _cluster = cluster;
+            _lavalinkMusicResolver = lavalinkMusicResolver;
             _musicResolvers = musicResolvers;
         }
 
@@ -45,7 +49,9 @@ namespace Common.Music.Resolvers {
                 }
             }
 
-            return await (await new LavalinkMusicResolver().Resolve(_cluster, _query)).Resolve();
+            return await _lavalinkMusicResolver
+                .Resolve(_cluster, _query)
+                .PipeAsync(result => result.Resolve());
         }
     }
 }

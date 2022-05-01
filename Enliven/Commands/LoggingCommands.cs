@@ -1,18 +1,19 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
+using Bot.DiscordRelated.Interactions;
 using Bot.DiscordRelated.MessageHistories;
 using Common;
-using Common.Entities;
 using Discord;
 using Discord.Commands;
-using Discord.WebSocket;
 
 namespace Bot.Commands {
-    public class Log : AdvancedModuleBase {
+    [SlashCommandAdapter]
+    [RegisterIf(typeof(RegisterIf.LoggingEnabled))]
+    public class LoggingCommands : AdvancedModuleBase {
         public MessageHistoryService MessageHistoryService { get; set; } = null!;
-        public MessageHistoryProvider MessageHistoryProvider { get; set; } = null!;
-        
+
         [Alias("log")]
         [Command("history", RunMode = RunMode.Async)]
         [Summary("history0s")]

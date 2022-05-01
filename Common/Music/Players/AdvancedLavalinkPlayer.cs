@@ -122,6 +122,17 @@ namespace Common.Music.Players {
             });
         }
 
+        public virtual async Task ApplyStateSnapshot(PlayerStateSnapshot playerSnapshot) {
+            if (playerSnapshot.LastTrack != null) await PlayAsync(playerSnapshot.LastTrack, playerSnapshot.TrackPosition);
+            if (playerSnapshot.PlayerState == PlayerState.Paused) await PauseAsync();
+            
+            _effectsList.Clear();
+            foreach (var playerEffectUse in playerSnapshot.Effects) {
+                _effectsList.Add(new PlayerEffectUse(playerEffectUse.User, playerEffectUse.Effect));
+            }
+            await ApplyFiltersAsync();
+        }
+
         /// <summary>
         /// This method is called only from third-party code.
         /// </summary>
@@ -137,8 +148,8 @@ namespace Common.Music.Players {
                         await playerDisplay.LeaveNotification(new EntryLocalized("Music.PlaybackStopped"), reason.Add(playerSnapshot.StoredPlaylist!.Id));
 
                     await Task.Delay(2000);
-                    var newPlayer = await MusicController.RestoreLastPlayer(GuildId);
-                    if (newPlayer == null) return;
+                    var newPlayer = await MusicController.ProvidePlayer(playerSnapshot.GuildId, playerSnapshot.LastVoiceChannelId, true);
+                    await newPlayer.ApplyStateSnapshot(playerSnapshot);
                     foreach (var playerDisplay in Displays.ToList()) 
                         await playerDisplay.ChangePlayer(newPlayer);
                     newPlayer.WriteToQueueHistory(new HistoryEntry(new EntryLocalized("Music.ReconnectedAfterDispose", GuildConfig.Prefix, playerSnapshot.StoredPlaylist!.Id)));
@@ -156,18 +167,18 @@ namespace Common.Music.Players {
             _effectsList.Add(effectUse);
 
             WriteToQueueHistory(new EntryLocalized("Music.EffectApplied", source?.Username ?? "Unknown", effectUse.Effect.DisplayName));
-            await ApplyFilters();
+            await ApplyFiltersAsync();
             return effectUse;
         }
 
         public virtual async Task RemoveEffect(PlayerEffectUse effectUse, IUser? source) {
             if (_effectsList.Remove(effectUse)) {
-                await ApplyFilters();
+                await ApplyFiltersAsync();
                 WriteToQueueHistory(new EntryLocalized("Music.EffectRemoved", source?.Username ?? "Unknown", effectUse.Effect.DisplayName));
             }
         }
 
-        protected async Task ApplyFilters() {
+        protected async Task ApplyFiltersAsync() {
             var effects = _effectsList.SelectMany(use => use.Effect.CurrentFilters)
                 .GroupBy(pair => pair.Key)
                 .Select(pairs => pairs.First())

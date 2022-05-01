@@ -3,14 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Autofac;
-using Bot.Config.Emoji;
 using Bot.DiscordRelated.MessageHistories;
 using Bot.Utilities;
 using Bot.Utilities.Collector;
 using Common;
 using Common.Config;
+using Common.Config.Emoji;
 using Common.Localization.Entries;
 using Common.Localization.Providers;
+using Common.Utils;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -27,10 +28,11 @@ namespace Bot.DiscordRelated.Commands {
         private readonly CustomCommandService _commandService;
         private readonly CommandCooldownHandler _commandCooldownHandler = new();
         private readonly FuzzySearch _fuzzySearch = new();
+        private readonly bool _isLoggingEnabled;
 
         public CommandHandlerService(DiscordShardedClient client, CustomCommandService commandService, IGuildConfigProvider guildConfigProvider,
                                      IStatisticsPartProvider statisticsPartProvider, MessageHistoryService messageHistoryService,
-                                     ILifetimeScope serviceProvider, CollectorService collectorService) {
+                                     ILifetimeScope serviceProvider, CollectorService collectorService, InstanceConfig instanceConfig) {
             _serviceProvider = serviceProvider;
             _collectorService = collectorService;
             _messageHistoryService = messageHistoryService;
@@ -38,6 +40,7 @@ namespace Bot.DiscordRelated.Commands {
             _guildConfigProvider = guildConfigProvider;
             _client = client;
             _commandService = commandService;
+            _isLoggingEnabled = instanceConfig.IsLoggingEnabled();
         }
 
 
@@ -106,7 +109,7 @@ namespace Bot.DiscordRelated.Commands {
                 }
             }
 
-            _messageHistoryService.TryLogCreatedMessage(s, guildConfig, isCommand);
+            if (_isLoggingEnabled) _messageHistoryService.TryLogCreatedMessage(s, guildConfig, isCommand);
         }
 
         private async Task AddEmojiErrorHint(SocketUserMessage targetMessage, ILocalizationProvider loc, IEmote emote, IEntry description,

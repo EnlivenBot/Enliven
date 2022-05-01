@@ -19,6 +19,21 @@ namespace Common.Config {
         ///      "Name": "Name will be displayed at player embed"
         ///  }
         /// </example>
-        public List<LavalinkNodeInfo> LavalinkNodes { get; set; } = new List<LavalinkNodeInfo>();
+        public List<LavalinkNodeInfo> LavalinkNodes { get; set; } = new();
+
+        /// <summary>
+        /// Allow manipulation modules for current bot instance
+        /// </summary>
+        /// <example>
+        /// List of available modules
+        /// !logging - disables logging
+        /// </example>
+        public List<string> Modules { get; set; } = new();
+    }
+
+    public static class InstanceConfigExtensions {
+        public static bool IsLoggingEnabled(this InstanceConfig config) {
+            return !config.Modules.Contains("!logging");
+        }
     }
 }

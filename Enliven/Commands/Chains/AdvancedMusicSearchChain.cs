@@ -4,12 +4,12 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Bot.Config.Emoji;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.MessageComponents;
 using Bot.Utilities.Collector;
 using Common;
 using Common.Config;
+using Common.Config.Emoji;
 using Common.Localization.Providers;
 using Common.Music.Controller;
 using Common.Music.Players;
@@ -71,10 +71,11 @@ namespace Bot.Commands.Chains {
 
         public async Task Start() {
             SetTimeout(Constants.VeryShortTimeSpan);
-            var tracks = (await _controller.Cluster.GetTracksAsync(_query, _searchMode)).ToList();
+            var cluster = await _controller.ClusterTask;
+            var tracks = await cluster.GetTracksAsync(_query, _searchMode).PipeAsync(enumerable => enumerable.ToList());
             // Repeat search, if fail
             if (!tracks.Any()) {
-                tracks = (await _controller.Cluster.GetTracksAsync(_query, _searchMode)).ToList();
+                tracks = await cluster.GetTracksAsync(_query, _searchMode).PipeAsync(enumerable => enumerable.ToList());
             }
 
             MainBuilder.Description = Loc.Get("Music.SearchResultsDescription", _searchMode, _query.SafeSubstring(100, "...") ?? "");

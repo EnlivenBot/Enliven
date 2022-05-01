@@ -74,8 +74,12 @@ namespace Common.Music.Players {
 
             if (LoadFailedRemoves > 2) {
                 try {
-                    var currentNode = MusicController.Cluster.GetServingNode(GuildId);
-                    var newNode = MusicController.Cluster.Nodes.Where(node => node.IsConnected).Where(node => node != currentNode).RandomOrDefault();
+                    var cluster = await MusicController.ClusterTask;
+                    var currentNode = cluster.GetServingNode(GuildId);
+                    var newNode = cluster.Nodes
+                        .Where(node => node.IsConnected)
+                        .Where(node => node != currentNode)
+                        .RandomOrDefault();
                     if (newNode != null) {
                         await currentNode.MovePlayerAsync(this, newNode);
                         WriteToQueueHistory(new HistoryEntry(new EntryLocalized("MusicQueues.NodeChanged", "SYSTEM", newNode.Label ?? "")));
@@ -187,7 +191,7 @@ namespace Common.Music.Players {
             }
         }
 
-        public void UpdateCurrentTrackIndex() {
+        protected void UpdateCurrentTrackIndex() {
             if (CurrentTrack == null) return;
             try {
                 if (CurrentTrack.Identifier == Playlist[CurrentTrackIndex].Identifier) return;
@@ -277,13 +281,24 @@ namespace Common.Music.Players {
         protected override async Task<PlayerSnapshot> GetPlayerSnapshot(PlayerSnapshotParameters parameters) {
             var snapshot = await base.GetPlayerSnapshot(parameters);
             snapshot.LoopingState = LoopingState;
-            snapshot.Playlist = Playlist;
+            snapshot.Playlist = Playlist.ToList();
             if (parameters.SavePlaylist) {
                 var playlist = await ExportPlaylist(ExportPlaylistOptions.AllData);
                 snapshot.StoredPlaylist = _playlistProvider.StorePlaylist(playlist, "a" + ObjectId.NewObjectId(), UserLink.Current);
             }
 
             return snapshot;
+        }
+
+        public override async Task ApplyStateSnapshot(PlayerStateSnapshot playerSnapshot) {
+            Playlist.Clear();
+            Playlist.AddRange(playerSnapshot.Playlist);
+            LoopingState = playerSnapshot.LoopingState;
+            if (playerSnapshot.LastTrack == null && Playlist.Count != 0) {
+                await PlayAsync(Playlist.First());
+            }
+            await base.ApplyStateSnapshot(playerSnapshot);
+            UpdateCurrentTrackIndex();
         }
 
         public override async Task OnTrackExceptionAsync(TrackExceptionEventArgs eventArgs) {

@@ -11,7 +11,6 @@ using Common.Entities;
 using Common.Localization.Entries;
 using Common.Localization.Providers;
 using Discord;
-using HarmonyLib;
 
 namespace Bot.DiscordRelated.MessageHistories {
     public class MessageHistoryPrinter {

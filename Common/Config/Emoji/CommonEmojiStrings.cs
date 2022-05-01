@@ -2,7 +2,7 @@
 using System.IO;
 using Newtonsoft.Json;
 
-namespace Bot.Config.Emoji {
+namespace Common.Config.Emoji {
     public class CommonEmojiStrings {
         private CommonEmojiStrings() { }
 
@@ -16,6 +16,11 @@ namespace Bot.Config.Emoji {
             });
 
         public static CommonEmojiStrings Instance => _lazy.Value;
+
+        public string GetEmoji(string name) {
+            return this.GetType().GetProperty(name)?.GetValue(this)?.ToString() 
+                ?? throw new ArgumentException("No emoji with this name found"); 
+        }
 
         public string RepeatOne { get; set; } = "<:repeatonce:682469899351621648>";
         public string RepeatOff { get; set; } = "<:repeatoff:682469899276517401>";
@@ -56,5 +61,10 @@ namespace Bot.Config.Emoji {
         public string NoEntry { get; set; } = "⛔";
         public string Level { get; set; } = "🎚️";
         public string E { get; set; } = "🇪";
+        
+        // Animated
+        
+        // https://cdn.discordapp.com/emojis/961698515694805022.gif?quality=lossless
+        public string LoadingAnimated { get; set; } = "<a:loading:961698515694805022>";
     }
 }

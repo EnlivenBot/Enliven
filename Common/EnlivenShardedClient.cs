@@ -33,6 +33,7 @@ namespace Common {
         public bool IsReady => Ready.IsCompleted;
         public Task Ready => _readyTaskCompletionSource.Task;
         public IObservable<SocketMessageComponent> MessageComponentUse { get; private set; } = null!;
+        public IObservable<SocketInteraction> InteractionCreate { get; private set; } = null!;
 
         private void SubscribeToEvents() {
             ShardReady += OnShardReady;
@@ -56,9 +57,11 @@ namespace Common {
         }
 
         private void SubscribeToMessageComponents() {
+            InteractionCreate = _interactionCreatedSubject.AsObservable();
             MessageComponentUse = _interactionCreatedSubject
                 .Where(interaction => interaction.Type == InteractionType.MessageComponent)
-                .Select(interaction => (SocketMessageComponent)interaction);
+                .Select(interaction => (SocketMessageComponent)interaction)
+                .AsObservable();
         }
 
         public async Task<IUser?> GetUserAsync(ulong id) {

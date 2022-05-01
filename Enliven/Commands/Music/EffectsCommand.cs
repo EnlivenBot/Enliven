@@ -2,12 +2,14 @@
 using System.Threading.Tasks;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
+using Bot.DiscordRelated.Interactions;
 using Bot.DiscordRelated.Music;
 using Common;
 using Common.Music.Effects;
 using Discord.Commands;
 
 namespace Bot.Commands.Music {
+    [SlashCommandAdapter]
     [Grouping("music")]
     [RequireContext(ContextType.Guild)]
     public class EffectsCommand : MusicModuleBase {
@@ -16,7 +18,6 @@ namespace Bot.Commands.Music {
         [Alias("efs")]
         [Summary("effects0s")]
         public async Task Effects() {
-            if (!await IsPreconditionsValid) return;
             if (Player == null || Player.Playlist.IsEmpty) {
                 await ReplyFormattedAsync(Loc.Get("Music.QueueEmpty").Format(GuildConfig.Prefix), true);
                 return;

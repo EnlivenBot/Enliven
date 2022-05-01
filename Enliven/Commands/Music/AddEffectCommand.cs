@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
+using Bot.DiscordRelated.Interactions;
 using Common;
 using Common.Config;
 using Discord.Commands;
@@ -11,12 +12,15 @@ using Newtonsoft.Json;
 using Tyrrrz.Extensions;
 
 namespace Bot.Commands.Music {
+    [SlashCommandAdapter]
     [Grouping("music")]
     [RequireContext(ContextType.Guild)]
     public class AddEffectCommand : MusicModuleBase {
         public IUserDataProvider UserDataProvider { get; set; } = null!;
         public ILiteCollection<PlayerEffect> PlayerEffectCollection { get; set; } = null!;
         
+        // TODO Implement this command as subcommand for effect
+        [SlashCommandAdapter(false)]
         [Command("effect add", RunMode = RunMode.Async)]
         [Priority(100)]
         [Alias("ef add")]

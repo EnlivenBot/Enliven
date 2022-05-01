@@ -1,4 +1,4 @@
-﻿namespace Bot.Config.Emoji {
+﻿namespace Common.Config.Emoji {
     public class ProgressEmojiList {
         public ProgressEmojiList() { }
         

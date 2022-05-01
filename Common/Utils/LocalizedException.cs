@@ -23,7 +23,9 @@ namespace Common.Utils {
         public LocalizedException(string message, Exception inner) : base(message, inner) {
             _entry = new EntryString(message);
         }
-        
+        public bool CanGet() {
+            return _entry.CanGet();
+        }
         public string Get(ILocalizationProvider provider, params object[] additionalArgs) {
             return _entry.Get(provider, additionalArgs);
         }

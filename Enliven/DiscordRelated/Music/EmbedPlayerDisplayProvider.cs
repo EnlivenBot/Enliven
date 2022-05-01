@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Linq;
+using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Bot.DiscordRelated.Commands;
@@ -15,15 +16,16 @@ using Newtonsoft.Json;
 using NLog;
 
 namespace Bot.DiscordRelated.Music {
-    public class EmbedPlayerDisplayProvider {
-        private ConcurrentDictionary<string, EmbedPlayerDisplay> _cache = new ConcurrentDictionary<string, EmbedPlayerDisplay>();
-        private IGuildConfigProvider _guildConfigProvider;
-        private DiscordShardedClient _client;
-        private CommandHandlerService _commandHandlerService;
-        private ILogger _logger;
-        private MessageComponentService _messageComponentService;
+    public class EmbedPlayerDisplayProvider : IService, IDisposable {
+        private readonly ConcurrentDictionary<string, EmbedPlayerDisplay> _cache = new();
+        private readonly IGuildConfigProvider _guildConfigProvider;
+        private readonly EnlivenShardedClient _client;
+        private readonly CommandHandlerService _commandHandlerService;
+        private readonly ILogger _logger;
+        private readonly MessageComponentService _messageComponentService;
+        private IDisposable? _restoreStoppedHandled;
 
-        public EmbedPlayerDisplayProvider(DiscordShardedClient client, IGuildConfigProvider guildConfigProvider,
+        public EmbedPlayerDisplayProvider(EnlivenShardedClient client, IGuildConfigProvider guildConfigProvider,
                                           CommandHandlerService commandHandlerService, MessageComponentService messageComponentService,
                                           ILogger logger) {
             _messageComponentService = messageComponentService;
@@ -31,7 +33,19 @@ namespace Bot.DiscordRelated.Music {
             _logger = logger;
             _client = client;
             _guildConfigProvider = guildConfigProvider;
+        }
+
+        public Task OnPreDiscordStart() {
+            _restoreStoppedHandled = _client.MessageComponentUse
+                .Where(component => component.Data.CustomId == "restoreStoppedPlayer")
+                .SubscribeAsync(component => {
+                    var guild = (component.Channel as IGuildChannel)?.Guild;
+                    if (guild == null) return Task.CompletedTask;
+                    var context = new ControllableCommandContext(_client) { Guild = guild, Channel = component.Channel, User = component.User };
+                    return _commandHandlerService.ExecuteCommand("resume", context, component.User.Id.ToString());
+                });
             new Task(UpdateCycle, TaskCreationOptions.LongRunning).Start();
+            return Task.CompletedTask;
         }
 
         public EmbedPlayerDisplay? Get(string id) {
@@ -47,10 +61,10 @@ namespace Bot.DiscordRelated.Music {
         }
 
         private EmbedPlayerDisplay ProvideInternal(string id, ITextChannel channel, FinalLavalinkPlayer finalLavalinkPlayer, int recursiveCount = 0) {
+            if (finalLavalinkPlayer.IsShutdowned) throw new InvalidOperationException("You try to provide display for shutdowned player");
             var embedPlayerDisplay = _cache.GetOrAdd(id, s => {
                 var guildConfig = _guildConfigProvider.Get(channel.GuildId);
                 var display = new EmbedPlayerDisplay(channel, _client, guildConfig.Loc, _commandHandlerService, guildConfig.PrefixProvider, _messageComponentService);
-
                 _ = display.Initialize(finalLavalinkPlayer);
 
                 return display;
@@ -60,7 +74,7 @@ namespace Bot.DiscordRelated.Music {
             if (recursiveCount <= 1) return ProvideInternal(id, channel, finalLavalinkPlayer, ++recursiveCount);
             _logger.Fatal("Provider recursive call. Provider: {data}",
                 JsonConvert.SerializeObject(embedPlayerDisplay, Formatting.None,
-                    new JsonSerializerSettings() {ReferenceLoopHandling = ReferenceLoopHandling.Ignore}));
+                    new JsonSerializerSettings() { ReferenceLoopHandling = ReferenceLoopHandling.Ignore }));
             return embedPlayerDisplay;
         }
 
@@ -83,6 +97,10 @@ namespace Bot.DiscordRelated.Music {
                 await waitCycle;
             }
             // ReSharper disable once FunctionNeverReturns
+        }
+
+        public void Dispose() {
+            _restoreStoppedHandled?.Dispose();
         }
     }
 }

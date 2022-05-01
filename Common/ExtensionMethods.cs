@@ -240,5 +240,11 @@ namespace Common {
                 // ignored
             }
         }
+
+        public static void Do<T>(this IEnumerable<T> sequence, Action<T> action)
+        {
+            using var enumerator = sequence.GetEnumerator();
+            while (enumerator.MoveNext()) action(enumerator.Current);
+        }
     }
 }

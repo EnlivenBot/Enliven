@@ -4,7 +4,6 @@ using System.Linq;
 using System.Reactive.Threading.Tasks;
 using System.Threading;
 using System.Threading.Tasks;
-using Bot.Patches;
 using Common;
 using Common.Config;
 using Common.Localization;
@@ -51,6 +50,8 @@ namespace Bot {
             await _client.StartAsync();
             _isDiscordStarted = true;
             await IService.ProcessEventAsync(_services, ServiceEventType.PostDiscordStart);
+
+            _ = _client.Ready.ContinueWith(async _ => await IService.ProcessEventAsync(_services, ServiceEventType.DiscordReady));
         }
 
         private async Task LoginAsync() {

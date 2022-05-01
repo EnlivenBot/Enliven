@@ -1,4 +1,9 @@
-﻿using Autofac;
+﻿using System;
+using System.Linq;
+using System.Net.Http;
+using Autofac;
+using Autofac.Builder;
+using Autofac.Core.Lifetime;
 using Common.Config;
 using Common.Music;
 using Common.Music.Controller;
@@ -10,6 +15,8 @@ using LiteDB;
 namespace Common {
     public static class CommonDiHelpers {
         public static ContainerBuilder AddCommonServices(this ContainerBuilder builder) {
+            builder.RegisterType<HttpClient>().SingleInstance();
+
             // Database related
             builder.RegisterType<LiteDatabaseProvider>().SingleInstance();
 
@@ -29,6 +36,7 @@ namespace Common {
             builder.RegisterType<LyricsService>().SingleInstance();
             builder.RegisterType<TrackEncoder>().SingleInstance();
             builder.RegisterType<LavalinkTrackEncoder>().AsSelf().AsImplementedInterfaces().SingleInstance();
+            builder.RegisterType<LavalinkMusicResolver>().AsSelf().SingleInstance();
 
             // Data providers
             builder.RegisterType<UserDataProvider>().As<IUserDataProvider>().SingleInstance();
@@ -41,6 +49,15 @@ namespace Common {
 
         public static LiteDatabase GetDatabase(this IComponentContext context) {
             return context.Resolve<LiteDatabaseProvider>().ProvideDatabase().GetAwaiter().GetResult();
+        }
+
+        public static IRegistrationBuilder<TLimit, TActivatorData, TStyle> InstancePerBot<TLimit, TActivatorData, TStyle>(
+            this IRegistrationBuilder<TLimit, TActivatorData, TStyle> registration, params object[] lifetimeScopeTags) {
+            if (registration == null)
+                throw new ArgumentNullException(nameof(registration));
+
+            var tags = new[] { Constants.BotLifetimeScopeTag }.Concat(lifetimeScopeTags).ToArray();
+            return registration.InstancePerMatchingLifetimeScope(tags);
         }
     }
 }

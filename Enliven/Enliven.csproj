@@ -5,14 +5,13 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <RootNamespace>Bot</RootNamespace>
     <AssemblyName>Enliven</AssemblyName>
-    <Version>18.0</Version>
+    <Version>19.0</Version>
     <Nullable>enable</Nullable>
     <LangVersion>9</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Autofac" Version="6.3.0" />
-    <PackageReference Include="Lib.Harmony" Version="2.1.1" />
     <PackageReference Include="SpotifyAPI.Web" Version="6.2.2" />
     <PackageReference Include="YandexMusicResolver" Version="4.0.0" />
   </ItemGroup>
