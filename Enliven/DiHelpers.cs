@@ -77,7 +77,7 @@ namespace Bot {
             // Providers
             builder.RegisterType<SpotifyAssociationProvider>().As<ISpotifyAssociationProvider>().SingleInstance();
             builder.RegisterType<MessageHistoryProvider>().SingleInstance();
-            builder.RegisterType<EmbedPlayerDisplayProvider>().InstancePerBot();
+            builder.RegisterType<EmbedPlayerDisplayProvider>().As<IService>().AsSelf().InstancePerBot();
             builder.RegisterType<EmbedPlayerQueueDisplayProvider>().InstancePerBot();
             builder.RegisterType<EmbedPlayerEffectsDisplayProvider>().InstancePerBot();
             builder.RegisterType<EffectSourceProvider>().SingleInstance();
