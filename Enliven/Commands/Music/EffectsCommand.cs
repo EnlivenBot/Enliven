@@ -14,16 +14,13 @@ namespace Bot.Commands.Music {
     [RequireContext(ContextType.Guild)]
     public class EffectsCommand : MusicModuleBase {
         public EmbedPlayerEffectsDisplayProvider EmbedPlayerEffectsDisplayProvider { get; set; } = null!;
+
+        [RequireNonEmptyPlaylist]
         [Command("effects", RunMode = RunMode.Async)]
         [Alias("efs")]
         [Summary("effects0s")]
-        public async Task Effects() {
-            if (Player == null || Player.Playlist.IsEmpty) {
-                await ReplyFormattedAsync(Loc.Get("Music.QueueEmpty").Format(GuildConfig.Prefix), true);
-                return;
-            }
-
-            EmbedPlayerEffectsDisplayProvider.CreateOrUpdateQueueDisplay(Context.Channel, Player);
+        public Task Effects() {
+            return EmbedPlayerEffectsDisplayProvider.CreateOrUpdateQueueDisplay(Context.Channel, Player);
         }
     }
 }

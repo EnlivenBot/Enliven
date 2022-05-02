@@ -79,7 +79,7 @@ namespace Bot.DiscordRelated.Interactions {
             builder
                 .WithName(command!.Text.ToLower())
                 .WithDescription(description)
-                .WithDefaultPermission(true)
+                .SetEnabledInDm(false)
                 .WithPreconditions(preconditions)
                 .WithAttributes(methodInfo.GetCustomAttributes().ToArray());
             CallbackProperty.SetValue(builder, CreateCallback(createLambdaBuilder, methodInfo, this));
