@@ -15,6 +15,7 @@ using Common.Utils;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using NLog;
 using Tyrrrz.Extensions;
 
 namespace Bot.DiscordRelated.Commands {
@@ -29,10 +30,13 @@ namespace Bot.DiscordRelated.Commands {
         private readonly CommandCooldownHandler _commandCooldownHandler = new();
         private readonly FuzzySearch _fuzzySearch = new();
         private readonly bool _isLoggingEnabled;
+        private ILogger _logger;
 
         public CommandHandlerService(DiscordShardedClient client, CustomCommandService commandService, IGuildConfigProvider guildConfigProvider,
                                      IStatisticsPartProvider statisticsPartProvider, MessageHistoryService messageHistoryService,
-                                     ILifetimeScope serviceProvider, CollectorService collectorService, InstanceConfig instanceConfig) {
+                                     ILifetimeScope serviceProvider, CollectorService collectorService, InstanceConfig instanceConfig,
+                                     ILogger logger) {
+            _logger = logger;
             _serviceProvider = serviceProvider;
             _collectorService = collectorService;
             _messageHistoryService = messageHistoryService;
@@ -105,6 +109,12 @@ namespace Bot.DiscordRelated.Commands {
                         case CommandError.MultipleMatches:
                             await SendErrorMessage(msg, guildConfig.Loc, result.ErrorReason);
                             break;
+                    }
+
+                    if (result.Error == CommandError.Exception) {
+                        var exception = result is ExecuteResult executeResult ? executeResult.Exception : null;
+                        if (exception is not CommandInterruptionException)
+                            _logger.Error(exception, "Interaction execution {Result}: {Reason}", result.Error!.Value, result.ErrorReason);
                     }
                 }
             }

@@ -47,7 +47,8 @@ namespace Bot.DiscordRelated.Interactions {
                 var result = await interactionSearchResult.Command.ExecuteAsync(context, _serviceProvider).ConfigureAwait(false);
                 if (!result.IsSuccess) {
                     var exception = result is ExecuteResult executeResult ? executeResult.Exception : null;
-                    _logger.Error(exception, "Interaction execution {Result}: {Reason}", result.Error!.Value, result.ErrorReason);
+                    if (exception is not CommandInterruptionException)
+                        _logger.Error(exception, "Interaction execution {Result}: {Reason}", result.Error!.Value, result.ErrorReason);
                 }
 
                 try {

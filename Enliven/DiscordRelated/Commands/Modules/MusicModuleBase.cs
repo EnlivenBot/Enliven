@@ -103,7 +103,7 @@ namespace Bot.DiscordRelated.Commands.Modules {
         private async Task ReplyAndThrowIfAsync(bool condition, IEntry entry) {
             if (!condition) return;
             _ = await ReplyEntryAsync(entry, Constants.ShortTimeSpan);
-            throw new InvalidOperationException();
+            throw new CommandInterruptionException(entry);
         }
 
         protected MusicCommandChannelInfo GetChannelInfo() {
