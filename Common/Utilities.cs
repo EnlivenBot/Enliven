@@ -45,14 +45,5 @@ namespace Common {
                     uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps ||
                     uriResult.Scheme == Uri.UriSchemeNetTcp);
         }
-        
-        public static Task OnDiscordLog(ILogger logger, LogMessage message) {
-            if (message.Message != null && message.Message.StartsWith("Unknown Dispatch")) {
-                return Task.CompletedTask;
-            }
-
-            logger.LogDiscord(message.Severity, message.Exception, "{message} from {source}", message.Message!, message.Source);
-            return Task.CompletedTask;
-        }
     }
 }

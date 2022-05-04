@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Autofac;
 using Bot.DiscordRelated.Commands;
+using Bot.Utilities.Logging;
 using Common;
 using Common.Config;
 using Common.Localization.Entries;
@@ -33,7 +34,7 @@ namespace Bot.DiscordRelated.Interactions {
             _serviceProvider = new ServiceProviderAdapter(serviceContainer);
             _globalConfig = globalConfig;
             _instanceConfig = instanceConfig;
-            Log += message => Common.Utilities.OnDiscordLog(logger, message);
+            Log += message => LoggingUtilities.OnDiscordLog(logger, message);
         }
 
         public async Task OnPreDiscordStart() {

@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Autofac;
 using Bot.Utilities;
+using Bot.Utilities.Logging;
 using Common;
 using Common.Config;
 using Common.Localization.Providers;
@@ -31,7 +32,7 @@ namespace Bot.DiscordRelated.Commands {
             _globalConfig = globalConfig;
             _instanceConfig = instanceConfig;
             _typeReaders = typeReaders;
-            Log += message => Common.Utilities.OnDiscordLog(logger, message);
+            Log += message => LoggingUtilities.OnDiscordLog(logger, message);
         }
 
         public async Task OnPreDiscordStart() {

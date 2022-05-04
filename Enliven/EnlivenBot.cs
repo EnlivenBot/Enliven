@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reactive.Threading.Tasks;
 using System.Threading;
 using System.Threading.Tasks;
+using Bot.Utilities.Logging;
 using Common;
 using Common.Config;
 using Common.Localization;
@@ -41,7 +42,7 @@ namespace Bot {
         internal async Task StartAsync() {
             _logger.Info("Start Initialising");
             await IService.ProcessEventAsync(_services, ServiceEventType.PreDiscordLogin);
-            _client.Log += message => Common.Utilities.OnDiscordLog(_logger, message);
+            _client.Log += message => LoggingUtilities.OnDiscordLog(_logger, message);
 
             await LoginAsync();
             await IService.ProcessEventAsync(_services, ServiceEventType.PreDiscordStart);

@@ -102,22 +102,6 @@ namespace Common {
             return await channel.SendFileAsync(ms, filename);
         }
 
-        public static void LogDiscord(this ILogger logger, LogSeverity logSeverity, Exception exception, string message, params object[] args)
-            => logger.Log(logSeverity.ToLogLevel(), exception, message, args);
-
-        public static LogLevel ToLogLevel(this LogSeverity logSeverity) {
-            var logLevel = logSeverity switch {
-                LogSeverity.Critical => LogLevel.Fatal,
-                LogSeverity.Error    => LogLevel.Error,
-                LogSeverity.Warning  => LogLevel.Warn,
-                LogSeverity.Info     => LogLevel.Info,
-                LogSeverity.Verbose  => LogLevel.Debug,
-                LogSeverity.Debug    => LogLevel.Trace,
-                _                    => throw new ArgumentOutOfRangeException()
-            };
-            return logLevel;
-        }
-
         public static TResult Try<TSource, TResult>(this TSource o, Func<TSource, TResult> action, Func<TSource, TResult> onFail) {
             try {
                 return action(o);
