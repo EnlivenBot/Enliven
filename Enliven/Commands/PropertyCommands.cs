@@ -8,7 +8,7 @@ using Discord.Commands;
 namespace Bot.Commands {
     [Hidden]
     [SlashCommandAdapter]
-    public class Properties : AdvancedModuleBase {
+    public class PropertyCommands : AdvancedModuleBase {
         [Command("enablelogging")]
         public async Task EnableLogging(bool b) {
             GuildConfig.IsLoggingEnabled = b;

@@ -8,7 +8,7 @@ using Discord.Commands;
 
 namespace Bot.Commands {
     [SlashCommandAdapter]
-    public class Statistics : AdvancedModuleBase {
+    public class StatisticCommands : AdvancedModuleBase {
         public IStatisticsService StatisticsService { get; set; } = null!;
 
         [Command("stats", RunMode = RunMode.Async)]
@@ -21,7 +21,7 @@ namespace Bot.Commands {
 
         [Command("userstats", RunMode = RunMode.Async)]
         [Summary("userstats0s")]
-        public Task UserStats([Summary("userstats0_0s")] IUser? user) {
+        public Task UserStats([Summary("userstats0_0s")] IUser? user = null) {
             Context.Message.SafeDelete();
             var u = user ?? Context.User;
             _ = ReplyAsync(null, false, StatisticsService.BuildStats(u, Loc).Build()).DelayedDelete(Constants.StandardTimeSpan);
