@@ -41,7 +41,7 @@ namespace Bot {
         internal async Task StartAsync() {
             _logger.Info("Start Initialising");
             await IService.ProcessEventAsync(_services, ServiceEventType.PreDiscordLogin);
-            _client.Log += OnClientLog;
+            _client.Log += message => Common.Utilities.OnDiscordLog(_logger, message);
 
             await LoginAsync();
             await IService.ProcessEventAsync(_services, ServiceEventType.PreDiscordStart);
@@ -82,15 +82,6 @@ namespace Bot {
 
         public async Task OnPostDiscordStart() {
             await _client.SetGameAsync("mentions of itself to get started", null, ActivityType.Listening);
-        }
-
-        private Task OnClientLog(LogMessage message) {
-            if (message.Message != null && message.Message.StartsWith("Unknown Dispatch")) {
-                return Task.CompletedTask;
-            }
-
-            _logger.Log(message.Severity, message.Exception, "{message} from {source}", message.Message!, message.Source);
-            return Task.CompletedTask;
         }
 
         protected override async Task DisposeInternalAsync() {

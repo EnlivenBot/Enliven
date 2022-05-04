@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Discord;
+using NLog;
 
 namespace Common {
     public static class Utilities {
@@ -42,6 +44,15 @@ namespace Common {
                    (uriResult.Scheme == Uri.UriSchemeFile || uriResult.Scheme == Uri.UriSchemeFtp ||
                     uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps ||
                     uriResult.Scheme == Uri.UriSchemeNetTcp);
+        }
+        
+        public static Task OnDiscordLog(ILogger logger, LogMessage message) {
+            if (message.Message != null && message.Message.StartsWith("Unknown Dispatch")) {
+                return Task.CompletedTask;
+            }
+
+            logger.LogDiscord(message.Severity, message.Exception, "{message} from {source}", message.Message!, message.Source);
+            return Task.CompletedTask;
         }
     }
 }

@@ -13,6 +13,7 @@ using Common.Localization.Providers;
 using Common.Utils;
 using Discord;
 using Discord.Commands;
+using NLog;
 
 namespace Bot.DiscordRelated.Commands {
     public class CustomCommandService : CommandService, IService {
@@ -23,11 +24,14 @@ namespace Bot.DiscordRelated.Commands {
         private readonly InstanceConfig _instanceConfig;
 
         public CustomCommandService(IEnumerable<CustomTypeReader> typeReaders, ILifetimeScope serviceContainer,
-                                    GlobalConfig globalConfig, InstanceConfig instanceConfig) {
+                                    GlobalConfig globalConfig, InstanceConfig instanceConfig,
+                                    ILogger logger)
+            : base(new CommandServiceConfig() { LogLevel = LogSeverity.Debug }) {
             _serviceContainer = serviceContainer;
             _globalConfig = globalConfig;
             _instanceConfig = instanceConfig;
             _typeReaders = typeReaders;
+            Log += message => Common.Utilities.OnDiscordLog(logger, message);
         }
 
         public async Task OnPreDiscordStart() {

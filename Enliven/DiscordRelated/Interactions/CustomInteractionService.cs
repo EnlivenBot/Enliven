@@ -14,6 +14,7 @@ using Discord.Commands;
 using Discord.Interactions;
 using Discord.Interactions.Builders;
 using Discord.WebSocket;
+using NLog;
 using PreconditionAttribute = Discord.Interactions.PreconditionAttribute;
 using RequireUserPermissionAttribute = Discord.Commands.RequireUserPermissionAttribute;
 using SlashCommandBuilder = Discord.Interactions.Builders.SlashCommandBuilder;
@@ -26,11 +27,13 @@ namespace Bot.DiscordRelated.Interactions {
         private readonly InstanceConfig _instanceConfig;
 
         public CustomInteractionService(DiscordShardedClient discordClient, ILifetimeScope serviceContainer,
-                                        GlobalConfig globalConfig, InstanceConfig instanceConfig)
-            : base(discordClient, new InteractionServiceConfig { UseCompiledLambda = true }) {
+                                        GlobalConfig globalConfig, InstanceConfig instanceConfig,
+                                        ILogger logger)
+            : base(discordClient, new InteractionServiceConfig { UseCompiledLambda = true, LogLevel = LogSeverity.Debug}) {
             _serviceProvider = new ServiceProviderAdapter(serviceContainer);
             _globalConfig = globalConfig;
             _instanceConfig = instanceConfig;
+            Log += message => Common.Utilities.OnDiscordLog(logger, message);
         }
 
         public async Task OnPreDiscordStart() {
