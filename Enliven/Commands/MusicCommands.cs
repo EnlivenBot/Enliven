@@ -91,7 +91,7 @@ namespace Bot.Commands {
         [Command("repeat", RunMode = RunMode.Async)]
         [Alias("r", "loop", "l")]
         [Summary("repeat0s")]
-        public async Task Repeat(LoopingState? state) {
+        public async Task Repeat(LoopingState? state = null) {
             Player.LoopingState = state ?? Player.LoopingState.Next();
             // Player.UpdateProgress();
             Player.WriteToQueueHistory(new HistoryEntry(

@@ -25,7 +25,7 @@ namespace Bot.Commands {
         [Command("fixspotify", RunMode = RunMode.Async)]
         [Alias("spotify, fs")]
         [Summary("fixspotify0s")]
-        public async Task FixSpotify([Remainder] [Summary("fixspotify0_0s")] string? s) {
+        public async Task FixSpotify([Remainder] [Summary("fixspotify0_0s")] string? s = null) {
             if (s == null) {
                 if (Player.CurrentTrack is SpotifyLavalinkTrack spotifyLavalinkTrack) {
                     var request = $"spotify:track:{spotifyLavalinkTrack.RelatedSpotifyTrackWrapper.Id}";
