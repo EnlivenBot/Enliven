@@ -11,13 +11,11 @@ namespace Common.Utils {
     }
 
     public class SingleTask<T> : IDisposable {
-        // ReSharper disable once StaticMemberInGenericType
-        private static readonly object LockObject = new object();
-
         [Obsolete("Use Execute method instead this")]
-        public readonly Func<SingleTaskExecutionData, Task<T>> Action;
+        private readonly Func<SingleTaskExecutionData, Task<T>> _action;
 
-        private HandyTimer _betweenExecutionsDelay = new HandyTimer();
+        private static object _lockObject = new();
+        private HandyTimer _betweenExecutionsDelay = new();
         private bool _isDirtyNow;
         private DateTime _lastExecutionTime = DateTime.MinValue;
         private T _lastResult = default!;
@@ -31,7 +29,7 @@ namespace Common.Utils {
         public SingleTask(Func<Task<T>> action) : this(data => action()) { }
 
         public SingleTask(Func<SingleTaskExecutionData, Task<T>> action) {
-            Action = action;
+            _action = action;
         }
 
         public TimeSpan? BetweenExecutionsDelay { get; set; }
@@ -52,7 +50,7 @@ namespace Common.Utils {
         }
 
         private Task<T> InternalExecute(bool makesDirty, TimeSpan? delayOverride) {
-            lock (LockObject) {
+            lock (_lockObject) {
                 var localTaskCompletionSource = _taskCompletionSource;
                 UpdateDelay(IsDelayResetByExecute, delayOverride);
                 if (localTaskCompletionSource != null) {
@@ -74,21 +72,21 @@ namespace Common.Utils {
                     }
                     else {
                         singleTaskExecutionData = new SingleTaskExecutionData();
-                        result = await Action(singleTaskExecutionData);
+                        result = await _action(singleTaskExecutionData);
                         if (result is Task task) {
                             await task;
                         }
                     }
 
-                    lock (LockObject) {
+                    lock (_lockObject) {
                         _lastResult = result;
                         IsExecuting = false;
-                        var localTaskCompletionSource = _taskCompletionSource;
+                        var oldSource = _taskCompletionSource;
                         _taskCompletionSource = null;
                         _lastExecutionTime = DateTime.Now;
                         _isDirtyNow = false;
                         UpdateDelay(true, singleTaskExecutionData?.OverrideDelay);
-                        localTaskCompletionSource.SetResult(result);
+                        oldSource.SetResult(result);
                     }
                 }, TaskCreationOptions.LongRunning).Start();
                 return _taskCompletionSource.Task;
