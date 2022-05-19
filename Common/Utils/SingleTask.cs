@@ -10,7 +10,7 @@ namespace Common.Utils {
         public SingleTask(Func<SingleTaskExecutionData, Task> action) : base(action) { }
     }
 
-    public class SingleTask<T> : IDisposable {
+    public class SingleTask<T> : DisposableBase {
         [Obsolete("Use Execute method instead this")]
         private readonly Func<SingleTaskExecutionData, Task<T>> _action;
 
@@ -43,7 +43,7 @@ namespace Common.Utils {
         public bool CanBeDirty { get; set; }
 
         public Task<T> Execute(bool makesDirty = true, TimeSpan? delayOverride = null) {
-            if (IsDisposed) throw new ObjectDisposedException(nameof(SingleTask));
+            EnsureNotDisposed();
 
             _isDirtyNow = false;
             return InternalExecute(makesDirty, delayOverride);
@@ -106,10 +106,7 @@ namespace Common.Utils {
             return await Execute(false);
         }
 
-        public bool IsDisposed { get; private set; }
-
-        public void Dispose() {
-            IsDisposed = true;
+        protected override void DisposeInternal() {
             _betweenExecutionsDelay.Dispose();
         }
     }

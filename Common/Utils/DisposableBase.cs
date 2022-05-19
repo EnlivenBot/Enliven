@@ -26,6 +26,15 @@ namespace Common.Utils {
             }
         }
 
+        protected void EnsureNotDisposed() {
+            if (IsDisposed) throw new ObjectDisposedException(GetType().Name);
+        }
+
+        protected T EnsureNotDisposedAndReturn<T>(Func<T> func) {
+            if (IsDisposed) throw new ObjectDisposedException(GetType().Name);
+            return func();
+        }
+
         protected abstract void DisposeInternal();
     }
 
@@ -48,6 +57,15 @@ namespace Common.Utils {
                 _disposed.OnCompleted();
                 _disposed.Dispose();
             }
+        }
+
+        protected void EnsureNotDisposed() {
+            if (IsDisposed) throw new ObjectDisposedException(GetType().Name);
+        }
+
+        protected T EnsureNotDisposedAndReturn<T>(Func<T> func) {
+            if (IsDisposed) throw new ObjectDisposedException(GetType().Name);
+            return func();
         }
 
         protected abstract Task DisposeInternalAsync();

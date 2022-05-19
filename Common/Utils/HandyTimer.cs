@@ -33,6 +33,7 @@ namespace Common.Utils {
         }
 
         public virtual void SetDelay(TimeSpan span) {
+            EnsureNotDisposed();
             if (span <= TimeSpan.Zero) {
                 SetCompleted();
             }
