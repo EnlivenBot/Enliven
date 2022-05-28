@@ -98,7 +98,7 @@ namespace Bot.DiscordRelated.Music {
                     // ignored
                 }
             }) {
-                BetweenExecutionsDelay = TimeSpan.FromSeconds(30), CanBeDirty = false, IsDelayResetByExecute = false,
+                BetweenExecutionsDelay = TimeSpan.FromSeconds(30), CanBeDirty = false
             };
 
             EmbedBuilder = new EnlivenEmbedBuilder();

@@ -1,26 +1,33 @@
 ﻿using System;
+using System.Reactive;
+using System.Threading;
 using System.Threading.Tasks;
 using Common.Criteria;
+using Discord;
 
 #pragma warning disable 618
 
 namespace Common.Utils {
-    public class SingleTask : SingleTask<Task> {
-        public SingleTask(Func<Task> action) : base(action) { }
-        public SingleTask(Func<SingleTaskExecutionData, Task> action) : base(action) { }
+    public class SingleTask : SingleTask<Unit> {
+        public SingleTask(Func<Task> action) : base(async () => {
+            await action();
+            return Unit.Default;
+        }) { }
+        public SingleTask(Func<SingleTaskExecutionData, Task> action) : base(async data => {
+            await action(data);
+            return Unit.Default;
+        }) { }
     }
 
     public class SingleTask<T> : DisposableBase {
         [Obsolete("Use Execute method instead this")]
         private readonly Func<SingleTaskExecutionData, Task<T>> _action;
 
-        private static object _lockObject = new();
-        private HandyTimer _betweenExecutionsDelay = new();
-        private bool _isDirtyNow;
-        private DateTime _lastExecutionTime = DateTime.MinValue;
-        private T _lastResult = default!;
-        private DateTime _targetTime;
-        private TaskCompletionSource<T>? _taskCompletionSource;
+        private readonly HandyShortestTimer _handyTimer = new();
+        private TaskCompletionSource<T>? _currentTaskCompletionSource;
+        private TaskCompletionSource<T>? _dirtyTaskCompletionSource;
+        private Optional<T> _lastResult = Optional<T>.Unspecified;
+        private object _lock = new();
 
         public SingleTask(Func<SingleTaskExecutionData, T> action) : this(data => Task.FromResult(action(data))) { }
 
@@ -29,85 +36,86 @@ namespace Common.Utils {
         public SingleTask(Func<Task<T>> action) : this(data => action()) { }
 
         public SingleTask(Func<SingleTaskExecutionData, Task<T>> action) {
+            if (typeof(T).Name is "Task" or "Task`1")
+                throw new InvalidOperationException($"{nameof(SingleTask<T>)} cannot contain generic type Task. Check for await in your ctor");
             _action = action;
         }
 
         public TimeSpan? BetweenExecutionsDelay { get; set; }
 
-        public ICriterion? NeedDirtyExecuteCriterion { get; set; }
+        public bool IsExecuting => _currentTaskCompletionSource?.Task.IsCompleted == true;
 
-        public bool IsDelayResetByExecute { get; set; }
-
-        public bool IsExecuting { get; private set; }
-
-        public bool CanBeDirty { get; set; }
-
+        public bool CanBeDirty { get; set; } = true;
+        
         public Task<T> Execute(bool makesDirty = true, TimeSpan? delayOverride = null) {
             EnsureNotDisposed();
+            makesDirty = makesDirty || !CanBeDirty;
 
-            _isDirtyNow = false;
-            return InternalExecute(makesDirty, delayOverride);
-        }
-
-        private Task<T> InternalExecute(bool makesDirty, TimeSpan? delayOverride) {
-            lock (_lockObject) {
-                var localTaskCompletionSource = _taskCompletionSource;
-                UpdateDelay(IsDelayResetByExecute, delayOverride);
-                if (localTaskCompletionSource != null) {
-                    if (!makesDirty || !CanBeDirty)
-                        return localTaskCompletionSource.Task;
-
-                    return QueueExecuteDirty(localTaskCompletionSource.Task);
-                }
-
-                _taskCompletionSource = new TaskCompletionSource<T>();
-                new Task(async () => {
-                    IsExecuting = true;
-                    await _betweenExecutionsDelay.TimerElapsed;
-
-                    T result;
-                    SingleTaskExecutionData? singleTaskExecutionData = null;
-                    if (_isDirtyNow && NeedDirtyExecuteCriterion != null && await NeedDirtyExecuteCriterion.JudgeAsync() || IsDisposed) {
-                        result = _lastResult;
+            lock (_lock) {
+                try {
+                    // If dirty execution planned - await it
+                    if (_dirtyTaskCompletionSource != null) {
+                        return _dirtyTaskCompletionSource.Task;
                     }
-                    else {
-                        singleTaskExecutionData = new SingleTaskExecutionData();
-                        result = await _action(singleTaskExecutionData);
-                        if (result is Task task) {
-                            await task;
+
+                    // If nothing executing now
+                    if (_currentTaskCompletionSource == null) {
+                        // If current call non dirty and something already executed
+                        if (!makesDirty && _lastResult.IsSpecified) {
+                            return Task.FromResult(_lastResult.Value);
                         }
+                        // Start execution
+                        var taskCompletionSource = _currentTaskCompletionSource = new TaskCompletionSource<T>();
+                        _ = ExecuteActionWrapper();
+                        return taskCompletionSource.Task;
                     }
 
-                    lock (_lockObject) {
-                        _lastResult = result;
-                        IsExecuting = false;
-                        var oldSource = _taskCompletionSource;
-                        _taskCompletionSource = null;
-                        _lastExecutionTime = DateTime.Now;
-                        _isDirtyNow = false;
-                        UpdateDelay(true, singleTaskExecutionData?.OverrideDelay);
-                        oldSource.SetResult(result);
+                    // If currently executing, but dirty execution not planned
+                    // If not dirty - return current execution result
+                    if (!makesDirty) {
+                        return _currentTaskCompletionSource.Task;
                     }
-                }, TaskCreationOptions.LongRunning).Start();
-                return _taskCompletionSource.Task;
+            
+                    // If dirty - queue dirty execution
+                    var dirtyTaskCompletionSource = _dirtyTaskCompletionSource = new TaskCompletionSource<T>();
+                    return dirtyTaskCompletionSource.Task;
+                }
+                finally {
+                    if (delayOverride != null) _handyTimer.SetDelay((TimeSpan)delayOverride);
+                }
             }
         }
 
-        private void UpdateDelay(bool hardUpdate, TimeSpan? overrideDelay = null) {
-            var tempTime = _lastExecutionTime + (overrideDelay ?? BetweenExecutionsDelay ?? TimeSpan.Zero);
-            if (!hardUpdate && tempTime >= _targetTime) return;
-            _targetTime = tempTime;
-            _betweenExecutionsDelay.SetTargetTime(_targetTime);
-        }
+        private async Task ExecuteActionWrapper() {
+            EnsureNotDisposed();
+            do {
+                await _handyTimer.TimerElapsed;
 
-        private async Task<T> QueueExecuteDirty(Task first) {
-            await first;
-            _isDirtyNow = true;
-            return await Execute(false);
+                var singleTaskExecutionData = new SingleTaskExecutionData();
+                try {
+                    var result = await _action(singleTaskExecutionData);
+                    if (result is Task task) await task;
+                    _lastResult = result;
+                    _currentTaskCompletionSource!.SetResult(result);
+                }
+                catch (Exception e) {
+                    _currentTaskCompletionSource!.SetException(e);
+                }
+
+                _handyTimer.Reset();
+                var delay = singleTaskExecutionData.OverrideDelay.GetValueOrDefault(BetweenExecutionsDelay ?? TimeSpan.Zero);
+                _handyTimer.SetDelay(delay);
+
+                lock (_lock) {
+                    _currentTaskCompletionSource = _dirtyTaskCompletionSource;
+                    if (_dirtyTaskCompletionSource == null) break;
+                    _dirtyTaskCompletionSource = null;
+                }
+            } while (!IsDisposed);
         }
 
         protected override void DisposeInternal() {
-            _betweenExecutionsDelay.Dispose();
+            _handyTimer.Dispose();
         }
     }
 
