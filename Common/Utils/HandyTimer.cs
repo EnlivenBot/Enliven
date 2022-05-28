@@ -25,7 +25,11 @@ namespace Common.Utils {
             _taskCompletionSource.TrySetResult(true);
         }
 
-        private void Reset() {
+        public virtual void Reset() {
+            ResetInternal();
+        }
+
+        private void ResetInternal() {
             if (IsDisposed) return;
             if (!_taskCompleted) return;
             _taskCompleted = false;
@@ -38,7 +42,7 @@ namespace Common.Utils {
                 SetCompleted();
             }
             else {
-                Reset();
+                ResetInternal();
                 _timer?.Dispose();
                 _timer = new Timer(_ => SetCompleted(), null, span, TimeSpan.FromMilliseconds(-1));
             }
