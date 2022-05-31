@@ -91,7 +91,7 @@ namespace Bot {
             builder.RegisterType<InteractionHandlerService>().As<IService>().AsSelf().InstancePerBot();
             builder.RegisterType<CommandHandlerService>().As<IService>().AsSelf().InstancePerBot();
             builder.RegisterType<StatisticsService>().As<IStatisticsService>().AsSelf().InstancePerBot();
-            builder.RegisterType<MessageComponentService>().As<MessageComponentService>().AsSelf().InstancePerBot();
+            builder.RegisterType<MessageComponentService>().AsSelf().InstancePerBot();
             builder.RegisterType<HtmlRendererService>().AsSelf().SingleInstance();
             builder.RegisterType<MessageHistoryHtmlExporter>().InstancePerBot();
             builder.RegisterType<CollectorService>().InstancePerBot();
