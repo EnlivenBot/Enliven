@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Reactive;
-using System.Threading;
 using System.Threading.Tasks;
-using Common.Criteria;
 using Discord;
 
 #pragma warning disable 618
@@ -27,7 +25,7 @@ namespace Common.Utils {
         private TaskCompletionSource<T>? _currentTaskCompletionSource;
         private TaskCompletionSource<T>? _dirtyTaskCompletionSource;
         private Optional<T> _lastResult = Optional<T>.Unspecified;
-        private object _lock = new();
+        private readonly object _lock = new();
 
         public SingleTask(Func<SingleTaskExecutionData, T> action) : this(data => Task.FromResult(action(data))) { }
 
@@ -87,31 +85,39 @@ namespace Common.Utils {
         }
 
         private async Task ExecuteActionWrapper() {
-            EnsureNotDisposed();
-            do {
-                await _handyTimer.TimerElapsed;
+            try {
+                EnsureNotDisposed();
+                do {
+                    await Task.WhenAny(_handyTimer.TimerElapsed, DisposedTask);
+                    if (IsDisposed) return;
 
-                var singleTaskExecutionData = new SingleTaskExecutionData();
-                try {
-                    var result = await _action(singleTaskExecutionData);
-                    if (result is Task task) await task;
-                    _lastResult = result;
-                    _currentTaskCompletionSource!.SetResult(result);
-                }
-                catch (Exception e) {
-                    _currentTaskCompletionSource!.SetException(e);
-                }
+                    var singleTaskExecutionData = new SingleTaskExecutionData();
+                    try {
+                        var result = await _action(singleTaskExecutionData);
+                        if (result is Task task) await task;
+                        _lastResult = result;
+                        _currentTaskCompletionSource!.SetResult(result);
+                    }
+                    catch (Exception e) {
+                        _currentTaskCompletionSource!.SetException(e);
+                    }
 
-                _handyTimer.Reset();
-                var delay = singleTaskExecutionData.OverrideDelay.GetValueOrDefault(BetweenExecutionsDelay ?? TimeSpan.Zero);
-                _handyTimer.SetDelay(delay);
+                    if (IsDisposed) return;
+                    _handyTimer.Reset();
+                    var delay = singleTaskExecutionData.OverrideDelay.GetValueOrDefault(BetweenExecutionsDelay ?? TimeSpan.Zero);
+                    _handyTimer.SetDelay(delay);
 
-                lock (_lock) {
-                    _currentTaskCompletionSource = _dirtyTaskCompletionSource;
-                    if (_dirtyTaskCompletionSource == null) break;
-                    _dirtyTaskCompletionSource = null;
-                }
-            } while (!IsDisposed);
+                    lock (_lock) {
+                        _currentTaskCompletionSource = _dirtyTaskCompletionSource;
+                        if (_dirtyTaskCompletionSource == null) break;
+                        _dirtyTaskCompletionSource = null;
+                    }
+                } while (!IsDisposed);
+            }
+            finally {
+                _currentTaskCompletionSource?.TrySetException(new TaskCanceledException("Task cancelled due to SingleTask disposing"));
+                _dirtyTaskCompletionSource?.TrySetException(new TaskCanceledException("Task cancelled due to SingleTask disposing"));
+            }
         }
 
         protected override void DisposeInternal() {
