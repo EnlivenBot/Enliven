@@ -145,8 +145,7 @@ namespace Bot.DiscordRelated {
             }
             
             try {
-                if (Message == null 
-                 || await _lastSendTimeChecker.ToCriteria().AddCriterion(new EnsureLastMessage(_currentChannel!, Message).Invert()).JudgeAsync()) {
+                if (Message == null || await _lastSendTimeChecker.ToCriteria().AddCriterion(new EnsureMessage(_currentChannel!, Message).Invert()).JudgeAsync()) {
                     await Resend();
                 }
                 else {

@@ -64,7 +64,8 @@ namespace Bot.DiscordRelated.Music {
             if (finalLavalinkPlayer.IsShutdowned) throw new InvalidOperationException("You try to provide display for shutdowned player");
             var embedPlayerDisplay = _cache.GetOrAdd(id, s => {
                 var guildConfig = _guildConfigProvider.Get(channel.GuildId);
-                var display = new EmbedPlayerDisplay(channel, _client, guildConfig.Loc, _commandHandlerService, guildConfig.PrefixProvider, _messageComponentService);
+                // TODO: Implement proper logger creation
+                var display = new EmbedPlayerDisplay(channel, _client, guildConfig.Loc, _commandHandlerService, guildConfig.PrefixProvider, _messageComponentService, _logger);
                 _ = display.Initialize(finalLavalinkPlayer);
 
                 return display;
