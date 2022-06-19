@@ -23,6 +23,7 @@ using Common.Music.Tracks;
 using Common.Utils;
 using Discord;
 using Lavalink4NET.Player;
+using Newtonsoft.Json;
 using NLog;
 using Tyrrrz.Extensions;
 
@@ -120,7 +121,7 @@ namespace Bot.DiscordRelated.Music {
             }
         }
 
-        private async Task UpdateControlMessageInternal() {
+        private async Task UpdateControlMessageInternal(SingleTaskExecutionData data) {
             if (_controlMessage != null) {
                 try {
                     _logger.Trace("Modifying embed control message. Guild: {TargetGuildId}. Channel: {TargetChannelId}. Message id: {ControlMessageId}", _targetGuild?.Id, _targetChannel.Id, _controlMessage.Id);
@@ -129,7 +130,8 @@ namespace Bot.DiscordRelated.Music {
                         properties.Content = "";
                         properties.Components = _messageComponent;
                     }, new RequestOptions {
-                        CancelToken = _cancellationTokenSource.Token
+                        CancelToken = _cancellationTokenSource.Token,
+                        RatelimitCallback = RatelimitCallback
                     });
                 }
                 catch (Exception e) {
@@ -141,6 +143,17 @@ namespace Bot.DiscordRelated.Music {
 
                     ControlMessageResend(_targetChannel);
                 }
+            }
+
+            Task RatelimitCallback(IRateLimitInfo info) {
+                _logger.Log(LogLevel.Trace, "Recieved ratelimit info for updating player embed control message. Guild: {TargetGuildId}. Channel: {TargetChannelId}. Message id: {ControlMessageId}.\nRatelimit info: {ratelimit info}", 
+                    _targetGuild?.Id, _targetChannel.Id, _controlMessage.Id, JsonConvert.SerializeObject(info));
+                if (info.Remaining <= 1) {
+                    data.OverrideDelay = info.ResetAfter;
+                    _logger.Debug("Ratelimit exceed for updating player embed control message. Waiting {ResetAfter}. Guild: {TargetGuildId}. Channel: {TargetChannelId}. Message id: {ControlMessageId}",
+                        info.ResetAfter, _targetGuild?.Id, _targetChannel.Id, _controlMessage.Id);
+                }
+                return Task.CompletedTask;
             }
         }
 
