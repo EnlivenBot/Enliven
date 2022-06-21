@@ -88,7 +88,7 @@ namespace Bot.DiscordRelated.Music {
                         if (display.Player.State != PlayerState.Playing) continue;
                         display.UpdateProgress();
                         display.UpdateMessageComponents();
-                        await display.UpdateControlMessage();
+                        await display.UpdateControlMessage(true);
                     }
                     catch (Exception) {
                         // ignored

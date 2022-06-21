@@ -22,6 +22,7 @@ using Common.Music.Players;
 using Common.Music.Tracks;
 using Common.Utils;
 using Discord;
+using Discord.Net;
 using Lavalink4NET.Player;
 using Newtonsoft.Json;
 using NLog;
@@ -131,8 +132,12 @@ namespace Bot.DiscordRelated.Music {
                         properties.Components = _messageComponent;
                     }, new RequestOptions {
                         CancelToken = _cancellationTokenSource.Token,
-                        RatelimitCallback = RatelimitCallback
+                        RatelimitCallback = RatelimitCallback,
+                        RetryMode = RetryMode.AlwaysFail
                     });
+                }
+                catch (RateLimitedException) {
+                    _logger.Debug("Got rate limited exception while updating player embed control message. Guild: {TargetGuildId}. Channel: {TargetChannelId}. Message id: {ControlMessageId}", _targetGuild?.Id, _targetChannel.Id, _controlMessage.Id);
                 }
                 catch (Exception e) {
                     _logger.Debug(e, "Failed to update embed control message. Guild: {TargetGuildId}. Channel: {TargetChannelId}. Message id: {ControlMessageId}", _targetGuild?.Id, _targetChannel.Id, _controlMessage.Id);
@@ -149,7 +154,7 @@ namespace Bot.DiscordRelated.Music {
                 _logger.Log(LogLevel.Trace, "Recieved ratelimit info for updating player embed control message. Guild: {TargetGuildId}. Channel: {TargetChannelId}. Message id: {ControlMessageId}.\nRatelimit info: {ratelimit info}", 
                     _targetGuild?.Id, _targetChannel.Id, _controlMessage.Id, JsonConvert.SerializeObject(info));
                 if (info.Remaining <= 1) {
-                    data.OverrideDelay = info.ResetAfter;
+                    data.OverrideDelay = info.ResetAfter > data.BetweenExecutionsDelay ? info.ResetAfter : null;
                     _logger.Debug("Ratelimit exceed for updating player embed control message. Waiting {ResetAfter}. Guild: {TargetGuildId}. Channel: {TargetChannelId}. Message id: {ControlMessageId}",
                         info.ResetAfter, _targetGuild?.Id, _targetChannel.Id, _controlMessage.Id);
                 }

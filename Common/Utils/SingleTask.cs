@@ -91,7 +91,7 @@ namespace Common.Utils {
                     await Task.WhenAny(_handyTimer.TimerElapsed, DisposedTask);
                     if (IsDisposed) return;
 
-                    var singleTaskExecutionData = new SingleTaskExecutionData();
+                    var singleTaskExecutionData = new SingleTaskExecutionData(BetweenExecutionsDelay);
                     try {
                         var result = await _action(singleTaskExecutionData);
                         if (result is Task task) await task;
@@ -126,6 +126,10 @@ namespace Common.Utils {
     }
 
     public class SingleTaskExecutionData {
+        public SingleTaskExecutionData(TimeSpan? betweenExecutionsDelay) {
+            BetweenExecutionsDelay = betweenExecutionsDelay;
+        }
+        public TimeSpan? BetweenExecutionsDelay { get; }
         public TimeSpan? OverrideDelay { get; set; }
     }
 }
