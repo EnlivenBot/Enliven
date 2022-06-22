@@ -65,15 +65,21 @@ namespace Bot.DiscordRelated.Commands {
 
             var hasStringPrefix = msg.HasStringPrefix(guildConfig.Prefix, ref argPos);
             var hasMentionPrefix = HasMentionPrefix(msg, _client.CurrentUser, ref argPos);
+            var isDedicatedMusicChannel = IsDedicatedMusicChannel(msg, guildConfig);
 
             bool isCommand = false;
-            if (hasStringPrefix || hasMentionPrefix) {
+            if (hasStringPrefix || hasMentionPrefix || isDedicatedMusicChannel) {
                 isCommand = true;
                 var query = msg.Content.Try(s1 => s1.Substring(argPos), "");
                 if (string.IsNullOrEmpty(query)) query = " ";
                 if (string.IsNullOrWhiteSpace(query) && hasMentionPrefix) query = "help";
+                if (string.IsNullOrWhiteSpace(query) && isDedicatedMusicChannel) return;
 
                 var command = await GetCommand(query, context);
+                if (command.Item2.Error == CommandError.UnknownCommand && isDedicatedMusicChannel) {
+                    query = $"play {query}";
+                    command = await GetCommand(query, context);
+                }
 
                 if (command.Item1 == null) {
                     if (command.Item2.Error == CommandError.UnmetPrecondition) {
@@ -120,6 +126,10 @@ namespace Bot.DiscordRelated.Commands {
             }
 
             if (_isLoggingEnabled) _messageHistoryService.TryLogCreatedMessage(s, guildConfig, isCommand);
+        }
+
+        private static bool IsDedicatedMusicChannel(IMessage msg, GuildConfig guildConfig) {
+            return !guildConfig.GetChannel(ChannelFunction.DedicatedMusic, out var channelId) || msg.Channel.Id == channelId;
         }
 
         private async Task AddEmojiErrorHint(SocketUserMessage targetMessage, ILocalizationProvider loc, IEmote emote, IEntry description,

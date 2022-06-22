@@ -108,8 +108,9 @@ namespace Bot.DiscordRelated.Commands.Modules {
 
         protected MusicCommandChannelInfo GetChannelInfo() {
             var musicChannelId = GuildConfig.GetChannel(ChannelFunction.Music, out var m) ? m : (ulong?)null;
+            var dedicatedMusicChannelId = GuildConfig.GetChannel(ChannelFunction.DedicatedMusic, out var d) ? d : (ulong?)null;
             var isMusicLimited = musicChannelId != null && GuildConfig.IsMusicLimited;
-            return new MusicCommandChannelInfo(Context.Channel.Id, musicChannelId, isMusicLimited, Context);
+            return new MusicCommandChannelInfo(Context.Channel.Id, musicChannelId, dedicatedMusicChannelId, isMusicLimited, Context);
         }
 
         protected async Task<IRepliedEntry> ReplyEntryAsync(IEntry entry, TimeSpan? timeout = null) {
@@ -158,8 +159,8 @@ namespace Bot.DiscordRelated.Commands.Modules {
             base.AfterExecute(command);
         }
 
-        protected record MusicCommandChannelInfo(ulong CurrentChannel, ulong? MusicChannel, bool IsMusicLimited, ICommandContext Context) {
-            public bool IsCurrentChannelSuitable => MusicChannel == null || CurrentChannel == MusicChannel;
+        protected record MusicCommandChannelInfo(ulong CurrentChannel, ulong? MusicChannel, ulong? DedicatedMusicChannel, bool IsMusicLimited, ICommandContext Context) {
+            public bool IsCurrentChannelSuitable => (MusicChannel == null && DedicatedMusicChannel == null) || CurrentChannel == MusicChannel || CurrentChannel == DedicatedMusicChannel;
             public bool IsCommandAllowed => IsCurrentChannelSuitable || !IsMusicLimited;
             public ulong TargetChannelId => MusicChannel ?? CurrentChannel;
             private ICommandContext Context { get; init; } = Context;

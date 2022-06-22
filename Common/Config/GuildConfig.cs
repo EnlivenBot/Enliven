@@ -55,7 +55,8 @@ namespace Common.Config {
 
     public enum ChannelFunction {
         Log,
-        Music
+        Music,
+        DedicatedMusic
     }
 
     public enum MessageExportType {
