@@ -86,7 +86,7 @@ namespace Bot.Commands {
         [Command("setchannelrole")]
         [Summary("setchannelrole0s")]
         public async Task SetChannelRole([Summary("setchannelrole0_0s")] ChannelFunction func,
-                                         [Summary("setchannelrole0_1s")] IChannel? channel) {
+                                         [Summary("setchannelrole0_1s")] IChannel? channel = null) {
             if (channel is ICategoryChannel) {
                 await ReplyFormattedAsync(Loc.Get("Commands.Fail"), Loc.Get("Commands.CategoryChannelNotSupported"));
                 return;
@@ -96,7 +96,10 @@ namespace Bot.Commands {
                 return;
             }
             GuildConfig.SetChannel(func, channel?.Id).Save();
-            await ReplyFormattedAsync(Loc.Get("Commands.Success"), Loc.Get("Commands.SetChannelResponse").Format(channel.Id, func.ToString()));
+            var description = channel != null 
+                ? Loc.Get("Commands.SetChannelRoleResponse", channel.Id, func)
+                : Loc.Get("Commands.ClearChannelRoleResponse", func);
+            await ReplyFormattedAsync(Loc.Get("Commands.Success"), description);
             Context.Message?.SafeDelete();
         }
     }

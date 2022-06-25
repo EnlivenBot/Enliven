@@ -129,7 +129,7 @@ namespace Bot.DiscordRelated.Commands {
         }
 
         private static bool IsDedicatedMusicChannel(IMessage msg, GuildConfig guildConfig) {
-            return !guildConfig.GetChannel(ChannelFunction.DedicatedMusic, out var channelId) || msg.Channel.Id == channelId;
+            return guildConfig.GetChannel(ChannelFunction.DedicatedMusic, out var channelId) && msg.Channel.Id == channelId;
         }
 
         private async Task AddEmojiErrorHint(SocketUserMessage targetMessage, ILocalizationProvider loc, IEmote emote, IEntry description,

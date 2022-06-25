@@ -220,7 +220,8 @@
     },
     "Commands": {
       "RequestedBy": "Requested by {0} | Help us by voting",
-      "SetChannelResponse": "Channel <#{0}> was successfully assigned the role {1}",
+      "SetChannelRoleResponse": "Channel <#{0}> was successfully assigned the role {1}",
+      "ClearChannelRoleResponse": "Channel role {0} cleared",
       "CategoryChannelNotSupported": "Despite the fact that discord allows you to specify a category in this command, it is necessary to specify the channel(not the channel category)",
       "VoiceChannelNotSupported": "Despite the fact that discord allows you to specify a voice channel in this command, it is necessary to specify the text channel",
       "Success": "Success",
