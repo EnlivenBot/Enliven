@@ -86,8 +86,8 @@ namespace Common.Config {
             _saveRequest.OnNext(this);
         }
 
-        public GuildConfig SetChannel(string channelId, ChannelFunction func) {
-            if (channelId == "null")
+        public GuildConfig SetChannel(ChannelFunction func, ulong? channelId) {
+            if (!channelId.HasValue)
                 FunctionalChannels.TryRemove(func, out _);
             else
                 FunctionalChannels[func] = Convert.ToUInt64(channelId);

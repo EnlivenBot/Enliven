@@ -83,20 +83,21 @@ namespace Bot.Commands {
             }
         }
 
-        [Command("setchannel")]
-        [Summary("setchannel0s")]
-        public async Task SetChannel([Summary("setchannel0_0s")] ChannelFunction func,
-                                     [Summary("setchannel0_1s")] IChannel channel) {
-            GuildConfig.SetChannel(channel.Id.ToString(), func).Save();
+        [Command("setchannelrole")]
+        [Summary("setchannelrole0s")]
+        public async Task SetChannelRole([Summary("setchannelrole0_0s")] ChannelFunction func,
+                                         [Summary("setchannelrole0_1s")] IChannel? channel) {
+            if (channel is ICategoryChannel) {
+                await ReplyFormattedAsync(Loc.Get("Commands.Fail"), Loc.Get("Commands.CategoryChannelNotSupported"));
+                return;
+            }
+            if (channel is IVoiceChannel) {
+                await ReplyFormattedAsync(Loc.Get("Commands.Fail"), Loc.Get("Commands.VoiceChannelNotSupported"));
+                return;
+            }
+            GuildConfig.SetChannel(func, channel?.Id).Save();
             await ReplyFormattedAsync(Loc.Get("Commands.Success"), Loc.Get("Commands.SetChannelResponse").Format(channel.Id, func.ToString()));
-            Context.Message.SafeDelete();
-        }
-
-        [SlashCommandAdapter(false)]
-        [Command("setchannel")]
-        [Summary("setchannel0s")]
-        public async Task SetThisChannel([Summary("setchannel0_0s")] ChannelFunction func) {
-            await SetChannel(func, Context.Channel);
+            Context.Message?.SafeDelete();
         }
     }
 }
