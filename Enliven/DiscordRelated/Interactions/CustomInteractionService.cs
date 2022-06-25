@@ -89,7 +89,7 @@ namespace Bot.DiscordRelated.Interactions {
             CallbackProperty.SetValue(builder, CreateCallback(createLambdaBuilder, methodInfo, this));
 
             foreach (var parameterInfo in methodInfo.GetParameters()) {
-                var pDescription = methodInfo.GetCustomAttribute<SummaryAttribute>()
+                var pDescription = parameterInfo.GetCustomAttribute<SummaryAttribute>()
                     .Pipe(attribute => attribute?.Text)
                     .Pipe(s => s == null ? null : EntryLocalized.Create("Help", s))
                     .Pipe(localized => localized?.CanGet() == true ? localized.Get(LangLocalizationProvider.EnglishLocalizationProvider) : null)
@@ -99,6 +99,8 @@ namespace Bot.DiscordRelated.Interactions {
                         .WithName(parameterInfo.Name!.ToLower())
                         .WithDescription(pDescription)
                         .SetParameterType(parameterInfo.ParameterType)
+                        .SetRequired(!parameterInfo.IsOptional)
+                        .SetDefaultValue(parameterInfo.DefaultValue)
                 );
             }
         }
