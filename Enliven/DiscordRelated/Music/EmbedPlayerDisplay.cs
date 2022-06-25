@@ -79,7 +79,7 @@ namespace Bot.DiscordRelated.Music {
             _embedBuilder.AddField("Warnings", loc.Get("Music.Warning"), loc.Get("Music.Empty"), false, 100, false);
 
             _controlMessageSendTask = new SingleTask(SendControlMessageInternal) { BetweenExecutionsDelay = TimeSpan.FromSeconds(30), CanBeDirty = false };
-            _updateControlMessageTask = new SingleTask(UpdateControlMessageInternal) { BetweenExecutionsDelay = TimeSpan.FromSeconds(1.5), CanBeDirty = true };
+            _updateControlMessageTask = new SingleTask(UpdateControlMessageInternal) { BetweenExecutionsDelay = TimeSpan.FromSeconds(1.5), CanBeDirty = true, ShouldExecuteNonDirtyIfNothingRunning = true};
         }
 
         private async Task SendControlMessageInternal(SingleTaskExecutionData data) {

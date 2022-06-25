@@ -44,6 +44,7 @@ namespace Common.Utils {
         public bool IsExecuting => _currentTaskCompletionSource?.Task.IsCompleted == true;
 
         public bool CanBeDirty { get; set; } = true;
+        public bool ShouldExecuteNonDirtyIfNothingRunning { get; set; }
         
         public Task<T> Execute(bool makesDirty = true, TimeSpan? delayOverride = null) {
             EnsureNotDisposed();
@@ -59,7 +60,7 @@ namespace Common.Utils {
                     // If nothing executing now
                     if (_currentTaskCompletionSource == null) {
                         // If current call non dirty and something already executed
-                        if (!makesDirty && _lastResult.IsSpecified) {
+                        if (!ShouldExecuteNonDirtyIfNothingRunning && !makesDirty && _lastResult.IsSpecified) {
                             return Task.FromResult(_lastResult.Value);
                         }
                         // Start execution

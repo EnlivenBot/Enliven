@@ -68,6 +68,18 @@ namespace Enliven.Tests {
         }
         
         [Fact]
+        public async Task SingleTask_ShouldExecuteNonDirtyIfNothingRunningProperty_VerifyExpectations() {
+            _singleTask.BetweenExecutionsDelay = TimeSpan.Zero;
+            _singleTask.ShouldExecuteNonDirtyIfNothingRunning = true;
+            
+            await GetExecuteExpression(false).Should().CompleteWithinAsync(100.Milliseconds()).WithResult(0);
+            _timesExecuted.Should().Be(1);
+            
+            await GetExecuteExpression(false).Should().CompleteWithinAsync(100.Milliseconds()).WithResult(1);
+            _timesExecuted.Should().Be(2);
+        }
+        
+        [Fact]
         public async Task SingleTask_TwoNonDirtyExecutionsSimultaneously_VerifyExpectations() {
             _singleTask.BetweenExecutionsDelay = TimeSpan.FromSeconds(1);
             
