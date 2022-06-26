@@ -20,7 +20,7 @@ namespace Bot.Commands.Music {
         [Command("play", RunMode = RunMode.Async)]
         [Alias("p")]
         [Summary("play0s")]
-        public async Task Play([Remainder] [Summary("play0_0s")] string? query = null) {
+        public async Task Play([Remainder] [SlashCommandOptional(false)] [Summary("play0_0s")] string? query = null) {
             await PlayInternal(query);
         }
 
@@ -28,7 +28,7 @@ namespace Bot.Commands.Music {
         [Command("playnext", RunMode = RunMode.Async)]
         [Alias("pn")]
         [Summary("playnext0s")]
-        public async Task PlayNext([Remainder] [Summary("play0_0s")] string? query = null) {
+        public async Task PlayNext([Remainder] [SlashCommandOptional(false)] [Summary("play0_0s")] string? query = null) {
             await PlayInternal(query, Player.Playlist.Count == 0 ? -1 : Player.CurrentTrackIndex + 1);
         }
 

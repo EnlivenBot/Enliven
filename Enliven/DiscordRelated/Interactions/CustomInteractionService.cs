@@ -94,14 +94,15 @@ namespace Bot.DiscordRelated.Interactions {
                     .Pipe(s => s == null ? null : EntryLocalized.Create("Help", s))
                     .Pipe(localized => localized?.CanGet() == true ? localized.Get(LangLocalizationProvider.EnglishLocalizationProvider) : null)
                     .Pipe(s => s ?? command.Text);
-                builder.AddParameter(parameterBuilder =>
+                var isOptional = parameterInfo.GetCustomAttribute<SlashCommandOptionalAttribute>()?.IsOptional ?? parameterInfo.IsOptional;
+                builder.AddParameter(parameterBuilder => {
                     parameterBuilder
                         .WithName(parameterInfo.Name!.ToLower())
                         .WithDescription(pDescription)
                         .SetParameterType(parameterInfo.ParameterType)
-                        .SetRequired(!parameterInfo.IsOptional)
-                        .SetDefaultValue(parameterInfo.DefaultValue)
-                );
+                        .SetRequired(!isOptional)
+                        .SetDefaultValue(parameterInfo.DefaultValue);
+                });
             }
         }
 
