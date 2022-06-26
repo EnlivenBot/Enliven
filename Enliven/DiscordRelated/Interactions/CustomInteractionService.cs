@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading.Tasks;
 using Autofac;
@@ -16,8 +17,11 @@ using Discord.Interactions;
 using Discord.Interactions.Builders;
 using Discord.WebSocket;
 using NLog;
+using ExecuteResult = Discord.Interactions.ExecuteResult;
+using IResult = Discord.Interactions.IResult;
 using PreconditionAttribute = Discord.Interactions.PreconditionAttribute;
 using RequireUserPermissionAttribute = Discord.Commands.RequireUserPermissionAttribute;
+using RuntimeResult = Discord.Interactions.RuntimeResult;
 using SlashCommandBuilder = Discord.Interactions.Builders.SlashCommandBuilder;
 using SummaryAttribute = Discord.Commands.SummaryAttribute;
 
@@ -30,7 +34,7 @@ namespace Bot.DiscordRelated.Interactions {
         public CustomInteractionService(DiscordShardedClient discordClient, ILifetimeScope serviceContainer,
                                         GlobalConfig globalConfig, InstanceConfig instanceConfig,
                                         ILogger logger)
-            : base(discordClient, new InteractionServiceConfig { UseCompiledLambda = true, LogLevel = LogSeverity.Debug}) {
+            : base(discordClient, new InteractionServiceConfig { UseCompiledLambda = true, LogLevel = LogSeverity.Debug }) {
             _serviceProvider = new ServiceProviderAdapter(serviceContainer);
             _globalConfig = globalConfig;
             _instanceConfig = instanceConfig;
@@ -47,7 +51,7 @@ namespace Bot.DiscordRelated.Interactions {
 
             foreach (var type in textCommandGroups) {
                 var name = type.GetCustomAttribute<GroupingAttribute>()?.GroupName ?? "Unspecified";
-                await CreateModuleAsync(name, _serviceProvider, 
+                await CreateModuleAsync(name, _serviceProvider,
                     moduleBuilder => BuildModule(type, moduleBuilder, CreateLambdaBuilder(type.GetTypeInfo(), this)));
             }
         }
@@ -79,14 +83,14 @@ namespace Bot.DiscordRelated.Interactions {
             var adminCommand = (methodInfo.GetCustomAttribute<RequireUserPermissionAttribute>()?.GuildPermission ?? 0 & GuildPermission.Administrator) != 0
                             || (methodInfo.DeclaringType?.GetCustomAttribute<RequireUserPermissionAttribute>()?.GuildPermission ?? 0 & GuildPermission.Administrator) != 0;
             var preconditions = adminCommand ? new[] { new Discord.Interactions.RequireUserPermissionAttribute(GuildPermission.Administrator) } : Array.Empty<PreconditionAttribute>();
-            
+
             builder
                 .WithName(command!.Text.ToLower())
                 .WithDescription(description)
                 .SetEnabledInDm(false)
                 .WithPreconditions(preconditions)
                 .WithAttributes(methodInfo.GetCustomAttributes().ToArray());
-            CallbackProperty.SetValue(builder, CreateCallback(createLambdaBuilder, methodInfo, this));
+            CallbackProperty.SetValue(builder, CreateCallback(createLambdaBuilder, methodInfo));
 
             foreach (var parameterInfo in methodInfo.GetParameters()) {
                 var pDescription = parameterInfo.GetCustomAttribute<SummaryAttribute>()
@@ -107,22 +111,73 @@ namespace Bot.DiscordRelated.Interactions {
         }
 
         #region Unsafe reflection driven bindings to DiscordNet internal classes
+
         private static MethodInfo? _reflectionUtilsCreateLambdaBuilderMethod;
         private static Func<IServiceProvider, IInteractionModuleBase> CreateLambdaBuilder(TypeInfo typeInfo, InteractionService commandService) {
             if (_reflectionUtilsCreateLambdaBuilderMethod == null) {
                 var reflectionUtilsType = typeof(InteractionService).Assembly.GetType("Discord.Interactions.ReflectionUtils`1")!.MakeGenericType(typeof(IInteractionModuleBase));
                 _reflectionUtilsCreateLambdaBuilderMethod = reflectionUtilsType.GetDeclaredMethod("CreateLambdaBuilder");
             }
-            return (Func<IServiceProvider, IInteractionModuleBase>)_reflectionUtilsCreateLambdaBuilderMethod.Invoke(null, new object[]{typeInfo, commandService})!;
+            return (Func<IServiceProvider, IInteractionModuleBase>)_reflectionUtilsCreateLambdaBuilderMethod.Invoke(null, new object[] { typeInfo, commandService })!;
         }
-        
-        private static MethodInfo? _moduleClassBuilderCreateCallbackMethod;
-        private static ExecuteCallback CreateCallback(Func<IServiceProvider, IInteractionModuleBase> createInstance, MethodInfo methodInfo, InteractionService commandService) {
-            if (_moduleClassBuilderCreateCallbackMethod == null) {
-                var moduleClassBuilderType = typeof(InteractionService).Assembly.GetType("Discord.Interactions.Builders.ModuleClassBuilder");
-                _moduleClassBuilderCreateCallbackMethod = moduleClassBuilderType.GetDeclaredMethod("CreateCallback");
+
+        private static ExecuteCallback CreateCallback(Func<IServiceProvider, IInteractionModuleBase> createInstance, MethodInfo methodInfo) {
+            Func<IInteractionModuleBase, object[], Task> commandInvoker = CreateMethodInvoker<IInteractionModuleBase>(methodInfo);
+
+            async Task<IResult> ExecuteCallback(IInteractionContext context, object[] args, IServiceProvider serviceProvider, ICommandInfo commandInfo) {
+                var instance = createInstance(serviceProvider);
+                instance.SetContext(context);
+
+                try {
+                    await instance.BeforeExecuteAsync(commandInfo).ConfigureAwait(false);
+                    instance.BeforeExecute(commandInfo);
+                    var task = commandInvoker(instance, args) ?? Task.Delay(0);
+
+                    if (task is Task<RuntimeResult> runtimeTask) {
+                        return await runtimeTask.ConfigureAwait(false);
+                    }
+                    else {
+                        await task.ConfigureAwait(false);
+                        return ExecuteResult.FromSuccess();
+
+                    }
+                }
+                catch (CommandInterruptionException) {
+                    return ExecuteResult.FromSuccess();
+                }
+                catch (Exception ex) {
+                    return ExecuteResult.FromError(ex);
+                }
+                finally {
+                    await instance.AfterExecuteAsync(commandInfo).ConfigureAwait(false);
+                    instance.AfterExecute(commandInfo);
+                    (instance as IDisposable)?.Dispose();
+                }
             }
-            return (ExecuteCallback)_moduleClassBuilderCreateCallbackMethod.Invoke(null, new object[] { createInstance, methodInfo, commandService })!;
+
+            return ExecuteCallback;
+        }
+
+        internal static Func<T, object[], Task> CreateMethodInvoker<T>(MethodInfo methodInfo) {
+            var parameters = methodInfo.GetParameters();
+            var paramsExp = new Expression[parameters.Length];
+
+            var instanceExp = Expression.Parameter(typeof(T), "instance");
+            var argsExp = Expression.Parameter(typeof(object[]), "args");
+
+            for (var i = 0; i < parameters.Length; i++) {
+                var parameter = parameters[i];
+
+                var indexExp = Expression.Constant(i);
+                var accessExp = Expression.ArrayIndex(argsExp, indexExp);
+                paramsExp[i] = Expression.Convert(accessExp, parameter.ParameterType);
+            }
+
+            var callExp = Expression.Call(Expression.Convert(instanceExp, methodInfo.ReflectedType), methodInfo, paramsExp);
+            var finalExp = Expression.Convert(callExp, typeof(Task));
+            var lambda = Expression.Lambda<Func<T, object[], Task>>(finalExp, instanceExp, argsExp).Compile();
+
+            return lambda;
         }
         #endregion
     }
