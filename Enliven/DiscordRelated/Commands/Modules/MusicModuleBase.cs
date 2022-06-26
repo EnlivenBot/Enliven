@@ -160,7 +160,7 @@ namespace Bot.DiscordRelated.Commands.Modules {
         }
 
         protected record MusicCommandChannelInfo(ulong CurrentChannel, ulong? MusicChannel, ulong? DedicatedMusicChannel, bool IsMusicLimited, ICommandContext Context) {
-            public bool IsCurrentChannelSuitable => (MusicChannel == null && DedicatedMusicChannel == null) || CurrentChannel == MusicChannel || CurrentChannel == DedicatedMusicChannel;
+            public bool IsCurrentChannelSuitable => MusicChannel == null || CurrentChannel == MusicChannel || CurrentChannel == DedicatedMusicChannel;
             public bool IsCommandAllowed => IsCurrentChannelSuitable || !IsMusicLimited;
             public ulong TargetChannelId => MusicChannel ?? CurrentChannel;
             private ICommandContext Context { get; init; } = Context;
