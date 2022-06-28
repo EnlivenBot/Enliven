@@ -1,31 +1,34 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net6.0</TargetFramework>
+        <RootNamespace>Bot</RootNamespace>
+        <AssemblyName>Enliven</AssemblyName>
+        <Version>19.0</Version>
+        <Nullable>enable</Nullable>
+        <LangVersion>9</LangVersion>
+    </PropertyGroup>
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
-    <RootNamespace>Bot</RootNamespace>
-    <AssemblyName>Enliven</AssemblyName>
-    <Version>19.0</Version>
-    <Nullable>enable</Nullable>
-    <LangVersion>9</LangVersion>
-  </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="8.0.0"/>
+        <PackageReference Include="SpotifyAPI.Web" Version="6.2.2"/>
+        <PackageReference Include="YandexMusicResolver" Version="4.0.0"/>
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Autofac" Version="6.3.0" />
-    <PackageReference Include="SpotifyAPI.Web" Version="6.2.2" />
-    <PackageReference Include="YandexMusicResolver" Version="4.0.0" />
-  </ItemGroup>
+    <ItemGroup>
+        <None Remove="Localization\en.json"/>
+        <None Update="nlog.config">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
 
-  <ItemGroup>
-    <None Remove="Localization\en.json" />
-    <None Update="nlog.config">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\ChatExporter\ChatExporter.csproj"/>
+        <ProjectReference Include="..\Common\Common.csproj"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\ChatExporter\ChatExporter.csproj" />
-    <ProjectReference Include="..\Common\Common.csproj" />
-  </ItemGroup>
-
+    <PropertyGroup>
+        <InvariantGlobalization>false</InvariantGlobalization>
+    </PropertyGroup>
 </Project>

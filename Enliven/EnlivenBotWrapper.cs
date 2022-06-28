@@ -24,7 +24,7 @@ namespace Bot {
         /// Attempts to start bot instance
         /// </summary>
         /// <returns>True if start successful, otherwise False</returns>
-        public Task<bool> StartAsync(IContainer container, CancellationToken cancellationToken) {
+        public Task<bool> StartAsync(ILifetimeScope container, CancellationToken cancellationToken) {
             if (_firstStartResult != null) throw new Exception("Current instance already started");
             try {
                 _instanceConfig = _configProvider.Load();
@@ -41,7 +41,7 @@ namespace Bot {
             return _firstStartResult!.Task;
         }
 
-        private async Task RunLoopAsync(IContainer container, CancellationToken cancellationToken) {
+        private async Task RunLoopAsync(ILifetimeScope container, CancellationToken cancellationToken) {
             var isFirst = true;
 
             while (!cancellationToken.IsCancellationRequested) {
