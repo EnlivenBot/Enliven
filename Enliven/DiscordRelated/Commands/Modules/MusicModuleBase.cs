@@ -91,7 +91,7 @@ namespace Bot.DiscordRelated.Commands.Modules {
             else {
                 await ReplyAndThrowIfAsync(requirePlayingTrack && player.CurrentTrack == null, NothingPlayingEntry);
                 await ReplyAndThrowIfAsync(requireNonEmptyPlaylist && player.Playlist.IsEmpty, NothingPlayingEntry);
-                await ReplyAndThrowIfAsync(userVoiceChannelId != player.VoiceChannelId, OtherVoiceChannelEntry);
+                await ReplyAndThrowIfAsync(userVoiceChannelId != player.VoiceChannelId, OtherVoiceChannelEntry.WithArg(Context.User.Mention));
             }
             Player = player;
 

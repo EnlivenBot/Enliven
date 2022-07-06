@@ -23,9 +23,9 @@ namespace Common.Music.Players {
 
         // ReSharper disable once UnusedParameter.Local
         public PlaylistLavalinkPlayer(IMusicController musicController, IGuildConfigProvider guildConfigProvider, IPlaylistProvider playlistProvider,
-                                      TrackEncoder trackEncoder) : base(
+                                      TrackEncoderUtils trackEncoderUtils) : base(
             musicController, guildConfigProvider) {
-            _trackEncoder = trackEncoder;
+            _trackEncoderUtils = trackEncoderUtils;
             _playlistProvider = playlistProvider;
             Playlist.Changed.Subscribe(playlist => UpdateCurrentTrackIndex());
         }
@@ -136,7 +136,7 @@ namespace Common.Music.Players {
         }
 
         public virtual async Task<ExportPlaylist> ExportPlaylist(ExportPlaylistOptions options) {
-            var encodedTracks = await Task.WhenAll(Playlist.Select(track => _trackEncoder.Encode(track)));
+            var encodedTracks = await Task.WhenAll(Playlist.Select(track => _trackEncoderUtils.Encode(track)));
             var exportPlaylist = new ExportPlaylist { Tracks = encodedTracks.ToList() };
             if (options != ExportPlaylistOptions.IgnoreTrackIndex) {
                 exportPlaylist.TrackIndex = CurrentTrackIndex.Normalize(0, Playlist.Count - 1);
@@ -156,7 +156,7 @@ namespace Common.Music.Players {
                 return;
             }
 
-            var tracks = (await _trackEncoder.BatchDecode(playlist.Tracks)).Select(track => track.AddAuthor(requester)).ToList();
+            var tracks = (await _trackEncoderUtils.BatchDecode(playlist.Tracks)).Select(track => track.AddAuthor(requester)).ToList();
             if (options == ImportPlaylistOptions.Replace) {
                 try {
                     await StopAsync();
@@ -204,7 +204,7 @@ namespace Common.Music.Players {
 
         private readonly SemaphoreSlim _enqueueLock = new SemaphoreSlim(1);
         private IPlaylistProvider _playlistProvider;
-        private TrackEncoder _trackEncoder;
+        private TrackEncoderUtils _trackEncoderUtils;
 
         public virtual async Task TryEnqueue(IEnumerable<MusicResolver> resolvers, string author, int index = -1) {
             var musicResolvers = resolvers.ToList();
@@ -302,7 +302,7 @@ namespace Common.Music.Players {
         }
 
         public override async Task OnTrackExceptionAsync(TrackExceptionEventArgs eventArgs) {
-            WriteToQueueHistory(new EntryLocalized("Music.TrackException", eventArgs.Exception.Cause));
+            WriteToQueueHistory(new EntryLocalized("Music.TrackException", eventArgs.ErrorMessage));
             await SkipAsync(1, true);
             await base.OnTrackExceptionAsync(eventArgs);
         }

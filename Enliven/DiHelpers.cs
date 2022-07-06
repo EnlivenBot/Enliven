@@ -70,9 +70,9 @@ namespace Bot {
             builder.RegisterType<YandexClientResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<Music.Yandex.YandexMusicResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
 
-            builder.RegisterType<SpotifyTrackEncoder>().PropertiesAutowired(PropertyWiringOptions.AllowCircularDependencies)
+            builder.RegisterType<SpotifyTrackEncoderUtil>().PropertiesAutowired(PropertyWiringOptions.AllowCircularDependencies)
                 .AsSelf().AsImplementedInterfaces().SingleInstance();
-            builder.RegisterType<YandexTrackEncoder>().AsSelf().AsImplementedInterfaces().SingleInstance();
+            builder.RegisterType<YandexTrackEncoderUtil>().AsSelf().AsImplementedInterfaces().SingleInstance();
 
             // Providers
             builder.RegisterType<SpotifyAssociationProvider>().As<ISpotifyAssociationProvider>().SingleInstance();

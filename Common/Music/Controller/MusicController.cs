@@ -15,6 +15,7 @@ using Lavalink4NET;
 using Lavalink4NET.Cluster;
 using Lavalink4NET.DiscordNet;
 using Lavalink4NET.Events;
+using Lavalink4NET.Integrations;
 using Lavalink4NET.Logging;
 using Lavalink4NET.Player;
 using Lavalink4NET.Tracking;
@@ -32,14 +33,14 @@ namespace Common.Music.Controller {
         private readonly ILogger _logger;
         private readonly ILifetimeScope _lifetimeScope;
         private readonly IEnumerable<LavalinkNodeInfo> _lavalinkNodeInfos;
-        private readonly TrackEncoder _trackEncoder;
+        private readonly TrackEncoderUtils _trackEncoderUtils;
 
         public MusicController(MusicResolverService musicResolverService, IGuildConfigProvider guildConfigProvider,
-                               IPlaylistProvider playlistProvider, TrackEncoder trackEncoder,
+                               IPlaylistProvider playlistProvider, TrackEncoderUtils trackEncoderUtils,
                                EnlivenShardedClient discordShardedClient, ILogger logger,
                                InstanceConfig instanceConfig, GlobalConfig globalConfig,
                                ILifetimeScope lifetimeScope) {
-            _trackEncoder = trackEncoder;
+            _trackEncoderUtils = trackEncoderUtils;
             _lavalinkNodeInfos = globalConfig.LavalinkNodes.Concat(instanceConfig.LavalinkNodes).Distinct();
             _logger = logger;
             _lifetimeScope = lifetimeScope;
@@ -77,11 +78,8 @@ namespace Common.Music.Controller {
             if (IsMusicEnabled) {
                 _logger.Info("Start building music cluster");
                 try {
-                    EnlivenLavalinkClusterNode NodeFactory(LavalinkNodeOptions options, IDiscordClientWrapper clientWrapper, Lavalink4NET.Logging.ILogger? arg3, ILavalinkCache? arg4)
-                        => new EnlivenLavalinkClusterNode(options, clientWrapper, arg3, arg4);
-
-                    var lavalinkClusterOptions = new CustomLavalinkClusterOptions<EnlivenLavalinkClusterNode>(NodeFactory) {
-                        Nodes = nodes.ToArray(), StayOnline = true, LoadBalacingStrategy = LoadBalancingStrategy
+                    var lavalinkClusterOptions = new LavalinkClusterOptions {
+                        Nodes = nodes.ToArray(), StayOnline = true, LoadBalacingStrategy = LoadBalancingStrategy, NodeFactory = LavalinkNodeFactory
                     };
                     var cluster = new EnlivenLavalinkCluster(lavalinkClusterOptions, wrapper, _lavalinkLogger);
                     cluster.PlayerMoved += ClusterOnPlayerMoved;
@@ -111,6 +109,9 @@ namespace Common.Music.Controller {
             }
             return null!;
         }
+
+        private LavalinkClusterNode LavalinkNodeFactory(LavalinkCluster lavalinkCluster, LavalinkNodeOptions options, IDiscordClientWrapper client, int id, IIntegrationCollection integrationCollection, Lavalink4NET.Logging.ILogger? logger, ILavalinkCache? cache)
+            => new EnlivenLavalinkClusterNode(lavalinkCluster, options, client, id, integrationCollection, logger, cache);
 
         private async Task InactivityTracking_OnInactivePlayer(object sender, InactivePlayerEventArgs args) {
             if (args.Player is AdvancedLavalinkPlayer embedPlaybackPlayer) {
@@ -158,7 +159,7 @@ namespace Common.Music.Controller {
         }
 
         private FinalLavalinkPlayer PlayerFactory() {
-            return new FinalLavalinkPlayer(this, _guildConfigProvider, _playlistProvider, _trackEncoder);
+            return new FinalLavalinkPlayer(this, _guildConfigProvider, _playlistProvider, _trackEncoderUtils);
         }
 
         public void StoreSnapshot(PlayerSnapshot parameters) {
@@ -192,19 +193,19 @@ namespace Common.Music.Controller {
             logger.Log(logLevel, e.Message);
         }
 
-        public static EnlivenLavalinkClusterNode LoadBalancingStrategy(LavalinkCluster cluster,
-                                                                       IReadOnlyCollection<EnlivenLavalinkClusterNode> enlivenLavalinkClusterNodes,
-                                                                       NodeRequestType type) {
+        public static LavalinkClusterNode LoadBalancingStrategy(LavalinkCluster cluster,
+                                                                IReadOnlyCollection<LavalinkClusterNode> nodes,
+                                                                NodeRequestType type) {
             switch (type) {
                 case NodeRequestType.Backup:
-                    return (EnlivenLavalinkClusterNode)LoadBalancingStrategies.LoadStrategy(cluster, enlivenLavalinkClusterNodes, type);
+                    return (EnlivenLavalinkClusterNode)LoadBalancingStrategies.LoadStrategy(cluster, nodes, type);
                 case NodeRequestType.LoadTrack:
-                    var targetNode = enlivenLavalinkClusterNodes.FirstOrDefault(node => node.IsConnected);
+                    var targetNode = nodes.FirstOrDefault(node => node.IsConnected);
                     if (targetNode != null)
                         return targetNode;
                     goto default;
                 default:
-                    return (EnlivenLavalinkClusterNode)LoadBalancingStrategies.RoundRobinStrategy(cluster, enlivenLavalinkClusterNodes, type);
+                    return (EnlivenLavalinkClusterNode)LoadBalancingStrategies.RoundRobinStrategy(cluster, nodes, type);
             }
         }
 

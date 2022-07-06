@@ -199,6 +199,8 @@ namespace Common {
         public static TOut Pipe<TIn, TOut>(this TIn input, Func<TIn, TOut> transform) => transform(input);
         public static async Task<TOut> PipeAsync<TIn, TOut>(this Task<TIn> input, Func<TIn, TOut> transform) => transform(await input);
         public static async Task<TOut> PipeAsync<TIn, TOut>(this Task<TIn> input, Func<TIn, Task<TOut>> transform) => await transform(await input);
+        public static async ValueTask<TOut> PipeAsync<TIn, TOut>(this ValueTask<TIn> input, Func<TIn, TOut> transform) => transform(await input);
+        public static async ValueTask<TOut> PipeAsync<TIn, TOut>(this ValueTask<TIn> input, Func<TIn, Task<TOut>> transform) => await transform(await input);
 
         public static async Task<IDisposable> WaitDisposableAsync(this SemaphoreSlim semaphore, CancellationToken? token = null) {
             await semaphore.WaitAsync(token ?? CancellationToken.None);

@@ -1,6 +1,6 @@
 ﻿using System;
+using Lavalink4NET.Payloads.Player;
 using Lavalink4NET.Player;
-using Lavalink4NET.Util;
 
 namespace Bot.Music.Spotify {
     public class SpotifyLavalinkTrack : LavalinkTrack {

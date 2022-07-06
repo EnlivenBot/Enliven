@@ -39,7 +39,7 @@ namespace Bot.Music.Yandex
                     {
                         case YandexSearchType.Track:
                             if (yandexMusicSearchResult.Tracks?.Count != 0)
-                                tracks.Add(new YandexLavalinkTrack(yandexMusicSearchResult.Tracks!.First(),
+                                tracks.Add(YandexLavalinkTrack.CreateInstance(yandexMusicSearchResult.Tracks!.First(),
                                     yandexMusicMainResolver.DirectUrlLoader));
                             break;
                         case YandexSearchType.Album:
@@ -47,7 +47,7 @@ namespace Bot.Music.Yandex
                                 tracks.AddRange(
                                     (await yandexMusicSearchResult.Albums!.First().LoadDataAsync())
                                     .Select(track =>
-                                        new YandexLavalinkTrack(track, yandexMusicMainResolver.DirectUrlLoader))
+                                        YandexLavalinkTrack.CreateInstance(track, yandexMusicMainResolver.DirectUrlLoader))
                                 );
                             break;
                         case YandexSearchType.Playlist:
@@ -55,7 +55,7 @@ namespace Bot.Music.Yandex
                                 tracks.AddRange(
                                     (await yandexMusicSearchResult.Playlists!.First().LoadDataAsync())
                                     .Select(track =>
-                                        new YandexLavalinkTrack(track, yandexMusicMainResolver.DirectUrlLoader))
+                                        YandexLavalinkTrack.CreateInstance(track, yandexMusicMainResolver.DirectUrlLoader))
                                 );
                             break;
                     }

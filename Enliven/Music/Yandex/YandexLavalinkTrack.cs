@@ -10,20 +10,29 @@ using YandexMusicResolver.Loaders;
 namespace Bot.Music.Yandex {
     public class YandexLavalinkTrack : LavalinkTrack {
         private IYandexMusicDirectUrlLoader _directUrlLoader;
-        public YandexMusicTrack RelatedYandexTrack;
+        public YandexMusicTrack RelatedYandexTrack { get; }
 
-        public YandexLavalinkTrack(YandexMusicTrack relatedYandexTrack, IYandexMusicDirectUrlLoader directUrlLoader)
-            : base(TrackDecoder.EncodeTrack(relatedYandexTrack.ToTrackInfo()), relatedYandexTrack.ToTrackInfo()) {
+        private YandexLavalinkTrack(YandexMusicTrack relatedYandexTrack, IYandexMusicDirectUrlLoader directUrlLoader, string identifier, LavalinkTrackInfo trackInformation)
+            : base(identifier, trackInformation) {
             RelatedYandexTrack = relatedYandexTrack;
             _directUrlLoader = directUrlLoader;
         }
 
-        public override async Task<LavalinkTrack> GetPlayableTrack() {
+        public static YandexLavalinkTrack CreateInstance(YandexMusicTrack relatedYandexTrack, IYandexMusicDirectUrlLoader directUrlLoader) {
+            var lavalinkTrackInfo = new LavalinkTrackInfo() {
+                Author = relatedYandexTrack.Author, Duration = relatedYandexTrack.Length, IsLiveStream = false, IsSeekable = true, 
+                Position = TimeSpan.Zero, Source = relatedYandexTrack.Uri, Title = relatedYandexTrack.Title, TrackIdentifier = relatedYandexTrack.Id
+            };
+            return new YandexLavalinkTrack(relatedYandexTrack, directUrlLoader, TrackEncoder.Encode(lavalinkTrackInfo), lavalinkTrackInfo);
+        }
+
+        public override async ValueTask<LavalinkTrack> GetPlayableTrack() {
             var directUrl = await GetDirectUrl(RelatedYandexTrack.Id);
-            var newTrackInfo = new LavalinkTrackInfo(Author, Duration, IsLiveStream, IsSeekable, Position, directUrl, Title, directUrl);
-            return new LavalinkTrack(TrackDecoder.EncodeTrack(newTrackInfo, StreamProvider.Http, writer => {
-                writer.WriteString("mp3");
-            }), newTrackInfo);
+            var lavalinkTrackInfo = new LavalinkTrackInfo() {
+                Author = Author, Duration = Duration, IsLiveStream = IsLiveStream, IsSeekable = IsSeekable, 
+                Position = Position, Source = directUrl, Title = Title, TrackIdentifier = directUrl
+            };
+            return lavalinkTrackInfo.CreateTrack();
         }
         
         private static readonly Dictionary<string, string> UrlCache = new Dictionary<string, string>();
