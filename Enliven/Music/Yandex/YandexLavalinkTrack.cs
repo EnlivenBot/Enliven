@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Common;
 using Common.Music.Tracks;
@@ -11,6 +12,7 @@ using YandexMusicResolver.Loaders;
 
 namespace Bot.Music.Yandex {
     public class YandexLavalinkTrack : LavalinkTrack, ITrackHasArtwork {
+        private static readonly HttpClient HttpClient = new(); 
         private IYandexMusicDirectUrlLoader _directUrlLoader;
         public YandexMusicTrack RelatedYandexTrack { get; }
 
@@ -38,11 +40,10 @@ namespace Bot.Music.Yandex {
         }
         
         private static readonly Dictionary<string, string> UrlCache = new Dictionary<string, string>();
-
         private async Task<string> GetDirectUrl(string id) {
             if (UrlCache.TryGetValue(id, out var url)) {
-                var isUrlAccessibleResponse = (HttpWebResponse) await WebRequest.Create(url).GetResponseAsync();
-                if (isUrlAccessibleResponse.StatusCode == HttpStatusCode.OK)
+                var isUrlAccessibleResponse = await HttpClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, url));
+                if (isUrlAccessibleResponse.IsSuccessStatusCode)
                     return url;
             }
 
