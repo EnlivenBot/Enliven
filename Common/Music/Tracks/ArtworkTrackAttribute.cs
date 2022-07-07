@@ -13,8 +13,15 @@ namespace Common.Music.Tracks {
 
     public static class ArtworkTrackAttributeExtensions {
         public static async ValueTask<Uri?> ResolveArtwork(this LavalinkTrack track, IArtworkService artworkService) {
-            return await track.GetOrAddAttribute(async () => new ArtworkTrackAttribute(await artworkService.ResolveAsync(track)))
+            return await track.GetOrAddAttribute(TrackArtworkResolver)
                 .PipeAsync(attribute => attribute.ArtworkUri);
+            
+            async Task<ArtworkTrackAttribute> TrackArtworkResolver() {
+                var artwork = track is ITrackHasArtwork trackHasArtwork
+                    ? await trackHasArtwork.GetArtwork()
+                    : await artworkService.ResolveAsync(track);
+                return new ArtworkTrackAttribute(artwork);
+            }
         }
     }
 }

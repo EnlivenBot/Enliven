@@ -2,13 +2,15 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
+using Common;
+using Common.Music.Tracks;
 using Lavalink4NET.Decoding;
 using Lavalink4NET.Player;
 using YandexMusicResolver.AudioItems;
 using YandexMusicResolver.Loaders;
 
 namespace Bot.Music.Yandex {
-    public class YandexLavalinkTrack : LavalinkTrack {
+    public class YandexLavalinkTrack : LavalinkTrack, ITrackHasArtwork {
         private IYandexMusicDirectUrlLoader _directUrlLoader;
         public YandexMusicTrack RelatedYandexTrack { get; }
 
@@ -47,6 +49,11 @@ namespace Bot.Music.Yandex {
             var directUrl = await _directUrlLoader.GetDirectUrl(id);
             UrlCache[id] = directUrl;
             return directUrl;
+        }
+        
+        public ValueTask<Uri?> GetArtwork() {
+            var artworkUri = RelatedYandexTrack.ArtworkUrl?.Pipe(s => new Uri(s));
+            return ValueTask.FromResult(artworkUri);
         }
     }
 }

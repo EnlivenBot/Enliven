@@ -71,7 +71,7 @@ namespace Bot.Music.Spotify {
                 var enumerable = spotifyTracks
                     .Select(async s => {
                             var association = await ResolveAssociation(s, cluster);
-                            return association != null ? new SpotifyLavalinkTrack(s, association.GetBestAssociation().Association) : null;
+                            return association != null ? new SpotifyLavalinkTrack(s, association.GetBestAssociation().Association, spotify) : null;
                         }
                     ).ToList();
                 return await Task.WhenAll(enumerable)

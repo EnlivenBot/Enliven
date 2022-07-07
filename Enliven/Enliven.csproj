@@ -10,22 +10,22 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="8.0.0"/>
-        <PackageReference Include="SpotifyAPI.Web" Version="6.2.2"/>
-        <PackageReference Include="YandexMusicResolver" Version="4.0.0"/>
-        <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1"/>
+        <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="8.0.0" />
+        <PackageReference Include="SpotifyAPI.Web" Version="6.2.2" />
+        <PackageReference Include="YandexMusicResolver" Version="4.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
     </ItemGroup>
 
     <ItemGroup>
-        <None Remove="Localization\en.json"/>
+        <None Remove="Localization\en.json" />
         <None Update="nlog.config">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\ChatExporter\ChatExporter.csproj"/>
-        <ProjectReference Include="..\Common\Common.csproj"/>
+        <ProjectReference Include="..\ChatExporter\ChatExporter.csproj" />
+        <ProjectReference Include="..\Common\Common.csproj" />
     </ItemGroup>
 
     <PropertyGroup>
