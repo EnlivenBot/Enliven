@@ -18,6 +18,7 @@ using Common.Entities;
 using Common.Music.Effects;
 using Common.Music.Resolvers;
 using Discord.WebSocket;
+using Lavalink4NET.Artwork;
 using NLog;
 
 namespace Bot {
@@ -95,6 +96,7 @@ namespace Bot {
             builder.RegisterType<HtmlRendererService>().AsSelf().SingleInstance();
             builder.RegisterType<MessageHistoryHtmlExporter>().InstancePerBot();
             builder.RegisterType<CollectorService>().InstancePerBot();
+            builder.RegisterType<ArtworkService>().As<IArtworkService>().SingleInstance();
 
             // MessageHistory Printers
             builder.RegisterType<MessageHistoryPrinter>().InstancePerBot();

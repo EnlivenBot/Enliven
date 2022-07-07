@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Lavalink4NET.Player;
 
 namespace Common.Music.Tracks {
@@ -44,6 +45,21 @@ namespace Common.Music.Tracks {
             }
             
             return (T) (track.GetAttributes()[typeof(T)] = factory());
+        }
+        
+        /// <summary>
+        /// Get attribute if exists or create new one, add it and return
+        /// </summary>
+        /// <param name="track">Target track</param>
+        /// <param name="factory">New attribute factory</param>
+        /// <typeparam name="T">Attribute type</typeparam>
+        /// <returns>Target attribute</returns>
+        public static async Task<T> GetOrAddAttribute<T>(this LavalinkTrack track, Func<Task<T>> factory) where T : ILavalinkTrackAttribute {
+            if (track.TryGetAttribute(out T existentAttribute)) {
+                return existentAttribute;
+            }
+            
+            return (T) (track.GetAttributes()[typeof(T)] = await factory());
         }
 
         private static Dictionary<Type, ILavalinkTrackAttribute> GetAttributes(this LavalinkTrack track) {

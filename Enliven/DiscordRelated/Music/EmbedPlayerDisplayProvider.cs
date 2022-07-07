@@ -11,6 +11,7 @@ using Common.Config;
 using Common.Music.Players;
 using Discord;
 using Discord.WebSocket;
+using Lavalink4NET.Artwork;
 using Lavalink4NET.Player;
 using Newtonsoft.Json;
 using NLog;
@@ -23,14 +24,16 @@ namespace Bot.DiscordRelated.Music {
         private readonly CommandHandlerService _commandHandlerService;
         private readonly ILogger _logger;
         private readonly MessageComponentService _messageComponentService;
+        private readonly IArtworkService _artworkService;
         private IDisposable? _restoreStoppedHandled;
 
         public EmbedPlayerDisplayProvider(EnlivenShardedClient client, IGuildConfigProvider guildConfigProvider,
                                           CommandHandlerService commandHandlerService, MessageComponentService messageComponentService,
-                                          ILogger logger) {
+                                          ILogger logger, IArtworkService artworkService) {
             _messageComponentService = messageComponentService;
             _commandHandlerService = commandHandlerService;
             _logger = logger;
+            _artworkService = artworkService;
             _client = client;
             _guildConfigProvider = guildConfigProvider;
         }
@@ -65,7 +68,7 @@ namespace Bot.DiscordRelated.Music {
             var embedPlayerDisplay = _cache.GetOrAdd(id, s => {
                 var guildConfig = _guildConfigProvider.Get(channel.GuildId);
                 // TODO: Implement proper logger creation
-                var display = new EmbedPlayerDisplay(channel, _client, guildConfig.Loc, _commandHandlerService, guildConfig.PrefixProvider, _messageComponentService, _logger);
+                var display = new EmbedPlayerDisplay(channel, _client, guildConfig.Loc, _commandHandlerService, guildConfig.PrefixProvider, _messageComponentService, _logger, _artworkService);
                 _ = display.Initialize(finalLavalinkPlayer);
 
                 return display;

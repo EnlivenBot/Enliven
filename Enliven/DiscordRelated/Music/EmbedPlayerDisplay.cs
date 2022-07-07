@@ -23,6 +23,7 @@ using Common.Music.Tracks;
 using Common.Utils;
 using Discord;
 using Discord.Net;
+using Lavalink4NET.Artwork;
 using Lavalink4NET.Player;
 using Newtonsoft.Json;
 using NLog;
@@ -41,6 +42,7 @@ namespace Bot.DiscordRelated.Music {
         private readonly MessageComponentService _messageComponentService;
         private readonly IDiscordClient _discordClient;
         private readonly ILogger _logger;
+        private readonly IArtworkService _artworkService;
 
         private readonly EnlivenEmbedBuilder _embedBuilder;
         private CancellationTokenSource _cancellationTokenSource = new();
@@ -54,16 +56,17 @@ namespace Bot.DiscordRelated.Music {
 
         public EmbedPlayerDisplay(ITextChannel targetChannel, IDiscordClient discordClient, ILocalizationProvider loc,
                                   CommandHandlerService commandHandlerService, IPrefixProvider prefixProvider, MessageComponentService messageComponentService, 
-                                  ILogger logger) :
-            this((IMessageChannel)targetChannel, discordClient, loc, commandHandlerService, prefixProvider, messageComponentService, logger) {
+                                  ILogger logger, IArtworkService artworkService) :
+            this((IMessageChannel)targetChannel, discordClient, loc, commandHandlerService, prefixProvider, messageComponentService, logger, artworkService) {
             _targetGuild = targetChannel.Guild;
         }
 
         public EmbedPlayerDisplay(IMessageChannel targetChannel, IDiscordClient discordClient, ILocalizationProvider loc,
                                   CommandHandlerService commandHandlerService, IPrefixProvider prefixProvider, MessageComponentService messageComponentService, 
-                                  ILogger logger) {
+                                  ILogger logger, IArtworkService artworkService) {
             _messageComponentService = messageComponentService;
             _logger = logger;
+            _artworkService = artworkService;
             _loc = loc;
             _commandHandlerService = commandHandlerService;
             _prefixProvider = prefixProvider;
@@ -330,21 +333,19 @@ namespace Bot.DiscordRelated.Music {
             }
         }
 
-        private void UpdateTrackInfo() {
+        private async Task UpdateTrackInfo() {
+            var track = Player.CurrentTrack;
             if (Player.CurrentTrackIndex >= Player.Playlist.Count && Player.Playlist.Count != 0) {
                 _embedBuilder.Author = new EmbedAuthorBuilder();
                 _embedBuilder.Title = _loc.Get("Music.QueueEnd");
                 _embedBuilder.Url = "";
             }
-            else if ((Player.State != PlayerState.NotPlaying || Player.State != PlayerState.NotConnected || Player.State != PlayerState.Destroyed) &&
-                     Player.CurrentTrack != null) {
-                var iconUrl = Player.CurrentTrack.Provider == StreamProvider.YouTube
-                    ? $"https://img.youtube.com/vi/{Player.CurrentTrack?.TrackIdentifier}/0.jpg"
-                    : null;
+            else if (track != null && (Player.State != PlayerState.NotPlaying || Player.State != PlayerState.NotConnected || Player.State != PlayerState.Destroyed)) {
+                var artwork = await track.ResolveArtwork(_artworkService);
                 _embedBuilder
-                    .WithAuthor(Player.CurrentTrack!.Author.SafeSubstring(Constants.MaxEmbedAuthorLength, "...").IsBlank("Unknown"), iconUrl)
-                    .WithTitle(MusicController.EscapeTrack(Player.CurrentTrack!.Title).SafeSubstring(Discord.EmbedBuilder.MaxTitleLength, "...")!)
-                    .WithUrl(Player.CurrentTrack.Source!);
+                    .WithAuthor(track!.Author.SafeSubstring(Constants.MaxEmbedAuthorLength, "...").IsBlank("Unknown"), artwork?.ToString())
+                    .WithTitle(MusicController.EscapeTrack(track!.Title).SafeSubstring(EmbedBuilder.MaxTitleLength, "...")!)
+                    .WithUrl(track.Source!);
             }
             else {
                 _embedBuilder.Author = new EmbedAuthorBuilder();
