@@ -170,6 +170,24 @@ namespace Common.Music.Controller {
             return _playerShutdownParametersMap.TryGetValue(guildId, out var playerSnapshot) ? playerSnapshot : null;
         }
 
+        private static readonly IEntry ReconnectedAfterDisposeEntry = new EntryLocalized("Music.ReconnectedAfterDispose");
+        public void OnPlayerDisposed(AdvancedLavalinkPlayer advancedLavalinkPlayer, PlayerSnapshot playerSnapshot, List<HistoryEntry> historyEntries) {
+            _logger.Warn("Player in {GuildId} disposed, waiting 2 sec and rewieving it", advancedLavalinkPlayer.GuildId);
+            Task.Run(async () => {
+                await Task.Delay(2000);
+                
+                var newPlayer = await ProvidePlayer(playerSnapshot.GuildId, playerSnapshot.LastVoiceChannelId, true);
+                await newPlayer.ApplyStateSnapshot(playerSnapshot);
+                foreach (var playerDisplay in advancedLavalinkPlayer.Displays.ToList()) 
+                    await playerDisplay.ChangePlayer(newPlayer);
+                
+                _logger.Info("Player for {GuildId} rewieved after disposing", advancedLavalinkPlayer.GuildId);
+                var guildConfig = _guildConfigProvider.Get(advancedLavalinkPlayer.GuildId);
+                newPlayer.WriteToQueueHistory(historyEntries);
+                newPlayer.WriteToQueueHistory(ReconnectedAfterDisposeEntry.WithArg(guildConfig.Prefix, playerSnapshot.StoredPlaylist!.Id));
+            });
+        }
+
         public FinalLavalinkPlayer? GetPlayer(ulong guildId) {
             return _playbackPlayers.FirstOrDefault(player =>
                 player.GuildId == guildId

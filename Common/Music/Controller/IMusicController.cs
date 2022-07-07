@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+using Common.History;
 using Common.Music.Players;
 using Common.Music.Resolvers;
 
@@ -15,6 +16,9 @@ namespace Common.Music.Controller {
         public FinalLavalinkPlayer? GetPlayer(ulong guildId);
 
         public Task<IEnumerable<MusicResolver>> ResolveQueries(IEnumerable<string> queries);
+        
         PlayerSnapshot? GetPlayerLastSnapshot(ulong guildId);
+        
+        void OnPlayerDisposed(AdvancedLavalinkPlayer advancedLavalinkPlayer, PlayerSnapshot playerSnapshot, List<HistoryEntry> historyEntries);
     }
 }

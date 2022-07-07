@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
@@ -14,6 +15,7 @@ using Lavalink4NET;
 using Lavalink4NET.Filters;
 using Lavalink4NET.Player;
 using NLog;
+using Tyrrrz.Extensions;
 
 namespace Common.Music.Players {
     public class AdvancedLavalinkPlayer : WrappedLavalinkPlayer {
@@ -54,11 +56,13 @@ namespace Common.Music.Players {
             GuildConfig.Save();
         }
 
+        private bool _isShutdownRequested;
         private static readonly IEntry ConcatLines = new EntryString("{0}\n{1}");
         private static readonly IEntry ResumeViaPlaylists = new EntryLocalized("Music.ResumeViaPlaylists");
         private static readonly IEntry PlaybackStopped = new EntryLocalized("Music.PlaybackStopped");
         public virtual async Task Shutdown(IEntry reason, PlayerShutdownParameters parameters) {
-            if (IsShutdowned) return;
+            if (IsShutdowned || _isShutdownRequested) return;
+            _isShutdownRequested = true;
 
             var playerSnapshot = await GetPlayerSnapshot(parameters);
             if (!_shutdownTaskCompletionSource.TrySetResult(playerSnapshot)) return;
@@ -82,7 +86,7 @@ namespace Common.Music.Players {
                 }
             }
             finally {
-                base.Dispose();
+                await base.DisposeAsyncCore();
             }
         }
 
@@ -110,6 +114,10 @@ namespace Common.Music.Players {
         public virtual void WriteToQueueHistory(HistoryEntry entry) {
             QueueHistory.Add(entry);
         }
+        
+        public virtual void WriteToQueueHistory(IEnumerable<HistoryEntry> entries) {
+            QueueHistory.AddRange(entries);
+        }
 
         protected virtual Task<PlayerSnapshot> GetPlayerSnapshot(PlayerSnapshotParameters parameters) {
             return Task.FromResult(new PlayerSnapshot {
@@ -133,31 +141,44 @@ namespace Common.Music.Players {
             await ApplyFiltersAsync();
         }
 
-        /// <summary>
-        /// This method is called only from third-party code.
-        /// </summary>
-        [Obsolete]
-        public override async void Dispose() {
-            if (!IsShutdowned) {
-                try {
-                    var playerShutdownParameters = new PlayerShutdownParameters {ShutdownDisplays = false, SavePlaylist = true};
-                    var reason = new EntryLocalized("Music.TryReconnectAfterDispose", GuildConfig.Prefix);
-                    await Shutdown(reason, playerShutdownParameters);
-                    var playerSnapshot = await ShutdownTask;
-                    foreach (var playerDisplay in Displays.ToList()) 
-                        await playerDisplay.LeaveNotification(new EntryLocalized("Music.PlaybackStopped"), reason.Add(playerSnapshot.StoredPlaylist!.Id));
+        private static readonly IEntry PlaybackStoppedEntry = new EntryLocalized("Music.PlaybackStopped");
+        private static readonly IEntry TryReconnectAfterDisposeEntry = new EntryLocalized("Music.TryReconnectAfterDispose");
+        private static readonly PlayerShutdownParameters ParametersForDisposedPlayer = new() {ShutdownDisplays = false, SavePlaylist = true};
+        
+        /// <remarks>
+        /// We don't call Dispose or DisposeAsync on our side of the player.
+        /// If Dispose was called on the player, something happened in the Lavalink and our job is to try to restart the player
+        /// </remarks>
+        protected sealed override void Dispose(bool disposing) {
+            if (IsShutdowned || !disposing || _isShutdownRequested) return;
+            DisposeAsyncCore().GetAwaiter().GetResult();
+        }
 
-                    await Task.Delay(2000);
-                    var newPlayer = await MusicController.ProvidePlayer(playerSnapshot.GuildId, playerSnapshot.LastVoiceChannelId, true);
-                    await newPlayer.ApplyStateSnapshot(playerSnapshot);
-                    foreach (var playerDisplay in Displays.ToList()) 
-                        await playerDisplay.ChangePlayer(newPlayer);
-                    newPlayer.WriteToQueueHistory(new HistoryEntry(new EntryLocalized("Music.ReconnectedAfterDispose", GuildConfig.Prefix, playerSnapshot.StoredPlaylist!.Id)));
-                }
-                catch (Exception e) {
-                    Logger.Error(e, "Error while resuming player");
-                }
+        /// <remarks>
+        /// We don't call Dispose or DisposeAsync on our side of the player.
+        /// If Dispose was called on the player, something happened in the Lavalink and our job is to try to restart the player
+        /// </remarks>
+        protected override async ValueTask DisposeAsyncCore() {
+            Logger.Warn("Got player in {GuildId} dispose request\n{StackTrace}", GuildId, new StackTrace());
+            if (IsShutdowned || _isShutdownRequested) return;
+            try {
+                Logger.Warn("Shutdowning player in {GuildId} due to Dispose call", GuildId);
+                await Shutdown(TryReconnectAfterDisposeEntry.WithArg(GuildConfig.Prefix), ParametersForDisposedPlayer);
+                var playerSnapshot = await ShutdownTask;
+
+                var notificationUpdateTasks = Displays
+                    .ToList()
+                    .Select(display => LeaveNotificationToDisplay(display, playerSnapshot));
+                await Task.WhenAll(notificationUpdateTasks);
+
+                MusicController.OnPlayerDisposed(this, playerSnapshot, QueueHistory.ToList());
             }
+            catch (Exception e) {
+                Logger.Error(e, "Error while disposing player");
+            }
+            
+            Task LeaveNotificationToDisplay(IPlayerDisplay display, PlayerSnapshot snapshot)
+                => display.LeaveNotification(PlaybackStoppedEntry, TryReconnectAfterDisposeEntry.WithArg(GuildConfig.Prefix, snapshot.StoredPlaylist!.Id));
         }
 
         public virtual async Task<PlayerEffectUse> ApplyEffect(PlayerEffect effect, IUser? source) {
