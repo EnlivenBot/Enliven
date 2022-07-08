@@ -208,7 +208,7 @@
       "effect0s": "Aplica o elimina el efecto de post-procesamiento",
       "effect0_0s": "Nombre o ID del efecto (predeterminados: `mono`, `bassboost`(`bb`), `nightcore`(`nc`), `8d`)",
       "effect0_1s": "Parámetro del efecto aplicado. Por ejemplo, para el efecto `bassboost`: `Low`, `Medium`, `High`, `Extreme`",
-      "effects0": "Mostrar y permitir gestionar efectos de sonido"
+      "effects_current0s": "Mostrar y permitir gestionar efectos de sonido"
     },
     "CommandHandler": {
       "FailedTitle": "Error al ejecutar un comando",

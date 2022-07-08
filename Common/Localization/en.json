@@ -208,7 +208,9 @@
       "effect0s": "Applies or removes the post-processing effect",
       "effect0_0s": "Effect name or ID (built-in: `mono`, `bassboost`(`bb`), `nightcore`(`nc`), `8d`)",
       "effect0_1s": "Parameter of the applied effect. For example `bassboost` mode: `Low`, `Medium`, `High`, `Extreme`",
-      "effects0": "Display and allow to manage sounds effects"
+      "effects_current0s": "Display embed to allow manage sounds effects",
+      "effects_add0s": "Add a custom sound effect",
+      "effects_add0_0s": "JSON string representing new effect. Leave empty to get guide"
     },
     "CommandHandler": {
       "FailedTitle": "Error executing command",
