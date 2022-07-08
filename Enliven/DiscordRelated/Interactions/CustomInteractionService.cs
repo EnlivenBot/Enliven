@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -17,6 +18,7 @@ using Discord.Interactions;
 using Discord.Interactions.Builders;
 using Discord.WebSocket;
 using NLog;
+using Tyrrrz.Extensions;
 using ExecuteResult = Discord.Interactions.ExecuteResult;
 using IResult = Discord.Interactions.IResult;
 using PreconditionAttribute = Discord.Interactions.PreconditionAttribute;
@@ -49,23 +51,31 @@ namespace Bot.DiscordRelated.Interactions {
                 .Where(type => type.GetCustomAttribute<SlashCommandAdapterAttribute>()?.ProcessSlashCommand == true)
                 .Where(type => RegisterIf.ShouldRegisterType(type, _globalConfig, _instanceConfig));
 
-            foreach (var type in textCommandGroups) {
-                var name = type.GetCustomAttribute<GroupingAttribute>()?.GroupName ?? "Unspecified";
-                await CreateModuleAsync(name, _serviceProvider,
-                    moduleBuilder => BuildModule(type, moduleBuilder, CreateLambdaBuilder(type.GetTypeInfo(), this)));
+            var subcommandSets = textCommandGroups.SelectMany(type => type.GetMethods())
+                .Where(info => info.GetCustomAttribute<HiddenAttribute>() == null)
+                .Where(info => info.GetCustomAttribute<SlashCommandAdapterAttribute>()?.ProcessSlashCommand ?? true)
+                .Select(info => (info, info.GetCustomAttribute<CommandAttribute>()))
+                .Where(tuple => tuple.Item2 != null)
+                .GroupBy(tuple => tuple.Item2!.Text.Contains(' ') ? tuple.Item2.Text.SubstringUntilLast(" ", StringComparison.InvariantCulture) : null);
+            foreach (var subcommandSet in subcommandSets) {
+                await CreateModuleAsync(subcommandSet.Key ?? "Unspecified", _serviceProvider, moduleBuilder => BuildTopLevelModules(moduleBuilder, subcommandSet));
+            }
+        }
+
+        private void BuildTopLevelModules(ModuleBuilder moduleBuilder, IGrouping<string?, (MethodInfo info, CommandAttribute?)> subcommandSet) {
+            moduleBuilder.SlashGroupName = subcommandSet.Key;
+            moduleBuilder.Description = subcommandSet.Key;
+
+            foreach (var commandInClass in subcommandSet.GroupBy(tuple => tuple.info.DeclaringType)) {
+                moduleBuilder.AddModule(builder => {
+                    BuildClassModule(commandInClass.Key!, builder, CreateLambdaBuilder(commandInClass.Key!.GetTypeInfo(), this), commandInClass.AsEnumerable());
+                });
             }
         }
 
         private static PropertyInfo TypeInfoProperty = typeof(ModuleBuilder).GetDeclaredProperty("TypeInfo");
-        private void BuildModule(Type module, ModuleBuilder moduleBuilder, Func<IServiceProvider, IInteractionModuleBase> createLambdaBuilder) {
+        private void BuildClassModule(Type module, ModuleBuilder moduleBuilder, Func<IServiceProvider, IInteractionModuleBase> createLambdaBuilder, IEnumerable<(MethodInfo info, CommandAttribute?)> commandMethods) {
             TypeInfoProperty.SetValue(moduleBuilder, module);
-
-            var commandMethods = module
-                .GetMethods()
-                .Where(info => info.GetCustomAttribute<HiddenAttribute>() == null)
-                .Where(info => info.GetCustomAttribute<SlashCommandAdapterAttribute>()?.ProcessSlashCommand ?? true)
-                .Select(info => (info, info.GetCustomAttribute<CommandAttribute>()))
-                .Where(tuple => tuple.Item2 != null);
 
             foreach (var (methodInfo, command) in commandMethods) {
                 moduleBuilder.AddSlashCommand(builder => BuildSlashCommand(builder, command, methodInfo, createLambdaBuilder));
@@ -74,18 +84,19 @@ namespace Bot.DiscordRelated.Interactions {
 
         private static PropertyInfo CallbackProperty = typeof(SlashCommandBuilder).GetProperty("Callback")!;
         private void BuildSlashCommand(SlashCommandBuilder builder, CommandAttribute? command, MethodInfo methodInfo, Func<IServiceProvider, IInteractionModuleBase> createLambdaBuilder) {
+            var commandText = command!.Text.Contains(' ') ? command.Text.SubstringAfterLast(" ") : command.Text;
             var description = methodInfo.GetCustomAttribute<SummaryAttribute>()
                 .Pipe(attribute => attribute?.Text)
                 .Pipe(s => s == null ? null : EntryLocalized.Create("Help", s))
                 .Pipe(localized => localized?.CanGet() == true ? localized.Get(LangLocalizationProvider.EnglishLocalizationProvider) : null)
-                .Pipe(s => s ?? command!.Text);
+                .Pipe(s => s ?? commandText);
 
             var adminCommand = (methodInfo.GetCustomAttribute<RequireUserPermissionAttribute>()?.GuildPermission ?? 0 & GuildPermission.Administrator) != 0
                             || (methodInfo.DeclaringType?.GetCustomAttribute<RequireUserPermissionAttribute>()?.GuildPermission ?? 0 & GuildPermission.Administrator) != 0;
             var preconditions = adminCommand ? new[] { new Discord.Interactions.RequireUserPermissionAttribute(GuildPermission.Administrator) } : Array.Empty<PreconditionAttribute>();
 
             builder
-                .WithName(command!.Text.ToLower())
+                .WithName(commandText.ToLower())
                 .WithDescription(description)
                 .SetEnabledInDm(false)
                 .WithPreconditions(preconditions)
