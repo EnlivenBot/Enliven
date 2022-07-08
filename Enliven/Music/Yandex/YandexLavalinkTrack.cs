@@ -25,7 +25,7 @@ namespace Bot.Music.Yandex {
         public static YandexLavalinkTrack CreateInstance(YandexMusicTrack relatedYandexTrack, IYandexMusicDirectUrlLoader directUrlLoader) {
             var lavalinkTrackInfo = new LavalinkTrackInfo() {
                 Author = relatedYandexTrack.Author, Duration = relatedYandexTrack.Length, IsLiveStream = false, IsSeekable = true, 
-                Position = TimeSpan.Zero, Source = relatedYandexTrack.Uri, Title = relatedYandexTrack.Title, TrackIdentifier = relatedYandexTrack.Id
+                Position = TimeSpan.Zero, Uri = relatedYandexTrack.Uri?.Pipe(s => new Uri(s)), Title = relatedYandexTrack.Title, TrackIdentifier = relatedYandexTrack.Id
             };
             return new YandexLavalinkTrack(relatedYandexTrack, directUrlLoader, TrackEncoder.Encode(lavalinkTrackInfo), lavalinkTrackInfo);
         }
@@ -34,7 +34,7 @@ namespace Bot.Music.Yandex {
             var directUrl = await GetDirectUrl(RelatedYandexTrack.Id);
             var lavalinkTrackInfo = new LavalinkTrackInfo() {
                 Author = Author, Duration = Duration, IsLiveStream = IsLiveStream, IsSeekable = IsSeekable, 
-                Position = Position, Source = directUrl, Title = Title, TrackIdentifier = directUrl
+                Position = Position, Uri = new Uri(directUrl), Title = Title, TrackIdentifier = directUrl, SourceName = "http"
             };
             return lavalinkTrackInfo.CreateTrack();
         }
