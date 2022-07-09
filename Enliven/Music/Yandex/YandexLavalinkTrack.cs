@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Common;
@@ -25,7 +24,8 @@ namespace Bot.Music.Yandex {
         public static YandexLavalinkTrack CreateInstance(YandexMusicTrack relatedYandexTrack, IYandexMusicDirectUrlLoader directUrlLoader) {
             var lavalinkTrackInfo = new LavalinkTrackInfo() {
                 Author = relatedYandexTrack.Author, Duration = relatedYandexTrack.Length, IsLiveStream = false, IsSeekable = true, 
-                Position = TimeSpan.Zero, Uri = relatedYandexTrack.Uri?.Pipe(s => new Uri(s)), Title = relatedYandexTrack.Title, TrackIdentifier = relatedYandexTrack.Id
+                Position = TimeSpan.Zero, Uri = relatedYandexTrack.Uri?.Pipe(s => new Uri(s)), Title = relatedYandexTrack.Title, 
+                TrackIdentifier = relatedYandexTrack.Id, SourceName = "http", ProbeInfo = "mp3"
             };
             return new YandexLavalinkTrack(relatedYandexTrack, directUrlLoader, TrackEncoder.Encode(lavalinkTrackInfo), lavalinkTrackInfo);
         }
@@ -34,11 +34,12 @@ namespace Bot.Music.Yandex {
             var directUrl = await GetDirectUrl(RelatedYandexTrack.Id);
             var lavalinkTrackInfo = new LavalinkTrackInfo() {
                 Author = Author, Duration = Duration, IsLiveStream = IsLiveStream, IsSeekable = IsSeekable, 
-                Position = Position, Uri = new Uri(directUrl), Title = Title, TrackIdentifier = directUrl, SourceName = "http"
+                Position = Position, Uri = new Uri(directUrl), Title = Title, TrackIdentifier = directUrl, 
+                SourceName = "http", ProbeInfo = "mp3"
             };
             return lavalinkTrackInfo.CreateTrack();
         }
-        
+
         private static readonly Dictionary<string, string> UrlCache = new Dictionary<string, string>();
         private async Task<string> GetDirectUrl(string id) {
             if (UrlCache.TryGetValue(id, out var url)) {
