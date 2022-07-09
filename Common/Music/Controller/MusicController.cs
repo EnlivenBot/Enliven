@@ -134,7 +134,8 @@ namespace Common.Music.Controller {
                 WebSocketUri = info.WebSocketUri,
                 Password = info.Password,
                 DisconnectOnStop = false,
-                Label = label
+                Label = label,
+                SuppressReconnectionEntries = true
             };
         }
 
@@ -184,7 +185,7 @@ namespace Common.Music.Controller {
                 _logger.Info("Player for {GuildId} rewieved after disposing", advancedLavalinkPlayer.GuildId);
                 var guildConfig = _guildConfigProvider.Get(advancedLavalinkPlayer.GuildId);
                 newPlayer.WriteToQueueHistory(historyEntries);
-                newPlayer.WriteToQueueHistory(ReconnectedAfterDisposeEntry.WithArg(guildConfig.Prefix, playerSnapshot.StoredPlaylist!.Id));
+                newPlayer.WriteToQueueHistory(ReconnectedAfterDisposeEntry.WithArg(playerSnapshot.StoredPlaylist!.Id));
             });
         }
 
