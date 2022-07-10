@@ -22,7 +22,7 @@ namespace Bot.Commands {
         public async Task SavePlaylist() {
             var playlist = await Player.ExportPlaylist(ExportPlaylistOptions.IgnoreTrackIndex);
             var storedPlaylist = PlaylistProvider.StorePlaylist(playlist, "u" + ObjectId.NewObjectId(), Context.User.ToLink());
-            await ReplyFormattedAsync(Loc.Get("Music.PlaylistSaved", storedPlaylist.Id, GuildConfig.Prefix));
+            await ReplyFormattedAsync(Loc.Get("Music.PlaylistSaved", storedPlaylist.Id));
         }
 
         [ShouldCreatePlayer]

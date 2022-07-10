@@ -54,11 +54,11 @@ namespace Bot.DiscordRelated.Commands {
                         new CommandGroup {
                             Commands = infos.ToList(),
                             GroupId = infos.Key,
-                            GroupNameTemplate = $"{{0}} ({{1}}help {infos.Key}):",
+                            GroupNameTemplate = $"{{0}} (/help {infos.Key}):",
                             GroupTextTemplate = string.Join(' ', infos
                                 .Select(info => info.Name)
                                 .GroupBy(s => s).Select(grouping => grouping.First())
-                                .Select(s => $"`{{0}}{s}`")
+                                .Select(s => $"`/{s}`")
                             )
                         }).ToDictionary(group => @group.GroupId);
             });
@@ -174,12 +174,12 @@ namespace Bot.DiscordRelated.Commands {
 
         public Lazy<Dictionary<string, CommandGroup>> CommandsGroups = null!;
 
-        public IEnumerable<EmbedFieldBuilder> BuildHelpFields(string command, string prefix, ILocalizationProvider loc) {
+        public IEnumerable<EmbedFieldBuilder> BuildHelpFields(string command, ILocalizationProvider loc) {
             return Aliases[command].Select(info => new EmbedFieldBuilder {
                 Name = loc.Get("Help.CommandTitle", command, GetAliasesString(info.Aliases, loc)),
                 Value = $"{loc.Get($"Help.{info.Summary}")}\n" +
                         "```css\n" +
-                        $"{prefix}{info.Name} {(info.Parameters.Count == 0 ? "" : $"[{string.Join("] [", info.Parameters.Select(x => x.Name))}]")}```" +
+                        $"/{info.Name} {(info.Parameters.Count == 0 ? "" : $"[{string.Join("] [", info.Parameters.Select(x => x.Name))}]")}```" +
                         (info.Parameters.Count == 0
                             ? ""
                             : "\n" + string.Join("\n",
@@ -196,7 +196,7 @@ namespace Bot.DiscordRelated.Commands {
         private static string GetAliases(IEnumerable<string> aliases) {
             var s = new StringBuilder();
             foreach (var alias in aliases) {
-                s.Append($" `{alias}` ");
+                s.Append($" `/{alias}` ");
             }
 
             return s.ToString().Trim();

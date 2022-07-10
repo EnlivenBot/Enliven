@@ -68,7 +68,7 @@ namespace Bot.DiscordRelated.Music {
             var embedPlayerDisplay = _cache.GetOrAdd(id, s => {
                 var guildConfig = _guildConfigProvider.Get(channel.GuildId);
                 // TODO: Implement proper logger creation
-                var display = new EmbedPlayerDisplay(channel, _client, guildConfig.Loc, _commandHandlerService, guildConfig.PrefixProvider, _messageComponentService, _logger, _artworkService);
+                var display = new EmbedPlayerDisplay(channel, _client, guildConfig.Loc, _commandHandlerService, _messageComponentService, _logger, _artworkService);
                 _ = display.Initialize(finalLavalinkPlayer);
 
                 return display;

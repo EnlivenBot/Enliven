@@ -42,7 +42,7 @@ namespace Bot.Commands {
             }
             catch (Exception) {
                 await ReplyFormattedAsync(Loc.Get("CommandHandler.FailedTitle"),
-                    Loc.Get("MessageHistory.IdFailedToParse").Format(id.SafeSubstring(100, "..."), GuildConfig.Prefix), 
+                    Loc.Get("MessageHistory.IdFailedToParse").Format(id.SafeSubstring(100, "...")), 
                     Constants.StandardTimeSpan);
                 Context.Message.SafeDelete();
                 return;

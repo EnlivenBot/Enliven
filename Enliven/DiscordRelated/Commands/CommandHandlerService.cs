@@ -86,10 +86,9 @@ namespace Bot.DiscordRelated.Commands {
                         await SendErrorMessage(msg, guildConfig.Loc, guildConfig.Loc.Get("CommandHandler.UnmetPrecondition"));
                     }
                     else {
-                        await AddEmojiErrorHint(msg, guildConfig.Loc, CommonEmoji.Help,
-                            new EntryLocalized("CommandHandler.UnknownCommand").Add(query.SafeSubstring(40, "...")!,
-                                _fuzzySearch.Search(query).GetBestMatches(3).Select(match => $"`{match.SimilarTo}`").JoinToString(", "),
-                                guildConfig.Prefix));
+                        var bestMatches = _fuzzySearch.Search(query).GetBestMatches(3).Select(match => $"`{match.SimilarTo}`").JoinToString(", ");
+                        var entryLocalized = new EntryLocalized("CommandHandler.UnknownCommand").Add(query.SafeSubstring(40, "...")!, bestMatches);
+                        await AddEmojiErrorHint(msg, guildConfig.Loc, CommonEmoji.Help, entryLocalized);
                     }
 
                     return;
@@ -103,11 +102,11 @@ namespace Bot.DiscordRelated.Commands {
                     switch (result.Error) {
                         case CommandError.ParseFailed:
                             await AddEmojiErrorHint(msg, guildConfig.Loc, CommonEmoji.Help, new EntryLocalized("CommandHandler.ParseFailed"),
-                                _commandService.BuildHelpFields(command.Item1.Value.Key.Alias, guildConfig.Prefix, guildConfig.Loc));
+                                _commandService.BuildHelpFields(command.Item1.Value.Key.Alias, guildConfig.Loc));
                             break;
                         case CommandError.BadArgCount:
                             await AddEmojiErrorHint(msg, guildConfig.Loc, CommonEmoji.Help, new EntryLocalized("CommandHandler.BadArgCount"),
-                                _commandService.BuildHelpFields(command.Item1.Value.Key.Alias, guildConfig.Prefix, guildConfig.Loc));
+                                _commandService.BuildHelpFields(command.Item1.Value.Key.Alias, guildConfig.Loc));
                             break;
                         case CommandError.ObjectNotFound:
                             await SendErrorMessage(msg, guildConfig.Loc, result.ErrorReason);

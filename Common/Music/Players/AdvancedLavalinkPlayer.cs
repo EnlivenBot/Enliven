@@ -72,7 +72,7 @@ namespace Common.Music.Players {
 
                 if (parameters.ShutdownDisplays) {
                     var body = parameters.SavePlaylist
-                        ? ConcatLines.WithArg(reason, ResumeViaPlaylists.WithArg(GuildConfig.Prefix, playerSnapshot.StoredPlaylist!.Id))
+                        ? ConcatLines.WithArg(reason, ResumeViaPlaylists.WithArg(playerSnapshot.StoredPlaylist!.Id))
                         : reason;
                     var displayShutdownTasks = Displays.ToList().Select(async display => {
                         try {
@@ -163,7 +163,7 @@ namespace Common.Music.Players {
             if (IsShutdowned || _isShutdownRequested) return;
             try {
                 Logger.Warn("Shutdowning player in {GuildId} due to Dispose call", GuildId);
-                await Shutdown(TryReconnectAfterDisposeEntry.WithArg(GuildConfig.Prefix), ParametersForDisposedPlayer);
+                await Shutdown(TryReconnectAfterDisposeEntry, ParametersForDisposedPlayer);
                 var playerSnapshot = await ShutdownTask;
 
                 var notificationUpdateTasks = Displays
@@ -178,7 +178,7 @@ namespace Common.Music.Players {
             }
             
             Task LeaveNotificationToDisplay(IPlayerDisplay display, PlayerSnapshot snapshot)
-                => display.LeaveNotification(PlaybackStoppedEntry, TryReconnectAfterDisposeEntry.WithArg(GuildConfig.Prefix, snapshot.StoredPlaylist!.Id));
+                => display.LeaveNotification(PlaybackStoppedEntry, TryReconnectAfterDisposeEntry.WithArg(snapshot.StoredPlaylist!.Id));
         }
 
         public virtual async Task<PlayerEffectUse> ApplyEffect(PlayerEffect effect, IUser? source) {

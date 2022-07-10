@@ -17,7 +17,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <None Remove="Localization\en.json" />
         <None Update="nlog.config">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>

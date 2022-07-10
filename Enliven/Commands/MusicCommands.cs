@@ -170,7 +170,7 @@ namespace Bot.Commands {
         [Summary("fastforward0s")]
         public async Task FastForward([Summary("fastforward0_0s")] TimeSpan? timeSpan = null) {
             if (!Player.CurrentTrack!.IsSeekable) {
-                _ = ReplyFormattedAsync(Loc.Get("Music.TrackNotSeekable").Format(GuildConfig.Prefix), true).DelayedDelete(Constants.ShortTimeSpan);
+                _ = ReplyFormattedAsync(Loc.Get("Music.TrackNotSeekable").Format(Context.User.Mention), true).DelayedDelete(Constants.ShortTimeSpan);
                 return;
             }
 
@@ -186,7 +186,7 @@ namespace Bot.Commands {
         [Summary("rewind0s")]
         public async Task Rewind([Summary("fastforward0_0s")] TimeSpan? timeSpan = null) {
             if (!Player.CurrentTrack!.IsSeekable) {
-                _ = ReplyFormattedAsync(Loc.Get("Music.TrackNotSeekable").Format(GuildConfig.Prefix), true).DelayedDelete(Constants.ShortTimeSpan);
+                _ = ReplyFormattedAsync(Loc.Get("Music.TrackNotSeekable").Format(Context.User.Mention), true).DelayedDelete(Constants.ShortTimeSpan);
                 return;
             }
 
@@ -202,7 +202,7 @@ namespace Bot.Commands {
         [Summary("seek0s")]
         public async Task Seek([Summary("seek0_0s")] TimeSpan position) {
             if (!Player.CurrentTrack!.IsSeekable) {
-                _ = ReplyFormattedAsync(Loc.Get("Music.TrackNotSeekable").Format(GuildConfig.Prefix), true).DelayedDelete(Constants.ShortTimeSpan);
+                _ = ReplyFormattedAsync(Loc.Get("Music.TrackNotSeekable").Format(Context.User.Mention), true).DelayedDelete(Constants.ShortTimeSpan);
                 return;
             }
 

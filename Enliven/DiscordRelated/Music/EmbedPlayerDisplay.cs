@@ -35,7 +35,6 @@ namespace Bot.DiscordRelated.Music {
     public class EmbedPlayerDisplay : PlayerDisplayBase {
         private readonly CommandHandlerService _commandHandlerService;
         private readonly ILocalizationProvider _loc;
-        private readonly IPrefixProvider _prefixProvider;
         private readonly IGuild? _targetGuild;
         private readonly SingleTask _updateControlMessageTask;
         private readonly SingleTask _controlMessageSendTask;
@@ -55,21 +54,20 @@ namespace Bot.DiscordRelated.Music {
         private EnlivenComponentBuilder? _messageComponentManager;
 
         public EmbedPlayerDisplay(ITextChannel targetChannel, IDiscordClient discordClient, ILocalizationProvider loc,
-                                  CommandHandlerService commandHandlerService, IPrefixProvider prefixProvider, MessageComponentService messageComponentService, 
+                                  CommandHandlerService commandHandlerService, MessageComponentService messageComponentService, 
                                   ILogger logger, IArtworkService artworkService) :
-            this((IMessageChannel)targetChannel, discordClient, loc, commandHandlerService, prefixProvider, messageComponentService, logger, artworkService) {
+            this((IMessageChannel)targetChannel, discordClient, loc, commandHandlerService, messageComponentService, logger, artworkService) {
             _targetGuild = targetChannel.Guild;
         }
 
         public EmbedPlayerDisplay(IMessageChannel targetChannel, IDiscordClient discordClient, ILocalizationProvider loc,
-                                  CommandHandlerService commandHandlerService, IPrefixProvider prefixProvider, MessageComponentService messageComponentService, 
+                                  CommandHandlerService commandHandlerService, MessageComponentService messageComponentService, 
                                   ILogger logger, IArtworkService artworkService) {
             _messageComponentService = messageComponentService;
             _logger = logger;
             _artworkService = artworkService;
             _loc = loc;
             _commandHandlerService = commandHandlerService;
-            _prefixProvider = prefixProvider;
             _targetChannel = targetChannel;
             _discordClient = discordClient;
 
@@ -256,7 +254,7 @@ namespace Bot.DiscordRelated.Music {
                     "Shuffle"       => "shuffle",
                     "Stop"          => "stop",
                     "Repeat"        => "repeat",
-                    "Effects"       => "effects",
+                    "Effects"       => "effects current",
                     _               => throw new ArgumentOutOfRangeException()
                 };
 
@@ -385,7 +383,7 @@ namespace Bot.DiscordRelated.Music {
         private void UpdateQueue() {
             if (Player.Playlist.Count == 0) {
                 _embedBuilder.Fields["Queue"].Name = _loc.Get("Music.QueueEmptyTitle");
-                _embedBuilder.Fields["Queue"].Value = _loc.Get("Music.QueueEmpty", _prefixProvider.GetPrefix());
+                _embedBuilder.Fields["Queue"].Value = _loc.Get("Music.QueueEmpty");
             }
             else {
                 _embedBuilder.Fields["Queue"].Name =

@@ -46,7 +46,7 @@ namespace Bot.Commands {
             var i = 0;
             foreach (var (key, pack) in LocalizationManager.Languages) {
                 embedBuilder.AddField($"{pack.LocalizationFlagEmojiText} **{pack.LocalizedName}** ({pack.LanguageName})",
-                    Loc.Get("Localization.LanguageDescription").Format(GuildConfig.Prefix, key, pack.Authors, pack.TranslationCompleteness), true);
+                    Loc.Get("Localization.LanguageDescription").Format(key, pack.Authors, pack.TranslationCompleteness), true);
                 var enlivenButtonBuilder = new EnlivenButtonBuilder().WithStyle(ButtonStyle.Secondary)
                     .WithEmote(pack.LocalizationFlagEmoji!).WithLabel($"{pack.LocalizedName} ({pack.LanguageName})")
                     .WithCustomId(key).WithTargetRow(i++ / 5);
