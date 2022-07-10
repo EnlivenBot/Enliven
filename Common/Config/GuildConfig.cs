@@ -36,7 +36,6 @@ namespace Common.Config {
 
     public partial class GuildConfig {
         [BsonIgnore] private ILocalizationProvider? _loc;
-        [BsonIgnore] private GuildPrefixProvider? _prefixProvider;
         [BsonId] public ulong GuildId { get; set; }
         public string Prefix { get; set; } = "&";
         public int Volume { get; set; } = 100;
@@ -78,7 +77,6 @@ namespace Common.Config {
         [BsonIgnore] public IObservable<ChannelFunction> FunctionalChannelsChanged => _functionalChannelsChanged.AsObservable();
 
         [BsonIgnore] public ILocalizationProvider Loc => _loc ??= new GuildLocalizationProvider(this);
-        [BsonIgnore] public GuildPrefixProvider PrefixProvider => _prefixProvider ??= new GuildPrefixProvider(this);
         
         [BsonIgnore] public bool SendWithoutHistoryPacks => HistoryMissingInLog && HistoryMissingPacks;
 

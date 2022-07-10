@@ -29,20 +29,17 @@ namespace Bot.DiscordRelated.Music {
                                          IGuildConfigProvider guildConfigProvider) {
             _loc = loc;
             _targetChannel = targetChannel;
-            IPrefixProvider prefixProvider = _targetChannel is ITextChannel textChannel
-                ? guildConfigProvider.Get(textChannel.Guild.Id).PrefixProvider
-                : (IPrefixProvider)new BotPrefixProvider();
             
             _enlivenComponentBuilder = messageComponentService.GetBuilder();
             _enlivenEmbedBuilder.Title = _loc.Get("Music.Effects");
 
             var applyEffectTitle = _loc.Get("Effects.ApplyEffectTitle");
             var effects = PlayerEffectSource.DefaultEffects.Select(source => $"`{source.GetSourceName()}`").JoinToString(", ");
-            var applyEffectDescription = _loc.Get("Effects.ApplyEffectDescription", prefixProvider.GetPrefix(), effects);
+            var applyEffectDescription = _loc.Get("Effects.ApplyEffectDescription", effects);
             _enlivenEmbedBuilder.AddField("ApplyEffects", applyEffectTitle, applyEffectDescription);
 
             var addCustomEffectTitle = _loc.Get("Effects.AddCustomEffectTitle");
-            var addCustomEffectDescription = _loc.Get("Effects.AddCustomEffectDescription", prefixProvider.GetPrefix());
+            var addCustomEffectDescription = _loc.Get("Effects.AddCustomEffectDescription");
             _enlivenEmbedBuilder.AddField("CustomEffects", addCustomEffectTitle, addCustomEffectDescription);
 
             var firstButton = new EnlivenButtonBuilder().WithStyle(ButtonStyle.Primary).WithDisabled(true);
