@@ -6,15 +6,15 @@
   "Authors": "SKProCH",
   "Data": {
     "Messages": {
-      "WelcomeDescription": "Greetings! 👋\n Thank you for adding me here!\n\n My prefix is `{0}`, or you can just mention me - {1}. Also, you can use slash commands to interact with bot.\n The list of commands can be viewed through `/help`.\n You also can get support on our [Discord server](https://discord.gg/zfBffbBbCp).\n\n Here is a brief overview of my commands:",
+      "WelcomeDescription": "Greetings! 👋\nThank you for adding me here!\n\nMy prefix is `{0}`, or you can just mention me - {1}. Also, you can use slash commands to interact with bot.\nThe list of commands can be viewed through `/help`.\nYou also can get support on our [Discord server](https://discord.gg/zfBffbBbCp).\n\nHere is a brief overview of my commands:",
       "WelcomeMusicTitle": "***📻 Music***",
-      "WelcomeMusic": "You can request tracks from YouTube, SoundCloud, YaMusic and many other platforms.\n You can control playback through emojis and commands. You can create and request your own playlists and much more. List of music commands - `/help music`",
+      "WelcomeMusic": "You can request tracks from YouTube, SoundCloud, Yandex Music, Spotify and many other platforms.\nYou can control playback through buttons and commands. You can create and request your own playlists and much more. List of music commands - `/help music`",
       "WelcomeLoggingTitle": ":book: ***Logging***",
-      "WelcomeLogging": "This bot collects a detailed history and can display all message changes in one place. If necessary, export the log to an image.\n Changes to messages do not clog the log channel, instead the entire history is exported when the message is deleted.\n To enable log collection, write `/enablelogging true`. To see the change history, put :book: under the desired message or use the command `/help history`",
+      "WelcomeLogging": "This bot collects a detailed history and can display all message changes in one place. If necessary, export the log to an image.\nChanges to messages do not clog the log channel, instead the entire history is exported when the message is deleted.\nTo enable log collection, write `/enablelogging true`. To see the change history, put :book: under the desired message or use the command `/help history`",
       "WelcomeLocalizationTitle": "🇺🇸 ***Localization***",
       "WelcomeLocalization": "You can change the bot's response language with `/language`",
       "WelcomeInfoTitle": "ℹ️ **Additional Information**",
-      "WelcomeInfo": "`/help setchannel` - to assign a role to channels (without this, logging will not send reports when a message is deleted, for example)\n `/help setprefix` - to change the bot prefix\n `/stats` and `/userstats` - to view statistics\n Invitation link can be found in bot profile",
+      "WelcomeInfo": "`/help setchannel` - to assign a role to channels (without this, logging will not send reports when a message is deleted, for example)\n`/help setprefix` - to change the bot prefix\n`/stats` and `/userstats` - to view statistics\nInvitation link can be found in bot profile",
       "WelcomeGithubTitle": "🆘 **Help us**",
       "WelcomeGithub": "If **you find an error**, you want to help with localizations or you **have an idea** - open an [issue](https://gitlab.com/skprochlab/nJMaLBot/-/issues) or create a [Merge Request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html) on [our GitLab](https://gitlab.com/skprochlab/nJMaLBot)!"
     },
@@ -22,7 +22,7 @@
       "Success": "Successfully changed the bot language to `{0}`",
       "Fail": "There is no language {0}.\nAvailable: {1}",
       "LanguagesList": "Language selection",
-      "LanguageDescription": "```/language {0}```\n Authors - {1}\n Completeness of translation - {2}%"
+      "LanguageDescription": "```/language {0}```\nAuthors - {1}\nCompleteness of translation - {2}%"
     },
     "MusicQueues": {
       "Enqueued": "**{0}** enqueue `{1}`",
@@ -71,7 +71,7 @@
       "MusicDisabled": "The bot does not have access to any Lavalink server and cannot play anything. Write to the host owner about this problem.",
       "PlayerDropped": "Unfortunately, the node that served your playback has crashed.",
       "PlayerMoved": "The node that served your playback has crashed. We resumed it on another node.",
-      "PlaylistSaved": "Playlist saved. ID: `{0}`\n Use `/loadplaylist {0}`\n Or `/addplaylist {0}`\n Or `/runplaylist {0}`\n Details about these commands can be viewed through `/help`",
+      "PlaylistSaved": "Playlist saved. ID: `{0}`\nUse `/loadplaylist {0}`\nOr `/addplaylist {0}`\nOr `/runplaylist {0}`\nDetails about these commands can be viewed through `/help`",
       "PlaylistNotFound": "Playlist `{0}` not found",
       "LoadPlaylist": "**{0}** starts loading playlist `{1}`",
       "ClearPlaylist": "**{0}** clears playlist",
@@ -214,7 +214,7 @@
       "UnmetPrecondition": "You do not have permission to execute this command!",
       "BadArgCount": "Error - wrong number of arguments for this command. Here's a hint for using the command:",
       "ParseFailed": "An error occurred while trying to parse this command. Here's a hint for using the command:",
-      "UnknownCommand": "Command `{0}` not found!\nPerhaps you wanted to use one of these: {1}\n Use the command `/help` for a list of commands.",
+      "UnknownCommand": "Command `{0}` not found!\nPerhaps you wanted to use one of these: {1}\nUse the command `/help` for a list of commands.",
       "CommandOnCooldown": "The command you were trying to execute is on cooldown. Try again later."
     },
     "Commands": {
@@ -282,7 +282,7 @@
     },
     "ChainsCommon": {
       "Ended": "Completed",
-      "Thanks": "The current command chain has been completed.\n Thanks for using this bot. {loc:Common.HelpByVote}",
+      "Thanks": "The current command chain has been completed.\nThanks for using this bot. {loc:Common.HelpByVote}",
       "ReasonStartedNew": "The current chain of commands has been terminated, as a new one has been launched.",
       "ReasonTimeout": "The current command chain ended because the timeout limit was reached",
       "CantSend": "We cannot complete this action in {0} because we do not have the necessary permissions"
