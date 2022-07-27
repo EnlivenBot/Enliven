@@ -6,15 +6,15 @@
   "Authors": "sergio-faraldo",
   "Data": {
     "Messages": {
-      "WelcomeDescription": "¡Hola! 👋\n ¡Gracias por añadirme!\n\n Mi prefijo es ​​`{0}`, aunque también puedes mencionarme si prefieres - {1}.\n Puedes ver la lista de comandos usando `{0}help`.\n También puede obtener asistencia en nuestro [servidor de Discord](https://discord.gg/zfBffbBbCp).\n\n Aquí tienes un resumen de mis opciones:",
+      "WelcomeDescription": "¡Hola! 👋\n ¡Gracias por añadirme!\n\nMi prefijo es ​​`{0}`, aunque también puedes mencionarme si prefieres - {1} o usar los slash commands ( comandos / ).\nPara ver la lista de comandos, escribe `/help`.\nPara recibir ayuda, puedes unirte a nuestro [servidor de Discord](https://discord.gg/zfBffbBbCp).\n\n Aquí tienes un resumen de mis comandos:",
       "WelcomeMusicTitle": "***📻 Música***",
-      "WelcomeMusic": "Puedes pedirme que reproduzca música de YouTube, SoundCloud, YaMusic y muchos otros servicios.\n Para controlar la reproducción puedes usar los emoticonos o usando comandos, como te sea más cómodo. También puedes crear playlists y mucho más. Para ver la lista completa de comandos de música, escribe `{0}help music`",
+      "WelcomeMusic": "Puedes pedirme que reproduzca música de YouTube, SoundCloud, Yandex Music, Spotify y muchos otros servicios.\nPara controlar la reproducción puedes usar los botones o usando comandos, como te sea más cómodo. También puedes crear y solicitar tus propias playlists y mucho más. Para ver la lista completa de comandos de música, escribe `/help music`",
       "WelcomeLoggingTitle": ":book: ***Logging***",
-      "WelcomeLogging": "Guardo un historial detallado y puedo mostrar todos los cambios de mensajes realizados. Si es necesario, puedes exportar el historial en forma de imagen.\n Los cambios de mensajes no atascarán el canal de logs, solamente exporto al canal el historial de cambios de un mensaje cuando este se elimina .\n Para habilitar la recolección de logs, escribe `{0}enablelogging true`. Para ver el historial de cambios, pon :book: debajo del mensaje del que quieras ver los cambios o usa el comando `{0}help history`",
+      "WelcomeLogging": "Guardo un historial detallado y puedo mostrar todos los cambios de mensajes realizados. Si es necesario, puedes exportar el historial en forma de imagen.\nLos cambios de mensajes no atascarán el canal de logs, solamente exporto al canal el historial de cambios de un mensaje cuando este se elimina .\nPara habilitar la recolección de logs, escribe `/enablelogging true`. Para ver el historial de cambios, pon :book: debajo del mensaje del que quieras ver los cambios o usa el comando `/help history`",
       "WelcomeLocalizationTitle": "🇪🇸 ***Idioma***",
-      "WelcomeLocalization": "Puedes cambiar el idioma que hablo escribiendo `{0}language`",
+      "WelcomeLocalization": "Puedes cambiar el idioma que hablo escribiendo `/language`",
       "WelcomeInfoTitle": "ℹ️ **Información adicional**",
-      "WelcomeInfo": "`{0}help setchannel` - para asignar el rol a los canales (sin esto, las funciones de logging no informarán cuando un mensaje se elimina, por ejemplo)\n `{0}help setprefix` - para cambiar mi prefijo\n `{0}stats` y `{0}userstats` - para ver estadísticas\n `{0}invite` - para ver mi link de invitación",
+      "WelcomeInfo": "`/help setchannel` - para asignar el rol a los canales (sin esto, las funciones de logging no informarán cuando un mensaje se elimina, por ejemplo)\n `/help setprefix` - para cambiar mi prefijo\n `/stats` y `/userstats` - para ver estadísticas\nEl enlace para añadirme a otros servidores está en mi perfil",
       "WelcomeGithubTitle": "🆘 **Ayúdanos**",
       "WelcomeGithub": "Si **encuentras un error**, quieres ayudar con las traducciones o **tienes una idea** - abre un [issue](https://gitlab.com/skprochlab/nJMaLBot/-/issues) o crea una [Merge Request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html) en [nuestro GitLab](https://gitlab.com/skprochlab/nJMaLBot)!"
     },
@@ -22,7 +22,7 @@
       "Success": "Idioma cambiado a `{0}`",
       "Fail": "No existe el idioma {0}.\nIdiomas disponibles: {1}",
       "LanguagesList": "Selección de idioma",
-      "LanguageDescription": "```{0}language {1}```\n Autores - {2}\n Progreso de la traducción - {3}%"
+      "LanguageDescription": "```/language {0}```\n Autores - {1}\n Progreso de la traducción - {2}%"
     },
     "MusicQueues": {
       "Enqueued": "**{0}** ha añadido en la cola: `{1}`",
@@ -42,24 +42,21 @@
       "NodeChanged": "**{0}** ha movido la reproducción a un nodo nuevo: `{1}`",
       "LimitExceed": "**{0}** ha hecho `{1}` solicitudes que no se han podido procesar. La cola ya contiene {2} pistas",
       "PlaylistLoadingLimit": "**{0}** no puede cargar una playlist con `{1}` pistas. La cola no puede tener más de {2} pistas",
-      "QueueTitle": "Cola",
-      "QueuePage": "Página `{0}` de `{1}`",
-      "QueuePageDescription": "⏮️⏭️ Para moverse al principio o al final \n◀️▶️ para cambiar a la siguiente o anterior página \n🗃️ para exportar a archivo",
-      "QueueDeprecated": "La cola ha cambiado, este mensaje de cola no es relevante. Para ver la cola otra vez, escribe `{0}queue`"
+      "QueueTitle": "Cola"
     },
     "Music": {
       "RequestHistory": "Historial de peticiones",
-      "RequestTracks": "Solicita pistas con `{0}play [pista]`",
+      "RequestTracks": "Solicitar canciones vía `/play`",
       "QueueEmpty": "La cola está vacía. {loc:Music.RequestTracks}",
       "VolumeOutOfRange": "Volumen fuera de rango (10% - 200%)",
       "RequestedBy": "Solicitada por: {0}",
       "NothingPlaying": "Nada en reproducción. {loc:Music.RequestTracks}",
       "Fail": "Error",
       "Playback": "Reproducción",
-      "UserStopPlayback": "**{0}** ha detenido la reproducción\n\nAyúdanos votando (comando `vote`)",
+      "UserStopPlayback": "**{0}** ha detenido la reproducción {loc:Common.HelpByVote}",
       "PlaybackStopped": "Reproducción detenida",
-      "NoListenersLeft": "Reproducción detenida, no quedan oyentes o pistas.\n\nAyúdanos votando (comando `vote`)",
-      "BotKicked": "Reproducción detenida - el bot fue desconectado del canal por alguien\n\nAyúdanos votando (comando `vote`)",
+      "NoListenersLeft": "Reproducción detenida - no quedan oyentes o canciones {loc:Common.HelpByVote}",
+      "BotKicked": "Reproducción detenida - el bot fue desconectado del canal por alguien {loc:Common.HelpByVote}",
       "NotFound": "No hay resultados de: `{0}`",
       "Loading": "Cargando",
       "Queue": "Cola - `{0}` de `{1}`  (Total: `{2}`)",
@@ -74,7 +71,7 @@
       "MusicDisabled": "No tengo acceso a ningún servidor Lavalink y no puedo reproducir nada. Informa al propietario del host sobre este problema.",
       "PlayerDropped": "Por desgracia, el nodo que estaba reproduciendo tu música ha fallado",
       "PlayerMoved": "El nodo que estaba reproduciendo tu música ha fallado. He movido la reproducción a otro nodo.",
-      "PlaylistSaved": "Playlist guardada. ID: `{0}`\n Usa `{1}loadplaylist {0}`\n o `{1}addplaylist {0}`\n o `{1}runplaylist {0}` para usarla.\n Puedes ver más detalles sobre los comandos escribiendo: `{1}help`",
+      "PlaylistSaved": "Playlist guardada. ID: `{0}`\n Usa `/loadplaylist {0}`\n o `/addplaylist {0}`\n o `/runplaylist {0}` para usarla.\n Puedes ver más detalles sobre los comandos escribiendo: `/help`",
       "PlaylistNotFound": "No encuentro la playlist `{0}`",
       "LoadPlaylist": "**{0}** ha cargado la playlist `{1}`",
       "ClearPlaylist": "**{0}** ha vaciado la playlist",
@@ -89,13 +86,13 @@
       "Waiting": "Esperando...",
       "QueueEnd": "Se ha alcanzado el fin de la cola",
       "OnlyOneNode": "Por desgracia, solamente está disponible el nodo en el que estoy ahora mismo",
-      "ResumeViaPlaylists": "Puedes intentar volver a reproducir usando: `{0}loadplaylist {1}`",
+      "ResumeViaPlaylists": "Puedes intentar volver a reproducir usando: `/loadplaylist {0}`",
       "Empty": "Vacío",
       "Warning": "**Alerta**",
       "WarningCustomEmoji": "‼️No puedo añadir los emojis personalizados que necesito para el reproductor. Para hacerlo, necesito el permiso `USE_EXTERNAL_EMOJIS`.",
       "TrackNotSeekable": "{0}, lo siento, pero no puedo mover la posición de reproducción en esta pista",
-      "TryReconnectAfterDispose": "Estoy intentando reconectar el reproductor automáticamente.\n Si no lo consigo, escribe `{0}loadplaylist {1}`",
-      "ReconnectedAfterDispose": "He reiniciado el reproductor, todo listo. Si aún falla algo, usa `{0}stop` y `{0}loadplaylist {1}`",
+      "TryReconnectAfterDispose": "Estoy intentando reconectar el reproductor automáticamente. Si no lo consigo, escribe `/loadplaylist {0}`",
+      "ReconnectedAfterDispose": "He reiniciado el reproductor, todo listo. Si aún falla algo, usa `/stop` y `/loadplaylist {0}`",
       "ResolvingTracks": "**{0}** ha hecho `{1}` solicitudes. He procesado `{2}` de ellas y he añadido `{3}` pistas.",
       "CurrentTrackNonSpotify": "La pista actual no es recibida de Spotify. Cambia a una pista de Spotify o proporcióname el track ID como argumento a este comando",
       "TrackStuck": "La pista actual está bloqueada. La voy a saltar.",
@@ -116,7 +113,7 @@
     },
     "Effects": {
       "AddEffectTitle": "Cómo agregar un efecto",
-      "AddEffectDescription": "1. Ve al [configurador](https://tinyurl.com/enliveneffects) \n2. Introduce un nombre para el efecto \n3. Edita las opciones para el efecto \n4. Copia el texto JSON del campo \"JSON Output\" de la esquina superior derecha \n5. Ejecuta el comando `{0}effect add TEXTOJSON`, donde TEXTOJSON es el texto copiado en el paso anterior",
+      "AddEffectDescription": "1. Ve al [configurador](https://tinyurl.com/enliveneffects) \n2. Introduce un nombre para el efecto \n3. Edita las opciones para el efecto \n4. Copia el texto JSON del campo \"JSON Output\" de la esquina superior derecha \n5. Ejecuta el comando `/effect add TEXTOJSON`, donde TEXTOJSON es el texto copiado en el paso anterior",
       "NameLength": "La longitud de `Nombre` debe estar entre `{0}` y `{1}` caracteres",
       "FiltersCount": "Debes seleccionar al menos un filtro",
       "ParametersCount": "Filtro `{0}`: Debes establecer al menos un parámetro",
@@ -125,9 +122,9 @@
       "BandsDuplicate": "El ecualizador no puede tener bandas duplicadas ({0})",
       "BandsNumbers": "Las bandas deben ser entre 0 y 14",
       "ApplyEffectTitle": "Aplicar efecto",
-      "ApplyEffectDescription": "Usa el comando `{0}effect NOMBRE` donde NOMBRE es el nombre del efecto o id.\nEfectos predeterminados: {1}",
+      "ApplyEffectDescription": "Usa el comando `/effect NOMBRE` donde NOMBRE es el nombre del efecto o id.\nEfectos predeterminados: {0}",
       "AddCustomEffectTitle": "Efectos personalizados",
-      "AddCustomEffectDescription": "Use el comando `{0}effect add` para obtener instrucciones",
+      "AddCustomEffectDescription": "Use el comando `/effects add` para obtener instrucciones",
       "Remove": "Eliminar:",
       "Add": "Añadir:"
     },
@@ -138,11 +135,11 @@
       "utils": "Utilidades"
     },
     "Help": {
-      "HelpPrefix": "Prefijo actual `{0}` o mencióname ({1}).\nTambién puede obtener asistencia en nuestro [servidor de Discord](https://discord.gg/zfBffbBbCp).",
+      "HelpPrefix": "Prefijo actual `{0}` o mencióname ({1}). También puedes usar comandos slash ( comandos / )\nTambién puede obtener asistencia en nuestro [servidor de Discord](https://discord.gg/zfBffbBbCp).",
       "HelpTitle": "Comandos disponibles",
       "HelpDescription": "Ayuda para todos los comandos y categorías",
       "NotFoundTitle": "Comando no encontrado",
-      "NotFoundDescription": "Comando `{0}` no encontrado. Escribe `{1}help` para ver todos los comandos disponibles.",
+      "NotFoundDescription": "Comando `{0}` no encontrado. Escribe `/help` para ver todos los comandos disponibles.",
       "CommandsOfGroup": "Comandos disponibles del grupo `{0}`",
       "CommandTitle": "**{0}** - {1}",
       "ByCommand": "Ayuda: `{0}`",
@@ -208,14 +205,16 @@
       "effect0s": "Aplica o elimina el efecto de post-procesamiento",
       "effect0_0s": "Nombre o ID del efecto (predeterminados: `mono`, `bassboost`(`bb`), `nightcore`(`nc`), `8d`)",
       "effect0_1s": "Parámetro del efecto aplicado. Por ejemplo, para el efecto `bassboost`: `Low`, `Medium`, `High`, `Extreme`",
-      "effects_current0s": "Mostrar y permitir gestionar efectos de sonido"
+      "effects_current0s": "Mostrar y permitir gestionar efectos de sonido",
+      "effects_add0s": "Añadir un efecto de sonido personalizado",
+      "effects_add0_0s": "Cadena JSON que representa el nuevo efecto. Dejar vacío para obtener la guía"
     },
     "CommandHandler": {
       "FailedTitle": "Error al ejecutar un comando",
       "UnmetPrecondition": "No tienes permisos para ejecutar este comando!",
       "BadArgCount": "Error - número incorrecto de argumentos. Info del comando:",
       "ParseFailed": "Error al leer el comando. Info del comando:",
-      "UnknownCommand": "¡Comando `{0}` no encontrado!\nQuizá quieras usar uno de estos: {1}\n Usa el comando `{2}help` para ver la lista de comandos.",
+      "UnknownCommand": "¡Comando `{0}` no encontrado!\nQuizá quieras usar uno de estos: {1}\nUsa el comando `/help` para ver la lista de comandos.",
       "CommandOnCooldown": "El comando que intentabas ejecutar está en tiempo de enfriamiento ahora mismo. Espera un poco."
     },
     "Commands": {
@@ -242,7 +241,7 @@
       "MessageId": "ID de mensaje: {0}",
       "LogTitle": "Historial de cambios de mensaje",
       "MessageNull": "No se puede obtener el historial de cambios: mensaje no encontrado. \nPosibles razones: \n- ID incorrecto \n- Mensaje eliminado \n- El bot ha perdido acceso al mensaje.",
-      "MessageWithoutHistory": "[Message]({0}) historial no disponible.\nPosibles razones:\n- El mensaje fue enviado antes de que el bot entrase en el servidor\n- El bot estaba offline cuando se envió el mensaje\n- El mensaje pertenece al canal de logs\n- Logging está deshabilitado (usa el comando `logging` para habilitarlo)",
+      "MessageWithoutHistory": "[Message]({0}) historial no disponible.\nPosibles razones:\n- El mensaje fue enviado antes de que el bot entrase en el servidor\n- El bot estaba offline cuando se envió el mensaje\n- El mensaje pertenece al canal de logs\n- Logging está deshabilitado (usa el comando `/logging` para configurarlo)",
       "ByAuthor": "Por {0}",
       "Requester": "Solicitante",
       "ChannelDeleted": "Canal {0} ({1}) en {2} fue eliminado. {3} mensajes borrados.",
@@ -251,7 +250,7 @@
       "Attachments": "Adjuntos: {0}",
       "AttachmentsTitle": "Adjuntos",
       "EmptyMessage": "```Mensaje sin texto```",
-      "IdFailedToParse": "No se puede reconocer el ID de mensaje (y el de canal) en `{0}`. \nEjemplo de uso:\n> {1}history 276780134676037642-728591222217637918\n> {1}history 728591222217637918",
+      "IdFailedToParse": "No se puede reconocer el ID de mensaje (y el de canal) en `{0}`. \nEjemplo de uso:\n> /history 276780134676037642-728591222217637918\n> /history 728591222217637918",
       "DeletedMessagesPackDescription": "**Se han eliminado los mensajes sin historial de cambios:**"
     },
     "Statistics": {
@@ -278,11 +277,12 @@
       "VoteDescription": "Puedes ayudarnos **gratis** en:\n[top.gg](https://top.gg/bot/606760964183949314) (vota [1 voto cada 12 horas] o escribe un comentario)\n[discordbotlist.com](https://discordbotlist.com/bots/enliven) (vota [1 voto cada 12 horas])\n[bots.ondiscord.xyz](https://bots.ondiscord.xyz/bots/606760964183949314) (escribe un comentario)\n O visítanos en [discord.bots.gg](https://discord.bots.gg/bots/606760964183949314)\n\nNo te olvides de [nuestro GitLab](https://gitlab.com/enlivenbot/enliven), donde puedes enviar errores y sugerencias (en inglés/ruso)\nPuedes unirte también a nuestro [Discord de soporte](https://discord.gg/zfBffbBbCp)",
       "All": "Todo",
       "Stop": "Detener",
-      "OnlyRequester": "Sólo el solicitante ({0}) puede interactuar con este componente"
+      "OnlyRequester": "Sólo el solicitante ({0}) puede interactuar con este componente",
+      "HelpByVote": "\n\nAyúdanos votando (`/vote`)"
     },
     "ChainsCommon": {
       "Ended": "Completado",
-      "Thanks": "La cadena de comandos actual ha sido completada.\n Gracias por usar este bot.\n Ayúdanos usando el comando `{0}vote`",
+      "Thanks": "La cadena de comandos actual se ha completado.\nGracias por usar este bot. {loc:Common.HelpByVote}",
       "ReasonStartedNew": "La cadena de comandos actual ha sido completada, lanzando una nueva.",
       "ReasonTimeout": "La cadena de comandos actual ha sido detenida debido a un timeout",
       "CantSend": "No puedo completar la acción en {0} porque no tengo los permisos necesarios"
@@ -313,7 +313,7 @@
       "OutputToImage": "🖨️ Los historiales de cambios de gran tamaño se mostrarán como: \n>__**Imágenes** (más lento, mayor tamaño)__\n> Documentos HTML (más rápido, recomendado)",
       "OutputToHtml": "🖨️ Los historiales de cambios de gran tamaño se mostrarán como: \n> Imágenes (más lento, mayor tamaño) \n> __**Documentos HTML** (más rápido, recomendado)__",
       "LogChannel": "🗒️ Canal de logs: {0}",
-      "LogChannelMissing": "**no seleccionado**. Para seleccionar, escribe ```{0}setchannel Log [mención del canal(#canal)]```",
+      "LogChannelMissing": "**no seleccionado**. Para seleccionar, escribe ```/setchannel Log [mención del canal(#canal)]```",
       "LoggedChannelsTitle": "📟 Canales con logging activado",
       "LoggedChannelsEmpty": "*No hay nada aquí*",
       "InfoTitle": "Controles",
