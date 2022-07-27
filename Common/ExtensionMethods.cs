@@ -50,6 +50,16 @@ namespace Common {
             }
         }
 
+        public static async ValueTask SafeDeleteAsync<T>(this T? message) where T : IMessage{
+            try {
+                if (message == null) return;
+                await message.DeleteAsync();
+            }
+            catch (Exception) {
+                // ignored
+            }
+        }
+
         public static string Format(this string format, params object?[] args) {
             return string.Format(format, args);
         }
