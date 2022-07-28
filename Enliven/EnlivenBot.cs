@@ -41,18 +41,18 @@ namespace Bot {
 
         internal async Task StartAsync() {
             _logger.Info("Start Initialising");
-            await IService.ProcessEventAsync(_services, ServiceEventType.PreDiscordLogin);
+            await IService.ProcessEventAsync(_services, ServiceEventType.PreDiscordLogin, _logger);
             _client.Log += message => LoggingUtilities.OnDiscordLog(_logger, message);
 
             await LoginAsync();
-            await IService.ProcessEventAsync(_services, ServiceEventType.PreDiscordStart);
+            await IService.ProcessEventAsync(_services, ServiceEventType.PreDiscordStart, _logger);
 
             _logger.Info("Starting client");
             await _client.StartAsync();
             _isDiscordStarted = true;
-            await IService.ProcessEventAsync(_services, ServiceEventType.PostDiscordStart);
+            await IService.ProcessEventAsync(_services, ServiceEventType.PostDiscordStart, _logger);
 
-            _ = _client.Ready.ContinueWith(async _ => await IService.ProcessEventAsync(_services, ServiceEventType.DiscordReady));
+            _ = _client.Ready.ContinueWith(async _ => await IService.ProcessEventAsync(_services, ServiceEventType.DiscordReady, _logger));
         }
 
         private async Task LoginAsync() {
@@ -86,8 +86,8 @@ namespace Bot {
         }
 
         protected override async Task DisposeInternalAsync() {
-            await IService.ProcessEventAsync(_services, _isDiscordStarted ? ServiceEventType.ShutdownStarted : ServiceEventType.ShutdownNotStarted);
-            _client.Dispose();
+            await IService.ProcessEventAsync(_services, _isDiscordStarted ? ServiceEventType.ShutdownStarted : ServiceEventType.ShutdownNotStarted, _logger);
+            await _client.DisposeAsync();
         }
     }
 }
