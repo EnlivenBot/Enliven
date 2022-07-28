@@ -108,7 +108,8 @@ namespace Bot.DiscordRelated.Interactions {
                     .Pipe(attribute => attribute?.Text)
                     .Pipe(s => s == null ? null : EntryLocalized.Create("Help", s))
                     .Pipe(localized => localized?.CanGet() == true ? localized.Get(LangLocalizationProvider.EnglishLocalizationProvider) : null)
-                    .Pipe(s => s ?? command.Text);
+                    .Pipe(s => s ?? command.Text)
+                    .Pipe(s => s.SafeSubstring(100, "..."));
                 var isOptional = parameterInfo.GetCustomAttribute<SlashCommandOptionalAttribute>()?.IsOptional ?? parameterInfo.IsOptional;
                 builder.AddParameter(parameterBuilder => {
                     parameterBuilder
