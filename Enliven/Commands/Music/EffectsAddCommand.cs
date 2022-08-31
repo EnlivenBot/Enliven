@@ -5,6 +5,7 @@ using Bot.DiscordRelated.Commands.Modules;
 using Bot.DiscordRelated.Interactions;
 using Common;
 using Common.Config;
+using Common.Localization.Entries;
 using Discord.Commands;
 using LiteDB;
 using Tyrrrz.Extensions;
@@ -25,7 +26,7 @@ namespace Bot.Commands.Music {
         [Summary("effects_add0s")]
         public async Task AddEffect([Discord.Commands.Summary("effect_add0_0s")][Remainder]string effectJson = "") {
             if (effectJson.IsNullOrWhiteSpace()) {
-                await ReplyFormattedAsync(Loc.Get("Effects.AddEffectTitle"), Loc.Get("Effects.AddEffectDescription"));
+                await this.ReplyFormattedAsync(new EntryLocalized("Effects.AddEffectTitle"), new EntryLocalized("Effects.AddEffectDescription"));
                 return;
             }
 
@@ -33,7 +34,7 @@ namespace Bot.Commands.Music {
                 var effectBase = PlayerEffectBase.FromDefaultJson(effectJson!);
                 if (effectBase == null) throw new Exception("Looks like JSON is empty");
                 if (!effectBase.IsValid(out var errorEntry)) {
-                    await ReplyFormattedAsync(errorEntry.Get(Loc), true);
+                    await this.ReplyFailFormattedAsync(errorEntry, true);
                     return;
                 }
 
@@ -44,7 +45,7 @@ namespace Bot.Commands.Music {
                 userData.Save();
             }
             catch (Exception e) {
-                await ReplyFormattedAsync(e.Message, true);
+                await this.ReplyFailFormattedAsync(e.Message.ToEntry(), true);
             }
         }
     }

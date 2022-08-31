@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Bot.DiscordRelated;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
 using Bot.DiscordRelated.Interactions;
 using Bot.DiscordRelated.MessageHistories;
 using Common;
+using Common.Localization.Entries;
 using Discord;
 using Discord.Commands;
 
@@ -41,10 +43,8 @@ namespace Bot.Commands {
                 }
             }
             catch (Exception) {
-                await ReplyFormattedAsync(Loc.Get("CommandHandler.FailedTitle"),
-                    Loc.Get("MessageHistory.IdFailedToParse").Format(id.SafeSubstring(100, "...")), 
-                    Constants.StandardTimeSpan);
-                Context.Message.SafeDelete();
+                await this.ReplyFailFormattedAsync(new EntryLocalized("MessageHistory.IdFailedToParse", id.SafeSubstring(100, "..."))).CleanupAfter(Constants.StandardTimeSpan);
+                await this.RemoveMessageInvokerIfPossible();
                 return;
             }
 
@@ -58,8 +58,11 @@ namespace Bot.Commands {
                 }
             }
 
-            await MessageHistoryService.PrintLog(channelId, messageId, userMessage, await GetResponseChannel(), Loc, (IGuildUser) Context.User, forceImage);
-            Context.Message.SafeDelete();
+            var bot = (await Context.Guild.GetCurrentUserAsync()).GetPermissions((IGuildChannel) Context.Channel);
+            var channel = bot.SendMessages ? Context.Channel : await Context.User.CreateDMChannelAsync();
+            // TODO: Make MessageHistoryService support interactions
+            await MessageHistoryService.PrintLog(channelId, messageId, userMessage, channel, Loc, (IGuildUser) Context.User, forceImage);
+            await this.RemoveMessageInvokerIfPossible();
         }
     }
 }

@@ -144,7 +144,7 @@ namespace Bot.Commands.Chains {
                 _collectorGroup.DisposeAll();
                 _componentBuilder.Dispose();
                 _cancellationTokenSource.Cancel();
-                _ = msg.DelayedDelete(Constants.StandardTimeSpan);
+                msg.DelayedDelete(Constants.StandardTimeSpan);
                 await msg.ModifyAsync(properties => {
                     properties.Embed = new EmbedBuilder().WithColor(Color.Orange).WithTitle(Loc.Get("ChainsCommon.Ended"))
                         .WithDescription(localized.Get(Loc))
@@ -173,7 +173,7 @@ namespace Bot.Commands.Chains {
 
             _cancellationTokenSource.Cancel();
             _collectorGroup?.DisposeAll();
-            msg.SafeDelete();
+            _ = msg.SafeDeleteAsync();
             OnEnd = localized => { };
             return true;
         }

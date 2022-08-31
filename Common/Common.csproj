@@ -9,7 +9,7 @@
     <ItemGroup>
       <PackageReference Include="Autofac" Version="6.3.0" />
       <PackageReference Include="DiffMatchPatchCSharp" Version="1.0.0" />
-      <PackageReference Include="Discord.Net" Version="3.7.2" />
+      <PackageReference Include="Discord.Net" Version="3.8.0" />
       <PackageReference Include="Lavalink4NET" Version="3.0.0-preview.10" />
       <PackageReference Include="Lavalink4NET.Discord.NET" Version="3.0.0-preview.10" />
       <PackageReference Include="Lavalink4NET.MemoryCache" Version="3.0.0-preview.10" />

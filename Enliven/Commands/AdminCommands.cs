@@ -2,14 +2,17 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Bot.Commands.Chains;
+using Bot.DiscordRelated;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
+using Bot.DiscordRelated.Commands.Modules.Contexts;
 using Bot.DiscordRelated.Interactions;
 using Bot.DiscordRelated.MessageComponents;
 using Bot.Utilities;
 using Common;
 using Common.Config;
 using Common.Localization;
+using Common.Localization.Entries;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -26,8 +29,9 @@ namespace Bot.Commands {
         [Hidden]
         [Command("printwelcome")]
         public async Task PrintWelcome() {
-            Context.Message.SafeDelete();
-            _ = GlobalBehaviorsService.PrintWelcomeMessage((SocketGuild) Context.Guild, Context.Channel).DelayedDelete(Constants.LongTimeSpan);
+            // TODO: Refactor using GlobalBehaviorsService
+            await GlobalBehaviorsService.PrintWelcomeMessage((SocketGuild) Context.Guild, Context.Channel).DelayedDelete(Constants.LongTimeSpan);
+            await this.RemoveMessageInvokerIfPossible();
         }
         
         [SlashCommandAdapter(false)]
@@ -36,11 +40,12 @@ namespace Bot.Commands {
         public async Task SetPrefix([Summary("setrefix0_0s")] string prefix) {
             GuildConfig.Prefix = prefix;
             GuildConfig.Save();
-            await ReplyFormattedAsync(Loc.Get("Commands.Success"), Loc.Get("Commands.SetPrefixResponse").Format(prefix), Constants.LongTimeSpan);
-            Context.Message.SafeDelete();
+            await this.ReplySuccessFormattedAsync(new EntryLocalized("Commands.SetPrefixResponse", prefix)).CleanupAfter(Constants.LongTimeSpan);
+            await this.RemoveMessageInvokerIfPossible();
         }
         
         private async Task ListLanguages() {
+            // TODO: Rework language selection with popups
             var embedBuilder = this.GetAuthorEmbedBuilder().WithColor(Color.Gold).WithTitle(Loc.Get("Localization.LanguagesList"));
             var componentBuilder = MessageComponentService.GetBuilder();
             var i = 0;
@@ -53,21 +58,21 @@ namespace Bot.Commands {
                 componentBuilder.WithButton(enlivenButtonBuilder);
             }
 
-            var message = await ReplyAsync(embed: embedBuilder.Build(), component: componentBuilder.Build());
-            componentBuilder.AssociateWithMessage(message);
+            var sentMessage = await Context.SendMessageAsync(null, embedBuilder.Build(), components: componentBuilder.Build());
+            componentBuilder.AssociateWithMessage(sentMessage.GetMessageAsync());
             componentBuilder.SetCallback(async (s, component, arg3) => {
                 var t = await CommandHandlerService.ExecuteCommand($"language {s}", new ComponentCommandContext(Context.Client, component),
                     component.User.Id.ToString());
-                if (t.IsSuccess) message.SafeDelete();
+                if (t.IsSuccess) await sentMessage.GetMessageAsync().PipeAsync(userMessage => userMessage.SafeDeleteAsync());
+                componentBuilder.Dispose();
             });
-            _ = message.DelayedDelete(Constants.StandardTimeSpan).ContinueWith(task => componentBuilder.Dispose());
+            _ = sentMessage.CleanupAfterAsync(Constants.StandardTimeSpan).ContinueWith(task => componentBuilder.Dispose());
         }
 
         [Command("language")]
         [Alias("languages")]
         [Summary("language0s")]
         public async Task SetLanguage([Summary("language0_0s")] string? language = null) {
-            Context.Message.SafeDelete();
             if (language == null) {
                 await ListLanguages();
                 return;
@@ -75,12 +80,13 @@ namespace Bot.Commands {
 
             if (LocalizationManager.Languages.ContainsKey(language)) {
                 GuildConfig.SetLanguage(language).Save();
-                await ReplyFormattedAsync(Loc.Get("Commands.Success"), Loc.Get("Localization.Success").Format(language), TimeSpan.FromMinutes(1));
+                await this.ReplySuccessFormattedAsync(new EntryLocalized("Localization.Success", language), true).CleanupAfter(Constants.StandardTimeSpan);
             }
             else {
                 var languagesList = string.Join(' ', LocalizationManager.Languages.Select(pair => $"`{pair.Key}`"));
-                await ReplyFormattedAsync(Loc.Get("Commands.Fail"), Loc.Get("Localization.Fail").Format(language, languagesList), TimeSpan.FromMinutes(1));
+                await this.ReplyFailFormattedAsync(new EntryLocalized("Localization.Fail", language, languagesList), true).CleanupAfter(Constants.ShortTimeSpan);
             }
+            await this.RemoveMessageInvokerIfPossible();
         }
 
         [Command("setchannelrole")]
@@ -88,19 +94,19 @@ namespace Bot.Commands {
         public async Task SetChannelRole([Summary("setchannelrole0_0s")] ChannelFunction func,
                                          [Summary("setchannelrole0_1s")] IChannel? channel = null) {
             if (channel is ICategoryChannel) {
-                await ReplyFormattedAsync(Loc.Get("Commands.Fail"), Loc.Get("Commands.CategoryChannelNotSupported"));
+                await this.ReplyFailFormattedAsync(new EntryLocalized("Commands.CategoryChannelNotSupported"));
                 return;
             }
             if (channel is IVoiceChannel) {
-                await ReplyFormattedAsync(Loc.Get("Commands.Fail"), Loc.Get("Commands.VoiceChannelNotSupported"));
+                await this.ReplyFailFormattedAsync(new EntryLocalized("Commands.VoiceChannelNotSupported"));
                 return;
             }
             GuildConfig.SetChannel(func, channel?.Id).Save();
             var description = channel != null 
-                ? Loc.Get("Commands.SetChannelRoleResponse", channel.Id, func)
-                : Loc.Get("Commands.ClearChannelRoleResponse", func);
-            await ReplyFormattedAsync(Loc.Get("Commands.Success"), description);
-            Context.Message?.SafeDelete();
+                ? new EntryLocalized("Commands.SetChannelRoleResponse", channel.Id, func)
+                : new EntryLocalized("Commands.ClearChannelRoleResponse", func);
+            await this.ReplySuccessFormattedAsync(description);
+            await this.RemoveMessageInvokerIfPossible();
         }
     }
 }

@@ -9,6 +9,7 @@ using Bot.Music.Spotify;
 using Bot.Utilities.Collector;
 using Common;
 using Common.Config;
+using Common.Localization.Entries;
 using Discord.Commands;
 
 namespace Bot.Commands {
@@ -35,7 +36,7 @@ namespace Bot.Commands {
                     await fixSpotifyChain.Start();
                 }
                 else {
-                    await ReplyFormattedAsync(Loc.Get("Music.CurrentTrackNonSpotify"), true);
+                    await this.ReplyFailFormattedAsync(new EntryLocalized("Music.CurrentTrackNonSpotify"), true);
                 }
             }
             else {

@@ -42,8 +42,6 @@ namespace Bot.DiscordRelated.Interactions {
                     return;
                 }
 
-                _ = context.Interaction.DeferAsync();
-
                 var result = await interactionSearchResult.Command.ExecuteAsync(context, _serviceProvider).ConfigureAwait(false);
                 if (!result.IsSuccess) {
                     var exception = result is ExecuteResult executeResult ? executeResult.Exception : null;

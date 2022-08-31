@@ -2,8 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Bot.DiscordRelated.Commands.Attributes;
+using Bot.DiscordRelated.Commands.Modules.Contexts;
 using Bot.DiscordRelated.Music;
-using Bot.Utilities;
 using Common;
 using Common.Config;
 using Common.Localization.Entries;
@@ -12,7 +13,6 @@ using Common.Music.Players;
 using Discord;
 using Discord.Commands;
 using Discord.Interactions;
-using Discord.WebSocket;
 using Lavalink4NET.Lyrics;
 
 #pragma warning disable 4014
@@ -28,12 +28,12 @@ namespace Bot.DiscordRelated.Commands.Modules {
         
         public FinalLavalinkPlayer Player { get; private set; } = null!;
 
-        protected override void BeforeExecute(CommandInfo command) {
-            base.BeforeExecute(command);
+        public override async Task BeforeExecuteAsync(CommandInfo command) {
+            await base.BeforeExecuteAsync(command);
             var shouldCreatePlayer = command.Attributes.Any(attribute => attribute is ShouldCreatePlayerAttribute);
             var requireNonEmptyPlaylist = command.Attributes.Any(attribute => attribute is RequireNonEmptyPlaylistAttribute);
             var requirePlayingTrack = command.Attributes.Any(attribute => (attribute as RequireNonEmptyPlaylistAttribute)?.RequirePlayingTrack == true);
-            BeforeExecuteAsync(shouldCreatePlayer, requireNonEmptyPlaylist, requirePlayingTrack).GetAwaiter().GetResult();
+            await BeforeExecuteAsync(shouldCreatePlayer, requireNonEmptyPlaylist, requirePlayingTrack);
         }
 
         public override async Task BeforeExecuteAsync(ICommandInfo command) {
@@ -53,6 +53,8 @@ namespace Bot.DiscordRelated.Commands.Modules {
         private static readonly IEntry OtherVoiceChannelEntry = new EntryLocalized("Music.OtherVoiceChannel");
         private static readonly IEntry NothingPlayingEntry = new EntryLocalized("Music.NothingPlaying");
         private static readonly IEntry CantConnectEntry = new EntryLocalized("Music.CantConnect");
+        private static readonly IEntry PlaybackEntry = new EntryLocalized("Music.Playback");
+        private static readonly IEntry PlaybackMovedEntry = new EntryLocalized("Music.PlaybackMoved");
         protected virtual async Task BeforeExecuteAsync(bool shouldCreatePlayer, bool requireNonEmptyPlaylist, bool requirePlayingTrack) {
             await ReplyAndThrowIfAsync(!MusicController.IsMusicEnabled, MusicDisabledEntry);
 
@@ -96,7 +98,7 @@ namespace Bot.DiscordRelated.Commands.Modules {
             Player = player;
 
             if (!channelInfo.IsCurrentChannelSuitable) {
-                await ReplyFormattedAsync(Loc.Get("Music.PlaybackMoved").Format(channelInfo.MusicChannel));
+                await this.ReplyFormattedAsync(PlaybackEntry, PlaybackMovedEntry.WithArg(channelInfo.MusicChannel!), true);
             }
         }
 
@@ -133,37 +135,24 @@ namespace Bot.DiscordRelated.Commands.Modules {
             return EmbedPlayerDisplayProvider.Provide(await channelInfo.GetTargetChannelAsync(), Player);
         }
 
-        protected async Task<IUserMessage> ReplyFormattedAsync(string description, bool isFail = false, IUserMessage? previous = null,
-                                                               IMessageChannel? channel = null) {
-            var embed = this.GetAuthorEmbedBuilder().WithTitle(Loc.Get(isFail ? "Music.Fail" : "Music.Playback"))
-                .WithDescription(description).WithColor(isFail ? Color.Orange : Color.Gold).Build();
-            if (previous == null) {
-                return await (channel ?? Context.Channel).SendMessageAsync(null, false, embed).ConfigureAwait(false);
-            }
-
-            await previous.ModifyAsync(properties => {
-                properties.Content = "";
-                properties.Embed = embed;
-            });
-            return previous;
-        }
-
-        protected override void AfterExecute(CommandInfo command) {
+        public override async Task AfterExecuteAsync(CommandInfo command) {
             // By a lucky coincidence of circumstances, it is only necessary to clear the message-command when it does not require the player’s summon
             // That is, it is a command for ordering music
             var needSummon = command.Attributes.FirstOrDefault(attribute => attribute is ShouldCreatePlayerAttribute) != null;
+            // TODO: Need rework to resending player 
+            // Or maybe we can consider sent any kind of "completed" messages to the user
             if (!needSummon) {
-                Context.Message.SafeDelete();
+                await this.RemoveMessageInvokerIfPossible();
             }
 
-            base.AfterExecute(command);
+            await base.AfterExecuteAsync(command);
         }
 
-        protected record MusicCommandChannelInfo(ulong CurrentChannel, ulong? MusicChannel, ulong? DedicatedMusicChannel, bool IsMusicLimited, ICommandContext Context) {
+        protected record MusicCommandChannelInfo(ulong CurrentChannel, ulong? MusicChannel, ulong? DedicatedMusicChannel, bool IsMusicLimited, ICommonModuleContext Context) {
             public bool IsCurrentChannelSuitable => MusicChannel == null || CurrentChannel == MusicChannel || CurrentChannel == DedicatedMusicChannel;
             public bool IsCommandAllowed => IsCurrentChannelSuitable || !IsMusicLimited;
             public ulong TargetChannelId => MusicChannel ?? CurrentChannel;
-            private ICommandContext Context { get; init; } = Context;
+            private ICommonModuleContext Context { get; init; } = Context;
             public async Task<ITextChannel> GetTargetChannelAsync() {
                 if (Context.Channel.Id == TargetChannelId) {
                     return (ITextChannel)Context.Channel;

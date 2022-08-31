@@ -4,9 +4,12 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Autofac;
 using Bot.DiscordRelated.Commands;
+using Bot.DiscordRelated.Commands.Attributes;
 using Bot.DiscordRelated.Commands.Modules;
+using Bot.DiscordRelated.Commands.Modules.Contexts;
 using Bot.DiscordRelated.Interactions;
 using Common;
+using Common.Localization.Entries;
 using Common.Music;
 using Discord;
 using Discord.Commands;
@@ -33,10 +36,11 @@ namespace Bot.Commands.Music {
         }
 
         private async Task PlayInternal(string? query, int position = -1) {
-            var queries = await GetMusicQueries(Context.Message, query.IsBlank(""));
+            var messageInvoker = (Context as TextCommandsModuleContext)?.Message;
+            var queries = await GetMusicQueries(messageInvoker, query.IsBlank(""));
             var mainPlayerDisplay = await GetMainPlayerDisplay();
             if (queries.Count == 0) {
-                Context.Message?.SafeDelete();
+                await this.RemoveMessageInvokerIfPossible();
                 mainPlayerDisplay.NextResendForced = true;
                 _ = mainPlayerDisplay.ControlMessageResend();
                 return;
@@ -49,7 +53,7 @@ namespace Bot.Commands.Music {
                 await Player.TryEnqueue(resolvedQueries, username, position);
             }
             catch (TrackNotFoundException) {
-                await ReplyFormattedAsync(Loc.Get("Music.NotFound", query!.SafeSubstring(100, "...")!), true);
+                await this.ReplyFailFormattedAsync(new EntryLocalized("Music.NotFound", query!.SafeSubstring(100, "...")!), true);
             }
         }
         
