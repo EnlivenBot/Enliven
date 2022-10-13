@@ -124,6 +124,7 @@ namespace Bot.DiscordRelated.Music {
         }
 
         private async Task UpdateControlMessageInternal(SingleTaskExecutionData data) {
+            var internalCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_cancellationTokenSource.Token);
             if (_controlMessage != null) {
                 try {
                     _logger.Trace("Modifying embed control message. Guild: {TargetGuildId}. Channel: {TargetChannelId}. Message id: {ControlMessageId}", _targetGuild?.Id, _targetChannel.Id, _controlMessage.Id);
@@ -132,13 +133,14 @@ namespace Bot.DiscordRelated.Music {
                         properties.Content = "";
                         properties.Components = _messageComponent;
                     }, new RequestOptions {
-                        CancelToken = _cancellationTokenSource.Token,
+                        CancelToken = internalCancellationTokenSource.Token,
                         RatelimitCallback = RatelimitCallback,
                         RetryMode = RetryMode.AlwaysFail
                     });
                 }
-                catch (RateLimitedException) {
-                    _logger.Debug("Got rate limited exception while updating player embed control message. Guild: {TargetGuildId}. Channel: {TargetChannelId}. Message id: {ControlMessageId}", _targetGuild?.Id, _targetChannel.Id, _controlMessage.Id);
+                catch (TimeoutException e) {
+                    if (internalCancellationTokenSource.IsCancellationRequested) return;
+                    _logger.Debug(e, "Got TimeoutException when updating player embed control message. Guild: {TargetGuildId}. Channel: {TargetChannelId}. Message id: {ControlMessageId}", _targetGuild?.Id, _targetChannel.Id, _controlMessage.Id);
                 }
                 catch (Exception e) {
                     _logger.Debug(e, "Failed to update embed control message. Guild: {TargetGuildId}. Channel: {TargetChannelId}. Message id: {ControlMessageId}", _targetGuild?.Id, _targetChannel.Id, _controlMessage.Id);
@@ -152,12 +154,9 @@ namespace Bot.DiscordRelated.Music {
             }
 
             Task RatelimitCallback(IRateLimitInfo info) {
-                _logger.Log(LogLevel.Trace, "Recieved ratelimit info for updating player embed control message. Guild: {TargetGuildId}. Channel: {TargetChannelId}. Message id: {ControlMessageId}.\nRatelimit info: {ratelimit info}", 
-                    _targetGuild?.Id, _targetChannel.Id, _controlMessage.Id, JsonConvert.SerializeObject(info));
-                if (info.Remaining <= 1) {
-                    data.OverrideDelay = info.ResetAfter > data.BetweenExecutionsDelay ? info.ResetAfter : null;
-                    _logger.Debug("Ratelimit exceed for updating player embed control message. Waiting {ResetAfter}. Guild: {TargetGuildId}. Channel: {TargetChannelId}. Message id: {ControlMessageId}",
-                        info.ResetAfter, _targetGuild?.Id, _targetChannel.Id, _controlMessage.Id);
+                if (info.RetryAfter is { } retryAfter) {
+                    internalCancellationTokenSource.Cancel();
+                    data.OverrideDelay = retryAfter > data.BetweenExecutionsDelay.GetValueOrDefault().TotalSeconds ? TimeSpan.FromSeconds(retryAfter + 1) : null;
                 }
                 return Task.CompletedTask;
             }
