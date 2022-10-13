@@ -91,8 +91,8 @@ namespace Common.Music.Controller {
                     _logger.Info("Initializing InactivityTrackingService instance with default options");
                     var inactivityTrackingOptions = new InactivityTrackingOptions {
                         TrackInactivity = true,
-                        DisconnectDelay = TimeSpan.FromSeconds(60),
-                        PollInterval = TimeSpan.FromSeconds(4)
+                        DisconnectDelay = TimeSpan.FromSeconds(120),
+                        PollInterval = TimeSpan.FromSeconds(30)
                     };
                     var inactivityTrackingService = new InactivityTrackingService(cluster, wrapper, inactivityTrackingOptions, _lavalinkLogger);
                     inactivityTrackingService.InactivePlayer += InactivityTracking_OnInactivePlayer;
