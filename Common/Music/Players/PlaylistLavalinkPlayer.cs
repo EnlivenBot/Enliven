@@ -11,7 +11,6 @@ using Common.Music.Controller;
 using Common.Music.Encoders;
 using Common.Music.Resolvers;
 using Common.Music.Tracks;
-using Lavalink4NET.Decoding;
 using Lavalink4NET.Events;
 using Lavalink4NET.Player;
 using LiteDB;
@@ -30,7 +29,16 @@ namespace Common.Music.Players {
             Playlist.Changed.Subscribe(playlist => UpdateCurrentTrackIndex());
         }
 
-        public LoopingState LoopingState { get; set; } = LoopingState.Off;
+        public LoopingState LoopingState {
+            get => _loopingState;
+            set {
+                _loopingState = value;
+                _loopingStateChanged.OnNext(value);
+            }
+        }
+
+        private readonly ISubject<LoopingState> _loopingStateChanged = new Subject<LoopingState>();
+        public IObservable<LoopingState> LoopingStateChanged => _loopingStateChanged;
 
         public LavalinkPlaylist Playlist { get; } = new LavalinkPlaylist();
 
@@ -205,6 +213,7 @@ namespace Common.Music.Players {
         private readonly SemaphoreSlim _enqueueLock = new SemaphoreSlim(1);
         private IPlaylistProvider _playlistProvider;
         private TrackEncoderUtils _trackEncoderUtils;
+        private LoopingState _loopingState = LoopingState.Off;
 
         public virtual async Task TryEnqueue(IEnumerable<MusicResolver> resolvers, string author, int index = -1) {
             var musicResolvers = resolvers.ToList();

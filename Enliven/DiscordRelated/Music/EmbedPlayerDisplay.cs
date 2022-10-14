@@ -226,14 +226,20 @@ namespace Bot.DiscordRelated.Music {
                     .Select(_ => Unit.Default)
                     .Subscribe(updateControlMessageSubj),
                 Player.FiltersChanged.Subscribe(_ => UpdateEffects()),
-                Player.CurrentTrackIndexChanged.Subscribe(_ => UpdateQueue())
+                Player.CurrentTrackIndexChanged.Subscribe(_ => UpdateQueue()),
+                Player.LoopingStateChanged.Subscribe(OnLoopingStateChanged)
             );
             UpdateNode();
             await ControlMessageResend();
-            
+
             void OnStateChanged(PlayerState obj) {
                 UpdateProgress();
                 UpdateTrackInfo();
+                UpdateMessageComponents();
+            }
+
+            void OnLoopingStateChanged(LoopingState _) {
+                UpdateProgress();
                 UpdateMessageComponents();
             }
 
