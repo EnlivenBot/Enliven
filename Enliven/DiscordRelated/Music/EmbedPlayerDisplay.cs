@@ -2,6 +2,9 @@
 using System.Collections.Immutable;
 using System.ComponentModel;
 using System.Linq;
+using System.Reactive;
+using System.Reactive.Linq;
+using System.Reactive.Subjects;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,11 +12,9 @@ using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Criteria;
 using Bot.DiscordRelated.MessageComponents;
 using Bot.Music.Spotify;
-using Bot.Utilities.Collector;
 using Common;
-using Common.Config;
 using Common.Config.Emoji;
-using Common.Criteria;
+using Common.History;
 using Common.Localization.Entries;
 using Common.Localization.Providers;
 using Common.Music;
@@ -22,13 +23,10 @@ using Common.Music.Players;
 using Common.Music.Tracks;
 using Common.Utils;
 using Discord;
-using Discord.Net;
 using Lavalink4NET.Artwork;
 using Lavalink4NET.Player;
-using Newtonsoft.Json;
 using NLog;
 using Tyrrrz.Extensions;
-
 #pragma warning disable 4014
 
 namespace Bot.DiscordRelated.Music {
@@ -207,25 +205,42 @@ namespace Bot.DiscordRelated.Music {
         public override async Task ChangePlayer(FinalLavalinkPlayer newPlayer) {
             _playerSubscriptions?.Dispose();
             await base.ChangePlayer(newPlayer);
+
+            var updateControlMessageSubj = new Subject<Unit>();
+            updateControlMessageSubj
+                .Throttle(TimeSpan.FromMilliseconds(100))
+                .Subscribe(_ => UpdateControlMessage());
+
             _playerSubscriptions = new Disposables(
-                Player.QueueHistory.HistoryChanged.Subscribe(collection => {
-                    _embedBuilder.Fields["RequestHistory"].Value = collection.GetLastHistory(_loc, out var isChanged).IsBlank(_loc.Get("Music.Empty"));
-                    if (isChanged) UpdateControlMessage();
-                }),
-                Player.Playlist.Changed.Subscribe(playlist => UpdateQueue()),
-                Player.VolumeChanged.Subscribe(obj => UpdateParameters()),
-                Player.SocketChanged.Subscribe(obj => UpdateNode()),
-                Player.StateChanged.Subscribe(obj => {
-                    UpdateProgress();
-                    UpdateTrackInfo();
-                    UpdateControlMessage();
-                    UpdateMessageComponents();
-                }),
+                updateControlMessageSubj,
+                Player.QueueHistory.HistoryChanged
+                    .Select(OnHistoryChanged)
+                    .Where(isChanged => isChanged)
+                    .Select(_ => Unit.Default)
+                    .Subscribe(updateControlMessageSubj),
+                Player.Playlist.Changed.Subscribe(_ => UpdateQueue()),
+                Player.VolumeChanged.Subscribe(_ => UpdateParameters()),
+                Player.SocketChanged.Subscribe(_ => UpdateNode()),
+                Player.StateChanged
+                    .Do(OnStateChanged)
+                    .Select(_ => Unit.Default)
+                    .Subscribe(updateControlMessageSubj),
                 Player.FiltersChanged.Subscribe(_ => UpdateEffects()),
-                Player.CurrentTrackIndexChanged.Subscribe(i => UpdateQueue())
+                Player.CurrentTrackIndexChanged.Subscribe(_ => UpdateQueue())
             );
             UpdateNode();
             await ControlMessageResend();
+            
+            void OnStateChanged(PlayerState obj) {
+                UpdateProgress();
+                UpdateTrackInfo();
+                UpdateMessageComponents();
+            }
+
+            bool OnHistoryChanged(HistoryCollection collection) {
+                _embedBuilder.Fields["RequestHistory"].Value = collection.GetLastHistory(_loc, out var isChanged).IsBlank(_loc.Get("Music.Empty"));
+                return isChanged;
+            }
         }
 
         private async Task SendControlMessage_WithMessageComponents() {
