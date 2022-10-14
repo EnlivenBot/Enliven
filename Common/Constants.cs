@@ -13,7 +13,7 @@ namespace Common {
         public static int MaxEmbedAuthorLength { get; set; } = 256;
         public static int MaxFieldLength { get; set; } = 2048;
 
-        public static TimeSpan PlayerEmbedUpdateDelay { get; set; } = TimeSpan.FromSeconds(4);
+        public static TimeSpan PlayerEmbedUpdateDelay { get; set; } = TimeSpan.FromSeconds(5);
 
         public const string BotLifetimeScopeTag = "BotInstance";
     }

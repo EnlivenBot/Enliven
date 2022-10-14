@@ -138,9 +138,10 @@ namespace Bot.DiscordRelated.Music {
                         RetryMode = RetryMode.AlwaysFail
                     });
                 }
-                catch (TimeoutException e) {
-                    if (internalCancellationTokenSource.IsCancellationRequested) return;
-                    _logger.Debug(e, "Got TimeoutException when updating player embed control message. Guild: {TargetGuildId}. Channel: {TargetChannelId}. Message id: {ControlMessageId}", _targetGuild?.Id, _targetChannel.Id, _controlMessage.Id);
+                catch (TimeoutException) {
+                    // Ignore all timeouts because weird Discord (Discord.NET?) logic.
+                    // Updating only one message every 5 seconds will trigger ratelimit exceptions.
+                    // Fuck it.
                 }
                 catch (Exception e) {
                     _logger.Debug(e, "Failed to update embed control message. Guild: {TargetGuildId}. Channel: {TargetChannelId}. Message id: {ControlMessageId}", _targetGuild?.Id, _targetChannel.Id, _controlMessage.Id);
