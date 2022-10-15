@@ -26,14 +26,15 @@ namespace Bot.DiscordRelated.Commands.Modules {
             Context = new InteractionsModuleContext(context, () => _interactionCommandInfo);
         }
         /// <inheritdoc />
-        public virtual Task BeforeExecuteAsync(ICommandInfo command) {
+        public virtual async Task BeforeExecuteAsync(ICommandInfo command) {
             _interactionCommandInfo = command;
-            return Task.CompletedTask;
+            await Context.BeforeExecuteAsync();
         }
         /// <inheritdoc />
         public void BeforeExecute(ICommandInfo command) { }
         /// <inheritdoc />
-        public Task AfterExecuteAsync(ICommandInfo command) => Task.CompletedTask;
+        public virtual async Task AfterExecuteAsync(ICommandInfo command) 
+            => await Context.AfterExecuteAsync();
         /// <inheritdoc />
         public void AfterExecute(ICommandInfo command) { }
         /// <inheritdoc />
@@ -49,10 +50,12 @@ namespace Bot.DiscordRelated.Commands.Modules {
         public void SetContext(ICommandContext context) {
             Context = new TextCommandsModuleContext(context);
         }
-        public virtual Task BeforeExecuteAsync(CommandInfo command) => Task.CompletedTask;
+        public virtual async Task BeforeExecuteAsync(CommandInfo command)
+            => await Context.BeforeExecuteAsync();
         /// <inheritdoc />
-        public virtual void BeforeExecute(CommandInfo command) { }
-        public virtual Task AfterExecuteAsync(CommandInfo command) => Task.CompletedTask;
+        public void BeforeExecute(CommandInfo command) { }
+        public virtual async Task AfterExecuteAsync(CommandInfo command) 
+            => await Context.BeforeExecuteAsync();
         /// <inheritdoc />
         public void AfterExecute(CommandInfo command) { }
         /// <inheritdoc />
