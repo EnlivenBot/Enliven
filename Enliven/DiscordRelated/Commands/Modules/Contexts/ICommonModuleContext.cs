@@ -23,6 +23,10 @@ namespace Bot.DiscordRelated.Commands.Modules.Contexts {
         /// </summary>
         IUser User { get; }
 
+        bool NeedResponse { get; }
+        bool HasMeaningResponseSent { get; }
+        bool CanSendEphemeral { get; }
+
         public ValueTask BeforeExecuteAsync();
         public ValueTask AfterExecuteAsync();
         Task<SentMessage> SendMessageAsync(string? text, Embed[]? embeds, bool ephemeral = false, MessageComponent? components = null);

@@ -22,6 +22,10 @@ namespace Bot.DiscordRelated.Commands.Modules.Contexts {
 
         public bool HasLoadingSent { get; private set; }
 
+        public bool NeedResponse => !Interaction.HasResponded;
+        public bool HasMeaningResponseSent { get; private set; }
+        public bool CanSendEphemeral => true;
+
         public async ValueTask BeforeExecuteAsync() {
             if (!NeedLoadingSend(_commandResolver())) return;
             HasLoadingSent = true;
@@ -29,8 +33,11 @@ namespace Bot.DiscordRelated.Commands.Modules.Contexts {
         }
 
         public async ValueTask AfterExecuteAsync() {
-            var restInteractionMessage = await Interaction.GetOriginalResponseAsync();
-            if ((restInteractionMessage.Flags & MessageFlags.Loading) != 0) await restInteractionMessage.DeleteAsync();
+            if (HasMeaningResponseSent) return;
+            if (HasLoadingSent) {
+                var restInteractionMessage = await Interaction.GetOriginalResponseAsync();
+                if ((restInteractionMessage.Flags & MessageFlags.Loading) != 0) await restInteractionMessage.DeleteAsync();
+            }
         }
 
         private static bool NeedLoadingSend(ICommandInfo commandInfo) {
@@ -40,13 +47,15 @@ namespace Bot.DiscordRelated.Commands.Modules.Contexts {
         }
 
         public async Task<SentMessage> SendMessageAsync(string? text, Embed[]? embeds, bool ephemeral = false, MessageComponent? components = null) {
+            var hasMeaningResponseSent = HasMeaningResponseSent;
+            HasMeaningResponseSent = true;
             // No loading and no responded
-            if (!HasLoadingSent && !Interaction.HasResponded) {
+            if (!HasLoadingSent && !hasMeaningResponseSent) {
                 await Interaction.RespondAsync(text: text, embeds: embeds, ephemeral: ephemeral, components: components);
                 return new SentMessage(() => Interaction.GetOriginalResponseAsync(), ephemeral);
             }
             // Only loading sent
-            if (HasLoadingSent && !Interaction.HasResponded) {
+            if (HasLoadingSent && !hasMeaningResponseSent) {
                 var message0 = await Interaction.ModifyOriginalResponseAsync(properties => {
                     properties.Content = text ?? Optional<string>.Unspecified;
                     properties.Components = components ?? Optional<MessageComponent>.Unspecified;
