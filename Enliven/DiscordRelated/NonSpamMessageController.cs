@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using System.Threading;
 using System.Threading.Tasks;
 using Bot.DiscordRelated.Commands.Modules;
 using Bot.DiscordRelated.Criteria;
+using Bot.DiscordRelated.Music;
 using Bot.Utilities;
 using Common;
 using Common.Criteria;
@@ -24,13 +24,13 @@ namespace Bot.DiscordRelated {
         private readonly SingleTask _updateTask;
 
         private HandyLongestTimer _clearTimer = new();
-        private IMessageChannel? _currentChannel;
 
         private TimeChecker _lastSendTimeChecker = new(TimeSpan.FromSeconds(20));
+        private SendControlMessageOverride? _sendControlMessageOverride;
 
         public NonSpamMessageController(ILocalizationProvider loc, IMessageChannel channel, string embedTitle, Color embedColor = default) {
             _loc = loc;
-            TargetChannels.Add(channel);
+            TargetChannel = channel;
             EmbedTitle = embedTitle;
             EmbedColor = embedColor;
             _updateTask = new SingleTask(InternalUpdateAsync) { CanBeDirty = true, BetweenExecutionsDelay = TimeSpan.FromSeconds(1) };
@@ -41,12 +41,7 @@ namespace Bot.DiscordRelated {
 
         private IUserMessage? Message { get; set; }
         private List<MessageControllerEntryData> Entries { get; } = new();
-        private List<IMessageChannel> TargetChannels { get; } = new();
-
-        public NonSpamMessageController AddChannel(IMessageChannel channel) {
-            TargetChannels.Add(channel);
-            return this;
-        }
+        private IMessageChannel TargetChannel { get; }
 
         [Obsolete("Use overload with IEntry instead")]
         public NonSpamMessageController AddEntry(string entry, TimeSpan? timeout = null) {
@@ -74,8 +69,7 @@ namespace Bot.DiscordRelated {
         public NonSpamMessageController RemoveEntry(IEntry entry) {
             var data = Entries
                 .Where(data => data.Entry == entry)
-                .OrderBy(data => data.AddDate)
-                .FirstOrDefault();
+                .MinBy(data => data.AddDate);
             if (data != null) {
                 Entries.Remove(data);
             }
@@ -119,17 +113,15 @@ namespace Bot.DiscordRelated {
                 return null;
             }
 
-            foreach (var messageChannel in TargetChannels) {
-                try {
-                    var sendMessage = messageChannel.SendMessageAsync(null, false, embed);
-                    _currentChannel = messageChannel;
-                    _lastSendTimeChecker.Update();
-                    Message = await sendMessage;
-                    return await sendMessage;
-                }
-                catch {
-                    // ignored
-                }
+
+            try {
+                _lastSendTimeChecker.Update();
+                Message = await _sendControlMessageOverride.ExecuteAndFallbackWith(embed, null, TargetChannel);
+                _sendControlMessageOverride = null;
+                return Message;
+            }
+            catch {
+                // ignored
             }
 
             return null;
@@ -143,11 +135,10 @@ namespace Bot.DiscordRelated {
                 executionData.OverrideDelay = TimeSpan.Zero;
                 return;
             }
-            
+
             try {
-                if (Message == null || await _lastSendTimeChecker.ToCriteria().AddCriterion(new EnsureMessage(_currentChannel!, Message).Invert()).JudgeAsync()) {
+                if (Message == null || await _lastSendTimeChecker.ToCriteria().AddCriterion(new EnsureMessage(TargetChannel, Message).Invert()).JudgeAsync())
                     await Resend();
-                }
                 else {
                     await Message!.ModifyAsync(properties => {
                         properties.Embed = embed;
@@ -161,14 +152,20 @@ namespace Bot.DiscordRelated {
             }
         }
 
-        private class MessageControllerEntryData {
-            public MessageControllerEntryData(IEntry entry, TimeSpan timeout) {
-                Entry = entry;
-                Timeout = timeout;
-            }
-            public IEntry Entry { get; set; }
-            public TimeSpan Timeout { get; set; }
-            public DateTime AddDate = DateTime.Now;
+        public async Task ResendWithOverride(SendControlMessageOverride sendControlMessageOverride, bool executeResend = true) {
+            _sendControlMessageOverride = (embed, component) => {
+                _sendControlMessageOverride = null;
+                return sendControlMessageOverride(embed, component);
+            };
+            if (!executeResend) return;
+
+            await _resendTask.Execute(false, TimeSpan.Zero);
+        }
+
+        private record MessageControllerEntryData(IEntry Entry, TimeSpan Timeout) {
+            public IEntry Entry { get; set; } = Entry;
+            public TimeSpan Timeout { get; } = Timeout;
+            public DateTime AddDate { get; } = DateTime.Now;
         }
 
         private class NonSpamMessageControllerEntry : IRepliedEntry {

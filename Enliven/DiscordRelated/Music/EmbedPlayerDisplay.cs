@@ -9,11 +9,8 @@ using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Criteria;
 using Bot.DiscordRelated.MessageComponents;
 using Bot.Music.Spotify;
-using Bot.Utilities.Collector;
 using Common;
-using Common.Config;
 using Common.Config.Emoji;
-using Common.Criteria;
 using Common.Localization.Entries;
 using Common.Localization.Providers;
 using Common.Music;
@@ -28,40 +25,42 @@ using Lavalink4NET.Player;
 using Newtonsoft.Json;
 using NLog;
 using Tyrrrz.Extensions;
-
 #pragma warning disable 4014
 
 namespace Bot.DiscordRelated.Music {
     public class EmbedPlayerDisplay : PlayerDisplayBase {
+        private readonly IArtworkService _artworkService;
         private readonly CommandHandlerService _commandHandlerService;
+        private readonly SingleTask _controlMessageSendTask;
+        private readonly IDiscordClient _discordClient;
+        private readonly EnlivenEmbedBuilder _embedBuilder;
         private readonly ILocalizationProvider _loc;
+        private readonly ILogger _logger;
+        private readonly MessageComponentService _messageComponentService;
         private readonly IGuild? _targetGuild;
         private readonly SingleTask _updateControlMessageTask;
-        private readonly SingleTask _controlMessageSendTask;
-        private readonly MessageComponentService _messageComponentService;
-        private readonly IDiscordClient _discordClient;
-        private readonly ILogger _logger;
-        private readonly IArtworkService _artworkService;
 
-        private readonly EnlivenEmbedBuilder _embedBuilder;
         private CancellationTokenSource _cancellationTokenSource = new();
         private IUserMessage? _controlMessage;
+        private string? _effectsInParameters;
         private bool _isExternalEmojiAllowed;
-        private Disposables? _playerSubscriptions;
-        private IMessageChannel _targetChannel;
-        public bool NextResendForced;
         private MessageComponent? _messageComponent;
         private EnlivenComponentBuilder? _messageComponentManager;
+        private Disposables? _playerSubscriptions;
+        private SendControlMessageOverride? _sendControlMessageOverride;
+        private IMessageChannel _targetChannel;
+
+        public bool NextResendForced;
 
         public EmbedPlayerDisplay(ITextChannel targetChannel, IDiscordClient discordClient, ILocalizationProvider loc,
-                                  CommandHandlerService commandHandlerService, MessageComponentService messageComponentService, 
+                                  CommandHandlerService commandHandlerService, MessageComponentService messageComponentService,
                                   ILogger logger, IArtworkService artworkService) :
             this((IMessageChannel)targetChannel, discordClient, loc, commandHandlerService, messageComponentService, logger, artworkService) {
             _targetGuild = targetChannel.Guild;
         }
 
         public EmbedPlayerDisplay(IMessageChannel targetChannel, IDiscordClient discordClient, ILocalizationProvider loc,
-                                  CommandHandlerService commandHandlerService, MessageComponentService messageComponentService, 
+                                  CommandHandlerService commandHandlerService, MessageComponentService messageComponentService,
                                   ILogger logger, IArtworkService artworkService) {
             _messageComponentService = messageComponentService;
             _logger = logger;
@@ -80,7 +79,7 @@ namespace Bot.DiscordRelated.Music {
             _embedBuilder.AddField("Warnings", loc.Get("Music.Warning"), loc.Get("Music.Empty"), false, 100, false);
 
             _controlMessageSendTask = new SingleTask(SendControlMessageInternal) { BetweenExecutionsDelay = TimeSpan.FromSeconds(30), CanBeDirty = false };
-            _updateControlMessageTask = new SingleTask(UpdateControlMessageInternal) { BetweenExecutionsDelay = TimeSpan.FromSeconds(1.5), CanBeDirty = true, ShouldExecuteNonDirtyIfNothingRunning = true};
+            _updateControlMessageTask = new SingleTask(UpdateControlMessageInternal) { BetweenExecutionsDelay = TimeSpan.FromSeconds(1.5), CanBeDirty = true, ShouldExecuteNonDirtyIfNothingRunning = true };
         }
 
         private async Task SendControlMessageInternal(SingleTaskExecutionData data) {
@@ -124,6 +123,7 @@ namespace Bot.DiscordRelated.Music {
         }
 
         private async Task UpdateControlMessageInternal(SingleTaskExecutionData data) {
+            if (_cancellationTokenSource.IsCancellationRequested) data.OverrideDelay = TimeSpan.Zero;
             if (_controlMessage != null) {
                 try {
                     _logger.Trace("Modifying embed control message. Guild: {TargetGuildId}. Channel: {TargetChannelId}. Message id: {ControlMessageId}", _targetGuild?.Id, _targetChannel.Id, _controlMessage.Id);
@@ -152,7 +152,7 @@ namespace Bot.DiscordRelated.Music {
             }
 
             Task RatelimitCallback(IRateLimitInfo info) {
-                _logger.Log(LogLevel.Trace, "Recieved ratelimit info for updating player embed control message. Guild: {TargetGuildId}. Channel: {TargetChannelId}. Message id: {ControlMessageId}.\nRatelimit info: {ratelimit info}", 
+                _logger.Log(LogLevel.Trace, "Recieved ratelimit info for updating player embed control message. Guild: {TargetGuildId}. Channel: {TargetChannelId}. Message id: {ControlMessageId}.\nRatelimit info: {ratelimit info}",
                     _targetGuild?.Id, _targetChannel.Id, _controlMessage.Id, JsonConvert.SerializeObject(info));
                 if (info.Remaining <= 1) {
                     data.OverrideDelay = info.ResetAfter > data.BetweenExecutionsDelay ? info.ResetAfter : null;
@@ -267,8 +267,18 @@ namespace Bot.DiscordRelated.Music {
             UpdateMessageComponents();
 
             _messageComponent = _messageComponentManager.Build();
-            _controlMessage = await _targetChannel.SendMessageAsync(null, false, _embedBuilder.Build(), components: _messageComponent);
+            _controlMessage = await _sendControlMessageOverride.ExecuteAndFallbackWith(_embedBuilder.Build(), _messageComponent, _targetChannel, _logger);
+            _sendControlMessageOverride = null;
             _messageComponentManager.AssociateWithMessage(_controlMessage);
+        }
+
+        public async Task ResendControlMessageWithOverride(SendControlMessageOverride sendControlMessageOverride, bool executeResend = true) {
+            _sendControlMessageOverride = sendControlMessageOverride;
+            if (!executeResend) return;
+
+            _cancellationTokenSource.Cancel();
+            await _controlMessageSendTask.Execute(false, TimeSpan.Zero);
+            _cancellationTokenSource = new CancellationTokenSource();
         }
 
         public void UpdateMessageComponents() {
@@ -372,8 +382,6 @@ namespace Bot.DiscordRelated.Music {
                 }
             }
         }
-
-        private string? _effectsInParameters;
         private void UpdateParameters() {
             var volume = (int)(Player.Volume * 200);
             var volumeText = volume < 50 || volume > 150 ? $"🔉 ***{volume}%***\n" : $"🔉 {volume}%";
