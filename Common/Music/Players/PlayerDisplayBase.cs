@@ -3,12 +3,12 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Threading.Tasks;
 using Common.Localization.Entries;
-using Common.Utils;
 
 namespace Common.Music.Players {
     public abstract class PlayerDisplayBase : IPlayerDisplay {
         private Subject<IPlayerDisplay> _shutdownObserver = null!;
-        public FinalLavalinkPlayer Player { get; set; } = null!;
+        public FinalLavalinkPlayer Player { get; private set; } = null!;
+        public bool IsInitialized { get; private set; }
 
         protected PlayerDisplayBase() {
             _shutdownObserver =  new Subject<IPlayerDisplay>();
@@ -17,6 +17,7 @@ namespace Common.Music.Players {
 
         public virtual Task Initialize(FinalLavalinkPlayer finalLavalinkPlayer) {
             ChangePlayer(finalLavalinkPlayer);
+            IsInitialized = true;
             
             return Task.CompletedTask;
         }
