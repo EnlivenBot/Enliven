@@ -13,7 +13,6 @@ using Common.Entities;
 using Common.Localization.Providers;
 using Common.Utils;
 using Discord;
-using NLog;
 
 namespace Common {
     public static class ExtensionMethods {
@@ -28,7 +27,7 @@ namespace Common {
             _ = Task.Delay(span).ContinueWith(task => messageTask.SafeDelete());
             return messageTask;
         }
-        
+
         /// <returns>
         /// Task, which completed when target message was deleted
         /// </returns>
@@ -54,7 +53,7 @@ namespace Common {
 
         public static void SafeDelete<T>(this T? message) where T : IMessage {
             try {
-                message?.DeleteAsync();
+                message?.DeleteAsync().ObserveException();
             }
             catch (Exception) {
                 // ignored
