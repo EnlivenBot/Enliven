@@ -104,7 +104,8 @@ namespace Bot.DiscordRelated.Commands.Modules {
         public override async Task AfterExecuteAsync(ICommandInfo command) {
             if (Context.NeedResponse) {
                 var channelInfo = GetChannelInfo();
-                if (channelInfo.IsCurrentChannelSuitable && Context.Channel is ITextChannel textChannel) EmbedPlayerDisplayProvider.Get(textChannel)?.ResendControlMessageWithOverride(OverrideSendingControlMessage);
+                if (channelInfo.IsCurrentChannelSuitable && Context.Channel is ITextChannel textChannel)
+                    EmbedPlayerDisplayProvider.Get(textChannel)?.ResendControlMessageWithOverride(OverrideSendingControlMessage);
             }
             await base.AfterExecuteAsync(command);
         }

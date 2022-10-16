@@ -16,6 +16,7 @@ using Discord.Commands;
 
 namespace Bot.Commands.Music {
     [SlashCommandAdapter]
+    [LongRunningCommand]
     [Grouping("music")]
     [RequireContext(ContextType.Guild)]
     public sealed class PlayCommand : MusicModuleBase {
@@ -56,7 +57,7 @@ namespace Bot.Commands.Music {
                 await this.ReplyFailFormattedAsync(new EntryLocalized("Music.NotFound", query!.SafeSubstring(100, "...")!), true);
             }
         }
-        
+
         private async Task<List<string>> GetMusicQueries(IMessage? message, string query) {
             var list = new List<string>();
             list.AddRange(ParseByLines(query));

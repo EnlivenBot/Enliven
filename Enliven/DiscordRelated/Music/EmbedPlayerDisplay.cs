@@ -137,6 +137,9 @@ namespace Bot.DiscordRelated.Music {
                         RetryMode = RetryMode.AlwaysFail
                     });
                 }
+                catch (TaskCanceledException) {
+                    // Ignored
+                }
                 catch (RateLimitedException) {
                     _logger.Debug("Got rate limited exception while updating player embed control message. Guild: {TargetGuildId}. Channel: {TargetChannelId}. Message id: {ControlMessageId}", _targetGuild?.Id, _targetChannel.Id, _controlMessage.Id);
                 }
@@ -274,6 +277,7 @@ namespace Bot.DiscordRelated.Music {
 
         public async Task ResendControlMessageWithOverride(SendControlMessageOverride sendControlMessageOverride, bool executeResend = true) {
             _sendControlMessageOverride = sendControlMessageOverride;
+            NextResendForced = true;
             if (!executeResend) return;
 
             _cancellationTokenSource.Cancel();
