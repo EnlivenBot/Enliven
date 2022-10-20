@@ -8,6 +8,7 @@ using Bot.DiscordRelated.Commands.Attributes;
 using Bot.DiscordRelated.Commands.Modules;
 using Bot.DiscordRelated.Commands.Modules.Contexts;
 using Bot.DiscordRelated.Interactions;
+using Bot.DiscordRelated.Music;
 using Common;
 using Common.Localization.Entries;
 using Common.Music;
@@ -40,14 +41,23 @@ namespace Bot.Commands.Music {
             var messageInvoker = (Context as TextCommandsModuleContext)?.Message;
             var queries = await GetMusicQueries(messageInvoker, query.IsBlank(""));
             var mainPlayerDisplay = await GetMainPlayerDisplay();
-            if (queries.Count == 0) {
-                await this.RemoveMessageInvokerIfPossible();
-                mainPlayerDisplay.NextResendForced = true;
-                _ = mainPlayerDisplay.ControlMessageResend();
+            if (queries.Count != 0) {
+                await StartResolvingInternal(query, position, mainPlayerDisplay, queries);
                 return;
             }
 
-            _ = mainPlayerDisplay.ControlMessageResend();
+            if (Context.NeedResponse)
+                await mainPlayerDisplay.ResendControlMessageWithOverride(OverrideSendingControlMessage);
+            else {
+                await this.RemoveMessageInvokerIfPossible();
+                mainPlayerDisplay.NextResendForced = true;
+                await mainPlayerDisplay.ControlMessageResend();
+            }
+        }
+
+        private async Task StartResolvingInternal(string? query, int position, EmbedPlayerDisplay mainPlayerDisplay, IEnumerable<string> queries) {
+            if (Context.NeedResponse) await mainPlayerDisplay.ResendControlMessageWithOverride(OverrideSendingControlMessage, false);
+            else _ = mainPlayerDisplay.ControlMessageResend();
             try {
                 var resolvedQueries = await MusicController.ResolveQueries(queries);
                 var username = Context.User?.Username ?? "Unknown";

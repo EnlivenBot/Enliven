@@ -47,6 +47,7 @@ namespace Bot.DiscordRelated.Music {
         private MessageComponent? _messageComponent;
         private EnlivenComponentBuilder? _messageComponentManager;
         private Disposables? _playerSubscriptions;
+        private bool _resendInsteadOfUpdate;
         private SendControlMessageOverride? _sendControlMessageOverride;
         private IMessageChannel _targetChannel;
 
@@ -126,6 +127,11 @@ namespace Bot.DiscordRelated.Music {
             if (_cancellationTokenSource.IsCancellationRequested) data.OverrideDelay = TimeSpan.Zero;
             if (_controlMessage != null) {
                 try {
+                    if (_resendInsteadOfUpdate) {
+                        _resendInsteadOfUpdate = false;
+                        await _controlMessageSendTask.Execute(false, TimeSpan.Zero);
+                        return;
+                    }
                     _logger.Trace("Modifying embed control message. Guild: {TargetGuildId}. Channel: {TargetChannelId}. Message id: {ControlMessageId}", _targetGuild?.Id, _targetChannel.Id, _controlMessage.Id);
                     await _controlMessage.ModifyAsync(properties => {
                         properties.Embed = _embedBuilder!.Build();
@@ -146,7 +152,7 @@ namespace Bot.DiscordRelated.Music {
                 catch (Exception e) {
                     _logger.Debug(e, "Failed to update embed control message. Guild: {TargetGuildId}. Channel: {TargetChannelId}. Message id: {ControlMessageId}", _targetGuild?.Id, _targetChannel.Id, _controlMessage.Id);
                     if (_controlMessage != null) {
-                        (await _targetChannel.GetMessageAsync(_controlMessage.Id)).SafeDelete();
+                        _targetChannel.GetMessageAsync(_controlMessage.Id).SafeDelete();
                         _controlMessage = null;
                     }
 
@@ -278,6 +284,7 @@ namespace Bot.DiscordRelated.Music {
         public async Task ResendControlMessageWithOverride(SendControlMessageOverride sendControlMessageOverride, bool executeResend = true) {
             _sendControlMessageOverride = sendControlMessageOverride;
             NextResendForced = true;
+            _resendInsteadOfUpdate = !executeResend;
             if (!executeResend) return;
 
             _cancellationTokenSource.Cancel();

@@ -116,7 +116,7 @@ namespace Bot.DiscordRelated.Commands.Modules {
             await base.AfterExecuteAsync(command);
         }
 
-        private async Task<IUserMessage> OverrideSendingControlMessage(Embed embed, MessageComponent component) {
+        protected async Task<IUserMessage> OverrideSendingControlMessage(Embed embed, MessageComponent component) {
             var sentMessage = await Context.SendMessageAsync(null, embed, false, component);
             return await sentMessage.GetMessageAsync();
         }
