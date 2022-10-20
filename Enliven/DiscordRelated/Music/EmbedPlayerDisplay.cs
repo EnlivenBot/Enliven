@@ -413,37 +413,24 @@ namespace Bot.DiscordRelated.Music {
                 _embedBuilder.Fields["Queue"].Value = $"```py\n{GetPlaylistString()}```";
             }
 
-            StringBuilder GetPlaylistString() {
-                var globalStringBuilder = new StringBuilder();
-                string? lastAuthor = null;
-                var authorStringBuilder = new StringBuilder();
-                for (var i = Math.Max(Player.CurrentTrackIndex - 1, 0); i < Player.CurrentTrackIndex + 5; i++) {
-                    if (!Player.Playlist.TryGetValue(i, out var track)) continue;
-                    var author = track!.GetRequester();
-                    if (author != lastAuthor && lastAuthor != null) FinalizeBlock();
-                    authorStringBuilder.Replace("└", "├").Replace("▬", "│");
-                    authorStringBuilder.Append(GetTrackString(MusicController.EscapeTrack(track!.Title),
-                        i + 1, Player.CurrentTrackIndex == i));
-                    lastAuthor = author;
+            string GetPlaylistString() {
+                var builder = new StringBuilder();
+                var helper = new PlaylistQueueHelper(Player.Playlist, Player.CurrentTrackIndex - 1, 5);
+                foreach (var track in helper) {
+                    if (helper.IsFirstInGroup) builder.AppendLine($"─────┬────{track.GetRequester()}");
+                    var isCurrent = helper.CurrentTrackIndex == Player.CurrentTrackIndex;
+                    var listChar = helper.IsLastInGroup ? '└' : '├';
+                    builder.AppendLine(GetTrackString(track.Title, helper.CurrentTrackNumber, isCurrent, listChar));
                 }
 
-                FinalizeBlock();
-
-                void FinalizeBlock() {
-                    globalStringBuilder.AppendLine($"─────┬────{lastAuthor}");
-                    globalStringBuilder.Append(authorStringBuilder.Replace("▬", " "));
-
-                    authorStringBuilder.Clear();
+                string GetTrackString(string title, int trackNumber, bool isCurrent, char listChar) {
+                    var trackNumberString = trackNumber.ToString();
+                    var track = MusicController.EscapeTrack(title).SafeSubstring(150, "...");
+                    var prefix = isCurrent ? '@' : ' ';
+                    return prefix + trackNumberString + new string(' ', 4 - trackNumberString.Length) + listChar + track;
                 }
 
-                StringBuilder GetTrackString(string title, int trackNumber, bool isCurrent) {
-                    var sb = new StringBuilder();
-                    sb.AppendLine($"{(isCurrent ? "@" : " ")}{trackNumber}    ".SafeSubstring(0, 5) + "└" + title);
-
-                    return sb;
-                }
-
-                return globalStringBuilder;
+                return builder.ToString();
             }
         }
 

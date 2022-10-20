@@ -250,5 +250,8 @@ namespace Common {
         {
             return task.ContinueWith(_ =>  task.Exception?.Handle(_ => true), TaskContinuationOptions.OnlyOnFaulted);
         }
+
+        public static IEnumerator<T> GetEnumerator<T>(this IEnumerator<T> enumerator) => enumerator;
+
     }
 }
