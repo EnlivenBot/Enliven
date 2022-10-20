@@ -87,9 +87,11 @@ namespace Bot.DiscordRelated.Music {
             try {
                 var shouldResend =
                     NextResendForced
+                 || _resendInsteadOfUpdate
                  || _controlMessage == null
                  || await EnsureMessage.NotExists(_targetChannel, _controlMessage.Id, 3);
                 if (shouldResend) {
+                    _resendInsteadOfUpdate = false;
                     NextResendForced = false;
                     _cancellationTokenSource.Cancel();
                     _cancellationTokenSource = new CancellationTokenSource();
@@ -284,7 +286,7 @@ namespace Bot.DiscordRelated.Music {
         public async Task ResendControlMessageWithOverride(SendControlMessageOverride sendControlMessageOverride, bool executeResend = true) {
             _sendControlMessageOverride = sendControlMessageOverride;
             NextResendForced = true;
-            _resendInsteadOfUpdate = !executeResend;
+            _resendInsteadOfUpdate = true;
             if (!executeResend) return;
 
             _cancellationTokenSource.Cancel();

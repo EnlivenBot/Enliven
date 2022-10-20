@@ -7,19 +7,17 @@ using Common.Localization.Entries;
 namespace Common.Music.Players {
     public abstract class PlayerDisplayBase : IPlayerDisplay {
         private Subject<IPlayerDisplay> _shutdownObserver = null!;
+
+        protected PlayerDisplayBase() {
+            _shutdownObserver = new Subject<IPlayerDisplay>();
+            Shutdown = _shutdownObserver.AsObservable();
+        }
         public FinalLavalinkPlayer Player { get; private set; } = null!;
         public bool IsInitialized { get; private set; }
 
-        protected PlayerDisplayBase() {
-            _shutdownObserver =  new Subject<IPlayerDisplay>();
-            Shutdown = _shutdownObserver.AsObservable();
-        }
-
-        public virtual Task Initialize(FinalLavalinkPlayer finalLavalinkPlayer) {
-            ChangePlayer(finalLavalinkPlayer);
+        public virtual async Task Initialize(FinalLavalinkPlayer finalLavalinkPlayer) {
+            await ChangePlayer(finalLavalinkPlayer);
             IsInitialized = true;
-            
-            return Task.CompletedTask;
         }
 
         public virtual Task ChangePlayer(FinalLavalinkPlayer newPlayer) {
@@ -27,7 +25,7 @@ namespace Common.Music.Players {
             Player?.Displays.Remove(this);
             Player = newPlayer;
             Player.Displays.Add(this);
-            
+
             return Task.CompletedTask;
         }
 
@@ -38,7 +36,7 @@ namespace Common.Music.Players {
             _shutdownObserver.OnCompleted();
             return Task.CompletedTask;
         }
-        
+
         public abstract Task LeaveNotification(IEntry header, IEntry body);
 
         public bool IsShutdowned { get; private set; }
