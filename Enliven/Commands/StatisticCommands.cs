@@ -1,6 +1,8 @@
 ﻿using System.Threading.Tasks;
+using Bot.DiscordRelated;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
+using Bot.DiscordRelated.Commands.Modules.Contexts;
 using Bot.DiscordRelated.Interactions;
 using Common;
 using Discord;
@@ -13,19 +15,17 @@ namespace Bot.Commands {
 
         [Command("stats", RunMode = RunMode.Async)]
         [Summary("stats0s")]
-        public Task Stats() {
-            Context.Message.SafeDelete();
-            _ = ReplyAsync(null, false, StatisticsService.BuildStats(null, Loc).Build()).DelayedDelete(Constants.StandardTimeSpan);
-            return Task.CompletedTask;
+        public async Task Stats() {
+            await Context.SendMessageAsync(null, StatisticsService.BuildStats(null, Loc).Build()).CleanupAfter(Constants.StandardTimeSpan);
+            await this.RemoveMessageInvokerIfPossible();
         }
 
         [Command("userstats", RunMode = RunMode.Async)]
         [Summary("userstats0s")]
-        public Task UserStats([Summary("userstats0_0s")] IUser? user = null) {
-            Context.Message.SafeDelete();
+        public async Task UserStats([Summary("userstats0_0s")] IUser? user = null) {
             var u = user ?? Context.User;
-            _ = ReplyAsync(null, false, StatisticsService.BuildStats(u, Loc).Build()).DelayedDelete(Constants.StandardTimeSpan);
-            return Task.CompletedTask;
+            await Context.SendMessageAsync(null, StatisticsService.BuildStats(u, Loc).Build()).CleanupAfter(Constants.StandardTimeSpan);
+            await this.RemoveMessageInvokerIfPossible();
         }
     }
 }

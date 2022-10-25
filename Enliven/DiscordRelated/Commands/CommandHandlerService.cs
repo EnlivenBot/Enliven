@@ -226,12 +226,12 @@ namespace Bot.DiscordRelated.Commands {
             }
 
             var embed = GetErrorEmbed(message.Author, loc, description).WithFields(fieldBuilders).Build();
-            _ = (await message.Channel.SendMessageAsync(null, false, embed)).DelayedDelete(Constants.LongTimeSpan);
+            await message.Channel.SendMessageAsync(null, false, embed).DelayedDelete(Constants.LongTimeSpan);
         }
 
         private static async Task SendErrorMessage(IMessage message, ILocalizationProvider loc, string description) {
             var embed = GetErrorEmbed(message.Author, loc, description).Build();
-            _ = (await message.Channel.SendMessageAsync(null, false, embed)).DelayedDelete(Constants.LongTimeSpan);
+            await message.Channel.SendMessageAsync(null, false, embed).DelayedDelete(Constants.LongTimeSpan);
         }
 
         public static EmbedBuilder GetErrorEmbed(IUser user, ILocalizationProvider loc, string description) {

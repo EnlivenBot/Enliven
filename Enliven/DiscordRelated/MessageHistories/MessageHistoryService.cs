@@ -167,7 +167,7 @@ namespace Bot.DiscordRelated.MessageHistories {
             var logMessage = await _messageHistoryPrinter
                 .GenerateDataForLog(history, forceImage, loc, requester, message)
                 .SendMessage(outputChannel);
-            _ = logMessage.DelayedDelete(Constants.LongTimeSpan);
+            logMessage.DelayedDelete(Constants.LongTimeSpan);
         }
 
         public bool NeedLogMessage(IMessage arg, GuildConfig config, bool? isCommand) {

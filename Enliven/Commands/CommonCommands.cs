@@ -2,6 +2,7 @@
 using Bot.DiscordRelated.Commands.Modules;
 using Bot.DiscordRelated.Interactions;
 using Common;
+using Common.Localization.Entries;
 using Discord.Commands;
 
 namespace Bot.Commands {
@@ -10,8 +11,8 @@ namespace Bot.Commands {
         [Command("vote")]
         [Alias("support", "voting")]
         public async Task Vote() {
-            Context.Message.SafeDelete();
-            await ReplyFormattedAsync(Loc.Get("Common.Vote"), Loc.Get("Common.VoteDescription"));
+            await this.ReplyFormattedAsync(new EntryLocalized("Common.Vote"), new EntryLocalized("Common.VoteDescription"));
+            await this.RemoveMessageInvokerIfPossible();
         }
     }
 }

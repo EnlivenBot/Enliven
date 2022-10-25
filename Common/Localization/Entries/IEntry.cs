@@ -19,5 +19,11 @@ namespace Common.Localization.Entries {
         public static IEntry WithArg(this IEntry entry, params object[] arguments) {
             return new EntryFormatted(entry, arguments);
         }
+
+        public static string Resolve(this ILocalizationProvider localizationProvider, IEntry entry)
+            => entry.Get(localizationProvider);
+
+        public static IEntry ToEntry(this string text)
+            => new EntryLocalized(text);
     }
 }

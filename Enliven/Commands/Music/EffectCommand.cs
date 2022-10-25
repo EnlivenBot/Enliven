@@ -4,6 +4,7 @@ using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
 using Bot.DiscordRelated.Interactions;
 using Common;
+using Common.Localization.Entries;
 using Common.Music.Effects;
 using Common.Music.Players;
 using Discord.Commands;
@@ -23,14 +24,14 @@ namespace Bot.Commands.Music {
             if (await TryRemoveEffect(effectName)) return;
 
             if (!EffectSourceProvider.TryResolve(Context.User.ToLink(), effectName, out var effectSource)) {
-                await ReplyFormattedAsync(Loc.Get("Music.EffectNotFound"), true);
+                await this.ReplyFailFormattedAsync(new EntryLocalized("Music.EffectNotFound"), true);
                 return;
             }
 
             if (await TryRemoveEffect(effectSource.GetSourceName())) return;
 
             if (Player.Effects.Count >= AdvancedLavalinkPlayer.MaxEffectsCount) {
-                await ReplyFormattedAsync(Loc.Get("Music.MaxEffectsCountExceed", AdvancedLavalinkPlayer.MaxEffectsCount), true);
+                await this.ReplyFailFormattedAsync(new EntryLocalized("Music.MaxEffectsCountExceed", AdvancedLavalinkPlayer.MaxEffectsCount), true);
                 return;
             }
             var playerEffect = await effectSource.CreateEffect(args);

@@ -2,15 +2,12 @@
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Reactive.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.MessageComponents;
 using Common;
 using Common.Config;
-using Common.Music.Players;
 using Discord;
-using Discord.WebSocket;
 using Lavalink4NET.Artwork;
 using Lavalink4NET.Player;
 using Newtonsoft.Json;
@@ -18,13 +15,13 @@ using NLog;
 
 namespace Bot.DiscordRelated.Music {
     public class EmbedPlayerDisplayProvider : IService, IDisposable {
+        private readonly IArtworkService _artworkService;
         private readonly ConcurrentDictionary<string, EmbedPlayerDisplay> _cache = new();
-        private readonly IGuildConfigProvider _guildConfigProvider;
         private readonly EnlivenShardedClient _client;
         private readonly CommandHandlerService _commandHandlerService;
+        private readonly IGuildConfigProvider _guildConfigProvider;
         private readonly ILogger _logger;
         private readonly MessageComponentService _messageComponentService;
-        private readonly IArtworkService _artworkService;
         private IDisposable? _restoreStoppedHandled;
 
         public EmbedPlayerDisplayProvider(EnlivenShardedClient client, IGuildConfigProvider guildConfigProvider,
@@ -36,6 +33,10 @@ namespace Bot.DiscordRelated.Music {
             _artworkService = artworkService;
             _client = client;
             _guildConfigProvider = guildConfigProvider;
+        }
+
+        public void Dispose() {
+            _restoreStoppedHandled?.Dispose();
         }
 
         public Task OnPreDiscordStart() {
@@ -59,23 +60,19 @@ namespace Bot.DiscordRelated.Music {
             return Get($"guild-{channel.GuildId}");
         }
 
-        public EmbedPlayerDisplay Provide(ITextChannel channel, FinalLavalinkPlayer finalLavalinkPlayer) {
-            return ProvideInternal($"guild-{channel.GuildId}", channel, finalLavalinkPlayer);
+        public EmbedPlayerDisplay Provide(ITextChannel channel) {
+            return ProvideInternal($"guild-{channel.GuildId}", channel);
         }
 
-        private EmbedPlayerDisplay ProvideInternal(string id, ITextChannel channel, FinalLavalinkPlayer finalLavalinkPlayer, int recursiveCount = 0) {
-            if (finalLavalinkPlayer.IsShutdowned) throw new InvalidOperationException("You try to provide display for shutdowned player");
+        private EmbedPlayerDisplay ProvideInternal(string id, ITextChannel channel, int recursiveCount = 0) {
             var embedPlayerDisplay = _cache.GetOrAdd(id, s => {
                 var guildConfig = _guildConfigProvider.Get(channel.GuildId);
                 // TODO: Implement proper logger creation
-                var display = new EmbedPlayerDisplay(channel, _client, guildConfig.Loc, _commandHandlerService, _messageComponentService, _logger, _artworkService);
-                _ = display.Initialize(finalLavalinkPlayer);
-
-                return display;
+                return new EmbedPlayerDisplay(channel, _client, guildConfig.Loc, _commandHandlerService, _messageComponentService, _logger, _artworkService);
             });
             if (!embedPlayerDisplay.IsShutdowned && !embedPlayerDisplay.Player?.IsShutdowned != false) return embedPlayerDisplay;
             _cache.TryRemove(id, out _);
-            if (recursiveCount <= 1) return ProvideInternal(id, channel, finalLavalinkPlayer, ++recursiveCount);
+            if (recursiveCount <= 1) return ProvideInternal(id, channel, ++recursiveCount);
             _logger.Fatal("Provider recursive call. Provider: {data}",
                 JsonConvert.SerializeObject(embedPlayerDisplay, Formatting.None,
                     new JsonSerializerSettings() { ReferenceLoopHandling = ReferenceLoopHandling.Ignore }));
@@ -101,10 +98,6 @@ namespace Bot.DiscordRelated.Music {
                 await waitCycle;
             }
             // ReSharper disable once FunctionNeverReturns
-        }
-
-        public void Dispose() {
-            _restoreStoppedHandled?.Dispose();
         }
     }
 }

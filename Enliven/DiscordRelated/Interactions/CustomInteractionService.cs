@@ -29,9 +29,12 @@ using SummaryAttribute = Discord.Commands.SummaryAttribute;
 
 namespace Bot.DiscordRelated.Interactions {
     public class CustomInteractionService : InteractionService, IService {
-        private readonly IServiceProvider _serviceProvider;
+        private static PropertyInfo TypeInfoProperty = typeof(ModuleBuilder).GetDeclaredProperty("TypeInfo");
+
+        private static PropertyInfo CallbackProperty = typeof(SlashCommandBuilder).GetProperty("Callback")!;
         private readonly GlobalConfig _globalConfig;
         private readonly InstanceConfig _instanceConfig;
+        private readonly IServiceProvider _serviceProvider;
 
         public CustomInteractionService(DiscordShardedClient discordClient, ILifetimeScope serviceContainer,
                                         GlobalConfig globalConfig, InstanceConfig instanceConfig,
@@ -72,17 +75,14 @@ namespace Bot.DiscordRelated.Interactions {
                 });
             }
         }
-
-        private static PropertyInfo TypeInfoProperty = typeof(ModuleBuilder).GetDeclaredProperty("TypeInfo");
         private void BuildClassModule(Type module, ModuleBuilder moduleBuilder, Func<IServiceProvider, IInteractionModuleBase> createLambdaBuilder, IEnumerable<(MethodInfo info, CommandAttribute?)> commandMethods) {
             TypeInfoProperty.SetValue(moduleBuilder, module);
+            moduleBuilder.AddAttributes(module.GetCustomAttributes<Attribute>().ToArray());
 
             foreach (var (methodInfo, command) in commandMethods) {
                 moduleBuilder.AddSlashCommand(builder => BuildSlashCommand(builder, command, methodInfo, createLambdaBuilder));
             }
         }
-
-        private static PropertyInfo CallbackProperty = typeof(SlashCommandBuilder).GetProperty("Callback")!;
         private void BuildSlashCommand(SlashCommandBuilder builder, CommandAttribute? command, MethodInfo methodInfo, Func<IServiceProvider, IInteractionModuleBase> createLambdaBuilder) {
             var commandText = command!.Text.Contains(' ') ? command.Text.SubstringAfterLast(" ") : command.Text;
             var description = methodInfo.GetCustomAttribute<SummaryAttribute>()
@@ -191,6 +191,7 @@ namespace Bot.DiscordRelated.Interactions {
 
             return lambda;
         }
+
         #endregion
     }
 }

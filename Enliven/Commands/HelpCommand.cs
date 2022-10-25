@@ -1,7 +1,9 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
+using Bot.DiscordRelated;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
+using Bot.DiscordRelated.Commands.Modules.Contexts;
 using Bot.Utilities;
 using Common;
 using Discord;
@@ -26,8 +28,7 @@ namespace Bot.Commands {
                         Value = pair.Value.GroupTextTemplate
                     }));
             eb.AddField(Loc.Get("Common.Vote"), Loc.Get("Common.VoteDescription"));
-            var responseChannel = await GetResponseChannel();
-            _ = responseChannel.SendMessageAsync(null, false, eb.Build()).DelayedDelete(Constants.LongTimeSpan);
+            await this.Context.SendMessageAsync(null, eb.Build()).CleanupAfter(Constants.LongTimeSpan);
         }
 
         [Command("help")]
@@ -53,8 +54,7 @@ namespace Bot.Commands {
                   .WithDescription(Loc.Get("Help.NotFoundDescription").Format(message.SafeSubstring(100, "...")));
             }
 
-            var responseChannel = await GetResponseChannel();
-            _ = responseChannel.SendMessageAsync(null, false, eb.Build()).DelayedDelete(Constants.LongTimeSpan);
+            await this.Context.SendMessageAsync(null, eb.Build()).CleanupAfter(Constants.LongTimeSpan);
         }
     }
 }

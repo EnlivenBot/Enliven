@@ -71,7 +71,7 @@ namespace Bot.Commands.Chains {
                     controlMessage.Channel.SendMessageAsync(null, false, propertiesEmbed);
                 }
 
-                _ = controlMessage.DelayedDelete(Constants.StandardTimeSpan);
+                controlMessage.DelayedDelete(Constants.StandardTimeSpan);
             };
             switch (_request.Type) {
                 case SpotifyUrl.SpotifyUrlType.Album:

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using Bot.DiscordRelated.Commands.Attributes;
 using Bot.Utilities;
 using Discord.Commands;
 
