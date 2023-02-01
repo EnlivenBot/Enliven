@@ -11,9 +11,9 @@
 
     <ItemGroup>
         <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="8.0.0" />
-        <PackageReference Include="SpotifyAPI.Web" Version="6.2.2" />
+        <PackageReference Include="SpotifyAPI.Web" Version="7.0.0"/>
         <PackageReference Include="YandexMusicResolver" Version="4.0.0" />
-        <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.0"/>
     </ItemGroup>
 
     <ItemGroup>

@@ -8,9 +8,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="DiscordChatExporter.Core" Version="2021.7.29.2003" PrivateAssets="Compile" />
-        <PackageReference Include="MiniRazor.CodeGen" Version="2.2.1" PrivateAssets="Compile" />
-        <PackageReference Include="PuppeteerSharp" Version="7.0.0" PrivateAssets="Compile" />
+        <PackageReference Include="DiscordChatExporter.Core" Version="2021.7.29.2003" PrivateAssets="Compile"/>
+        <PackageReference Include="MiniRazor.CodeGen" Version="2.2.2" PrivateAssets="Compile"/>
+        <PackageReference Include="PuppeteerSharp" Version="9.0.2" PrivateAssets="Compile"/>
     </ItemGroup>
 
     <ItemGroup>
