@@ -5,10 +5,11 @@ using Discord.Commands;
 
 namespace Bot.DiscordRelated.Commands.Modules.Contexts {
     public class TextCommandsModuleContext : ICommonModuleContext, ICommandContext {
-        public ICommandContext OriginalContext { get; }
         public TextCommandsModuleContext(ICommandContext originalContext) {
             OriginalContext = originalContext;
         }
+        public ICommandContext OriginalContext { get; }
+        public IUserMessage Message => OriginalContext.Message;
 
         public IDiscordClient Client => OriginalContext.Client;
         public IGuild Guild => OriginalContext.Guild;
@@ -17,9 +18,9 @@ namespace Bot.DiscordRelated.Commands.Modules.Contexts {
         public bool NeedResponse => false;
         public bool HasMeaningResponseSent { get; private set; }
         public bool CanSendEphemeral => false;
-        public IUserMessage Message => OriginalContext.Message;
 
         public ValueTask BeforeExecuteAsync() {
+            //-V3013
             return ValueTask.CompletedTask;
         }
 

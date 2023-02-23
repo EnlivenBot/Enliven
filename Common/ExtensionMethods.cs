@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Reactive.Disposables;
@@ -47,6 +48,7 @@ namespace Common {
                 });
             }
             catch (Exception) {
+                //-V3163
                 // ignored
             }
         }
@@ -56,6 +58,7 @@ namespace Common {
                 message?.DeleteAsync().ObserveException();
             }
             catch (Exception) {
+                //-V3163
                 // ignored
             }
         }
@@ -82,6 +85,7 @@ namespace Common {
                                                   : text.Substring(start, length);
         }
 
+        [return: NotNullIfNotNull("text")]
         public static string? SafeSubstring(this string? text, int length, string postContent = "") {
             if (text == null) return null;
 
@@ -259,6 +263,5 @@ namespace Common {
         }
 
         public static IEnumerator<T> GetEnumerator<T>(this IEnumerator<T> enumerator) => enumerator;
-
     }
 }

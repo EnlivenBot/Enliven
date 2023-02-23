@@ -64,7 +64,7 @@ namespace Bot.Commands.Music {
                 await Player.TryEnqueue(resolvedQueries, username, position);
             }
             catch (TrackNotFoundException) {
-                await this.ReplyFailFormattedAsync(new EntryLocalized("Music.NotFound", query!.SafeSubstring(100, "...")!), true);
+                await this.ReplyFailFormattedAsync(new EntryLocalized("Music.NotFound", query.SafeSubstring(100, "...") ?? "EMPTY"), true);
             }
         }
 

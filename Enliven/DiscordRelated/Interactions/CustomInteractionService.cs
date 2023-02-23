@@ -91,8 +91,9 @@ namespace Bot.DiscordRelated.Interactions {
                 .Pipe(localized => localized?.CanGet() == true ? localized.Get(LangLocalizationProvider.EnglishLocalizationProvider) : null)
                 .Pipe(s => s ?? commandText);
 
-            var adminCommand = (methodInfo.GetCustomAttribute<RequireUserPermissionAttribute>()?.GuildPermission ?? 0 & GuildPermission.Administrator) != 0
-                            || (methodInfo.DeclaringType?.GetCustomAttribute<RequireUserPermissionAttribute>()?.GuildPermission ?? 0 & GuildPermission.Administrator) != 0;
+            var adminCommand = (methodInfo.GetCustomAttribute<RequireUserPermissionAttribute>()?.GuildPermission.GetValueOrDefault(0).HasFlag(GuildPermission.Administrator) ?? false)
+                            || (methodInfo.DeclaringType?.GetCustomAttribute<RequireUserPermissionAttribute>()?.GuildPermission.GetValueOrDefault(0).HasFlag(GuildPermission.Administrator) ?? false);
+
             var preconditions = adminCommand ? new[] { new Discord.Interactions.RequireUserPermissionAttribute(GuildPermission.Administrator) } : Array.Empty<PreconditionAttribute>();
 
             builder

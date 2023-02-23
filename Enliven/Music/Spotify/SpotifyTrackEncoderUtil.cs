@@ -9,11 +9,11 @@ using Lavalink4NET.Player;
 namespace Bot.Music.Spotify {
     public class SpotifyTrackEncoderUtil : ITrackEncoderUtil {
         private SpotifyMusicResolver _resolver;
-        public IMusicController MusicController { get; set; } = null!;
 
         public SpotifyTrackEncoderUtil(SpotifyMusicResolver resolver) {
             _resolver = resolver;
         }
+        public IMusicController MusicController { get; set; } = null!;
 
         public int Priority { get; } = 11;
         public int EncoderId { get; } = 2;
@@ -23,7 +23,7 @@ namespace Bot.Music.Spotify {
         }
 
         public Task<byte[]> Encode(LavalinkTrack track) {
-            var spotifyLavalinkTrack = (track as SpotifyLavalinkTrack)!;
+            var spotifyLavalinkTrack = ((SpotifyLavalinkTrack)track)!;
             return Task.FromResult(Encoding.ASCII.GetBytes(spotifyLavalinkTrack.RelatedSpotifyTrackWrapper.Id));
         }
 

@@ -21,15 +21,15 @@ using Tyrrrz.Extensions;
 namespace Bot.DiscordRelated.Commands {
     public class CommandHandlerService : IService {
         private readonly DiscordShardedClient _client;
+        private readonly CollectorService _collectorService;
+        private readonly CommandCooldownHandler _commandCooldownHandler = new();
+        private readonly CustomCommandService _commandService;
+        private readonly FuzzySearch _fuzzySearch = new();
         private readonly IGuildConfigProvider _guildConfigProvider;
-        private readonly IStatisticsPartProvider _statisticsPartProvider;
+        private readonly bool _isLoggingEnabled;
         private readonly MessageHistoryService _messageHistoryService;
         private readonly ILifetimeScope _serviceProvider;
-        private readonly CollectorService _collectorService;
-        private readonly CustomCommandService _commandService;
-        private readonly CommandCooldownHandler _commandCooldownHandler = new();
-        private readonly FuzzySearch _fuzzySearch = new();
-        private readonly bool _isLoggingEnabled;
+        private readonly IStatisticsPartProvider _statisticsPartProvider;
         private ILogger _logger;
 
         public CommandHandlerService(DiscordShardedClient client, CustomCommandService commandService, IGuildConfigProvider guildConfigProvider,
@@ -109,8 +109,6 @@ namespace Bot.DiscordRelated.Commands {
                                 _commandService.BuildHelpFields(command.Item1.Value.Key.Alias, guildConfig.Loc));
                             break;
                         case CommandError.ObjectNotFound:
-                            await SendErrorMessage(msg, guildConfig.Loc, result.ErrorReason);
-                            break;
                         case CommandError.MultipleMatches:
                             await SendErrorMessage(msg, guildConfig.Loc, result.ErrorReason);
                             break;

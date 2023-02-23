@@ -107,10 +107,8 @@ namespace Bot.DiscordRelated.Music {
                         var guildUser = await _targetGuild.GetUserAsync(_discordClient.CurrentUser.Id);
                         var channelPerms = guildUser.GetPermissions((IGuildChannel)_targetChannel);
                         _isExternalEmojiAllowed = channelPerms.UseExternalEmojis;
-                        // ReSharper disable once AssignmentInConditionalExpression
-                        if (_embedBuilder.Fields["Warnings"].IsEnabled = !channelPerms.UseExternalEmojis) {
-                            _embedBuilder.Fields["Warnings"].Value = _loc.Get("Music.WarningCustomEmoji");
-                        }
+                        _embedBuilder.Fields["Warnings"].IsEnabled = !channelPerms.UseExternalEmojis;
+                        if (_embedBuilder.Fields["Warnings"].IsEnabled) _embedBuilder.Fields["Warnings"].Value = _loc.Get("Music.WarningCustomEmoji");
                     }
 
                     var oldControlMessage = _controlMessage;
