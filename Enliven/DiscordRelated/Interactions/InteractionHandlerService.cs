@@ -10,11 +10,11 @@ using NLog;
 
 namespace Bot.DiscordRelated.Interactions {
     public class InteractionHandlerService : IService, IDisposable {
-        private IDisposable? _disposable;
         private readonly CustomInteractionService _customInteractionService;
         private readonly EnlivenShardedClient _enlivenShardedClient;
         private readonly ILogger _logger;
         private readonly ServiceProviderAdapter _serviceProvider;
+        private IDisposable? _disposable;
         public InteractionHandlerService(IComponentContext serviceContainer, CustomInteractionService customInteractionService, EnlivenShardedClient enlivenShardedClient, ILogger logger) {
             _serviceProvider = new ServiceProviderAdapter(serviceContainer);
             _customInteractionService = customInteractionService;
@@ -22,16 +22,16 @@ namespace Bot.DiscordRelated.Interactions {
             _logger = logger;
         }
 
+        public void Dispose() {
+            _disposable?.Dispose();
+        }
+
         public async Task OnDiscordReady() {
             await _customInteractionService.RegisterCommandsGloballyAsync();
             _disposable = _enlivenShardedClient.InteractionCreate
                 .Select(interaction => new ShardedInteractionContext(_enlivenShardedClient, interaction))
-                .SubscribeAsync(OnInteractionCreated);
+                .Subscribe(context => _ = OnInteractionCreated(context));
             _logger.Info("Interactions initialized");
-        }
-
-        public void Dispose() {
-            _disposable?.Dispose();
         }
 
         private async Task OnInteractionCreated(ShardedInteractionContext context) {
