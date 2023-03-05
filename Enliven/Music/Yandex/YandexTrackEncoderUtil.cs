@@ -4,18 +4,19 @@ using System.Text;
 using System.Threading.Tasks;
 using Common.Music.Encoders;
 using Lavalink4NET.Player;
+using YandexMusicResolver;
 
 namespace Bot.Music.Yandex {
     public class YandexTrackEncoderUtil : ITrackEncoderUtil, IBatchTrackEncoder {
-        private YandexClientResolver _clientResolver;
+        private readonly IYandexMusicMainResolver _yandexMusicMainResolver;
 
-        private ConcurrentDictionary<string, TaskCompletionSource<LavalinkTrack>> _enqueueCache = new ConcurrentDictionary<string, TaskCompletionSource<LavalinkTrack>>();
+        private ConcurrentDictionary<long, TaskCompletionSource<LavalinkTrack>> _enqueueCache = new();
 
-        public YandexTrackEncoderUtil(YandexClientResolver clientResolver) {
-            _clientResolver = clientResolver;
+        public YandexTrackEncoderUtil(IYandexMusicMainResolver yandexMusicMainResolver) {
+            _yandexMusicMainResolver = yandexMusicMainResolver;
         }
         public Task<LavalinkTrack> EnqueueDecode(byte[] data) {
-            var id = Encoding.ASCII.GetString(data);
+            var id = long.Parse(Encoding.ASCII.GetString(data));
             var taskCompletionSource = new TaskCompletionSource<LavalinkTrack>();
             return _enqueueCache.GetOrAdd(id, taskCompletionSource).Task;
         }
@@ -23,10 +24,9 @@ namespace Bot.Music.Yandex {
         public async Task Process() {
             var taskCompletionSources = _enqueueCache.ToDictionary(pair => pair.Key, pair => pair.Value);
             _enqueueCache.Clear();
-            var yandexMusicMainResolver = await _clientResolver.GetClient();
-            var tracks = await yandexMusicMainResolver.TrackLoader.LoadTracks(taskCompletionSources.Keys);
+            var tracks = await _yandexMusicMainResolver.TrackLoader.LoadTracks(taskCompletionSources.Keys);
             foreach (var yandexMusicTrack in tracks) {
-                taskCompletionSources[yandexMusicTrack.Id].SetResult(YandexLavalinkTrack.CreateInstance(yandexMusicTrack, yandexMusicMainResolver.DirectUrlLoader));
+                taskCompletionSources[yandexMusicTrack.Id].SetResult(YandexLavalinkTrack.CreateInstance(yandexMusicTrack, _yandexMusicMainResolver.DirectUrlLoader));
             }
         }
 
@@ -39,13 +39,13 @@ namespace Bot.Music.Yandex {
 
         public Task<byte[]> Encode(LavalinkTrack track) {
             var yandexLavalinkTrack = ((YandexLavalinkTrack)track)!;
-            return Task.FromResult(Encoding.ASCII.GetBytes(yandexLavalinkTrack.RelatedYandexTrack.Id));
+            return Task.FromResult(Encoding.ASCII.GetBytes(yandexLavalinkTrack.RelatedYandexTrack.Id.ToString()));
         }
 
         public async Task<LavalinkTrack> Decode(byte[] data) {
-            var yandexMusicMainResolver = await _clientResolver.GetClient();
-            var yandexTrack = await yandexMusicMainResolver.TrackLoader.LoadTrack(Encoding.ASCII.GetString(data));
-            return YandexLavalinkTrack.CreateInstance(yandexTrack!, yandexMusicMainResolver.DirectUrlLoader);
+            var id = long.Parse(Encoding.ASCII.GetString(data));
+            var yandexTrack = await _yandexMusicMainResolver.TrackLoader.LoadTrack(id);
+            return YandexLavalinkTrack.CreateInstance(yandexTrack!, _yandexMusicMainResolver.DirectUrlLoader);
         }
     }
 }

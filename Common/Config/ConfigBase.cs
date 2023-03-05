@@ -3,7 +3,6 @@ using System.Reactive;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using Newtonsoft.Json;
-using YandexMusicResolver.Config;
 
 namespace Common.Config {
     public class ConfigBase {
@@ -15,7 +14,7 @@ namespace Common.Config {
         public void Load() {
             // Loading handled by ConfigProvider
         }
-        
+
         public void Save() {
             _saveRequest.OnNext(Unit.Default);
         }

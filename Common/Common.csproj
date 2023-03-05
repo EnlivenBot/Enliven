@@ -17,7 +17,6 @@
         <PackageReference Include="NLog" Version="5.1.1"/>
         <PackageReference Include="System.Reactive" Version="5.0.0"/>
         <PackageReference Include="Tyrrrz.Extensions" Version="1.6.5"/>
-        <PackageReference Include="YandexMusicResolver" Version="4.0.0"/>
     </ItemGroup>
 
     <ItemGroup>

@@ -11,21 +11,28 @@ using YandexMusicResolver.Loaders;
 
 namespace Bot.Music.Yandex {
     public class YandexLavalinkTrack : LavalinkTrack, ITrackHasArtwork {
-        private static readonly HttpClient HttpClient = new(); 
+        private static readonly HttpClient HttpClient = new();
+
+        private static readonly Dictionary<long, string> UrlCache = new();
         private IYandexMusicDirectUrlLoader _directUrlLoader;
-        public YandexMusicTrack RelatedYandexTrack { get; }
 
         private YandexLavalinkTrack(YandexMusicTrack relatedYandexTrack, IYandexMusicDirectUrlLoader directUrlLoader, string identifier, LavalinkTrackInfo trackInformation)
             : base(identifier, trackInformation) {
             RelatedYandexTrack = relatedYandexTrack;
             _directUrlLoader = directUrlLoader;
         }
+        public YandexMusicTrack RelatedYandexTrack { get; }
+
+        public ValueTask<Uri?> GetArtwork() {
+            var artworkUri = RelatedYandexTrack.ArtworkUrl?.Pipe(s => new Uri(s));
+            return ValueTask.FromResult(artworkUri);
+        }
 
         public static YandexLavalinkTrack CreateInstance(YandexMusicTrack relatedYandexTrack, IYandexMusicDirectUrlLoader directUrlLoader) {
             var lavalinkTrackInfo = new LavalinkTrackInfo() {
-                Author = relatedYandexTrack.Author, Duration = relatedYandexTrack.Length, IsLiveStream = false, IsSeekable = true, 
-                Position = TimeSpan.Zero, Uri = relatedYandexTrack.Uri?.Pipe(s => new Uri(s)), Title = relatedYandexTrack.Title, 
-                TrackIdentifier = relatedYandexTrack.Id, SourceName = "http", ProbeInfo = "mp3"
+                Author = relatedYandexTrack.Author, Duration = relatedYandexTrack.Length, IsLiveStream = false, IsSeekable = true,
+                Position = TimeSpan.Zero, Uri = relatedYandexTrack.Uri?.Pipe(s => new Uri(s)), Title = relatedYandexTrack.Title,
+                TrackIdentifier = relatedYandexTrack.Id.ToString(), SourceName = "http", ProbeInfo = "mp3"
             };
             return new YandexLavalinkTrack(relatedYandexTrack, directUrlLoader, TrackEncoder.Encode(lavalinkTrackInfo), lavalinkTrackInfo);
         }
@@ -33,15 +40,13 @@ namespace Bot.Music.Yandex {
         public override async ValueTask<LavalinkTrack> GetPlayableTrack() {
             var directUrl = await GetDirectUrl(RelatedYandexTrack.Id);
             var lavalinkTrackInfo = new LavalinkTrackInfo() {
-                Author = Author, Duration = Duration, IsLiveStream = IsLiveStream, IsSeekable = IsSeekable, 
-                Position = Position, Uri = new Uri(directUrl), Title = Title, TrackIdentifier = directUrl, 
+                Author = Author, Duration = Duration, IsLiveStream = IsLiveStream, IsSeekable = IsSeekable,
+                Position = Position, Uri = new Uri(directUrl), Title = Title, TrackIdentifier = directUrl,
                 SourceName = "http", ProbeInfo = "mp3"
             };
             return lavalinkTrackInfo.CreateTrack();
         }
-
-        private static readonly Dictionary<string, string> UrlCache = new Dictionary<string, string>();
-        private async Task<string> GetDirectUrl(string id) {
+        private async Task<string> GetDirectUrl(long id) {
             if (UrlCache.TryGetValue(id, out var url)) {
                 var isUrlAccessibleResponse = await HttpClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, url));
                 if (isUrlAccessibleResponse.IsSuccessStatusCode)
@@ -51,11 +56,6 @@ namespace Bot.Music.Yandex {
             var directUrl = await _directUrlLoader.GetDirectUrl(id);
             UrlCache[id] = directUrl;
             return directUrl;
-        }
-        
-        public ValueTask<Uri?> GetArtwork() {
-            var artworkUri = RelatedYandexTrack.ArtworkUrl?.Pipe(s => new Uri(s));
-            return ValueTask.FromResult(artworkUri);
         }
     }
 }

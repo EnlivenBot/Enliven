@@ -1,4 +1,5 @@
-﻿using Autofac;
+﻿using System.Net.Http;
+using Autofac;
 using Bot.DiscordRelated;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Interactions;
@@ -20,6 +21,9 @@ using Common.Music.Resolvers;
 using Discord.WebSocket;
 using Lavalink4NET.Artwork;
 using NLog;
+using YandexMusicResolver;
+using YandexMusicResolver.Config;
+using YandexMusicResolver.Loaders;
 
 namespace Bot {
     internal static class DiHelpers {
@@ -68,7 +72,6 @@ namespace Bot {
             builder.RegisterType<SpotifyMusicResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<SpotifyClientResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
 
-            builder.RegisterType<YandexClientResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<Music.Yandex.YandexMusicResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
 
             builder.RegisterType<SpotifyTrackEncoderUtil>().PropertiesAutowired(PropertyWiringOptions.AllowCircularDependencies)
@@ -103,6 +106,22 @@ namespace Bot {
             builder.RegisterType<MessageHistoryPackPrinter>().InstancePerBot();
 
             return builder;
+        }
+
+        public static ContainerBuilder AddYandexResolver(this ContainerBuilder builder) {
+            builder.Register(context => GetYandexCredentials(context.Resolve<GlobalConfig>())).SingleInstance();
+            builder.RegisterType<YandexMusicAuthService>().As<IYandexMusicAuthService>().SingleInstance()
+                .UsingConstructor(typeof(IHttpClientFactory));
+            builder.RegisterType<YandexCredentialsProvider>().As<IYandexCredentialsProvider>().SingleInstance();
+            builder.RegisterType<YandexMusicMainResolver>().As<IYandexMusicMainResolver>().SingleInstance()
+                .UsingConstructor(typeof(IYandexCredentialsProvider), typeof(IHttpClientFactory),
+                    typeof(IYandexMusicPlaylistLoader), typeof(IYandexMusicTrackLoader), typeof(IYandexMusicDirectUrlLoader), typeof(IYandexMusicSearchResultLoader));
+
+            return builder;
+        }
+
+        private static YandexCredentials GetYandexCredentials(GlobalConfig globalConfig) {
+            return new YandexCredentials() { Login = globalConfig.YandexLogin, Password = globalConfig.YandexPassword, Token = globalConfig.YandexToken };
         }
     }
 }

@@ -29,12 +29,14 @@ IHost host = Host.CreateDefaultBuilder(args)
     .UseServiceProviderFactory(new AutofacServiceProviderFactory())
     .ConfigureServices(services => {
         services.AddHostedService<Worker>();
+        services.AddHttpClient();
     })
     .ConfigureContainer<ContainerBuilder>(container => {
         container
             .AddGlobalConfig()
             .AddEnlivenServices()
-            .AddCommonServices();
+            .AddCommonServices()
+            .AddYandexResolver();
     })
     .ConfigureLogging(builder => builder.ClearProviders())
     .Build();
