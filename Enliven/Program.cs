@@ -33,7 +33,6 @@ IHost host = Host.CreateDefaultBuilder(args)
     })
     .ConfigureContainer<ContainerBuilder>(container => {
         container
-            .AddGlobalConfig()
             .AddEnlivenServices()
             .AddCommonServices()
             .AddYandexResolver();

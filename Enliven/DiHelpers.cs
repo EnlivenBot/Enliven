@@ -20,6 +20,8 @@ using Common.Music.Effects;
 using Common.Music.Resolvers;
 using Discord.WebSocket;
 using Lavalink4NET.Artwork;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using NLog;
 using YandexMusicResolver;
 using YandexMusicResolver.Config;
@@ -28,28 +30,6 @@ using YandexMusicResolver.Loaders;
 namespace Bot {
     internal static class DiHelpers {
         private static readonly ILogger Logger = LogManager.GetCurrentClassLogger();
-        public static ContainerBuilder AddGlobalConfig(this ContainerBuilder builder) {
-            var configProvider = new ConfigProvider<GlobalConfig>("Config/GlobalConfig.json");
-            // Hook old config if possible
-            if (!configProvider.IsConfigExists()) {
-                var oldConfigProvider = new ConfigProvider<GlobalConfig>("Config/config.json");
-                if (oldConfigProvider.IsConfigExists()) {
-                    oldConfigProvider.Load();
-                    oldConfigProvider.ConfigPath = "Config/GlobalConfig.json";
-                    oldConfigProvider.Save();
-                    configProvider = oldConfigProvider;
-                }
-                else {
-                    Logger.Warn("Main config created from scratch. Consider check it!");
-                }
-            }
-
-            builder.Register(context => configProvider.Load())
-                .AsSelf().AsImplementedInterfaces()
-                .SingleInstance();
-
-            return builder;
-        }
 
         public static ContainerBuilder AddEnlivenServices(this ContainerBuilder builder) {
             builder.RegisterType<MusicResolverService>().AsSelf().SingleInstance();
@@ -69,6 +49,7 @@ namespace Bot {
             // Music resolvers
             builder.RegisterType<DeezerMusicResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
 
+            builder.ConfigureOptions<SpotifyOptions>();
             builder.RegisterType<SpotifyMusicResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<SpotifyClientResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
 
@@ -109,7 +90,7 @@ namespace Bot {
         }
 
         public static ContainerBuilder AddYandexResolver(this ContainerBuilder builder) {
-            builder.Register(context => GetYandexCredentials(context.Resolve<GlobalConfig>())).SingleInstance();
+            builder.Configure<YandexCredentials>();
             builder.RegisterType<YandexMusicAuthService>().As<IYandexMusicAuthService>().SingleInstance()
                 .UsingConstructor(typeof(IHttpClientFactory));
             builder.RegisterType<YandexCredentialsProvider>().As<IYandexCredentialsProvider>().SingleInstance();
@@ -120,8 +101,16 @@ namespace Bot {
             return builder;
         }
 
-        private static YandexCredentials GetYandexCredentials(GlobalConfig globalConfig) {
-            return new YandexCredentials() { Login = globalConfig.YandexLogin, Password = globalConfig.YandexPassword, Token = globalConfig.YandexToken };
+        public static ContainerBuilder ConfigureOptions<T>(this ContainerBuilder builder) where T : class {
+            builder.Register(context => new OptionsWrapper<T>(context.Resolve<IConfiguration>().GetSection(typeof(T).Name).Get<T>()!));
+
+            return builder;
+        }
+
+        public static ContainerBuilder Configure<T>(this ContainerBuilder builder) where T : class {
+            builder.Register(context => context.Resolve<IConfiguration>().GetSection(typeof(T).Name).Get<T>()!);
+
+            return builder;
         }
     }
 }

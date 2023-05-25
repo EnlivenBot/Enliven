@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
 using Autofac;
 using Common.Config;
@@ -10,7 +9,6 @@ using Common.Localization.Entries;
 using Common.Music.Encoders;
 using Common.Music.Players;
 using Common.Music.Resolvers;
-using Discord;
 using Lavalink4NET;
 using Lavalink4NET.Cluster;
 using Lavalink4NET.DiscordNet;
@@ -19,29 +17,35 @@ using Lavalink4NET.Integrations;
 using Lavalink4NET.Logging;
 using Lavalink4NET.Player;
 using Lavalink4NET.Tracking;
+using Microsoft.Extensions.Configuration;
 using ILogger = NLog.ILogger;
 
 namespace Common.Music.Controller {
     public class MusicController : IMusicController {
+        private static readonly IEntry ReconnectedAfterDisposeEntry = new EntryLocalized("Music.ReconnectedAfterDispose");
+        private readonly EnlivenShardedClient _discordShardedClient;
+        private readonly IGuildConfigProvider _guildConfigProvider;
+        private readonly EventLogger _lavalinkLogger = new();
+        private readonly IEnumerable<LavalinkNodeInfo> _lavalinkNodeInfos;
+        private readonly ILifetimeScope _lifetimeScope;
+        private readonly ILogger _logger;
+        private readonly MusicResolverService _musicResolverService;
         private readonly List<FinalLavalinkPlayer> _playbackPlayers = new();
         private readonly Dictionary<ulong, PlayerSnapshot> _playerShutdownParametersMap = new();
-        private readonly EventLogger _lavalinkLogger = new();
-        private readonly MusicResolverService _musicResolverService;
-        private readonly IGuildConfigProvider _guildConfigProvider;
         private readonly IPlaylistProvider _playlistProvider;
-        private readonly EnlivenShardedClient _discordShardedClient;
-        private readonly ILogger _logger;
-        private readonly ILifetimeScope _lifetimeScope;
-        private readonly IEnumerable<LavalinkNodeInfo> _lavalinkNodeInfos;
         private readonly TrackEncoderUtils _trackEncoderUtils;
+
+        private Task<EnlivenLavalinkCluster>? _clusterTask;
+
+        private int _nodeIdCounter;
 
         public MusicController(MusicResolverService musicResolverService, IGuildConfigProvider guildConfigProvider,
                                IPlaylistProvider playlistProvider, TrackEncoderUtils trackEncoderUtils,
                                EnlivenShardedClient discordShardedClient, ILogger logger,
-                               InstanceConfig instanceConfig, GlobalConfig globalConfig,
-                               ILifetimeScope lifetimeScope) {
+                               IConfiguration configuration, InstanceConfig instanceConfig, ILifetimeScope lifetimeScope) {
             _trackEncoderUtils = trackEncoderUtils;
-            _lavalinkNodeInfos = globalConfig.LavalinkNodes.Concat(instanceConfig.LavalinkNodes).Distinct();
+            var commonNodes = configuration.GetValue<IEnumerable<LavalinkNodeInfo>>("LavalinkNodes") ?? Array.Empty<LavalinkNodeInfo>();
+            _lavalinkNodeInfos = commonNodes.Concat(instanceConfig.LavalinkNodes).Distinct();
             _logger = logger;
             _lifetimeScope = lifetimeScope;
             _discordShardedClient = discordShardedClient;
@@ -49,6 +53,7 @@ namespace Common.Music.Controller {
             _guildConfigProvider = guildConfigProvider;
             _musicResolverService = musicResolverService;
         }
+        protected EnlivenLavalinkCluster Cluster => ClusterTask.GetAwaiter().GetResult();
 
         public Task OnShutdown(bool isDiscordStarted) {
             var tasks = _playbackPlayers
@@ -59,14 +64,66 @@ namespace Common.Music.Controller {
         }
 
         public bool IsMusicEnabled { get; private set; }
-
-        private Task<EnlivenLavalinkCluster>? _clusterTask;
         public Task<EnlivenLavalinkCluster> ClusterTask => _clusterTask ?? throw new InvalidOperationException("This task initialized after Ready event in DiscordClient");
-        protected EnlivenLavalinkCluster Cluster => ClusterTask.GetAwaiter().GetResult();
 
         public Task OnDiscordReady() {
             _clusterTask = InitializeCluster();
             return _clusterTask;
+        }
+
+        public async Task<FinalLavalinkPlayer> ProvidePlayer(ulong guildId, ulong voiceChannelId, bool recreate = false) {
+            var oldPlayer = _playbackPlayers.FirstOrDefault(playbackPlayer => playbackPlayer.GuildId == guildId);
+            if (oldPlayer != null) {
+                if (!recreate) return oldPlayer;
+                if (!oldPlayer.IsShutdowned) {
+                    await oldPlayer.Shutdown(new PlayerShutdownParameters());
+                }
+
+                _playbackPlayers.Remove(oldPlayer);
+            }
+
+            var finalLavalinkPlayer = Cluster.GetPlayer<FinalLavalinkPlayer>(guildId);
+            if (finalLavalinkPlayer != null) await finalLavalinkPlayer.DestroyAsync();
+
+            var player = await Cluster.JoinAsync(PlayerFactory, guildId, voiceChannelId);
+            _ = player.ShutdownTask.ContinueWith(_ => _playbackPlayers.Remove(player));
+            _playbackPlayers.Add(player);
+            return player;
+        }
+
+        public void StoreSnapshot(PlayerSnapshot parameters) {
+            _playerShutdownParametersMap[parameters.GuildId] = parameters;
+        }
+
+        public PlayerSnapshot? GetPlayerLastSnapshot(ulong guildId) {
+            return _playerShutdownParametersMap.TryGetValue(guildId, out var playerSnapshot) ? playerSnapshot : null;
+        }
+        public void OnPlayerDisposed(AdvancedLavalinkPlayer advancedLavalinkPlayer, PlayerSnapshot playerSnapshot, List<HistoryEntry> historyEntries) {
+            _logger.Warn("Player in {GuildId} disposed, waiting 2 sec and rewieving it", advancedLavalinkPlayer.GuildId);
+            Task.Run(async () => {
+                await Task.Delay(2000);
+
+                var newPlayer = await ProvidePlayer(playerSnapshot.GuildId, playerSnapshot.LastVoiceChannelId, true);
+                await newPlayer.ApplyStateSnapshot(playerSnapshot);
+                foreach (var playerDisplay in advancedLavalinkPlayer.Displays.ToList())
+                    await playerDisplay.ChangePlayer(newPlayer);
+
+                _logger.Info("Player for {GuildId} rewieved after disposing", advancedLavalinkPlayer.GuildId);
+                var guildConfig = _guildConfigProvider.Get(advancedLavalinkPlayer.GuildId);
+                newPlayer.WriteToQueueHistory(historyEntries);
+                newPlayer.WriteToQueueHistory(ReconnectedAfterDisposeEntry.WithArg(playerSnapshot.StoredPlaylist!.Id));
+            });
+        }
+
+        public FinalLavalinkPlayer? GetPlayer(ulong guildId) {
+            return _playbackPlayers.FirstOrDefault(player =>
+                player.GuildId == guildId
+             && !player.IsShutdowned
+             && player.State is not (PlayerState.NotConnected or PlayerState.Destroyed));
+        }
+
+        public Task<IEnumerable<MusicResolver>> ResolveQueries(IEnumerable<string> queries) {
+            return Task.FromResult(queries.Select(s => _musicResolverService.GetResolver(s, Cluster)));
         }
         private async Task<EnlivenLavalinkCluster> InitializeCluster() {
             _lavalinkLogger.LogMessage += (sender, e) => LavalinkLoggerOnLogMessage(e, _logger);
@@ -120,8 +177,6 @@ namespace Common.Music.Controller {
                 });
             }
         }
-
-        private int _nodeIdCounter;
         private LavalinkNodeOptions ConvertNodeInfoToOptions(LavalinkNodeInfo info) {
             var label = info.Name;
             if (string.IsNullOrWhiteSpace(label)) {
@@ -139,65 +194,8 @@ namespace Common.Music.Controller {
             };
         }
 
-        public async Task<FinalLavalinkPlayer> ProvidePlayer(ulong guildId, ulong voiceChannelId, bool recreate = false) {
-            var oldPlayer = _playbackPlayers.FirstOrDefault(playbackPlayer => playbackPlayer.GuildId == guildId);
-            if (oldPlayer != null) {
-                if (!recreate) return oldPlayer;
-                if (!oldPlayer.IsShutdowned) {
-                    await oldPlayer.Shutdown(new PlayerShutdownParameters());
-                }
-
-                _playbackPlayers.Remove(oldPlayer);
-            }
-
-            var finalLavalinkPlayer = Cluster.GetPlayer<FinalLavalinkPlayer>(guildId);
-            if (finalLavalinkPlayer != null) await finalLavalinkPlayer.DestroyAsync();
-
-            var player = await Cluster.JoinAsync(PlayerFactory, guildId, voiceChannelId);
-            _ = player.ShutdownTask.ContinueWith(_ => _playbackPlayers.Remove(player));
-            _playbackPlayers.Add(player);
-            return player;
-        }
-
         private FinalLavalinkPlayer PlayerFactory() {
             return new FinalLavalinkPlayer(this, _guildConfigProvider, _playlistProvider, _trackEncoderUtils);
-        }
-
-        public void StoreSnapshot(PlayerSnapshot parameters) {
-            _playerShutdownParametersMap[parameters.GuildId] = parameters;
-        }
-
-        public PlayerSnapshot? GetPlayerLastSnapshot(ulong guildId) {
-            return _playerShutdownParametersMap.TryGetValue(guildId, out var playerSnapshot) ? playerSnapshot : null;
-        }
-
-        private static readonly IEntry ReconnectedAfterDisposeEntry = new EntryLocalized("Music.ReconnectedAfterDispose");
-        public void OnPlayerDisposed(AdvancedLavalinkPlayer advancedLavalinkPlayer, PlayerSnapshot playerSnapshot, List<HistoryEntry> historyEntries) {
-            _logger.Warn("Player in {GuildId} disposed, waiting 2 sec and rewieving it", advancedLavalinkPlayer.GuildId);
-            Task.Run(async () => {
-                await Task.Delay(2000);
-                
-                var newPlayer = await ProvidePlayer(playerSnapshot.GuildId, playerSnapshot.LastVoiceChannelId, true);
-                await newPlayer.ApplyStateSnapshot(playerSnapshot);
-                foreach (var playerDisplay in advancedLavalinkPlayer.Displays.ToList()) 
-                    await playerDisplay.ChangePlayer(newPlayer);
-                
-                _logger.Info("Player for {GuildId} rewieved after disposing", advancedLavalinkPlayer.GuildId);
-                var guildConfig = _guildConfigProvider.Get(advancedLavalinkPlayer.GuildId);
-                newPlayer.WriteToQueueHistory(historyEntries);
-                newPlayer.WriteToQueueHistory(ReconnectedAfterDisposeEntry.WithArg(playerSnapshot.StoredPlaylist!.Id));
-            });
-        }
-
-        public FinalLavalinkPlayer? GetPlayer(ulong guildId) {
-            return _playbackPlayers.FirstOrDefault(player =>
-                player.GuildId == guildId
-             && !player.IsShutdowned
-             && player.State is not (PlayerState.NotConnected or PlayerState.Destroyed));
-        }
-
-        public Task<IEnumerable<MusicResolver>> ResolveQueries(IEnumerable<string> queries) {
-            return Task.FromResult(queries.Select(s => _musicResolverService.GetResolver(s, Cluster)));
         }
 
         private static void LavalinkLoggerOnLogMessage(LogMessageEventArgs e, ILogger logger) {

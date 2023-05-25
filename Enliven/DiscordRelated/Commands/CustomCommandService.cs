@@ -18,22 +18,21 @@ using NLog;
 
 namespace Bot.DiscordRelated.Commands {
     public class CustomCommandService : CommandService, IService {
-        public ILookup<string, CommandInfo> Aliases { get; private set; } = null!;
-        private readonly IEnumerable<CustomTypeReader> _typeReaders;
-        private readonly ILifetimeScope _serviceContainer;
-        private readonly GlobalConfig _globalConfig;
         private readonly InstanceConfig _instanceConfig;
+        private readonly ILifetimeScope _serviceContainer;
+        private readonly IEnumerable<CustomTypeReader> _typeReaders;
+
+        public Lazy<Dictionary<string, CommandGroup>> CommandsGroups = null!;
 
         public CustomCommandService(IEnumerable<CustomTypeReader> typeReaders, ILifetimeScope serviceContainer,
-                                    GlobalConfig globalConfig, InstanceConfig instanceConfig,
-                                    ILogger logger)
+                                    InstanceConfig instanceConfig, ILogger logger)
             : base(new CommandServiceConfig() { LogLevel = LogSeverity.Debug }) {
             _serviceContainer = serviceContainer;
-            _globalConfig = globalConfig;
             _instanceConfig = instanceConfig;
             _typeReaders = typeReaders;
             Log += message => LoggingUtilities.OnDiscordLog(logger, message);
         }
+        public ILookup<string, CommandInfo> Aliases { get; private set; } = null!;
 
         public async Task OnPreDiscordStart() {
             await AddModulesAsync(Assembly.GetEntryAssembly()!, new ServiceProviderAdapter(_serviceContainer));
@@ -72,7 +71,7 @@ namespace Bot.DiscordRelated.Commands {
                  || definedType.IsAbstract
                  || definedType.ContainsGenericParameters
                  || definedType.IsDefined(typeof(DontAutoLoadAttribute))
-                 || definedType.GetCustomAttribute<RegisterIf>()?.CanBeRegistered(_globalConfig, _instanceConfig) == false)
+                 || definedType.GetCustomAttribute<RegisterIf>()?.CanBeRegistered(_instanceConfig) == false)
                     continue;
                 await AddModuleAsync(definedType, services).ConfigureAwait(false);
             }
@@ -171,8 +170,6 @@ namespace Bot.DiscordRelated.Commands {
             //     await _commandExecutedEvent.InvokeAsync(chosenOverload.Key.Command, context, result);
             // return result;
         }
-
-        public Lazy<Dictionary<string, CommandGroup>> CommandsGroups = null!;
 
         public IEnumerable<EmbedFieldBuilder> BuildHelpFields(string command, ILocalizationProvider loc) {
             return Aliases[command].Select(info => new EmbedFieldBuilder {

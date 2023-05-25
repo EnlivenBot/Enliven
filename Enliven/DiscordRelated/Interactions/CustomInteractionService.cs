@@ -32,16 +32,13 @@ namespace Bot.DiscordRelated.Interactions {
         private static PropertyInfo TypeInfoProperty = typeof(ModuleBuilder).GetDeclaredProperty("TypeInfo");
 
         private static PropertyInfo CallbackProperty = typeof(SlashCommandBuilder).GetProperty("Callback")!;
-        private readonly GlobalConfig _globalConfig;
         private readonly InstanceConfig _instanceConfig;
         private readonly IServiceProvider _serviceProvider;
 
         public CustomInteractionService(DiscordShardedClient discordClient, ILifetimeScope serviceContainer,
-                                        GlobalConfig globalConfig, InstanceConfig instanceConfig,
-                                        ILogger logger)
+                                        InstanceConfig instanceConfig, ILogger logger)
             : base(discordClient, new InteractionServiceConfig { UseCompiledLambda = true, LogLevel = LogSeverity.Debug }) {
             _serviceProvider = new ServiceProviderAdapter(serviceContainer);
-            _globalConfig = globalConfig;
             _instanceConfig = instanceConfig;
             Log += message => LoggingUtilities.OnDiscordLog(logger, message);
         }
@@ -52,7 +49,7 @@ namespace Bot.DiscordRelated.Interactions {
                 .Where(type => typeof(IModuleBase).IsAssignableFrom(type) && typeof(IInteractionModuleBase).IsAssignableFrom(type))
                 .Where(type => type.GetCustomAttribute<HiddenAttribute>() == null)
                 .Where(type => type.GetCustomAttribute<SlashCommandAdapterAttribute>()?.ProcessSlashCommand == true)
-                .Where(type => RegisterIf.ShouldRegisterType(type, _globalConfig, _instanceConfig));
+                .Where(type => RegisterIf.ShouldRegisterType(type, _instanceConfig));
 
             var subcommandSets = textCommandGroups.SelectMany(type => type.GetMethods())
                 .Where(info => info.GetCustomAttribute<HiddenAttribute>() == null)
