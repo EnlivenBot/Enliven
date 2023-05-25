@@ -14,6 +14,7 @@ using Common.Entities;
 using Common.Localization.Providers;
 using Common.Utils;
 using Discord;
+using Microsoft.Extensions.Configuration;
 
 namespace Common {
     public static class ExtensionMethods {
@@ -263,5 +264,9 @@ namespace Common {
         }
 
         public static IEnumerator<T> GetEnumerator<T>(this IEnumerator<T> enumerator) => enumerator;
+
+        public static T? GetSectionValue<T>(this IConfiguration configuration, string key) {
+            return configuration.GetSection(key).Get<T>();
+        }
     }
 }

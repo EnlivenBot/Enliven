@@ -44,7 +44,7 @@ namespace Common.Music.Controller {
                                EnlivenShardedClient discordShardedClient, ILogger logger,
                                IConfiguration configuration, InstanceConfig instanceConfig, ILifetimeScope lifetimeScope) {
             _trackEncoderUtils = trackEncoderUtils;
-            var commonNodes = configuration.GetValue<IEnumerable<LavalinkNodeInfo>>("LavalinkNodes") ?? Array.Empty<LavalinkNodeInfo>();
+            var commonNodes = configuration.GetSectionValue<IEnumerable<LavalinkNodeInfo>>("LavalinkNodes") ?? Array.Empty<LavalinkNodeInfo>();
             _lavalinkNodeInfos = commonNodes.Concat(instanceConfig.LavalinkNodes).Distinct();
             _logger = logger;
             _lifetimeScope = lifetimeScope;
