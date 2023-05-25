@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Reactive.Threading.Tasks;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,6 +9,7 @@ using Common;
 using Common.Config;
 using Common.Utils;
 using Discord;
+using Discord.Net;
 using NLog;
 
 namespace Bot {
@@ -71,8 +73,12 @@ namespace Bot {
                     _logger.Info("Successefully logged in");
                     return;
                 }
+                catch (HttpException e) when (e.HttpCode == HttpStatusCode.Unauthorized) {
+                    _logger.Fatal("Failed to login - unauthorized. Check token - {Token}", _config.BotToken);
+                    throw;
+                }
                 catch (Exception e) {
-                    _logger.Fatal(e, "Failed to login. Probably token is incorrect - {token}", _config.BotToken);
+                    _logger.Fatal(e, "Failed to login");
                     _logger.Info("Waiting before next attempt - {delay}s", connectionTryNumber * 10);
                     await Task.Delay(TimeSpan.FromSeconds(connectionTryNumber * 10));
                 }
