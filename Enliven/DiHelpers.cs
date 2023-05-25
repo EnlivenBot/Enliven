@@ -102,7 +102,8 @@ namespace Bot {
         }
 
         public static ContainerBuilder ConfigureOptions<T>(this ContainerBuilder builder) where T : class {
-            builder.Register(context => new OptionsWrapper<T>(context.Resolve<IConfiguration>().GetSection(typeof(T).Name).Get<T>()!));
+            builder.Register(context => new OptionsWrapper<T>(context.Resolve<IConfiguration>().GetSection(typeof(T).Name).Get<T>()!))
+                .As<IOptions<SpotifyOptions>>();
 
             return builder;
         }
