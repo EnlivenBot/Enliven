@@ -6,9 +6,9 @@ using Autofac.Extensions.DependencyInjection;
 using Bot;
 using Common;
 using Common.Localization;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using NLog;
 
 // Initializing localization
@@ -25,7 +25,9 @@ TaskScheduler.UnobservedTaskException += (sender, args) => {
 };
 
 // Creating and running host
-IHost host = Host.CreateDefaultBuilder(args)
+
+var builder = WebApplication.CreateBuilder(args);
+builder.Host
     .UseServiceProviderFactory(new AutofacServiceProviderFactory())
     .ConfigureServices(services => {
         services.AddHostedService<Worker>();
@@ -36,8 +38,8 @@ IHost host = Host.CreateDefaultBuilder(args)
             .AddEnlivenServices()
             .AddCommonServices()
             .AddYandexResolver();
-    })
-    .ConfigureLogging(builder => builder.ClearProviders())
-    .Build();
+    });
 
-await host.RunAsync();
+var app = builder.Build();
+app.MapGet("/", _ => Task.FromResult("Enliven web host started"));
+await app.RunAsync();

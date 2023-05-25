@@ -1,0 +1,13 @@
+﻿{
+  "$schema": "http://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "Enliven": {
+      "commandName": "Project",
+      "applicationUrl": "http://localhost:8080",
+      "workingDirectory": "$(TargetDir)",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}
