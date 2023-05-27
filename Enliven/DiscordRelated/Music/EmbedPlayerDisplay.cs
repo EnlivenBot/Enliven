@@ -11,7 +11,6 @@ using System.Threading.Tasks;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Criteria;
 using Bot.DiscordRelated.MessageComponents;
-using Bot.Music.Spotify;
 using Common;
 using Common.Config.Emoji;
 using Common.History;
@@ -353,19 +352,19 @@ namespace Bot.DiscordRelated.Music {
                     LoopingState.Off => _isExternalEmojiAllowed ? CommonEmojiStrings.Instance.RepeatOff : "❌",
                     _                => throw new InvalidEnumArgumentException()
                 };
-                var spotifyId = (Player.CurrentTrack is SpotifyLavalinkTrack spotifyLavalinkTrack)
-                    ? spotifyLavalinkTrack.RelatedSpotifyTrackWrapper.Id
-                    : null;
-                var spotifyEmojiExists = spotifyId != null && _isExternalEmojiAllowed;
+                var needCustomSourceEmoji = Player.CurrentTrack is ITrackHasCustomSource && _isExternalEmojiAllowed;
                 var sb = new StringBuilder(Player.Position.Position.FormattedToString());
                 if (Player.CurrentTrack.IsSeekable) {
                     sb.Append(" / ");
                     sb.Append(Player.CurrentTrack.Duration.FormattedToString());
                 }
 
-                var space = new string(' ', Math.Max(0, ((spotifyEmojiExists ? 18 : 22) - sb.Length) / 2));
+                var space = new string(' ', Math.Max(0, ((needCustomSourceEmoji ? 18 : 22) - sb.Length) / 2));
                 var detailsBar = stateString + '`' + space + sb + space + '`' + loopingStateString;
-                if (spotifyEmojiExists) detailsBar += $"[{CommonEmojiStrings.Instance.Spotify}](https://open.spotify.com/track/{spotifyId})";
+                if (needCustomSourceEmoji) {
+                    var customSourceTrack = (ITrackHasCustomSource)Player.CurrentTrack;
+                    detailsBar += $"[{customSourceTrack.CustomSourceEmote}]({customSourceTrack.CustomSourceUrl})";
+                }
                 _embedBuilder.Fields["State"].Value = progressBar + "\n" + detailsBar;
             }
             else {

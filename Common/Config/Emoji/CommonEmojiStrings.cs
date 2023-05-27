@@ -26,6 +26,7 @@ namespace Common.Config.Emoji {
         public string Pause { get; set; } = "<:pause:682580118425960469>";
         public string Stop { get; set; } = "<:stop:682658172615524382>";
         public string Spotify { get; set; } = "<:spotify:764837934519156746>";
+        public string YandexMusic { get; set; } = "<:yandexmusic:1112134818839408754>";
         public string RepeatBox { get; set; } = "<:repeatbox:1030612480696791040>";
         public string RepeatOffBox { get; set; } = "<:repeatoffbox:1030612484094181396>";
         public string RepeatOneBox { get; set; } = "<:repeatonebox:1030612487344763070>";

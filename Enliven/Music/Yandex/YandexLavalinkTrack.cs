@@ -3,14 +3,16 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Common;
+using Common.Config.Emoji;
 using Common.Music.Tracks;
+using Discord;
 using Lavalink4NET.Decoding;
 using Lavalink4NET.Player;
 using YandexMusicResolver.AudioItems;
 using YandexMusicResolver.Loaders;
 
 namespace Bot.Music.Yandex {
-    public class YandexLavalinkTrack : LavalinkTrack, ITrackHasArtwork {
+    public class YandexLavalinkTrack : LavalinkTrack, ITrackHasArtwork, ITrackHasCustomSource {
         private static readonly HttpClient HttpClient = new();
 
         private static readonly Dictionary<long, string> UrlCache = new();
@@ -18,6 +20,7 @@ namespace Bot.Music.Yandex {
 
         private YandexLavalinkTrack(YandexMusicTrack relatedYandexTrack, IYandexMusicDirectUrlLoader directUrlLoader, string identifier, LavalinkTrackInfo trackInformation)
             : base(identifier, trackInformation) {
+            CustomSourceUrl = new Uri(relatedYandexTrack.Uri!);
             RelatedYandexTrack = relatedYandexTrack;
             _directUrlLoader = directUrlLoader;
         }
@@ -27,6 +30,12 @@ namespace Bot.Music.Yandex {
             var artworkUri = RelatedYandexTrack.ArtworkUrl?.Pipe(s => new Uri(s));
             return ValueTask.FromResult(artworkUri);
         }
+
+        /// <inheritdoc />
+        public Emote CustomSourceEmote => CommonEmoji.YandexMusic;
+
+        /// <inheritdoc />
+        public Uri CustomSourceUrl { get; }
 
         public static YandexLavalinkTrack CreateInstance(YandexMusicTrack relatedYandexTrack, IYandexMusicDirectUrlLoader directUrlLoader) {
             var lavalinkTrackInfo = new LavalinkTrackInfo() {
