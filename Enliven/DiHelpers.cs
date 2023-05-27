@@ -49,7 +49,7 @@ namespace Bot {
             // Music resolvers
             builder.RegisterType<DeezerMusicResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
 
-            builder.ConfigureOptions<SpotifyOptions>();
+            builder.ConfigureOptions<SpotifyCredentials>();
             builder.RegisterType<SpotifyMusicResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<SpotifyClientResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
 
@@ -103,7 +103,7 @@ namespace Bot {
 
         public static ContainerBuilder ConfigureOptions<T>(this ContainerBuilder builder) where T : class {
             builder.Register(context => new OptionsWrapper<T>(context.Resolve<IConfiguration>().GetSection(typeof(T).Name).Get<T>()!))
-                .As<IOptions<SpotifyOptions>>();
+                .As<IOptions<T>>();
 
             return builder;
         }

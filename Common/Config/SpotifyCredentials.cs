@@ -1,5 +1,5 @@
 ﻿namespace Common.Config {
-    public class SpotifyOptions {
+    public class SpotifyCredentials {
         /// <summary>
         /// Spotify client ID for resolving spotify related things. Leave null for disabling spotify integration
         /// Obtain at https://developer.spotify.com/dashboard/

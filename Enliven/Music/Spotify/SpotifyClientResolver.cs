@@ -7,11 +7,11 @@ using SpotifyAPI.Web;
 
 namespace Bot.Music.Spotify {
     public class SpotifyClientResolver {
-        private readonly SpotifyOptions _config;
+        private readonly SpotifyCredentials _config;
         private Task<SpotifyClient?>? _getSpotifyInternal;
         private ILogger _logger;
 
-        public SpotifyClientResolver(IOptions<SpotifyOptions> options, ILogger logger) {
+        public SpotifyClientResolver(IOptions<SpotifyCredentials> options, ILogger logger) {
             _logger = logger;
             _config = options.Value;
             _ = GetSpotify();
