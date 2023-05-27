@@ -30,7 +30,7 @@ namespace Bot.Music.Spotify {
         public async Task<LavalinkTrack> Decode(byte[] data) {
             var cluster = await MusicController.ClusterTask;
             var spotifyUrl = new SpotifyUrl(Encoding.ASCII.GetString(data), SpotifyUrl.SpotifyUrlType.Track);
-            return await _resolver.Resolve(cluster, spotifyUrl).PipeAsync(result => result.Resolve()).PipeAsync(list => list.First());
+            return await _resolver.Resolve(spotifyUrl, cluster).PipeAsync(list => list.First());
         }
     }
 }

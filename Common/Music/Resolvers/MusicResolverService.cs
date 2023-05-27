@@ -7,8 +7,8 @@ using Lavalink4NET.Player;
 
 namespace Common.Music.Resolvers {
     public class MusicResolverService {
-        private readonly IEnumerable<IMusicResolver> _musicResolvers;
         private readonly LavalinkMusicResolver _lavalinkMusicResolver;
+        private readonly IEnumerable<IMusicResolver> _musicResolvers;
 
         public MusicResolverService(IEnumerable<IMusicResolver> musicResolvers, LavalinkMusicResolver lavalinkMusicResolver) {
             _musicResolvers = musicResolvers;
@@ -19,12 +19,12 @@ namespace Common.Music.Resolvers {
             return new MusicResolver(_musicResolvers, lavalinkCluster, _lavalinkMusicResolver, query);
         }
     }
-    
+
 
     public class MusicResolver {
-        private readonly IEnumerable<IMusicResolver> _musicResolvers;
         private readonly LavalinkCluster _cluster;
         private readonly LavalinkMusicResolver _lavalinkMusicResolver;
+        private readonly IEnumerable<IMusicResolver> _musicResolvers;
         private readonly string _query;
 
         public MusicResolver(IEnumerable<IMusicResolver> musicResolvers, LavalinkCluster cluster, LavalinkMusicResolver lavalinkMusicResolver, string query) {
@@ -34,12 +34,12 @@ namespace Common.Music.Resolvers {
             _musicResolvers = musicResolvers;
         }
 
-        public async Task<List<LavalinkTrack>> GetTracks() {
-            foreach (var musicResolverTask in _musicResolvers.Select(resolver => resolver.Resolve(_cluster, _query))) {
-                var musicResolver = await musicResolverTask;
-                if (!await musicResolver.CanResolve()) continue;
+        public async Task<ICollection<LavalinkTrack>> GetTracks() {
+            foreach (var resolver in _musicResolvers) {
                 try {
-                    return await musicResolver.Resolve();
+                    var lavalinkTracks = await resolver.Resolve(_cluster, _query)
+                        .PipeAsync(enumerable => enumerable.ToList());
+                    if (lavalinkTracks.Count != 0) return lavalinkTracks;
                 }
                 catch (TrackNotFoundException e) {
                     if (!e.AllowFallback) throw;
@@ -49,9 +49,8 @@ namespace Common.Music.Resolvers {
                 }
             }
 
-            return await _lavalinkMusicResolver
-                .Resolve(_cluster, _query)
-                .PipeAsync(result => result.Resolve());
+            return await _lavalinkMusicResolver.Resolve(_cluster, _query)
+                .PipeAsync(tracks => tracks.ToList());
         }
     }
 }

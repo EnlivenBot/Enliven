@@ -23,21 +23,21 @@ using SpotifyAPI.Web;
 namespace Bot.Commands.Chains {
     public class FixSpotifyChain : ChainBase {
         private readonly IMessageChannel _channel;
-        private readonly SpotifyUrl _request;
-        private readonly IUser _requester;
-        private readonly IMusicController _musicController;
-        private readonly IUserDataProvider _userDataProvider;
-        private readonly ISpotifyAssociationCreator _spotifyAssociationCreator;
-        private readonly SpotifyClientResolver _spotifyClientResolver;
-        private readonly MessageComponentService _messageComponentService;
         private readonly CollectorService _collectorService;
         private readonly IDiscordClient _discordClient;
+        private readonly MessageComponentService _messageComponentService;
+        private readonly IMusicController _musicController;
+        private readonly SpotifyUrl _request;
+        private readonly IUser _requester;
+        private readonly ISpotifyAssociationCreator _spotifyAssociationCreator;
+        private readonly SpotifyClientResolver _spotifyClientResolver;
+        private readonly IUserDataProvider _userDataProvider;
         private CollectorsGroup? _collectorController;
-        private PaginatedMessage? _paginatedMessage;
         private IUserMessage? _controlMessage;
+        private PaginatedMessage? _paginatedMessage;
 
         public FixSpotifyChain(IUser requester, IMessageChannel channel, ILocalizationProvider loc, string request,
-                               IMusicController musicController, IUserDataProvider userDataProvider, 
+                               IMusicController musicController, IUserDataProvider userDataProvider,
                                ISpotifyAssociationCreator spotifyAssociationCreator, SpotifyClientResolver spotifyClientResolver,
                                MessageComponentService service, CollectorService collectorService, IDiscordClient discordClient)
             : base($"{nameof(FixSpotifyChain)}_{requester.Id}", loc) {
@@ -177,8 +177,8 @@ namespace Bot.Commands.Chains {
 
                 var addMatch = Regex.Match(args.Message.Content, @"^(new|add) (.*)$");
                 if (addMatch.Success) {
-                    var searchResults = (await (await new LavalinkMusicResolver().Resolve(cluster, addMatch.Groups[2].Value)).Resolve())
-                        .Where(track => track != null).ToList();
+                    var lavalinkMusicResolver = new LavalinkMusicResolver();
+                    var searchResults = await lavalinkMusicResolver.Resolve(cluster, addMatch.Groups[2].Value);
                     try {
                         var resultTrack = searchResults.Single();
 

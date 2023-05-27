@@ -268,5 +268,9 @@ namespace Common {
         public static T? GetSectionValue<T>(this IConfiguration configuration, string key) {
             return configuration.GetSection(key).Get<T>();
         }
+
+        public static Task<T[]> WhenAllAsync<T>(this IEnumerable<Task<T>> tasks) {
+            return Task.WhenAll(tasks);
+        }
     }
 }
