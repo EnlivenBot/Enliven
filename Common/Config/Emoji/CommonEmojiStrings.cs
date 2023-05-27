@@ -70,7 +70,7 @@ namespace Common.Config.Emoji {
             emojiString = GetType().GetProperty(name)?.GetValue(this)?.ToString()
                        ?? throw new ArgumentException("No emoji with this name found");
             _getEmojiCache[name] = emojiString;
-            return name;
+            return emojiString;
         }
     }
 }
