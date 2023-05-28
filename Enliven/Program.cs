@@ -1,9 +1,11 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using Bot;
+using Bot.Utilities;
 using Common;
 using Common.Localization;
 using Microsoft.AspNetCore.Builder;
@@ -37,9 +39,14 @@ builder.Host
         container
             .AddEnlivenServices()
             .AddCommonServices()
-            .AddYandexResolver();
+            .AddYandexResolver()
+            .AddVk();
     });
 
 var app = builder.Build();
+
 app.MapGet("/", _ => Task.FromResult("Enliven web host started"));
+var endpointProviders = app.Services.GetServices<IEndpointProvider>();
+await Task.WhenAll(endpointProviders.Select(provider => provider.ConfigureEndpoints(app)));
+
 await app.RunAsync();

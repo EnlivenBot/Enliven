@@ -10,6 +10,7 @@ namespace Common.Config.Emoji {
         public static Emote Stop { get; set; } = Emote.Parse(CommonEmojiStrings.Instance.Stop);
         public static Emote Spotify { get; set; } = Emote.Parse(CommonEmojiStrings.Instance.Spotify);
         public static Emote YandexMusic { get; set; } = Emote.Parse(CommonEmojiStrings.Instance.YandexMusic);
+        public static Emote VkMusic { get; set; } = Emote.Parse(CommonEmojiStrings.Instance.VkMusic);
         public static Emote RepeatBox { get; set; } = Emote.Parse(CommonEmojiStrings.Instance.RepeatBox);
         public static Emote RepeatOneBox { get; set; } = Emote.Parse(CommonEmojiStrings.Instance.RepeatOneBox);
         public static Emote RepeatOffBox { get; set; } = Emote.Parse(CommonEmojiStrings.Instance.RepeatOffBox);

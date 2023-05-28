@@ -6,12 +6,16 @@
         <AssemblyName>Enliven</AssemblyName>
         <Version>19.0</Version>
         <Nullable>enable</Nullable>
-        <LangVersion>9</LangVersion>
+        <LangVersion>10</LangVersion>
+        <UserSecretsId>d6df00aa-ccf3-410e-92e6-723b9cd92b2f</UserSecretsId>
     </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="8.0.0"/>
         <PackageReference Include="SpotifyAPI.Web" Version="7.0.0"/>
+        <PackageReference Include="VkNet" Version="1.72.0"/>
+        <PackageReference Include="VkNet.AudioBypassService" Version="1.7.4"/>
+        <PackageReference Include="Xabe.FFmpeg.Downloader" Version="5.2.6"/>
         <PackageReference Include="YandexMusicResolver" Version="5.1.0"/>
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.0"/>
     </ItemGroup>

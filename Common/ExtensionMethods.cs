@@ -272,5 +272,9 @@ namespace Common {
         public static Task<T[]> WhenAllAsync<T>(this IEnumerable<Task<T>> tasks) {
             return Task.WhenAll(tasks);
         }
+
+        public static Uri Append(this Uri uri, params string[] paths) {
+            return new Uri(paths.Aggregate(uri.AbsoluteUri, (current, path) => string.Format("{0}/{1}", current.TrimEnd('/'), path.TrimStart('/'))));
+        }
     }
 }

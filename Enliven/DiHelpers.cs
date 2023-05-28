@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using Autofac;
 using Bot.DiscordRelated;
 using Bot.DiscordRelated.Commands;
@@ -8,6 +9,7 @@ using Bot.DiscordRelated.MessageHistories;
 using Bot.DiscordRelated.Music;
 using Bot.Music.Deezer;
 using Bot.Music.Spotify;
+using Bot.Music.Vk;
 using Bot.Music.Yandex;
 using Bot.Utilities.Collector;
 using Bot.Utilities.Logging;
@@ -21,8 +23,11 @@ using Common.Music.Resolvers;
 using Discord.WebSocket;
 using Lavalink4NET.Artwork;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using NLog;
+using VkNet;
+using VkNet.AudioBypassService.Extensions;
 using YandexMusicResolver;
 using YandexMusicResolver.Config;
 using YandexMusicResolver.Loaders;
@@ -110,6 +115,26 @@ namespace Bot {
 
         public static ContainerBuilder Configure<T>(this ContainerBuilder builder) where T : class {
             builder.Register(context => context.Resolve<IConfiguration>().GetSection(typeof(T).Name).Get<T>()!);
+
+            return builder;
+        }
+
+        public static ContainerBuilder AddVk(this ContainerBuilder builder) {
+            builder.ConfigureOptions<VkCredentials>();
+            builder.Register(c => new VkApi(new ServiceCollection().AddAudioBypass()))
+                .AsImplementedInterfaces()
+                .AsSelf()
+                .SingleInstance();
+            builder.Register(_ => new VkMusicCacheService(TimeSpan.FromDays(1), ".cache/vkmusic/", "mp3"))
+                .AsSelf();
+            builder.RegisterType<VkMusicSeederService>()
+                .AsImplementedInterfaces()
+                .AsSelf()
+                .SingleInstance();
+            builder.RegisterType<VkMusicResolver>()
+                .AsImplementedInterfaces()
+                .AsSelf()
+                .SingleInstance();
 
             return builder;
         }
