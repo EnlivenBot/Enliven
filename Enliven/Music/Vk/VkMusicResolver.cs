@@ -47,11 +47,11 @@ public class VkMusicResolver : IMusicResolver {
         if (albumMatch.Success) {
             var audios = await _vkApi.CallAsync<VkCollection<Audio>>("audio.get", new VkParameters() {
                 {
-                    "owner_id", long.Parse(trackMatch.Groups[1].Value)
+                    "owner_id", long.Parse(albumMatch.Groups[1].Value)
                 }, {
-                    "playlist_id", long.Parse(trackMatch.Groups[2].Value)
+                    "playlist_id", long.Parse(albumMatch.Groups[2].Value)
                 }, {
-                    "access_key", trackMatch.Groups[3].Value
+                    "access_key", albumMatch.Groups[3].Value
                 }
             });
 
