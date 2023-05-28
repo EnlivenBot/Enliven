@@ -18,7 +18,18 @@ using Tyrrrz.Extensions;
 
 namespace Common.Music.Players {
     public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer {
+        private readonly ISubject<int> _currentTrackIndexChanged = new Subject<int>();
+
+        private readonly SemaphoreSlim _enqueueLock = new SemaphoreSlim(1);
+
+        private readonly ISubject<LoopingState> _loopingStateChanged = new Subject<LoopingState>();
         private int _currentTrackIndex;
+        private LoopingState _loopingState = LoopingState.Off;
+        private IPlaylistProvider _playlistProvider;
+        private TrackEncoderUtils _trackEncoderUtils;
+
+        public string? LoadFailedId = "";
+        public int LoadFailedRemoves;
 
         // ReSharper disable once UnusedParameter.Local
         public PlaylistLavalinkPlayer(IMusicController musicController, IGuildConfigProvider guildConfigProvider, IPlaylistProvider playlistProvider,
@@ -37,12 +48,9 @@ namespace Common.Music.Players {
             }
         }
 
-        private readonly ISubject<LoopingState> _loopingStateChanged = new Subject<LoopingState>();
         public IObservable<LoopingState> LoopingStateChanged => _loopingStateChanged;
 
         public LavalinkPlaylist Playlist { get; } = new LavalinkPlaylist();
-
-        private readonly ISubject<int> _currentTrackIndexChanged = new Subject<int>();
         public IObservable<int> CurrentTrackIndexChanged => _currentTrackIndexChanged;
 
         public int CurrentTrackIndex {
@@ -53,9 +61,6 @@ namespace Common.Music.Players {
                 _currentTrackIndexChanged.OnNext(value);
             }
         }
-
-        public string? LoadFailedId = "";
-        public int LoadFailedRemoves;
 
         public override async Task OnTrackEndAsync(TrackEndEventArgs eventArgs) {
             if (eventArgs.Reason == TrackEndReason.Replaced) return;
@@ -116,6 +121,7 @@ namespace Common.Music.Players {
             if (enqueue && State == PlayerState.Playing) return Playlist.Count;
             await base.PlayAsync(track, startTime, endTime, noReplace);
             UpdateCurrentTrackIndex();
+            if (Playlist.TryGetValue(CurrentTrackIndex + 1, out var nextTrack) && nextTrack is ITrackNeedPrefetch needPrefetchTrack) _ = needPrefetchTrack.PrefetchTrack();
             return 0;
         }
 
@@ -209,11 +215,6 @@ namespace Common.Music.Players {
                 CurrentTrackIndex = Playlist.IndexOf(CurrentTrack);
             }
         }
-
-        private readonly SemaphoreSlim _enqueueLock = new SemaphoreSlim(1);
-        private IPlaylistProvider _playlistProvider;
-        private TrackEncoderUtils _trackEncoderUtils;
-        private LoopingState _loopingState = LoopingState.Off;
 
         public virtual async Task TryEnqueue(IEnumerable<MusicResolver> resolvers, string author, int index = -1) {
             var musicResolvers = resolvers.ToList();
