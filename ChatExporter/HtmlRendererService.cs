@@ -2,15 +2,14 @@
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Common;
 using NLog;
 using PuppeteerSharp;
 
 namespace ChatExporter {
-    public class HtmlRendererService : IDisposable, IAsyncDisposable {
-        private Task<RevisionInfo>? _browserDownloadingTask;
-        private Browser? _browser;
+    public sealed class HtmlRendererService : IDisposable, IAsyncDisposable {
         private readonly SemaphoreSlim _semaphoreSlim = new(1);
+        private IBrowser? _browser;
+        private Task<RevisionInfo>? _browserDownloadingTask;
         public HtmlRendererService(ILogger logger) {
             logger.Info("Starting Chrome downloading");
             _browserDownloadingTask = new BrowserFetcher().DownloadAsync(BrowserFetcher.DefaultChromiumRevision);
@@ -22,7 +21,15 @@ namespace ChatExporter {
             }, TaskContinuationOptions.OnlyOnRanToCompletion);
         }
 
-        private async Task<Browser> InitializeBrowser() {
+        public ValueTask DisposeAsync() {
+            return _browser?.DisposeAsync() ?? new ValueTask();
+        }
+
+        public void Dispose() {
+            _browser?.Dispose();
+        }
+
+        private async Task<IBrowser> InitializeBrowser() {
             if (_browserDownloadingTask == null) {
                 throw new Exception("HtmlRendererService start initialization only after OnPostDiscordStart call (after starting Discord client)");
             }
@@ -44,8 +51,8 @@ namespace ChatExporter {
 
             await using var page = await browser.NewPageAsync();
             await page.SetContentAsync(html);
-            await page.SetViewportAsync(new ViewPortOptions() {Width = pageWidth ?? 512, Height = 1});
-            await page.ScreenshotAsync(path, new ScreenshotOptions() {FullPage = true});
+            await page.SetViewportAsync(new ViewPortOptions() { Width = pageWidth ?? 512, Height = 1 });
+            await page.ScreenshotAsync(path, new ScreenshotOptions() { FullPage = true });
         }
 
         public async Task<MemoryStream> RenderHtmlToStream(string html, int? pageWidth = null) {
@@ -57,14 +64,6 @@ namespace ChatExporter {
             finally {
                 File.Delete(tempFileName);
             }
-        }
-
-        public void Dispose() {
-            _browser?.Dispose();
-        }
-
-        public ValueTask DisposeAsync() {
-            return _browser?.DisposeAsync() ?? new ValueTask();
         }
     }
 }

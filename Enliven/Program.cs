@@ -1,79 +1,52 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
+using Autofac.Extensions.DependencyInjection;
+using Bot;
+using Bot.Utilities;
 using Common;
-using Common.Config;
 using Common.Localization;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using NLog;
 
-namespace Bot {
-    internal static class Program {
-        private static IContainer Container { get; set; } = null!;
-        private static readonly ILogger Logger = LogManager.GetCurrentClassLogger();
-        private static async Task Main(string[] args) {
-#if !DEBUG
-            InstallErrorHandlers();
-#endif
+// Initializing localization
+Directory.CreateDirectory("Config");
+LocalizationManager.Initialize();
 
-            LocalizationManager.Initialize();
+// Setting up global handlers
+var logger = LogManager.GetLogger("Global");
+AppDomain.CurrentDomain.UnhandledException += (sender, args) =>
+    logger.Fatal(args.ExceptionObject as Exception, "Global uncaught exception");
+TaskScheduler.UnobservedTaskException += (sender, args) => {
+    logger.Fatal(args.Exception?.Flatten(), "Global uncaught task exception");
+    args.SetObserved();
+};
 
-            var containerBuilder = new ContainerBuilder()
-                .AddGlobalConfig()
-                .AddEnlivenServices()
-                .AddCommonServices();
-            Container = containerBuilder.Build();
+// Creating and running host
 
-            var configs = PrepareInstanceConfigs();
-            var enlivenBotWrappers = configs.Select(provider => new EnlivenBotWrapper(provider));
-            var startTasks = enlivenBotWrappers.Select(wrapper => wrapper.StartAsync(Container, CancellationToken.None)).ToList();
+var builder = WebApplication.CreateBuilder(args);
+builder.Host
+    .UseServiceProviderFactory(new AutofacServiceProviderFactory())
+    .ConfigureServices(services => {
+        services.AddHostedService<Worker>();
+        services.AddHttpClient();
+    })
+    .ConfigureContainer<ContainerBuilder>(container => {
+        container
+            .AddEnlivenServices()
+            .AddCommonServices()
+            .AddYandexResolver()
+            .AddVk();
+    });
 
-            var whenAll = await Task.WhenAll(startTasks);
-            if (whenAll.All(b => !b)) {
-                // If all failed - exit
-                Logger.Fatal("All bot instances failed to start. Check configs, logs and try again");
-                Environment.Exit(-1);
-            }
+var app = builder.Build();
 
-            AppDomain.CurrentDomain.ProcessExit += OnCurrentDomainOnProcessExit;
-            await Task.Delay(-1);
-        }
+app.MapGet("/", _ => Task.FromResult("Enliven web host started"));
+var endpointProviders = app.Services.GetServices<IEndpointProvider>();
+await Task.WhenAll(endpointProviders.Select(provider => provider.ConfigureEndpoints(app)));
 
-        private static IEnumerable<ConfigProvider<InstanceConfig>> PrepareInstanceConfigs() {
-            try {
-                return ConfigProvider<InstanceConfig>.GetConfigs("Config/Instances/");
-            }
-            catch (Exception) when (File.Exists("Config/config.json")) {
-                // Migrate old config to new folder
-                Directory.CreateDirectory("Config/Instances/");
-                File.Move("Config/config.json", "Config/Instances/MainBot.json");
-                return PrepareInstanceConfigs();
-            }
-            catch (Exception) {
-                var enlivenConfigProvider = new ConfigProvider<InstanceConfig>("Config/Instances/MainBot.json");
-                enlivenConfigProvider.Load();
-                throw new Exception($"New config file generated at {enlivenConfigProvider.FullConfigPath}. Consider check it.");
-            }
-        }
-
-        private static void OnCurrentDomainOnProcessExit(object? o, EventArgs eventArgs) {
-            Logger.Info("Application shutdown requested");
-            Container.DisposeAsync().AsTask().Wait();
-            Logger.Info("Application shutdowned");
-            LogManager.Shutdown();
-            Environment.Exit(0);
-        }
-
-        // ReSharper disable once UnusedMember.Local
-        private static void InstallErrorHandlers() {
-            var logger = LogManager.GetLogger("Global");
-            AppDomain.CurrentDomain.UnhandledException += (sender, args) =>
-                logger.Fatal(args.ExceptionObject as Exception, "Global uncaught exception");
-            TaskScheduler.UnobservedTaskException += (sender, args) =>
-                logger.Fatal(args.Exception?.Flatten(), "Global uncaught task exception");
-        }
-    }
-}
+await app.RunAsync();

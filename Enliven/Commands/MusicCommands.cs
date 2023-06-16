@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Bot.Commands.Chains;
 using Bot.DiscordRelated;
 using Bot.DiscordRelated.Commands;
+using Bot.DiscordRelated.Commands.Attributes;
 using Bot.DiscordRelated.Commands.Modules;
 using Bot.DiscordRelated.Interactions;
 using Bot.DiscordRelated.MessageComponents;
@@ -68,8 +69,8 @@ namespace Bot.Commands {
                         Player.CurrentTrack!.Title.SafeSubstring(0, 40) + "..."));
             }
             else {
-                var description = Loc.Get("Music.TrackIndexWrong").Format(Context.User.Mention, index, Player.Playlist.Count);
-                _ = ReplyFormattedAsync(description, true).DelayedDelete(Constants.ShortTimeSpan);
+                var description = new EntryLocalized("Music.TrackIndexWrong", Context.User.Mention, index, Player.Playlist.Count);
+                await this.ReplyFailFormattedAsync(description, true).CleanupAfter(Constants.ShortTimeSpan);
             }
         }
 
@@ -78,25 +79,23 @@ namespace Bot.Commands {
         [Summary("volume0s")]
         public async Task Volume([Summary("volume0_0s")] int volume = 100) {
             if (volume is > 200 or < 10) {
-                await ReplyFormattedAsync(Loc.Get("Music.VolumeOutOfRange"), true);
+                await this.ReplyFailFormattedAsync(new EntryLocalized("Music.VolumeOutOfRange"), true);
                 return;
             }
 
             await Player.SetVolumeAsync(volume);
-            Player.WriteToQueueHistory(new HistoryEntry(
-                new EntryLocalized("MusicQueues.NewVolume", Context.User.Username, volume),
-                $"{Context.User.Id}volume"));
+            var entryLocalized = new EntryLocalized("MusicQueues.NewVolume", Context.User.Username, volume);
+            Player.WriteToQueueHistory(new HistoryEntry(entryLocalized, $"{Context.User.Id}volume"));
         }
 
         [Command("repeat", RunMode = RunMode.Async)]
         [Alias("r", "loop", "l")]
         [Summary("repeat0s")]
-        public async Task Repeat(LoopingState? state) {
+        public async Task Repeat(LoopingState? state = null) {
             Player.LoopingState = state ?? Player.LoopingState.Next();
             // Player.UpdateProgress();
-            Player.WriteToQueueHistory(new HistoryEntry(
-                new EntryLocalized("MusicQueues.RepeatSet", Context.User.Username, Player.LoopingState.ToString()),
-                $"{Context.User.Id}repeat"));
+            var entryLocalized = new EntryLocalized("MusicQueues.RepeatSet", Context.User.Username, Player.LoopingState.ToString());
+            Player.WriteToQueueHistory(new HistoryEntry(entryLocalized, $"{Context.User.Id}repeat"));
         }
 
         [RequireNonEmptyPlaylist]
@@ -117,7 +116,7 @@ namespace Bot.Commands {
             if (Player.Playlist.IsEmpty) {
                 var playerSnapshot = MusicController.GetPlayerLastSnapshot(Context.Guild.Id);
                 if (playerSnapshot == null) {
-                    await ReplyFormattedAsync(Loc.Get("Music.NoSnapshotFoundToResume"), true);
+                    await this.ReplyFailFormattedAsync(new EntryLocalized("Music.NoSnapshotFoundToResume"), true);
                     return;
                 }
                 await Player.ApplyStateSnapshot(playerSnapshot);
@@ -170,7 +169,7 @@ namespace Bot.Commands {
         [Summary("fastforward0s")]
         public async Task FastForward([Summary("fastforward0_0s")] TimeSpan? timeSpan = null) {
             if (!Player.CurrentTrack!.IsSeekable) {
-                _ = ReplyFormattedAsync(Loc.Get("Music.TrackNotSeekable").Format(GuildConfig.Prefix), true).DelayedDelete(Constants.ShortTimeSpan);
+                await this.ReplyFailFormattedAsync(new EntryLocalized("Music.TrackNotSeekable", Context.User.Mention), true).CleanupAfter(Constants.ShortTimeSpan);
                 return;
             }
 
@@ -186,7 +185,7 @@ namespace Bot.Commands {
         [Summary("rewind0s")]
         public async Task Rewind([Summary("fastforward0_0s")] TimeSpan? timeSpan = null) {
             if (!Player.CurrentTrack!.IsSeekable) {
-                _ = ReplyFormattedAsync(Loc.Get("Music.TrackNotSeekable").Format(GuildConfig.Prefix), true).DelayedDelete(Constants.ShortTimeSpan);
+                await this.ReplyFailFormattedAsync(new EntryLocalized("Music.TrackNotSeekable", Context.User.Mention), true).CleanupAfter(Constants.ShortTimeSpan);
                 return;
             }
 
@@ -202,7 +201,7 @@ namespace Bot.Commands {
         [Summary("seek0s")]
         public async Task Seek([Summary("seek0_0s")] TimeSpan position) {
             if (!Player.CurrentTrack!.IsSeekable) {
-                _ = ReplyFormattedAsync(Loc.Get("Music.TrackNotSeekable").Format(GuildConfig.Prefix), true).DelayedDelete(Constants.ShortTimeSpan);
+                await this.ReplyFailFormattedAsync(new EntryLocalized("Music.TrackNotSeekable", Context.User.Mention), true).CleanupAfter(Constants.ShortTimeSpan);
                 return;
             }
 
@@ -252,8 +251,8 @@ namespace Bot.Commands {
             // For programmers
             if (trackIndex == 0) trackIndex = 1;
             if (trackIndex < 1 || trackIndex > Player.Playlist.Count) {
-                var description = Loc.Get("Music.TrackIndexWrong").Format(Context.User.Mention, trackIndex, Player.Playlist.Count);
-                _ = ReplyFormattedAsync(description, true).DelayedDelete(Constants.ShortTimeSpan);
+                var description = new EntryLocalized("Music.TrackIndexWrong", Context.User.Mention, trackIndex, Player.Playlist.Count);
+                await this.ReplyFailFormattedAsync(description, true).CleanupAfter(Constants.ShortTimeSpan);
             }
 
             newIndex = Math.Max(1, Math.Min(Player.Playlist.Count, newIndex));
@@ -268,7 +267,7 @@ namespace Bot.Commands {
         public async Task ChangeNode() {
             var cluster = await MusicController.ClusterTask;
             if (cluster.Nodes.Count <= 1) {
-                ReplyFormattedAsync(Loc.Get("Music.OnlyOneNode"), true);
+                await this.ReplyFailFormattedAsync(new EntryLocalized("Music.OnlyOneNode"), true);
                 return;
             }
 
@@ -279,7 +278,7 @@ namespace Bot.Commands {
                 .RandomOrDefault();
 
             if (newNode == null) {
-                ReplyFormattedAsync(Loc.Get("Music.OnlyOneNode"), true);
+                await this.ReplyFailFormattedAsync(new EntryLocalized("Music.OnlyOneNode"), true);
                 return;
             }
 
@@ -325,8 +324,11 @@ namespace Bot.Commands {
                 lyrics = await LyricsService.GetLyricsAsync(artist, title);
             }
 
-            var isFail = string.IsNullOrWhiteSpace(lyrics);
-            await ReplyFormattedAsync((isFail ? Loc.Get("Music.LyricsNotFound", artist, title) : lyrics)!, isFail);
+            if (string.IsNullOrWhiteSpace(lyrics)) {
+                await this.ReplyFailFormattedAsync(new EntryLocalized("Music.LyricsNotFound", artist, title), true);
+                return;
+            }
+            await this.ReplyFormattedAsync(title.ToEntry(), lyrics.ToEntry());
         }
     }
 }

@@ -9,6 +9,7 @@ using Bot.Music.Spotify;
 using Bot.Utilities.Collector;
 using Common;
 using Common.Config;
+using Common.Localization.Entries;
 using Discord.Commands;
 
 namespace Bot.Commands {
@@ -25,7 +26,7 @@ namespace Bot.Commands {
         [Command("fixspotify", RunMode = RunMode.Async)]
         [Alias("spotify, fs")]
         [Summary("fixspotify0s")]
-        public async Task FixSpotify([Remainder] [Summary("fixspotify0_0s")] string? s) {
+        public async Task FixSpotify([Remainder] [Summary("fixspotify0_0s")] string? s = null) {
             if (s == null) {
                 if (Player.CurrentTrack is SpotifyLavalinkTrack spotifyLavalinkTrack) {
                     var request = $"spotify:track:{spotifyLavalinkTrack.RelatedSpotifyTrackWrapper.Id}";
@@ -35,7 +36,7 @@ namespace Bot.Commands {
                     await fixSpotifyChain.Start();
                 }
                 else {
-                    await ReplyFormattedAsync(Loc.Get("Music.CurrentTrackNonSpotify"), true);
+                    await this.ReplyFailFormattedAsync(new EntryLocalized("Music.CurrentTrackNonSpotify"), true);
                 }
             }
             else {

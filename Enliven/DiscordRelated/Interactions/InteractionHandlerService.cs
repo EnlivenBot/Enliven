@@ -10,11 +10,11 @@ using NLog;
 
 namespace Bot.DiscordRelated.Interactions {
     public class InteractionHandlerService : IService, IDisposable {
-        private IDisposable? _disposable;
         private readonly CustomInteractionService _customInteractionService;
         private readonly EnlivenShardedClient _enlivenShardedClient;
         private readonly ILogger _logger;
         private readonly ServiceProviderAdapter _serviceProvider;
+        private IDisposable? _disposable;
         public InteractionHandlerService(IComponentContext serviceContainer, CustomInteractionService customInteractionService, EnlivenShardedClient enlivenShardedClient, ILogger logger) {
             _serviceProvider = new ServiceProviderAdapter(serviceContainer);
             _customInteractionService = customInteractionService;
@@ -22,25 +22,31 @@ namespace Bot.DiscordRelated.Interactions {
             _logger = logger;
         }
 
-        public async Task OnDiscordReady() {
-            await _customInteractionService.RegisterCommandsGloballyAsync();
-            _disposable = _enlivenShardedClient.InteractionCreate
-                .Select(interaction => new ShardedInteractionContext(_enlivenShardedClient, interaction))
-                .SubscribeAsync(OnInteractionCreated);
-            _logger.Info("Interactions initialized");
-        }
-
         public void Dispose() {
             _disposable?.Dispose();
         }
 
+        public async Task OnDiscordReady() {
+            await _customInteractionService.RegisterCommandsGloballyAsync();
+            _disposable = _enlivenShardedClient.InteractionCreate
+                .Select(interaction => new ShardedInteractionContext(_enlivenShardedClient, interaction))
+                .Subscribe(context => _ = OnInteractionCreated(context));
+            _logger.Info("Interactions initialized");
+        }
+
         private async Task OnInteractionCreated(ShardedInteractionContext context) {
             try {
-                _ = context.Interaction.DeferAsync();
-                var result = await _customInteractionService.ExecuteCommandAsync(context, _serviceProvider);
+                var interactionSearchResult = SearchInteraction(context);
+                if (!interactionSearchResult.IsSuccess) {
+                    _logger.Warn("Interaction not found. Id: {InteractionId}. Reason: {Reason}", interactionSearchResult.Text, interactionSearchResult.ErrorReason);
+                    return;
+                }
+
+                var result = await interactionSearchResult.Command.ExecuteAsync(context, _serviceProvider).ConfigureAwait(false);
                 if (!result.IsSuccess) {
                     var exception = result is ExecuteResult executeResult ? executeResult.Exception : null;
-                    _logger.Error(exception, "Interaction execution {Result}: {Reason}", result.Error!.Value, result.ErrorReason);
+                    if (exception is not CommandInterruptionException)
+                        _logger.Error(exception, "Interaction execution {Result}: {Reason}", result.Error!.Value, result.ErrorReason);
                 }
 
                 try {
@@ -54,8 +60,25 @@ namespace Bot.DiscordRelated.Interactions {
                 }
             }
             catch (Exception e) {
-                Console.WriteLine(e);
+                _logger.Error(e, "Error while handling interaction");
             }
+        }
+
+        private SearchResult<ICommandInfo> SearchInteraction(ShardedInteractionContext context) {
+            return context.Interaction switch {
+                ISlashCommandInteraction slashCommandInteraction => ParseSearchResultToCommon(_customInteractionService.SearchSlashCommand(slashCommandInteraction)),
+                IComponentInteraction messageComponent           => ParseSearchResultToCommon(_customInteractionService.SearchComponentCommand(messageComponent)),
+                IUserCommandInteraction userCommand              => ParseSearchResultToCommon(_customInteractionService.SearchUserCommand(userCommand)),
+                IMessageCommandInteraction messageCommand        => ParseSearchResultToCommon(_customInteractionService.SearchMessageCommand(messageCommand)),
+                IAutocompleteInteraction autocomplete            => ParseSearchResultToCommon(_customInteractionService.SearchAutocompleteCommand(autocomplete)),
+                _                                                => throw new ArgumentOutOfRangeException()
+            };
+        }
+
+        private static SearchResult<ICommandInfo> ParseSearchResultToCommon<T>(SearchResult<T> result) where T : class, ICommandInfo {
+            return result.IsSuccess
+                ? SearchResult<ICommandInfo>.FromSuccess(result.Text, result.Command, result.RegexCaptureGroups)
+                : SearchResult<ICommandInfo>.FromError(result.Text, result.Error!.Value, result.ErrorReason);
         }
     }
 }

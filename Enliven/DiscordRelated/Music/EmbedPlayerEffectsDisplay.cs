@@ -4,7 +4,6 @@ using System.Reactive.Disposables;
 using System.Threading.Tasks;
 using Bot.DiscordRelated.MessageComponents;
 using Common;
-using Common.Config;
 using Common.Config.Emoji;
 using Common.Localization.Entries;
 using Common.Localization.Providers;
@@ -17,32 +16,28 @@ using Tyrrrz.Extensions;
 
 namespace Bot.DiscordRelated.Music {
     public class EmbedPlayerEffectsDisplay : PlayerDisplayBase {
-        private ILocalizationProvider _loc;
-        private IMessageChannel _targetChannel;
-        private CompositeDisposable _disposable = new CompositeDisposable();
-        private EnlivenEmbedBuilder _enlivenEmbedBuilder = new EnlivenEmbedBuilder();
-        private EnlivenComponentBuilder _enlivenComponentBuilder;
         private readonly SingleTask _updateControlMessageTask;
         private IUserMessage? _controlMessage;
+        private CompositeDisposable _disposable = new CompositeDisposable();
+        private EnlivenComponentBuilder _enlivenComponentBuilder;
+        private EnlivenEmbedBuilder _enlivenEmbedBuilder = new EnlivenEmbedBuilder();
+        private ILocalizationProvider _loc;
+        private IMessageChannel _targetChannel;
 
-        public EmbedPlayerEffectsDisplay(IMessageChannel targetChannel, ILocalizationProvider loc, MessageComponentService messageComponentService,
-                                         IGuildConfigProvider guildConfigProvider) {
+        public EmbedPlayerEffectsDisplay(IMessageChannel targetChannel, ILocalizationProvider loc, MessageComponentService messageComponentService) {
             _loc = loc;
             _targetChannel = targetChannel;
-            IPrefixProvider prefixProvider = _targetChannel is ITextChannel textChannel
-                ? guildConfigProvider.Get(textChannel.Guild.Id).PrefixProvider
-                : (IPrefixProvider)new BotPrefixProvider();
-            
+
             _enlivenComponentBuilder = messageComponentService.GetBuilder();
             _enlivenEmbedBuilder.Title = _loc.Get("Music.Effects");
 
             var applyEffectTitle = _loc.Get("Effects.ApplyEffectTitle");
             var effects = PlayerEffectSource.DefaultEffects.Select(source => $"`{source.GetSourceName()}`").JoinToString(", ");
-            var applyEffectDescription = _loc.Get("Effects.ApplyEffectDescription", prefixProvider.GetPrefix(), effects);
+            var applyEffectDescription = _loc.Get("Effects.ApplyEffectDescription", effects);
             _enlivenEmbedBuilder.AddField("ApplyEffects", applyEffectTitle, applyEffectDescription);
 
             var addCustomEffectTitle = _loc.Get("Effects.AddCustomEffectTitle");
-            var addCustomEffectDescription = _loc.Get("Effects.AddCustomEffectDescription", prefixProvider.GetPrefix());
+            var addCustomEffectDescription = _loc.Get("Effects.AddCustomEffectDescription");
             _enlivenEmbedBuilder.AddField("CustomEffects", addCustomEffectTitle, addCustomEffectDescription);
 
             var firstButton = new EnlivenButtonBuilder().WithStyle(ButtonStyle.Primary).WithDisabled(true);
@@ -59,7 +54,7 @@ namespace Bot.DiscordRelated.Music {
                     .WithCallback(component => AddEffect(component, effect));
                 _enlivenComponentBuilder.WithButton(builder);
             }
-            
+
             _updateControlMessageTask = new SingleTask(async () => {
                 if (_controlMessage != null) {
                     try {
@@ -78,7 +73,7 @@ namespace Bot.DiscordRelated.Music {
                         await ExecuteShutdown(null!, null!);
                     }
                 }
-            }) {BetweenExecutionsDelay = TimeSpan.FromSeconds(1.5), CanBeDirty = true};
+            }) { BetweenExecutionsDelay = TimeSpan.FromSeconds(1.5), CanBeDirty = true };
             _disposable.Add(_updateControlMessageTask);
         }
 

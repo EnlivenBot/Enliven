@@ -4,6 +4,7 @@ using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
 using Bot.DiscordRelated.Interactions;
 using Common;
+using Common.Localization.Entries;
 using Common.Music.Effects;
 using Common.Music.Players;
 using Discord.Commands;
@@ -15,6 +16,7 @@ namespace Bot.Commands.Music {
     public class EffectCommand : MusicModuleBase {
         public EffectSourceProvider EffectSourceProvider { get; set; } = null!;
 
+        [RequireNonEmptyPlaylist]
         [Command("effect", RunMode = RunMode.Async)]
         [Alias("ef")]
         [Summary("effect0s")]
@@ -22,22 +24,22 @@ namespace Bot.Commands.Music {
             if (await TryRemoveEffect(effectName)) return;
 
             if (!EffectSourceProvider.TryResolve(Context.User.ToLink(), effectName, out var effectSource)) {
-                await ReplyFormattedAsync(Loc.Get("Music.EffectNotFound"), true);
+                await this.ReplyFailFormattedAsync(new EntryLocalized("Music.EffectNotFound"), true);
                 return;
             }
 
             if (await TryRemoveEffect(effectSource.GetSourceName())) return;
 
-            if (Player!.Effects.Count >= AdvancedLavalinkPlayer.MaxEffectsCount) {
-                await ReplyFormattedAsync(Loc.Get("Music.MaxEffectsCountExceed", AdvancedLavalinkPlayer.MaxEffectsCount), true);
+            if (Player.Effects.Count >= AdvancedLavalinkPlayer.MaxEffectsCount) {
+                await this.ReplyFailFormattedAsync(new EntryLocalized("Music.MaxEffectsCountExceed", AdvancedLavalinkPlayer.MaxEffectsCount), true);
                 return;
             }
             var playerEffect = await effectSource.CreateEffect(args);
-            await Player!.ApplyEffect(playerEffect, Context.User);
+            await Player.ApplyEffect(playerEffect, Context.User);
         }
 
         private async Task<bool> TryRemoveEffect(string effectName) {
-            var currentEffectUse = Player!.Effects.FirstOrDefault(use => use.Effect.SourceName == effectName || use.Effect.DisplayName == effectName);
+            var currentEffectUse = Player.Effects.FirstOrDefault(use => use.Effect.SourceName == effectName || use.Effect.DisplayName == effectName);
             if (currentEffectUse == null) return false;
             await Player.RemoveEffect(currentEffectUse, Context.User);
             return true;

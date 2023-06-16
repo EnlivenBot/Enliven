@@ -18,9 +18,7 @@ namespace Bot.Utilities.Logging {
                         (p, i) => p.ParameterType == typeof(ILogger),
                         (p, i) => {
                             var logger = LogManager.GetLogger(p.Member.DeclaringType.FullName);
-                            if (i.TryResolve<ConfigProvider<InstanceConfig>>(out var configProvider)) {
-                                logger = logger.WithProperty("DisplayedInstanceName", $"{configProvider.ConfigFileName}|");
-                            }
+                            if (i.TryResolve<InstanceConfig>(out var configProvider)) logger = logger.WithProperty("DisplayedInstanceName", $"{configProvider.Name}|");
                             return logger;
                         })
                 }));
@@ -42,9 +40,7 @@ namespace Bot.Utilities.Logging {
                 // Set the properties located.
                 foreach (var propToSet in properties) {
                     var logger = LogManager.GetLogger(instanceType.FullName);
-                    if (context.TryResolve<ConfigProvider<InstanceConfig>>(out var configProvider)) {
-                        logger = logger.WithProperty("DisplayedInstanceName", $"{configProvider.ConfigFileName}|");
-                    }
+                    if (context.TryResolve<InstanceConfig>(out var configProvider)) logger = logger.WithProperty("DisplayedInstanceName", $"{configProvider.Name}|");
                     propToSet.SetValue(context.Instance, logger, null);
                 }
             }

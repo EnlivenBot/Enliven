@@ -65,7 +65,7 @@ namespace Bot.Commands.Chains {
                             _guildConfig.HistoryMissingInLog = !_guildConfig.HistoryMissingInLog;
                         }
                         else if (args.Reaction.Emote.Equals(CommonEmoji.LegacyStop)) {
-                            OnEnd.Invoke(new EntryLocalized("ChainsCommon.Thanks").Add(() => _guildConfig.Prefix));
+                            OnEnd.Invoke(new EntryLocalized("ChainsCommon.Thanks"));
                             return;
                         }
                         else if (args.Reaction.Emote.Equals(CommonEmoji.LegacyFileBox)) {
@@ -92,7 +92,7 @@ namespace Bot.Commands.Chains {
                     properties.Embed = new EmbedBuilder().WithColor(Color.Orange).WithTitle(Loc.Get("ChainsCommon.Ended")).WithDescription(entry.Get(Loc))
                         .Build());
                 await _message.RemoveAllReactionsAsync();
-                _ = _message.DelayedDelete(Constants.StandardTimeSpan);
+                _message.DelayedDelete(Constants.StandardTimeSpan);
             };
             SetTimeout(Constants.StandardTimeSpan);
         }
@@ -126,7 +126,7 @@ namespace Bot.Commands.Chains {
             descriptionBuilder.AppendLine(Loc.Get("Logging.LogChannel").Format(
                 historyChannelExists
                     ? $"<#{logChannelId}>"
-                    : Loc.Get("Logging.LogChannelMissing").Format(_guildConfig.Prefix)));
+                    : Loc.Get("Logging.LogChannelMissing")));
             MainBuilder.Description = descriptionBuilder.ToString();
 
             MainBuilder.GetOrAddField("info", s => new PriorityEmbedFieldBuilder().WithPriority(100))

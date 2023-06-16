@@ -1,37 +1,64 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
+using Common;
+using Common.Config.Emoji;
+using Common.Music.Tracks;
+using Discord;
 using Lavalink4NET.Decoding;
 using Lavalink4NET.Player;
 using YandexMusicResolver.AudioItems;
 using YandexMusicResolver.Loaders;
 
 namespace Bot.Music.Yandex {
-    public class YandexLavalinkTrack : LavalinkTrack {
-        private IYandexMusicDirectUrlLoader _directUrlLoader;
-        public YandexMusicTrack RelatedYandexTrack;
+    public class YandexLavalinkTrack : LavalinkTrack, ITrackHasArtwork, ITrackHasCustomSource {
+        private static readonly HttpClient HttpClient = new();
 
-        public YandexLavalinkTrack(YandexMusicTrack relatedYandexTrack, IYandexMusicDirectUrlLoader directUrlLoader)
-            : base(TrackDecoder.EncodeTrack(relatedYandexTrack.ToTrackInfo()), relatedYandexTrack.ToTrackInfo()) {
+        private static readonly Dictionary<long, string> UrlCache = new();
+        private IYandexMusicDirectUrlLoader _directUrlLoader;
+
+        private YandexLavalinkTrack(YandexMusicTrack relatedYandexTrack, IYandexMusicDirectUrlLoader directUrlLoader, string identifier, LavalinkTrackInfo trackInformation)
+            : base(identifier, trackInformation) {
+            CustomSourceUrl = new Uri(relatedYandexTrack.Uri!);
             RelatedYandexTrack = relatedYandexTrack;
             _directUrlLoader = directUrlLoader;
         }
+        public YandexMusicTrack RelatedYandexTrack { get; }
 
-        public override async Task<LavalinkTrack> GetPlayableTrack() {
-            var directUrl = await GetDirectUrl(RelatedYandexTrack.Id);
-            var newTrackInfo = new LavalinkTrackInfo(Author, Duration, IsLiveStream, IsSeekable, Position, directUrl, Title, directUrl);
-            return new LavalinkTrack(TrackDecoder.EncodeTrack(newTrackInfo, StreamProvider.Http, writer => {
-                writer.WriteString("mp3");
-            }), newTrackInfo);
+        public ValueTask<Uri?> GetArtwork() {
+            var artworkUri = RelatedYandexTrack.ArtworkUrl?.Pipe(s => new Uri(s));
+            return ValueTask.FromResult(artworkUri);
         }
-        
-        private static readonly Dictionary<string, string> UrlCache = new Dictionary<string, string>();
 
-        private async Task<string> GetDirectUrl(string id) {
+        /// <inheritdoc />
+        public Emote CustomSourceEmote => CommonEmoji.YandexMusic;
+
+        /// <inheritdoc />
+        public Uri CustomSourceUrl { get; }
+
+        public static YandexLavalinkTrack CreateInstance(YandexMusicTrack relatedYandexTrack, IYandexMusicDirectUrlLoader directUrlLoader) {
+            var lavalinkTrackInfo = new LavalinkTrackInfo() {
+                Author = relatedYandexTrack.Author, Duration = relatedYandexTrack.Length, IsLiveStream = false, IsSeekable = true,
+                Position = TimeSpan.Zero, Uri = relatedYandexTrack.Uri?.Pipe(s => new Uri(s)), Title = relatedYandexTrack.Title,
+                TrackIdentifier = relatedYandexTrack.Id.ToString(), SourceName = "http", ProbeInfo = "mp3"
+            };
+            return new YandexLavalinkTrack(relatedYandexTrack, directUrlLoader, TrackEncoder.Encode(lavalinkTrackInfo), lavalinkTrackInfo);
+        }
+
+        public override async ValueTask<LavalinkTrack> GetPlayableTrack() {
+            var directUrl = await GetDirectUrl(RelatedYandexTrack.Id);
+            var lavalinkTrackInfo = new LavalinkTrackInfo() {
+                Author = Author, Duration = Duration, IsLiveStream = IsLiveStream, IsSeekable = IsSeekable,
+                Position = Position, Uri = new Uri(directUrl), Title = Title, TrackIdentifier = directUrl,
+                SourceName = "http", ProbeInfo = "mp3"
+            };
+            return lavalinkTrackInfo.CreateTrack();
+        }
+        private async Task<string> GetDirectUrl(long id) {
             if (UrlCache.TryGetValue(id, out var url)) {
-                var isUrlAccessibleResponse = (HttpWebResponse) await WebRequest.Create(url).GetResponseAsync();
-                if (isUrlAccessibleResponse.StatusCode == HttpStatusCode.OK)
+                var isUrlAccessibleResponse = await HttpClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, url));
+                if (isUrlAccessibleResponse.IsSuccessStatusCode)
                     return url;
             }
 

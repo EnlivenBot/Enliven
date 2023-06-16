@@ -1,21 +1,37 @@
 ﻿using System;
+using System.Linq;
+using System.Threading.Tasks;
+using Common;
+using Common.Config.Emoji;
+using Common.Music.Tracks;
+using Discord;
 using Lavalink4NET.Player;
-using Lavalink4NET.Util;
+using SpotifyAPI.Web;
 
 namespace Bot.Music.Spotify {
-    public class SpotifyLavalinkTrack : LavalinkTrack {
-        public SpotifyTrackWrapper RelatedSpotifyTrackWrapper;
+    public class SpotifyLavalinkTrack : LavalinkTrack, ITrackHasArtwork, ITrackHasCustomSource {
+        private SpotifyClient _spotifyClient;
 
-        public SpotifyLavalinkTrack(SpotifyTrackWrapper relatedSpotifyTrackWrapper, LavalinkTrack track) : this(relatedSpotifyTrackWrapper, track.Identifier, track.Author,
-            track.Duration, track.IsLiveStream, track.IsSeekable, track.Source, track.Title, track.TrackIdentifier, track.Provider) { }
-
-        public SpotifyLavalinkTrack(SpotifyTrackWrapper relatedSpotifyTrackWrapper, string identifier, LavalinkTrackInfo info) : this(relatedSpotifyTrackWrapper, identifier, info.Author,
-            info.Duration, info.IsLiveStream, info.IsSeekable, info.Source, info.Title, info.TrackIdentifier, StreamProviderUtil.GetStreamProvider(info.Source!)) { }
-
-        public SpotifyLavalinkTrack(SpotifyTrackWrapper relatedSpotifyTrackWrapper, string identifier, string author, TimeSpan duration, bool isLiveStream, bool isSeekable,
-                                    string? source, string title, string trackIdentifier, StreamProvider provider) : base(identifier, author, duration,
-            isLiveStream, isSeekable, source, title, trackIdentifier, provider) {
+        public SpotifyLavalinkTrack(SpotifyTrackWrapper relatedSpotifyTrackWrapper, LavalinkTrack track, SpotifyClient spotifyClient)
+            : base(track.Identifier, track.Author, track.Duration, track.IsLiveStream, track.IsSeekable, track.Uri, track.SourceName, track.Position, track.Title, track.TrackIdentifier, track.Context, track.Provider) {
+            CustomSourceUrl = new Uri($"https://open.spotify.com/track/{relatedSpotifyTrackWrapper.Id}");
             RelatedSpotifyTrackWrapper = relatedSpotifyTrackWrapper;
+            _spotifyClient = spotifyClient;
         }
+        public SpotifyTrackWrapper RelatedSpotifyTrackWrapper { get; }
+
+        public async ValueTask<Uri?> GetArtwork() {
+            if (_spotifyClient == null) return null;
+            var imageUrl = await RelatedSpotifyTrackWrapper.GetFullTrack(_spotifyClient)
+                .PipeAsync(track => track.Album.Images.FirstOrDefault())
+                .PipeAsync(image => image?.Url);
+            return imageUrl?.Pipe(s => new Uri(s));
+        }
+
+        /// <inheritdoc />
+        public Emote CustomSourceEmote => CommonEmoji.Spotify;
+
+        /// <inheritdoc />
+        public Uri CustomSourceUrl { get; }
     }
 }

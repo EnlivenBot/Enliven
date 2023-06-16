@@ -1,11 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json;
 
 namespace Common.Config.Emoji {
     public class CommonEmojiStrings {
-        private CommonEmojiStrings() { }
-
         private static Lazy<CommonEmojiStrings> _lazy = new Lazy<CommonEmojiStrings>(
             () => {
                 var emojiStrings = new CommonEmojiStrings();
@@ -15,23 +14,23 @@ namespace Common.Config.Emoji {
                 return emojiStrings;
             });
 
+        private static Dictionary<string, string> _getEmojiCache = new();
+        private CommonEmojiStrings() { }
+
         public static CommonEmojiStrings Instance => _lazy.Value;
 
-        public string GetEmoji(string name) {
-            return this.GetType().GetProperty(name)?.GetValue(this)?.ToString() 
-                ?? throw new ArgumentException("No emoji with this name found"); 
-        }
-
-        public string RepeatOne { get; set; } = "<:repeatonce:682469899351621648>";
-        public string RepeatOff { get; set; } = "<:repeatoff:682469899276517401>";
-        public string Repeat { get; set; } = "<:repeat:682469899066409043>";
+        public string RepeatOne { get; set; } = "<:repeatone:1030612485914497126>";
+        public string RepeatOff { get; set; } = "<:repeatoff:1030612482433241128>";
+        public string Repeat { get; set; } = "<:repeat:1030610163670982736>";
         public string Play { get; set; } = "<:play:682580118358458368>";
         public string Pause { get; set; } = "<:pause:682580118425960469>";
         public string Stop { get; set; } = "<:stop:682658172615524382>";
         public string Spotify { get; set; } = "<:spotify:764837934519156746>";
-        public string RepeatBox {get;set;} = "<:repeatbox:854346340993597471>";
-        public string RepeatOffBox {get;set;} = "<:repeatoffbox:854346381410172968>";
-        public string RepeatOneBox {get;set;} = "<:repeatonebox:854346274416230421>";
+        public string YandexMusic { get; set; } = "<:yandexmusic:1112134818839408754>";
+        public string VkMusic { get; set; } = "<:vkmusic:1112149911711010887>";
+        public string RepeatBox { get; set; } = "<:repeatbox:1030612480696791040>";
+        public string RepeatOffBox { get; set; } = "<:repeatoffbox:1030612484094181396>";
+        public string RepeatOneBox { get; set; } = "<:repeatonebox:1030612487344763070>";
         public string LegacyTrackNext { get; set; } = "⏭️";
         public string LegacyTrackPrevious { get; set; } = "⏮️";
         public string LegacyPause { get; set; } = "⏸️";
@@ -61,10 +60,18 @@ namespace Common.Config.Emoji {
         public string NoEntry { get; set; } = "⛔";
         public string Level { get; set; } = "🎚️";
         public string E { get; set; } = "🇪";
-        
+
         // Animated
-        
+
         // https://cdn.discordapp.com/emojis/961698515694805022.gif?quality=lossless
         public string LoadingAnimated { get; set; } = "<a:loading:961698515694805022>";
+
+        public string GetEmoji(string name) {
+            if (_getEmojiCache.TryGetValue(name, out var emojiString)) return emojiString;
+            emojiString = GetType().GetProperty(name)?.GetValue(this)?.ToString()
+                       ?? throw new ArgumentException("No emoji with this name found");
+            _getEmojiCache[name] = emojiString;
+            return emojiString;
+        }
     }
 }

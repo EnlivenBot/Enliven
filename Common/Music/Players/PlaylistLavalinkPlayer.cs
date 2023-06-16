@@ -11,7 +11,6 @@ using Common.Music.Controller;
 using Common.Music.Encoders;
 using Common.Music.Resolvers;
 using Common.Music.Tracks;
-using Lavalink4NET.Decoding;
 using Lavalink4NET.Events;
 using Lavalink4NET.Player;
 using LiteDB;
@@ -19,22 +18,39 @@ using Tyrrrz.Extensions;
 
 namespace Common.Music.Players {
     public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer {
+        private readonly ISubject<int> _currentTrackIndexChanged = new Subject<int>();
+
+        private readonly SemaphoreSlim _enqueueLock = new SemaphoreSlim(1);
+
+        private readonly ISubject<LoopingState> _loopingStateChanged = new Subject<LoopingState>();
         private int _currentTrackIndex;
+        private LoopingState _loopingState = LoopingState.Off;
+        private IPlaylistProvider _playlistProvider;
+        private TrackEncoderUtils _trackEncoderUtils;
+
+        public string? LoadFailedId = "";
+        public int LoadFailedRemoves;
 
         // ReSharper disable once UnusedParameter.Local
         public PlaylistLavalinkPlayer(IMusicController musicController, IGuildConfigProvider guildConfigProvider, IPlaylistProvider playlistProvider,
-                                      TrackEncoder trackEncoder) : base(
+                                      TrackEncoderUtils trackEncoderUtils) : base(
             musicController, guildConfigProvider) {
-            _trackEncoder = trackEncoder;
+            _trackEncoderUtils = trackEncoderUtils;
             _playlistProvider = playlistProvider;
             Playlist.Changed.Subscribe(playlist => UpdateCurrentTrackIndex());
         }
 
-        public LoopingState LoopingState { get; set; } = LoopingState.Off;
+        public LoopingState LoopingState {
+            get => _loopingState;
+            set {
+                _loopingState = value;
+                _loopingStateChanged.OnNext(value);
+            }
+        }
+
+        public IObservable<LoopingState> LoopingStateChanged => _loopingStateChanged;
 
         public LavalinkPlaylist Playlist { get; } = new LavalinkPlaylist();
-
-        private readonly ISubject<int> _currentTrackIndexChanged = new Subject<int>();
         public IObservable<int> CurrentTrackIndexChanged => _currentTrackIndexChanged;
 
         public int CurrentTrackIndex {
@@ -45,9 +61,6 @@ namespace Common.Music.Players {
                 _currentTrackIndexChanged.OnNext(value);
             }
         }
-
-        public string? LoadFailedId = "";
-        public int LoadFailedRemoves;
 
         public override async Task OnTrackEndAsync(TrackEndEventArgs eventArgs) {
             if (eventArgs.Reason == TrackEndReason.Replaced) return;
@@ -108,6 +121,7 @@ namespace Common.Music.Players {
             if (enqueue && State == PlayerState.Playing) return Playlist.Count;
             await base.PlayAsync(track, startTime, endTime, noReplace);
             UpdateCurrentTrackIndex();
+            if (Playlist.TryGetValue(CurrentTrackIndex + 1, out var nextTrack) && nextTrack is ITrackNeedPrefetch needPrefetchTrack) _ = needPrefetchTrack.PrefetchTrack();
             return 0;
         }
 
@@ -136,7 +150,7 @@ namespace Common.Music.Players {
         }
 
         public virtual async Task<ExportPlaylist> ExportPlaylist(ExportPlaylistOptions options) {
-            var encodedTracks = await Task.WhenAll(Playlist.Select(track => _trackEncoder.Encode(track)));
+            var encodedTracks = await Task.WhenAll(Playlist.Select(track => _trackEncoderUtils.Encode(track)));
             var exportPlaylist = new ExportPlaylist { Tracks = encodedTracks.ToList() };
             if (options != ExportPlaylistOptions.IgnoreTrackIndex) {
                 exportPlaylist.TrackIndex = CurrentTrackIndex.Normalize(0, Playlist.Count - 1);
@@ -156,7 +170,7 @@ namespace Common.Music.Players {
                 return;
             }
 
-            var tracks = (await _trackEncoder.BatchDecode(playlist.Tracks)).Select(track => track.AddAuthor(requester)).ToList();
+            var tracks = (await _trackEncoderUtils.BatchDecode(playlist.Tracks)).Select(track => track.AddAuthor(requester)).ToList();
             if (options == ImportPlaylistOptions.Replace) {
                 try {
                     await StopAsync();
@@ -201,10 +215,6 @@ namespace Common.Music.Players {
                 CurrentTrackIndex = Playlist.IndexOf(CurrentTrack);
             }
         }
-
-        private readonly SemaphoreSlim _enqueueLock = new SemaphoreSlim(1);
-        private IPlaylistProvider _playlistProvider;
-        private TrackEncoder _trackEncoder;
 
         public virtual async Task TryEnqueue(IEnumerable<MusicResolver> resolvers, string author, int index = -1) {
             var musicResolvers = resolvers.ToList();
@@ -302,7 +312,7 @@ namespace Common.Music.Players {
         }
 
         public override async Task OnTrackExceptionAsync(TrackExceptionEventArgs eventArgs) {
-            WriteToQueueHistory(new EntryLocalized("Music.TrackException", eventArgs.Exception.Cause));
+            WriteToQueueHistory(new EntryLocalized("Music.TrackException", eventArgs.ErrorMessage));
             await SkipAsync(1, true);
             await base.OnTrackExceptionAsync(eventArgs);
         }

@@ -1,7 +1,9 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
+using Bot.DiscordRelated;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
+using Bot.DiscordRelated.Commands.Modules.Contexts;
 using Bot.Utilities;
 using Common;
 using Discord;
@@ -16,18 +18,17 @@ namespace Bot.Commands {
         [Summary("help1s")]
         public async Task PrintHelp() {
             var eb = this.GetAuthorEmbedBuilder()
-                         .WithTitle(Loc.Get("Help.HelpTitle"))
-                         .WithColor(Color.Gold)
-                         .WithDescription(Loc.Get("Help.HelpPrefix").Format(GuildConfig.Prefix, Context.Client.CurrentUser.Mention))
-                         .AddField($"{GuildConfig.Prefix}help", Loc.Get("Help.HelpDescription"))
-                         .WithFields(CustomCommandService.CommandsGroups.Value.Select(pair =>
-                              new EmbedFieldBuilder {
-                                  Name = pair.Value.GroupNameTemplate.Format(Loc.Get($"Groups.{pair.Key}"), GuildConfig.Prefix),
-                                  Value = pair.Value.GroupTextTemplate.Format(GuildConfig.Prefix)
-                              }));
+                .WithTitle(Loc.Get("Help.HelpTitle"))
+                .WithColor(Color.Gold)
+                .WithDescription(Loc.Get("Help.HelpPrefix").Format(GuildConfig.Prefix, Context.Client.CurrentUser.Mention))
+                .AddField($"/help", Loc.Get("Help.HelpDescription"))
+                .WithFields(CustomCommandService.CommandsGroups.Value.Select(pair =>
+                    new EmbedFieldBuilder {
+                        Name = pair.Value.GroupNameTemplate.Format(Loc.Get($"Groups.{pair.Key}")),
+                        Value = pair.Value.GroupTextTemplate
+                    }));
             eb.AddField(Loc.Get("Common.Vote"), Loc.Get("Common.VoteDescription"));
-            var responseChannel = await GetResponseChannel();
-            _ = responseChannel.SendMessageAsync(null, false, eb.Build()).DelayedDelete(Constants.LongTimeSpan);
+            await this.Context.SendMessageAsync(null, eb.Build()).CleanupAfter(Constants.LongTimeSpan);
         }
 
         [Command("help")]
@@ -36,22 +37,24 @@ namespace Bot.Commands {
             var eb = this.GetAuthorEmbedBuilder().WithColor(Color.Gold);
             if (CustomCommandService.CommandsGroups.Value.TryGetValue(message, out var commandGroup)) {
                 eb.WithTitle(Loc.Get("Help.CommandsOfGroup").Format(message))
-                  .WithFields(commandGroup.Commands.GroupBy(info => info.Name).Select(infos => infos.First()).Select(info => new EmbedFieldBuilder {
-                       Name = $"`{GuildConfig.Prefix}{info.Name}` {CustomCommandService.GetAliasesString(info.Aliases, Loc)}",
-                       Value = Loc.Get($"Help.{info.Summary}")
-                   }));
+                    .WithFields(commandGroup.Commands
+                        .GroupBy(info => info.Name)
+                        .Select(infos => infos.First())
+                        .Select(info => new EmbedFieldBuilder {
+                            Name = $"`/{info.Name}` {CustomCommandService.GetAliasesString(info.Aliases, Loc)}",
+                            Value = Loc.Get($"Help.{info.Summary}")
+                        }));
             }
             else if (CustomCommandService.Aliases.Contains(message)) {
                 eb.WithTitle(Loc.Get("Help.ByCommand").Format(message))
-                  .WithFields(CustomCommandService.BuildHelpFields(message, GuildConfig.Prefix, Loc));
+                  .WithFields(CustomCommandService.BuildHelpFields(message, Loc));
             }
             else {
                 eb.WithTitle(Loc.Get("Help.NotFoundTitle"))
-                  .WithDescription(Loc.Get("Help.NotFoundDescription").Format(message.SafeSubstring(100, "..."), GuildConfig.Prefix));
+                  .WithDescription(Loc.Get("Help.NotFoundDescription").Format(message.SafeSubstring(100, "...")));
             }
 
-            var responseChannel = await GetResponseChannel();
-            _ = responseChannel.SendMessageAsync(null, false, eb.Build()).DelayedDelete(Constants.LongTimeSpan);
+            await this.Context.SendMessageAsync(null, eb.Build()).CleanupAfter(Constants.LongTimeSpan);
         }
     }
 }

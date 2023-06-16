@@ -2,9 +2,11 @@
 using System.Threading.Tasks;
 using Bot.DiscordRelated;
 using Bot.DiscordRelated.Commands;
+using Bot.DiscordRelated.Commands.Attributes;
 using Bot.DiscordRelated.Commands.Modules;
 using Bot.DiscordRelated.Interactions;
 using Common;
+using Common.Localization.Entries;
 using Common.Music;
 using Discord.Commands;
 using LiteDB;
@@ -22,7 +24,7 @@ namespace Bot.Commands {
         public async Task SavePlaylist() {
             var playlist = await Player.ExportPlaylist(ExportPlaylistOptions.IgnoreTrackIndex);
             var storedPlaylist = PlaylistProvider.StorePlaylist(playlist, "u" + ObjectId.NewObjectId(), Context.User.ToLink());
-            await ReplyFormattedAsync(Loc.Get("Music.PlaylistSaved", storedPlaylist.Id, GuildConfig.Prefix));
+            await this.ReplySuccessFormattedAsync(new EntryLocalized("Music.PlaylistSaved", storedPlaylist.Id));
         }
 
         [ShouldCreatePlayer]
@@ -52,16 +54,17 @@ namespace Bot.Commands {
         private async Task ExecutePlaylist(string id, ImportPlaylistOptions options) {
             var playlist = PlaylistProvider.Get(id);
             if (playlist == null) {
-                await ReplyFormattedAsync(Loc.Get("Music.PlaylistNotFound", id.SafeSubstring(100, "...") ?? ""), true);
+                await this.ReplyFailFormattedAsync(new EntryLocalized("Music.PlaylistNotFound", id.SafeSubstring(100, "...") ?? ""), true);
                 return;
             }
 
             Player!.WriteToQueueHistory(Loc.Get("Music.LoadPlaylist", Context.User.Username,
                 id.SafeSubstring(100, "...") ?? ""));
             await Player.ImportPlaylist(playlist, options, Context.User.Username);
+            // TODO: Make control message resending as command response
             var mainPlayerDisplay = await GetMainPlayerDisplay();
             _ = mainPlayerDisplay.ControlMessageResend();
-            Context?.Message?.SafeDelete();
+            await this.RemoveMessageInvokerIfPossible();
         }
     }
 }

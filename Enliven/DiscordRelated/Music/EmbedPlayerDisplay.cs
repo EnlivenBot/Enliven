@@ -1,19 +1,19 @@
-﻿using System;
+using System;
 using System.Collections.Immutable;
 using System.ComponentModel;
 using System.Linq;
+using System.Reactive;
+using System.Reactive.Linq;
+using System.Reactive.Subjects;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Criteria;
 using Bot.DiscordRelated.MessageComponents;
-using Bot.Music.Spotify;
-using Bot.Utilities.Collector;
 using Common;
-using Common.Config;
 using Common.Config.Emoji;
-using Common.Criteria;
+using Common.History;
 using Common.Localization.Entries;
 using Common.Localization.Providers;
 using Common.Music;
@@ -22,98 +22,158 @@ using Common.Music.Players;
 using Common.Music.Tracks;
 using Common.Utils;
 using Discord;
+using Lavalink4NET.Artwork;
 using Lavalink4NET.Player;
+using NLog;
 using Tyrrrz.Extensions;
-
 #pragma warning disable 4014
 
 namespace Bot.DiscordRelated.Music {
     public class EmbedPlayerDisplay : PlayerDisplayBase {
-        private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
-        private CommandHandlerService _commandHandlerService;
-        private IUserMessage? _controlMessage;
-        private bool _isExternalEmojiAllowed;
-        private ILocalizationProvider _loc;
-
-        private Disposables? _playerSubscriptions;
-        private IPrefixProvider _prefixProvider;
-
-        private IMessageChannel _targetChannel;
+        private readonly IArtworkService _artworkService;
+        private readonly CommandHandlerService _commandHandlerService;
+        private readonly SingleTask _controlMessageSendTask;
         private readonly IDiscordClient _discordClient;
-        private IGuild? _targetGuild;
-        private SingleTask _updateControlMessageTask;
-        private SingleTask _controlMessageSendTask;
+        private readonly EnlivenEmbedBuilder _embedBuilder;
+        private readonly ILocalizationProvider _loc;
+        private readonly ILogger _logger;
+        private readonly MessageComponentService _messageComponentService;
+        private readonly IGuild? _targetGuild;
+        private readonly SingleTask _updateControlMessageTask;
 
-        private EnlivenEmbedBuilder EmbedBuilder;
-
-        public bool NextResendForced;
-        private MessageComponentService _messageComponentService;
+        private CancellationTokenSource _cancellationTokenSource = new();
+        private IUserMessage? _controlMessage;
+        private string? _effectsInParameters;
+        private bool _isExternalEmojiAllowed;
         private MessageComponent? _messageComponent;
         private EnlivenComponentBuilder? _messageComponentManager;
+        private Disposables? _playerSubscriptions;
+        private bool _resendInsteadOfUpdate;
+        private SendControlMessageOverride? _sendControlMessageOverride;
+        private IMessageChannel _targetChannel;
+
+        public bool NextResendForced;
 
         public EmbedPlayerDisplay(ITextChannel targetChannel, IDiscordClient discordClient, ILocalizationProvider loc,
-                                  CommandHandlerService commandHandlerService, IPrefixProvider prefixProvider, MessageComponentService messageComponentService) :
-            this((IMessageChannel) targetChannel, discordClient, loc, commandHandlerService, prefixProvider, messageComponentService) {
+                                  CommandHandlerService commandHandlerService, MessageComponentService messageComponentService,
+                                  ILogger logger, IArtworkService artworkService) :
+            this((IMessageChannel)targetChannel, discordClient, loc, commandHandlerService, messageComponentService, logger, artworkService) {
             _targetGuild = targetChannel.Guild;
         }
 
         public EmbedPlayerDisplay(IMessageChannel targetChannel, IDiscordClient discordClient, ILocalizationProvider loc,
-                                  CommandHandlerService commandHandlerService, IPrefixProvider prefixProvider, MessageComponentService messageComponentService) {
+                                  CommandHandlerService commandHandlerService, MessageComponentService messageComponentService,
+                                  ILogger logger, IArtworkService artworkService) {
             _messageComponentService = messageComponentService;
+            _logger = logger;
+            _artworkService = artworkService;
             _loc = loc;
             _commandHandlerService = commandHandlerService;
-            _prefixProvider = prefixProvider;
             _targetChannel = targetChannel;
             _discordClient = discordClient;
-            _updateControlMessageTask = new SingleTask(async () => {
-                if (_controlMessage != null) {
-                    try {
-                        await _controlMessage.ModifyAsync(properties => {
-                            properties.Embed = EmbedBuilder!.Build();
-                            properties.Content = "";
-                            properties.Components = _messageComponent;
-                        }, new RequestOptions {CancelToken = _cancellationTokenSource.Token});
-                    }
-                    catch (Exception) {
-                        if (_controlMessage != null) {
-                            (await _targetChannel.GetMessageAsync(_controlMessage.Id)).SafeDelete();
-                            _controlMessage = null;
-                        }
 
-                        ControlMessageResend(_targetChannel);
+            _embedBuilder = new EnlivenEmbedBuilder();
+            _embedBuilder.AddField("State", loc.Get("Music.Empty"), loc.Get("Music.Empty"), true);
+            _embedBuilder.AddField("Parameters", loc.Get("Music.Parameters"), loc.Get("Music.Empty"), true);
+            _embedBuilder.AddField("Effects", loc.Get("Music.Effects"), loc.Get("Music.Empty"), isEnabled: false);
+            _embedBuilder.AddField("Queue", loc.Get("Music.Queue").Format(0, 0, 0), loc.Get("Music.Empty"));
+            _embedBuilder.AddField("RequestHistory", loc.Get("Music.RequestHistory"), loc.Get("Music.Empty"));
+            _embedBuilder.AddField("Warnings", loc.Get("Music.Warning"), loc.Get("Music.Empty"), false, 100, false);
+
+            _controlMessageSendTask = new SingleTask(SendControlMessageInternal) { BetweenExecutionsDelay = TimeSpan.FromSeconds(30), CanBeDirty = false };
+            _updateControlMessageTask = new SingleTask(UpdateControlMessageInternal) { BetweenExecutionsDelay = TimeSpan.FromSeconds(1.5), CanBeDirty = true, ShouldExecuteNonDirtyIfNothingRunning = true };
+        }
+
+        private async Task SendControlMessageInternal(SingleTaskExecutionData data) {
+            try {
+                var shouldResend =
+                    NextResendForced
+                 || _resendInsteadOfUpdate
+                 || _controlMessage == null
+                 || await EnsureMessage.NotExists(_targetChannel, _controlMessage.Id, 3);
+                if (shouldResend) {
+                    _resendInsteadOfUpdate = false;
+                    NextResendForced = false;
+                    _cancellationTokenSource.Cancel();
+                    _cancellationTokenSource = new CancellationTokenSource();
+
+                    UpdateParameters();
+                    UpdateProgress();
+                    UpdateQueue();
+                    UpdateTrackInfo();
+
+                    if (_targetGuild != null) {
+                        var guildUser = await _targetGuild.GetUserAsync(_discordClient.CurrentUser.Id);
+                        var channelPerms = guildUser.GetPermissions((IGuildChannel)_targetChannel);
+                        _isExternalEmojiAllowed = channelPerms.UseExternalEmojis;
+                        _embedBuilder.Fields["Warnings"].IsEnabled = !channelPerms.UseExternalEmojis;
+                        if (_embedBuilder.Fields["Warnings"].IsEnabled) _embedBuilder.Fields["Warnings"].Value = _loc.Get("Music.WarningCustomEmoji");
                     }
+
+                    var oldControlMessage = _controlMessage;
+                    await SendControlMessage_WithMessageComponents();
+                    _logger.Debug("Sent player embed controll message. Guild: {TargetGuildId}. Channel: {TargetChannelId}. Message id: {ControlMessageId}", _targetGuild?.Id, _targetChannel.Id, _controlMessage.Id);
+                    oldControlMessage.SafeDelete();
                 }
-            }) {BetweenExecutionsDelay = TimeSpan.FromSeconds(1.5), CanBeDirty = true};
-            _controlMessageSendTask = new SingleTask(async data => {
+                else {
+                    data.OverrideDelay = TimeSpan.FromSeconds(5);
+                }
+            }
+            catch (Exception) {
+                // ignored
+            }
+        }
+
+        private async Task UpdateControlMessageInternal(SingleTaskExecutionData data) {
+            var internalCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_cancellationTokenSource.Token);
+            if (_cancellationTokenSource.IsCancellationRequested) data.OverrideDelay = TimeSpan.Zero;
+            if (_controlMessage != null) {
                 try {
-                    if (NextResendForced || await new EnsureLastMessage(_targetChannel, _controlMessage?.Id ?? 0, 3) {IsNullableTrue = true}.Invert().JudgeAsync()) {
-                        NextResendForced = false;
-                        await SendControlMessage();
+                    if (_resendInsteadOfUpdate) {
+                        _resendInsteadOfUpdate = false;
+                        await _controlMessageSendTask.Execute(false, TimeSpan.Zero);
+                        return;
                     }
-                    else {
-                        data.OverrideDelay = TimeSpan.FromSeconds(5);
+                    _logger.Trace("Modifying embed control message. Guild: {TargetGuildId}. Channel: {TargetChannelId}. Message id: {ControlMessageId}", _targetGuild?.Id, _targetChannel.Id, _controlMessage.Id);
+                    await _controlMessage.ModifyAsync(properties => {
+                        properties.Embed = _embedBuilder!.Build();
+                        properties.Content = "";
+                        properties.Components = _messageComponent;
+                    }, new RequestOptions {
+                        CancelToken = internalCancellationTokenSource.Token,
+                        RatelimitCallback = RatelimitCallback,
+                        RetryMode = RetryMode.AlwaysFail
+                    });
+                }
+                catch (TimeoutException) {
+                    // Ignore all timeouts because weird Discord (Discord.NET?) logic.
+                    // Updating only one message every 5 seconds will trigger ratelimit exceptions.
+                    // Fuck it.
+                }
+                catch (Exception e) {
+                    _logger.Debug(e, "Failed to update embed control message. Guild: {TargetGuildId}. Channel: {TargetChannelId}. Message id: {ControlMessageId}", _targetGuild?.Id, _targetChannel.Id, _controlMessage.Id);
+                    if (_controlMessage != null) {
+                        _targetChannel.GetMessageAsync(_controlMessage.Id).SafeDelete();
+                        _controlMessage = null;
                     }
-                }
-                catch (Exception) {
-                    // ignored
-                }
-            }) {
-                BetweenExecutionsDelay = TimeSpan.FromSeconds(30), CanBeDirty = false, IsDelayResetByExecute = false,
-            };
 
-            EmbedBuilder = new EnlivenEmbedBuilder();
-            EmbedBuilder.AddField("State", loc.Get("Music.Empty"), loc.Get("Music.Empty"), true);
-            EmbedBuilder.AddField("Parameters", loc.Get("Music.Parameters"), loc.Get("Music.Empty"), true);
-            EmbedBuilder.AddField("Effects", loc.Get("Music.Effects"), loc.Get("Music.Empty"), isEnabled: false);
-            EmbedBuilder.AddField("Queue", loc.Get("Music.Queue").Format(0, 0, 0), loc.Get("Music.Empty"));
-            EmbedBuilder.AddField("RequestHistory", loc.Get("Music.RequestHistory"), loc.Get("Music.Empty"));
-            EmbedBuilder.AddField("Warnings", loc.Get("Music.Warning"), loc.Get("Music.Empty"), false, 100, false);
+                    ControlMessageResend(_targetChannel);
+                }
+            }
+
+            Task RatelimitCallback(IRateLimitInfo info) {
+                if (info.RetryAfter is { } retryAfter) {
+                    internalCancellationTokenSource.Cancel();
+                    data.OverrideDelay = retryAfter > data.BetweenExecutionsDelay.GetValueOrDefault().TotalSeconds ? TimeSpan.FromSeconds(retryAfter + 1) : null;
+                }
+                return Task.CompletedTask;
+            }
         }
 
         public override async Task LeaveNotification(IEntry header, IEntry body) {
             try {
-                await _targetChannel.SendMessageAsync(null, false,
-                    new EmbedBuilder().WithColor(Color.Gold).WithTitle(header.Get(_loc)).WithDescription(body.Get(_loc)).Build());
+                var embedBuilder = new EmbedBuilder().WithColor(Color.Gold).WithTitle(header.Get(_loc)).WithDescription(body.Get(_loc));
+                await _targetChannel.SendMessageAsync(null, false, embedBuilder.Build());
             }
             catch (Exception) {
                 // ignored
@@ -125,12 +185,12 @@ namespace Bot.DiscordRelated.Music {
             _cancellationTokenSource.Cancel();
             var message = _controlMessage;
             _controlMessage = null;
-            
+
             _playerSubscriptions?.Dispose();
             _cancellationTokenSource.Dispose();
             _controlMessageSendTask.Dispose();
             _updateControlMessageTask.Dispose();
-            
+
             if (message != null) {
                 var embed = new EmbedBuilder()
                     .WithColor(Color.Gold)
@@ -154,41 +214,48 @@ namespace Bot.DiscordRelated.Music {
         public override async Task ChangePlayer(FinalLavalinkPlayer newPlayer) {
             _playerSubscriptions?.Dispose();
             await base.ChangePlayer(newPlayer);
+
+            var updateControlMessageSubj = new Subject<Unit>();
+            updateControlMessageSubj
+                .Throttle(TimeSpan.FromMilliseconds(100))
+                .Subscribe(_ => UpdateControlMessage());
+
             _playerSubscriptions = new Disposables(
-                Player.QueueHistory.HistoryChanged.Subscribe(collection => {
-                    EmbedBuilder.Fields["RequestHistory"].Value = collection.GetLastHistory(_loc, out var isChanged).IsBlank(_loc.Get("Music.Empty"));
-                    if (isChanged) UpdateControlMessage();
-                }),
-                Player.Playlist.Changed.Subscribe(playlist => UpdateQueue()),
-                Player.VolumeChanged.Subscribe(obj => UpdateParameters()),
-                Player.SocketChanged.Subscribe(obj => UpdateNode()),
-                Player.StateChanged.Subscribe(obj => {
-                    UpdateProgress();
-                    UpdateTrackInfo();
-                    UpdateControlMessage();
-                    UpdateMessageComponents();
-                }),
+                updateControlMessageSubj,
+                Player.QueueHistory.HistoryChanged
+                    .Select(OnHistoryChanged)
+                    .Where(isChanged => isChanged)
+                    .Select(_ => Unit.Default)
+                    .Subscribe(updateControlMessageSubj),
+                Player.Playlist.Changed.Subscribe(_ => UpdateQueue()),
+                Player.VolumeChanged.Subscribe(_ => UpdateParameters()),
+                Player.SocketChanged.Subscribe(_ => UpdateNode()),
+                Player.StateChanged
+                    .Do(OnStateChanged)
+                    .Select(_ => Unit.Default)
+                    .Subscribe(updateControlMessageSubj),
                 Player.FiltersChanged.Subscribe(_ => UpdateEffects()),
-                Player.CurrentTrackIndexChanged.Subscribe(i => UpdateQueue())
+                Player.CurrentTrackIndexChanged.Subscribe(_ => UpdateQueue()),
+                Player.LoopingStateChanged.Subscribe(OnLoopingStateChanged)
             );
             UpdateNode();
             await ControlMessageResend();
-        }
-        
-        private async Task SendControlMessage() {
-            _cancellationTokenSource.Cancel();
-            _cancellationTokenSource = new CancellationTokenSource();
 
-            UpdateParameters();
-            UpdateProgress();
-            UpdateQueue();
-            UpdateTrackInfo();
+            void OnStateChanged(PlayerState obj) {
+                UpdateProgress();
+                UpdateTrackInfo();
+                UpdateMessageComponents();
+            }
 
-            await CheckRestrictions();
+            void OnLoopingStateChanged(LoopingState _) {
+                UpdateProgress();
+                UpdateMessageComponents();
+            }
 
-            var oldControlMessage = _controlMessage;
-            await SendControlMessage_WithMessageComponents();
-            oldControlMessage.SafeDelete();
+            bool OnHistoryChanged(HistoryCollection collection) {
+                _embedBuilder.Fields["RequestHistory"].Value = collection.GetLastHistory(_loc, out var isChanged).IsBlank(_loc.Get("Music.Empty"));
+                return isChanged;
+            }
         }
 
         private async Task SendControlMessage_WithMessageComponents() {
@@ -217,7 +284,7 @@ namespace Bot.DiscordRelated.Music {
                     "Shuffle"       => "shuffle",
                     "Stop"          => "stop",
                     "Repeat"        => "repeat",
-                    "Effects"          => "effects",
+                    "Effects"       => "effects current",
                     _               => throw new ArgumentOutOfRangeException()
                 };
 
@@ -230,8 +297,20 @@ namespace Bot.DiscordRelated.Music {
             UpdateMessageComponents();
 
             _messageComponent = _messageComponentManager.Build();
-            _controlMessage = await _targetChannel.SendMessageAsync(null, false, EmbedBuilder.Build(), components: _messageComponent);
+            _controlMessage = await _sendControlMessageOverride.ExecuteAndFallbackWith(_embedBuilder.Build(), _messageComponent, _targetChannel, _logger);
+            _sendControlMessageOverride = null;
             _messageComponentManager.AssociateWithMessage(_controlMessage);
+        }
+
+        public async Task ResendControlMessageWithOverride(SendControlMessageOverride sendControlMessageOverride, bool executeResend = true) {
+            _sendControlMessageOverride = sendControlMessageOverride;
+            NextResendForced = true;
+            _resendInsteadOfUpdate = true;
+            if (!executeResend) return;
+
+            _cancellationTokenSource.Cancel();
+            await _controlMessageSendTask.Execute(false, TimeSpan.Zero);
+            _cancellationTokenSource = new CancellationTokenSource();
         }
 
         public void UpdateMessageComponents() {
@@ -255,24 +334,9 @@ namespace Bot.DiscordRelated.Music {
             if (updated) _messageComponent = _messageComponentManager.Build();
         }
 
-        private async Task CheckRestrictions() {
-            if (_targetGuild != null) {
-                var guildUser = await _targetGuild.GetUserAsync(_discordClient.CurrentUser.Id);
-                var channelPerms = guildUser.GetPermissions((IGuildChannel) _targetChannel);
-                _isExternalEmojiAllowed = channelPerms.UseExternalEmojis;
-                var text = "";
-                if (!channelPerms.UseExternalEmojis) text += _loc.Get("Music.WarningCustomEmoji") + "\n";
-
-                // ReSharper disable once AssignmentInConditionalExpression
-                if (EmbedBuilder.Fields["Warnings"].IsEnabled = !string.IsNullOrWhiteSpace(text)) {
-                    EmbedBuilder.Fields["Warnings"].Value = text;
-                }
-            }
-        }
-
         public void UpdateProgress(bool background = false) {
             if (Player.CurrentTrack != null) {
-                EmbedBuilder.Fields["State"].Name = _loc.Get("Music.RequestedBy").Format(Player.CurrentTrack.GetRequester());
+                _embedBuilder.Fields["State"].Name = _loc.Get("Music.RequestedBy").Format(Player.CurrentTrack.GetRequester());
 
                 var progressPercentage = Convert.ToInt32(Player.Position.Position.TotalSeconds / Player.CurrentTrack.Duration.TotalSeconds * 100);
                 var progressBar = (_isExternalEmojiAllowed ? ProgressEmoji.CustomEmojiPack : ProgressEmoji.TextEmojiPack).GetProgress(progressPercentage);
@@ -288,54 +352,52 @@ namespace Bot.DiscordRelated.Music {
                     LoopingState.Off => _isExternalEmojiAllowed ? CommonEmojiStrings.Instance.RepeatOff : "❌",
                     _                => throw new InvalidEnumArgumentException()
                 };
-                var spotifyId = (Player.CurrentTrack is SpotifyLavalinkTrack spotifyLavalinkTrack)
-                    ? spotifyLavalinkTrack.RelatedSpotifyTrackWrapper.Id
-                    : null;
-                var spotifyEmojiExists = spotifyId != null && _isExternalEmojiAllowed;
+                var needCustomSourceEmoji = Player.CurrentTrack is ITrackHasCustomSource && _isExternalEmojiAllowed;
                 var sb = new StringBuilder(Player.Position.Position.FormattedToString());
                 if (Player.CurrentTrack.IsSeekable) {
                     sb.Append(" / ");
                     sb.Append(Player.CurrentTrack.Duration.FormattedToString());
                 }
 
-                var space = new string(' ', Math.Max(0, ((spotifyEmojiExists ? 18 : 22) - sb.Length) / 2));
+                var space = new string(' ', Math.Max(0, ((needCustomSourceEmoji ? 18 : 22) - sb.Length) / 2));
                 var detailsBar = stateString + '`' + space + sb + space + '`' + loopingStateString;
-                if (spotifyEmojiExists) detailsBar += $"[{CommonEmojiStrings.Instance.Spotify}](https://open.spotify.com/track/{spotifyId})";
-                EmbedBuilder.Fields["State"].Value = progressBar + "\n" + detailsBar;
+                if (needCustomSourceEmoji) {
+                    var customSourceTrack = (ITrackHasCustomSource)Player.CurrentTrack;
+                    detailsBar += $"[{customSourceTrack.CustomSourceEmote}]({customSourceTrack.CustomSourceUrl})";
+                }
+                _embedBuilder.Fields["State"].Value = progressBar + "\n" + detailsBar;
             }
             else {
-                EmbedBuilder.Fields["State"].Name = _loc.Get("Music.Playback");
-                EmbedBuilder.Fields["State"].Value = _loc.Get("Music.PlaybackNothingPlaying");
+                _embedBuilder.Fields["State"].Name = _loc.Get("Music.Playback");
+                _embedBuilder.Fields["State"].Value = _loc.Get("Music.PlaybackNothingPlaying");
             }
         }
 
-        private void UpdateTrackInfo() {
+        private async Task UpdateTrackInfo() {
+            var track = Player.CurrentTrack;
             if (Player.CurrentTrackIndex >= Player.Playlist.Count && Player.Playlist.Count != 0) {
-                EmbedBuilder.Author = new EmbedAuthorBuilder();
-                EmbedBuilder.Title = _loc.Get("Music.QueueEnd");
-                EmbedBuilder.Url = "";
+                _embedBuilder.Author = new EmbedAuthorBuilder();
+                _embedBuilder.Title = _loc.Get("Music.QueueEnd");
+                _embedBuilder.Url = "";
             }
-            else if ((Player.State != PlayerState.NotPlaying || Player.State != PlayerState.NotConnected || Player.State != PlayerState.Destroyed) &&
-                     Player.CurrentTrack != null) {
-                var iconUrl = Player.CurrentTrack.Provider == StreamProvider.YouTube
-                    ? $"https://img.youtube.com/vi/{Player.CurrentTrack?.TrackIdentifier}/0.jpg"
-                    : null;
-                EmbedBuilder
-                    .WithAuthor(Player.CurrentTrack!.Author.SafeSubstring(Constants.MaxEmbedAuthorLength, "...").IsBlank("Unknown"), iconUrl)
-                    .WithTitle(MusicController.EscapeTrack(Player.CurrentTrack!.Title).SafeSubstring(Discord.EmbedBuilder.MaxTitleLength, "...")!)
-                    .WithUrl(Player.CurrentTrack.Source!);
+            else if (track != null && (Player.State != PlayerState.NotPlaying || Player.State != PlayerState.NotConnected || Player.State != PlayerState.Destroyed)) {
+                var artwork = await track.ResolveArtwork(_artworkService);
+                _embedBuilder
+                    .WithAuthor(track!.Author.SafeSubstring(Constants.MaxEmbedAuthorLength, "...").IsBlank("Unknown"), artwork?.ToString())
+                    .WithTitle(MusicController.EscapeTrack(track!.Title).SafeSubstring(EmbedBuilder.MaxTitleLength, "...")!)
+                    .WithUrl(track.Source!);
             }
             else {
-                EmbedBuilder.Author = new EmbedAuthorBuilder();
-                EmbedBuilder.Title = _loc.Get("Music.Waiting");
-                EmbedBuilder.Url = "";
+                _embedBuilder.Author = new EmbedAuthorBuilder();
+                _embedBuilder.Title = _loc.Get("Music.Waiting");
+                _embedBuilder.Url = "";
             }
         }
-        
+
         private void UpdateEffects() {
             var effectsText = ProcessEffectsText(Player.Effects);
-            EmbedBuilder.Fields["Effects"].Value = effectsText.Or("Placeholder");
-            EmbedBuilder.Fields["Effects"].IsEnabled = !effectsText.IsNullOrWhiteSpace();
+            _embedBuilder.Fields["Effects"].Value = effectsText.Or("Placeholder");
+            _embedBuilder.Fields["Effects"].IsEnabled = !effectsText.IsNullOrWhiteSpace();
 
             string ProcessEffectsText(ImmutableList<PlayerEffectUse> effects) {
                 try {
@@ -352,62 +414,47 @@ namespace Bot.DiscordRelated.Music {
                 }
             }
         }
-
-        private string? _effectsInParameters;
         private void UpdateParameters() {
             var volume = (int)(Player.Volume * 200);
             var volumeText = volume < 50 || volume > 150 ? $"🔉 ***{volume}%***\n" : $"🔉 {volume}%";
-            EmbedBuilder.Fields["Parameters"].Value = volumeText + _effectsInParameters;
+            _embedBuilder.Fields["Parameters"].Value = volumeText + _effectsInParameters;
         }
 
         private void UpdateQueue() {
             if (Player.Playlist.Count == 0) {
-                EmbedBuilder.Fields["Queue"].Name = _loc.Get("Music.QueueEmptyTitle");
-                EmbedBuilder.Fields["Queue"].Value = _loc.Get("Music.QueueEmpty", _prefixProvider.GetPrefix());
+                _embedBuilder.Fields["Queue"].Name = _loc.Get("Music.QueueEmptyTitle");
+                _embedBuilder.Fields["Queue"].Value = _loc.Get("Music.QueueEmpty");
             }
             else {
-                EmbedBuilder.Fields["Queue"].Name =
+                _embedBuilder.Fields["Queue"].Name =
                     _loc.Get("Music.Queue").Format(Player.CurrentTrackIndex + 1, Player.Playlist.Count,
                         Player.Playlist.TotalPlaylistLength.FormattedToString());
-                EmbedBuilder.Fields["Queue"].Value = $"```py\n{GetPlaylistString()}```";
+                _embedBuilder.Fields["Queue"].Value = $"```py\n{GetPlaylistString()}```";
             }
 
-            StringBuilder GetPlaylistString() {
-                var globalStringBuilder = new StringBuilder();
-                string? lastAuthor = null;
-                var authorStringBuilder = new StringBuilder();
-                for (var i = Math.Max(Player.CurrentTrackIndex - 1, 0); i < Player.CurrentTrackIndex + 5; i++) {
-                    if (!Player.Playlist.TryGetValue(i, out var track)) continue;
-                    var author = track!.GetRequester();
-                    if (author != lastAuthor && lastAuthor != null) FinalizeBlock();
-                    authorStringBuilder.Replace("└", "├").Replace("▬", "│");
-                    authorStringBuilder.Append(GetTrackString(MusicController.EscapeTrack(track!.Title),
-                        i + 1, Player.CurrentTrackIndex == i));
-                    lastAuthor = author;
+            string GetPlaylistString() {
+                var builder = new StringBuilder();
+                var helper = new PlaylistQueueHelper(Player.Playlist, Player.CurrentTrackIndex - 1, 5);
+                foreach (var track in helper) {
+                    if (helper.IsFirstInGroup) builder.AppendLine($"─────┬────{track.GetRequester()}");
+                    var isCurrent = helper.CurrentTrackIndex == Player.CurrentTrackIndex;
+                    var listChar = helper.IsLastInGroup ? '└' : '├';
+                    builder.AppendLine(GetTrackString(track.Title, helper.CurrentTrackNumber, isCurrent, listChar));
                 }
 
-                FinalizeBlock();
-
-                void FinalizeBlock() {
-                    globalStringBuilder.AppendLine($"─────┬────{lastAuthor}");
-                    globalStringBuilder.Append(authorStringBuilder.Replace("▬", " "));
-
-                    authorStringBuilder.Clear();
+                string GetTrackString(string title, int trackNumber, bool isCurrent, char listChar) {
+                    var trackNumberString = trackNumber.ToString();
+                    var track = MusicController.EscapeTrack(title).SafeSubstring(150, "...");
+                    var prefix = isCurrent ? '@' : ' ';
+                    return prefix + trackNumberString + new string(' ', 4 - trackNumberString.Length) + listChar + track;
                 }
 
-                StringBuilder GetTrackString(string title, int trackNumber, bool isCurrent) {
-                    var sb = new StringBuilder();
-                    sb.AppendLine($"{(isCurrent ? "@" : " ")}{trackNumber}    ".SafeSubstring(0, 5) + "└" + title);
-
-                    return sb;
-                }
-
-                return globalStringBuilder;
+                return builder.ToString();
             }
         }
 
         private Task UpdateNode() {
-            EmbedBuilder.WithFooter($"Powered by {_discordClient.CurrentUser.Username} | {(Player.LavalinkSocket as EnlivenLavalinkClusterNode)?.Label}");
+            _embedBuilder.WithFooter($"Powered by {_discordClient.CurrentUser.Username} | {(Player.LavalinkSocket as EnlivenLavalinkClusterNode)?.Label}");
             return Task.CompletedTask;
         }
 
@@ -415,16 +462,9 @@ namespace Bot.DiscordRelated.Music {
             return _updateControlMessageTask.IsDisposed ? Task.CompletedTask : _updateControlMessageTask.Execute(!background);
         }
 
-        public async Task SetChannel(IMessageChannel channel) {
-            if (channel.Id != _targetChannel.Id) {
-                await ControlMessageResend(channel);
-            }
-        }
-
         public async Task ControlMessageResend(IMessageChannel? channel = null) {
             if (_controlMessageSendTask.IsDisposed) return;
 
-            if (channel != null) CheckRestrictions();
             _targetChannel = channel ?? _targetChannel;
             await _controlMessageSendTask.Execute(false);
         }

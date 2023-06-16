@@ -7,28 +7,32 @@ using System.Text;
 using System.Threading.Tasks;
 using Autofac;
 using Bot.Utilities;
+using Bot.Utilities.Logging;
 using Common;
 using Common.Config;
 using Common.Localization.Providers;
 using Common.Utils;
 using Discord;
 using Discord.Commands;
+using NLog;
 
 namespace Bot.DiscordRelated.Commands {
     public class CustomCommandService : CommandService, IService {
-        public ILookup<string, CommandInfo> Aliases { get; private set; } = null!;
-        private readonly IEnumerable<CustomTypeReader> _typeReaders;
-        private readonly ILifetimeScope _serviceContainer;
-        private readonly GlobalConfig _globalConfig;
         private readonly InstanceConfig _instanceConfig;
+        private readonly ILifetimeScope _serviceContainer;
+        private readonly IEnumerable<CustomTypeReader> _typeReaders;
+
+        public Lazy<Dictionary<string, CommandGroup>> CommandsGroups = null!;
 
         public CustomCommandService(IEnumerable<CustomTypeReader> typeReaders, ILifetimeScope serviceContainer,
-                                    GlobalConfig globalConfig, InstanceConfig instanceConfig) {
+                                    InstanceConfig instanceConfig, ILogger logger)
+            : base(new CommandServiceConfig() { LogLevel = LogSeverity.Debug }) {
             _serviceContainer = serviceContainer;
-            _globalConfig = globalConfig;
             _instanceConfig = instanceConfig;
             _typeReaders = typeReaders;
+            Log += message => LoggingUtilities.OnDiscordLog(logger, message);
         }
+        public ILookup<string, CommandInfo> Aliases { get; private set; } = null!;
 
         public async Task OnPreDiscordStart() {
             await AddModulesAsync(Assembly.GetEntryAssembly()!, new ServiceProviderAdapter(_serviceContainer));
@@ -49,11 +53,11 @@ namespace Bot.DiscordRelated.Commands {
                         new CommandGroup {
                             Commands = infos.ToList(),
                             GroupId = infos.Key,
-                            GroupNameTemplate = $"{{0}} ({{1}}help {infos.Key}):",
+                            GroupNameTemplate = $"{{0}} (/help {infos.Key}):",
                             GroupTextTemplate = string.Join(' ', infos
                                 .Select(info => info.Name)
                                 .GroupBy(s => s).Select(grouping => grouping.First())
-                                .Select(s => $"`{{0}}{s}`")
+                                .Select(s => $"`/{s}`")
                             )
                         }).ToDictionary(group => @group.GroupId);
             });
@@ -67,7 +71,7 @@ namespace Bot.DiscordRelated.Commands {
                  || definedType.IsAbstract
                  || definedType.ContainsGenericParameters
                  || definedType.IsDefined(typeof(DontAutoLoadAttribute))
-                 || definedType.GetCustomAttribute<RegisterIf>()?.CanBeRegistered(_globalConfig, _instanceConfig) == false)
+                 || definedType.GetCustomAttribute<RegisterIf>()?.CanBeRegistered(_instanceConfig) == false)
                     continue;
                 await AddModuleAsync(definedType, services).ConfigureAwait(false);
             }
@@ -167,14 +171,12 @@ namespace Bot.DiscordRelated.Commands {
             // return result;
         }
 
-        public Lazy<Dictionary<string, CommandGroup>> CommandsGroups = null!;
-
-        public IEnumerable<EmbedFieldBuilder> BuildHelpFields(string command, string prefix, ILocalizationProvider loc) {
+        public IEnumerable<EmbedFieldBuilder> BuildHelpFields(string command, ILocalizationProvider loc) {
             return Aliases[command].Select(info => new EmbedFieldBuilder {
                 Name = loc.Get("Help.CommandTitle", command, GetAliasesString(info.Aliases, loc)),
                 Value = $"{loc.Get($"Help.{info.Summary}")}\n" +
                         "```css\n" +
-                        $"{prefix}{info.Name} {(info.Parameters.Count == 0 ? "" : $"[{string.Join("] [", info.Parameters.Select(x => x.Name))}]")}```" +
+                        $"/{info.Name} {(info.Parameters.Count == 0 ? "" : $"[{string.Join("] [", info.Parameters.Select(x => x.Name))}]")}```" +
                         (info.Parameters.Count == 0
                             ? ""
                             : "\n" + string.Join("\n",
@@ -191,7 +193,7 @@ namespace Bot.DiscordRelated.Commands {
         private static string GetAliases(IEnumerable<string> aliases) {
             var s = new StringBuilder();
             foreach (var alias in aliases) {
-                s.Append($" `{alias}` ");
+                s.Append($" `/{alias}` ");
             }
 
             return s.ToString().Trim();

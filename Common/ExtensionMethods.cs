@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Reactive.Disposables;
@@ -13,23 +14,34 @@ using Common.Entities;
 using Common.Localization.Providers;
 using Common.Utils;
 using Discord;
-using NLog;
+using Microsoft.Extensions.Configuration;
 
 namespace Common {
     public static class ExtensionMethods {
-        public static Task DelayedDelete(this IMessage message, TimeSpan span) {
-            return Task.Delay(span).ContinueWith(task => message.SafeDelete());
+        public static void DelayedDelete(this IMessage message, TimeSpan span) {
+            _ = Task.Delay(span).ContinueWith(task => message.SafeDelete());
         }
 
-        public static Task DelayedDelete<T>(this Task<T> message, TimeSpan span) where T : IMessage{
-            return Task.Delay(span).ContinueWith(task => message.SafeDelete());
+        /// <returns>
+        /// Original <paramref name="messageTask"/>
+        /// </returns>
+        public static Task DelayedDelete<T>(this Task<T> messageTask, TimeSpan span) where T : IMessage {
+            _ = Task.Delay(span).ContinueWith(task => messageTask.SafeDelete());
+            return messageTask;
         }
 
-        public static void SafeDelete<T>(this Task<T> message) where T : IMessage{
+        /// <returns>
+        /// Task, which completed when target message was deleted
+        /// </returns>
+        public static Task DelayedDeleteAsync<T>(this Task<T> messageTask, TimeSpan span) where T : IMessage {
+            return Task.Delay(span).ContinueWith(task => messageTask.SafeDelete());
+        }
+
+        public static void SafeDelete<T>(this Task<T> message) where T : IMessage {
             try {
                 message.ContinueWith(async task => {
                     try {
-                        (await task).SafeDelete();
+                        await (await task).SafeDeleteAsync();
                     }
                     catch (Exception) {
                         // ignored
@@ -37,13 +49,25 @@ namespace Common {
                 });
             }
             catch (Exception) {
+                //-V3163
                 // ignored
             }
         }
 
-        public static void SafeDelete<T>(this T? message) where T : IMessage{
+        public static void SafeDelete<T>(this T? message) where T : IMessage {
             try {
-                message?.DeleteAsync();
+                message?.DeleteAsync().ObserveException();
+            }
+            catch (Exception) {
+                //-V3163
+                // ignored
+            }
+        }
+
+        public static async ValueTask SafeDeleteAsync<T>(this T? message) where T : IMessage {
+            try {
+                if (message == null) return;
+                await message.DeleteAsync();
             }
             catch (Exception) {
                 // ignored
@@ -62,6 +86,7 @@ namespace Common {
                                                   : text.Substring(start, length);
         }
 
+        [return: NotNullIfNotNull("text")]
         public static string? SafeSubstring(this string? text, int length, string postContent = "") {
             if (text == null) return null;
 
@@ -81,7 +106,7 @@ namespace Common {
         public static T Next<T>(this T src) where T : struct {
             if (!typeof(T).IsEnum) throw new ArgumentException($"Argument {typeof(T).FullName} is not an Enum");
 
-            var arr = (T[]) Enum.GetValues(src.GetType());
+            var arr = (T[])Enum.GetValues(src.GetType());
             var j = Array.IndexOf(arr, src) + 1;
             return arr.Length == j ? arr[0] : arr[j];
         }
@@ -100,19 +125,6 @@ namespace Common {
             await tw.FlushAsync();
             ms.Position = 0;
             return await channel.SendFileAsync(ms, filename);
-        }
-
-        public static void Log(this ILogger logger, LogSeverity logSeverity, Exception exception, string message, params object[] args) {
-            var logLevel = logSeverity switch {
-                LogSeverity.Critical => LogLevel.Fatal,
-                LogSeverity.Error    => LogLevel.Error,
-                LogSeverity.Warning  => LogLevel.Warn,
-                LogSeverity.Info     => LogLevel.Info,
-                LogSeverity.Verbose  => LogLevel.Debug,
-                LogSeverity.Debug    => LogLevel.Trace,
-                _                    => throw new ArgumentOutOfRangeException()
-            };
-            logger.Log(logLevel, exception, message, args);
         }
 
         public static TResult Try<TSource, TResult>(this TSource o, Func<TSource, TResult> action, Func<TSource, TResult> onFail) {
@@ -157,17 +169,16 @@ namespace Common {
 
         public static string FormattedToString(this TimeSpan span) {
             string s = $"{span:mm':'ss}";
-            if ((int) span.TotalHours != 0)
-                s = s.Insert(0, $"{(int) span.TotalHours}:");
+            if ((int)span.TotalHours != 0)
+                s = s.Insert(0, $"{(int)span.TotalHours}:");
             return s;
         }
 
         public static UserLink ToLink(this IUser user) {
             return new UserLink(user.Id);
         }
-        
-        public static TimeSpan Sum<TSource>(this IEnumerable<TSource> source, Func<TSource, TimeSpan> func)
-        {
+
+        public static TimeSpan Sum<TSource>(this IEnumerable<TSource> source, Func<TSource, TimeSpan> func) {
             return new TimeSpan(source.Sum(item => func(item).Ticks));
         }
 
@@ -194,12 +205,12 @@ namespace Common {
             }
             return source;
         }
-        
+
         public static IEnumerable<EmbedFieldBuilder> AsFields(this IEnumerable<MessageSnapshot> snapshots, ILocalizationProvider loc) {
             var embedFields = snapshots.Select(messageSnapshot => new EmbedFieldBuilder {
                 Name = messageSnapshot.EditTimestamp.ToString(),
-                Value = messageSnapshot.CurrentContent.IsBlank() 
-                    ? loc.Get("MessageHistory.EmptyMessage") 
+                Value = messageSnapshot.CurrentContent.IsBlank()
+                    ? loc.Get("MessageHistory.EmptyMessage")
                     : $">>> {messageSnapshot.CurrentContent.SafeSubstring(1900, "...")}"
             }).ToList();
 
@@ -208,18 +219,20 @@ namespace Common {
 
             return embedFields;
         }
-        
+
         public static TOut Pipe<TIn, TOut>(this TIn input, Func<TIn, TOut> transform) => transform(input);
         public static async Task<TOut> PipeAsync<TIn, TOut>(this Task<TIn> input, Func<TIn, TOut> transform) => transform(await input);
         public static async Task<TOut> PipeAsync<TIn, TOut>(this Task<TIn> input, Func<TIn, Task<TOut>> transform) => await transform(await input);
+        public static async Task PipeAsync<TIn>(this Task<TIn> input, Action<TIn> transform) => transform(await input);
+        public static async ValueTask<TOut> PipeAsync<TIn, TOut>(this ValueTask<TIn> input, Func<TIn, TOut> transform) => transform(await input);
+        public static async ValueTask<TOut> PipeAsync<TIn, TOut>(this ValueTask<TIn> input, Func<TIn, Task<TOut>> transform) => await transform(await input);
 
         public static async Task<IDisposable> WaitDisposableAsync(this SemaphoreSlim semaphore, CancellationToken? token = null) {
             await semaphore.WaitAsync(token ?? CancellationToken.None);
             return Disposable.Create(() => semaphore.Release());
         }
-        
-        public static IEnumerable<T> DequeueExisting<T>(this ConcurrentQueue<T> queue)
-        {
+
+        public static IEnumerable<T> DequeueExisting<T>(this ConcurrentQueue<T> queue) {
             T item;
             while (queue.TryDequeue(out item))
                 yield return item;
@@ -241,10 +254,27 @@ namespace Common {
             }
         }
 
-        public static void Do<T>(this IEnumerable<T> sequence, Action<T> action)
-        {
+        public static void Do<T>(this IEnumerable<T> sequence, Action<T> action) {
             using var enumerator = sequence.GetEnumerator();
             while (enumerator.MoveNext()) action(enumerator.Current);
+        }
+
+        public static Task ObserveException(this Task task) {
+            return task.ContinueWith(_ => task.Exception?.Handle(_ => true), TaskContinuationOptions.OnlyOnFaulted);
+        }
+
+        public static IEnumerator<T> GetEnumerator<T>(this IEnumerator<T> enumerator) => enumerator;
+
+        public static T? GetSectionValue<T>(this IConfiguration configuration, string key) {
+            return configuration.GetSection(key).Get<T>();
+        }
+
+        public static Task<T[]> WhenAllAsync<T>(this IEnumerable<Task<T>> tasks) {
+            return Task.WhenAll(tasks);
+        }
+
+        public static Uri Append(this Uri uri, params string[] paths) {
+            return new Uri(paths.Aggregate(uri.AbsoluteUri, (current, path) => string.Format("{0}/{1}", current.TrimEnd('/'), path.TrimStart('/'))));
         }
     }
 }

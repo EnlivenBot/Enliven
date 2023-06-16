@@ -14,25 +14,17 @@ namespace Bot {
     public class EnlivenBotWrapper {
         private static ILogger Logger = LogManager.GetCurrentClassLogger();
         private TaskCompletionSource<bool>? _firstStartResult;
-        private readonly ConfigProvider<InstanceConfig> _configProvider;
         private InstanceConfig _instanceConfig = null!;
-        public EnlivenBotWrapper(ConfigProvider<InstanceConfig> configProvider) {
-            _configProvider = configProvider;
+        public EnlivenBotWrapper(InstanceConfig config) {
+            _instanceConfig = config;
         }
 
         /// <summary>
         /// Attempts to start bot instance
         /// </summary>
         /// <returns>True if start successful, otherwise False</returns>
-        public Task<bool> StartAsync(IContainer container, CancellationToken cancellationToken) {
+        public Task<bool> StartAsync(ILifetimeScope container, CancellationToken cancellationToken) {
             if (_firstStartResult != null) throw new Exception("Current instance already started");
-            try {
-                _instanceConfig = _configProvider.Load();
-            }
-            catch (Exception e) {
-                Logger.Error(e, $"Config loading error for {_configProvider.ConfigFileName}");
-                throw;
-            }
 
             _firstStartResult = new TaskCompletionSource<bool>();
 
@@ -41,7 +33,7 @@ namespace Bot {
             return _firstStartResult!.Task;
         }
 
-        private async Task RunLoopAsync(IContainer container, CancellationToken cancellationToken) {
+        private async Task RunLoopAsync(ILifetimeScope container, CancellationToken cancellationToken) {
             var isFirst = true;
 
             while (!cancellationToken.IsCancellationRequested) {
@@ -59,7 +51,7 @@ namespace Bot {
                     }
                 }
                 catch (Exception e) {
-                    Logger.Fatal(e, $"Failed to start bot instance with config {Path.GetFileName(_configProvider.ConfigPath)}");
+                    Logger.Fatal(e, $"Failed to start bot instance with config {Path.GetFileName(_instanceConfig.Name)}");
                     _firstStartResult!.TrySetResult(false);
                     if (isFirst) return;
                 }
@@ -69,7 +61,7 @@ namespace Bot {
         }
 
         private void ConfigureBotLifetime(ContainerBuilder builder) {
-            builder.Register(context => _configProvider)
+            builder.Register(context => _instanceConfig)
                 .AsSelf()
                 .SingleInstance();
             builder.Register(context => _instanceConfig)

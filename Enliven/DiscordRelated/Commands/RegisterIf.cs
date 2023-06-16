@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Reflection;
 using Common.Config;
 
@@ -16,21 +15,21 @@ namespace Bot.DiscordRelated.Commands {
             }
         }
 
-        public static bool ShouldRegisterType(Type type, GlobalConfig globalConfig, InstanceConfig instanceConfig) {
-            return type.GetCustomAttribute<RegisterIf>()?.CanBeRegistered(globalConfig, instanceConfig) ?? true;
-        }
-        
-        public bool CanBeRegistered(GlobalConfig globalConfig, InstanceConfig instanceConfig) {
+        public bool CanBeRegistered(InstanceConfig instanceConfig) {
             var checker = _checkers.GetOrAdd(_funcType, type => Activator.CreateInstance(type) as IRegisterIfChecker ?? throw new InvalidOperationException($"Cannot create checker of type {type.FullName}"));
-            return checker.CanBeRegistered(globalConfig, instanceConfig);
+            return checker.CanBeRegistered(instanceConfig);
         }
-        
+
+        public static bool ShouldRegisterType(Type type, InstanceConfig instanceConfig) {
+            return type.GetCustomAttribute<RegisterIf>()?.CanBeRegistered(instanceConfig) ?? true;
+        }
+
         public interface IRegisterIfChecker {
-            public bool CanBeRegistered(GlobalConfig globalConfig, InstanceConfig instanceConfig);
+            public bool CanBeRegistered(InstanceConfig instanceConfig);
         }
-        
+
         public class LoggingEnabled : IRegisterIfChecker {
-            public bool CanBeRegistered(GlobalConfig globalConfig, InstanceConfig instanceConfig) {
+            public bool CanBeRegistered(InstanceConfig instanceConfig) {
                 return instanceConfig.IsLoggingEnabled();
             }
         }

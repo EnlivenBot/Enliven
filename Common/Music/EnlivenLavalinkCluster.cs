@@ -8,10 +8,9 @@ using Lavalink4NET.Logging;
 
 namespace Common.Music
 {
-    public class EnlivenLavalinkCluster : LavalinkCustomCluster<EnlivenLavalinkClusterNode>
+    public class EnlivenLavalinkCluster : LavalinkCluster
     {
-        public EnlivenLavalinkCluster(CustomLavalinkClusterOptions<EnlivenLavalinkClusterNode> options,
-            IDiscordClientWrapper client, ILogger? logger = null, ILavalinkCache? cache = null) 
+        public EnlivenLavalinkCluster(LavalinkClusterOptions options, IDiscordClientWrapper client, ILogger? logger = null, ILavalinkCache? cache = null) 
             : base(options, client, logger, cache)
         {
             NodeConnected += OnNodeConnected;

@@ -25,7 +25,11 @@ namespace Common.Utils {
             _taskCompletionSource.TrySetResult(true);
         }
 
-        private void Reset() {
+        public virtual void Reset() {
+            ResetInternal();
+        }
+
+        private void ResetInternal() {
             if (IsDisposed) return;
             if (!_taskCompleted) return;
             _taskCompleted = false;
@@ -33,11 +37,12 @@ namespace Common.Utils {
         }
 
         public virtual void SetDelay(TimeSpan span) {
+            EnsureNotDisposed();
             if (span <= TimeSpan.Zero) {
                 SetCompleted();
             }
             else {
-                Reset();
+                ResetInternal();
                 _timer?.Dispose();
                 _timer = new Timer(_ => SetCompleted(), null, span, TimeSpan.FromMilliseconds(-1));
             }
@@ -50,15 +55,6 @@ namespace Common.Utils {
         protected override void DisposeInternal() {
             _timer?.Dispose();
             _completedSubject.Dispose();
-        }
-    }
-
-    public class HandyLongestTimer : HandyTimer {
-        private DateTime _targetTime = DateTime.Now;
-        public override void SetDelay(TimeSpan span) {
-            if (DateTime.Now + span < _targetTime) return;
-            _targetTime = DateTime.Now + span;
-            base.SetDelay(span);
         }
     }
 }

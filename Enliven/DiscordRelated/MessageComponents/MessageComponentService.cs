@@ -1,21 +1,22 @@
 ﻿using System;
 using System.Reactive.Linq;
+using System.Reactive.Subjects;
 using Common;
 using Discord.WebSocket;
 using NLog;
 
 namespace Bot.DiscordRelated.MessageComponents {
     public class MessageComponentService {
-        private EnlivenShardedClient _enlivenShardedClient;
         private ILogger _logger;
         public MessageComponentService(EnlivenShardedClient enlivenShardedClient, ILogger logger) {
             _logger = logger;
-            _enlivenShardedClient = enlivenShardedClient;
+            enlivenShardedClient.MessageComponentUse
+                .Do(component => _ = component.DeferAsync())
+                .Subscribe(_messageComponentUseSubject);
         }
 
-        public IObservable<SocketMessageComponent> MessageComponentUse => 
-            _enlivenShardedClient.MessageComponentUse
-                .Do(component => _ = component.DeferAsync());
+        private readonly Subject<SocketMessageComponent> _messageComponentUseSubject = new();
+        public IObservable<SocketMessageComponent> MessageComponentUse => _messageComponentUseSubject.AsObservable();
 
         public EnlivenComponentBuilder GetBuilder() {
             return new EnlivenComponentBuilder(this);

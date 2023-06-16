@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Bot.Commands.Chains;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
+using Bot.DiscordRelated.Commands.Modules.Contexts;
 using Bot.DiscordRelated.Interactions;
 using Bot.DiscordRelated.MessageHistories;
 using Bot.Utilities.Collector;
@@ -24,7 +25,8 @@ namespace Bot.Commands {
         [Command("clearhistories", RunMode = RunMode.Async)]
         [Summary("clearhistories0s")]
         public async Task ClearHistories() {
-            await ReplyAsync("Start clearing message histories");
+            // TODO: Replace with EntryLocalized
+            await this.Context.SendMessageAsync("Start clearing message histories");
             await MessageHistoryService.ClearGuildLogs((SocketGuild) Context.Guild);
         }
 

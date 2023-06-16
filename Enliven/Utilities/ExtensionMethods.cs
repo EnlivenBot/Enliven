@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using Bot.DiscordRelated;
 using Bot.DiscordRelated.Commands;
+using Bot.DiscordRelated.Commands.Attributes;
 using Bot.DiscordRelated.Commands.Modules;
 using Common.Localization.Providers;
 using Discord;

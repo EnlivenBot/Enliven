@@ -36,7 +36,6 @@ namespace Common.Config {
 
     public partial class GuildConfig {
         [BsonIgnore] private ILocalizationProvider? _loc;
-        [BsonIgnore] private GuildPrefixProvider? _prefixProvider;
         [BsonId] public ulong GuildId { get; set; }
         public string Prefix { get; set; } = "&";
         public int Volume { get; set; } = 100;
@@ -55,7 +54,8 @@ namespace Common.Config {
 
     public enum ChannelFunction {
         Log,
-        Music
+        Music,
+        DedicatedMusic
     }
 
     public enum MessageExportType {
@@ -77,7 +77,6 @@ namespace Common.Config {
         [BsonIgnore] public IObservable<ChannelFunction> FunctionalChannelsChanged => _functionalChannelsChanged.AsObservable();
 
         [BsonIgnore] public ILocalizationProvider Loc => _loc ??= new GuildLocalizationProvider(this);
-        [BsonIgnore] public GuildPrefixProvider PrefixProvider => _prefixProvider ??= new GuildPrefixProvider(this);
         
         [BsonIgnore] public bool SendWithoutHistoryPacks => HistoryMissingInLog && HistoryMissingPacks;
 
@@ -85,8 +84,8 @@ namespace Common.Config {
             _saveRequest.OnNext(this);
         }
 
-        public GuildConfig SetChannel(string channelId, ChannelFunction func) {
-            if (channelId == "null")
+        public GuildConfig SetChannel(ChannelFunction func, ulong? channelId) {
+            if (!channelId.HasValue)
                 FunctionalChannels.TryRemove(func, out _);
             else
                 FunctionalChannels[func] = Convert.ToUInt64(channelId);

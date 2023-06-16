@@ -1,8 +1,12 @@
 ﻿using System.Collections.Generic;
-using Common.Music;
 
 namespace Common.Config {
-    public class InstanceConfig : ConfigBase {
+    public class InstanceConfig {
+        /// <summary>
+        /// Instance bot name
+        /// </summary>
+        public string Name { get; set; }
+
         /// <summary>
         /// Your Discord bot token
         /// </summary>
