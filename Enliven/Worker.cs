@@ -8,6 +8,7 @@ using Common.Config;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using NLog;
+using Tyrrrz.Extensions;
 
 namespace Bot {
     public class Worker : BackgroundService {
@@ -26,8 +27,10 @@ namespace Bot {
         protected override Task ExecuteAsync(CancellationToken stoppingToken) => Task.CompletedTask;
 
         public override async Task StartAsync(CancellationToken cancellationToken) {
-            var configs = _configuration.GetSection("Instances").Get<IEnumerable<InstanceConfig>>();
-            var enlivenBotWrappers = configs.Select(config => new EnlivenBotWrapper(config));
+            var configs = _configuration.GetSection("Instances").Get<IEnumerable<InstanceConfig>>()
+                ?.ToList();
+            if (configs!.IsNullOrEmpty()) throw new InvalidOperationException("No bot instances configured. Check your appsettings");
+            var enlivenBotWrappers = configs!.Select(config => new EnlivenBotWrapper(config));
             var startTasks = enlivenBotWrappers.Select(wrapper => wrapper.StartAsync(_lifetimeScope, CancellationToken.None)).ToList();
 
             var whenAll = await Task.WhenAll(startTasks);
