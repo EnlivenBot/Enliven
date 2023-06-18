@@ -1,5 +1,7 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Bot.Utilities;
 using Common;
@@ -53,6 +55,11 @@ public class VkMusicSeederService : IEndpointProvider {
 
     private static async Task InitializeFfmpegInternal() {
         await FFmpegDownloader.GetLatestVersion(FFmpegVersion.Official, ".local-ffmpeg");
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+            var executableFiles = Directory.GetFiles(".local-ffmpeg")
+                .Where(s => string.IsNullOrEmpty(Path.GetExtension(s)));
+            foreach (var executableFile in executableFiles) File.SetUnixFileMode(executableFile, UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute);
+        }
         FFmpeg.SetExecutablesPath(".local-ffmpeg");
     }
 

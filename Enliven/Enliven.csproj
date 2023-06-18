@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <TargetFramework>net6.0</TargetFramework>
+        <TargetFramework>net7.0</TargetFramework>
         <RootNamespace>Bot</RootNamespace>
         <AssemblyName>Enliven</AssemblyName>
         <Version>19.0</Version>
