@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -53,12 +54,14 @@ public class VkMusicSeederService : IEndpointProvider {
         }, TaskContinuationOptions.OnlyOnRanToCompletion);
     }
 
+    [SuppressMessage("Interoperability", "CA1416:Validate platform compatibility")]
     private static async Task InitializeFfmpegInternal() {
         await FFmpegDownloader.GetLatestVersion(FFmpegVersion.Official, ".local-ffmpeg");
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
             var executableFiles = Directory.GetFiles(".local-ffmpeg")
                 .Where(s => string.IsNullOrEmpty(Path.GetExtension(s)));
-            foreach (var executableFile in executableFiles) File.SetUnixFileMode(executableFile, UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute);
+            foreach (var executableFile in executableFiles)
+                File.SetUnixFileMode(executableFile, UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute);
         }
         FFmpeg.SetExecutablesPath(".local-ffmpeg");
     }
