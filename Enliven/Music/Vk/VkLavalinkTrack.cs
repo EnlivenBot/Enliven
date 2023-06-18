@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Common;
 using Common.Config.Emoji;
 using Common.Music.Tracks;
 using Discord;
@@ -20,7 +21,9 @@ public class VkLavalinkTrack : LavalinkTrack, ITrackHasCustomSource, ITrackHasAr
 
     /// <inheritdoc />
     public ValueTask<Uri?> GetArtwork() {
-        return new ValueTask<Uri?>(new Uri(_audio.Album.Thumb.Photo68));
+        var thumbUri = _audio.Album?.Thumb?.Photo68
+            ?.Pipe(s => new Uri(s));
+        return new ValueTask<Uri?>(thumbUri);
     }
 
     /// <inheritdoc />
