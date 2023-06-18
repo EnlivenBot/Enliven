@@ -16,14 +16,13 @@ namespace Bot.Music.Vk;
 public class VkMusicSeederService : IEndpointProvider {
     private readonly ILogger<VkMusicSeederService> _logger;
     private readonly VkMusicCacheService _vkCacheService;
-    private Uri _apiExternalUrl;
+    private Uri? _apiExternalUrl;
     private Task _ffmpegInitialization = null!;
     public VkMusicSeederService(IConfiguration configuration, VkMusicCacheService vkCacheService, ILogger<VkMusicSeederService> logger) {
         _vkCacheService = vkCacheService;
         _logger = logger;
         var apiUrl = configuration.GetValue<string>("ApiExternalUrl");
-        IsVkSeedAvailable = !string.IsNullOrWhiteSpace(apiUrl);
-        if (!IsVkSeedAvailable) {
+        if (string.IsNullOrWhiteSpace(apiUrl)) {
             _logger.LogWarning("Since ApiExternalUrl was not set, VK resolving not available");
             return;
         }
@@ -31,7 +30,7 @@ public class VkMusicSeederService : IEndpointProvider {
         _apiExternalUrl = new Uri(apiUrl).Append("vk/audio/");
     }
 
-    public bool IsVkSeedAvailable { get; }
+    public bool IsVkSeedAvailable { get; private set; }
 
     /// <inheritdoc />
     public Task ConfigureEndpoints(WebApplication app) {
@@ -42,13 +41,19 @@ public class VkMusicSeederService : IEndpointProvider {
 
     private void InitializeFfmpeg() {
         _logger.LogInformation("Starting FFMPEG downloading");
-        _ffmpegInitialization = FFmpegDownloader.GetLatestVersion(FFmpegVersion.Official, ".local-ffmpeg");
+        _ffmpegInitialization = InitializeFfmpegInternal();
         _ffmpegInitialization.ContinueWith(task => {
-            _logger.LogCritical(task.Exception?.Flatten(), "FFMPEG downloaded failed");
+            _logger.LogCritical(task.Exception?.Flatten(), "FFMPEG downloaded failed. VK resolving not available");
         }, TaskContinuationOptions.OnlyOnFaulted);
         _ffmpegInitialization.ContinueWith(task => {
             _logger.LogInformation("FFMPEG downloaded");
+            IsVkSeedAvailable = _apiExternalUrl != null;
         }, TaskContinuationOptions.OnlyOnRanToCompletion);
+    }
+
+    private static async Task InitializeFfmpegInternal() {
+        await FFmpegDownloader.GetLatestVersion(FFmpegVersion.Official, ".local-ffmpeg");
+        FFmpeg.SetExecutablesPath(".local-ffmpeg");
     }
 
     public async Task<Uri> PrepareTrackAndGetUrl(Audio audio) {
@@ -64,7 +69,7 @@ public class VkMusicSeederService : IEndpointProvider {
             _vkCacheService.Put(id);
         }
 
-        return _apiExternalUrl.Append(id);
+        return _apiExternalUrl!.Append(id);
     }
 
     private IResult GetMp3Handler(string id) {
