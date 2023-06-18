@@ -3,7 +3,7 @@
   "profiles": {
     "Enliven": {
       "commandName": "Project",
-      "applicationUrl": "http://localhost:8080",
+      "applicationUrl": "http://localhost:8088",
       "workingDirectory": "$(TargetDir)",
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Development"
