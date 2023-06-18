@@ -26,8 +26,8 @@ public class VkMusicSeederService : IEndpointProvider {
             _logger.LogWarning("Since ApiExternalUrl was not set, VK resolving not available");
             return;
         }
-        InitializeFfmpeg();
         _apiExternalUrl = new Uri(apiUrl).Append("vk/audio/");
+        InitializeFfmpeg();
     }
 
     public bool IsVkSeedAvailable { get; private set; }
