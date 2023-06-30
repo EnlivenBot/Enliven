@@ -19,6 +19,7 @@ namespace Bot.Music.Vk;
 public class VkMusicResolver : IMusicResolver {
     private static readonly Regex VkTrackRegex = new(@"https:\/\/vk\.com\/audio(-?\d*_\d*)", RegexOptions.Compiled);
     private static readonly Regex VkAlbumRegex = new(@"https:\/\/vk\.com\/music\/album\/(-?\d*)_(\d*)_(\S*)", RegexOptions.Compiled);
+    private static readonly Regex VkUserRegex = new(@"https:\/\/vk\.com\/audios(-?\d*)", RegexOptions.Compiled);
     private readonly VkCredentials _credentials;
     private readonly ILogger<VkMusicResolver> _logger;
     private readonly IVkApi _vkApi;
@@ -52,6 +53,17 @@ public class VkMusicResolver : IMusicResolver {
                     "playlist_id", long.Parse(albumMatch.Groups[2].Value)
                 }, {
                     "access_key", albumMatch.Groups[3].Value
+                }
+            });
+
+            return audios.Select(audio => VkLavalinkTrack.CreateInstance(audio, _vkSeederService));
+        }
+
+        var userMatch = VkUserRegex.Match(query);
+        if (userMatch.Success) {
+            var audios = await _vkApi.CallAsync<VkCollection<Audio>>("audio.get", new VkParameters() {
+                {
+                    "owner_id", long.Parse(userMatch.Groups[1].Value)
                 }
             });
 
