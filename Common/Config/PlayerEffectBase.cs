@@ -3,18 +3,17 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Text;
 using Common.Localization.Entries;
 using Lavalink4NET.Filters;
 using Lavalink4NET.Player;
 using LiteDB;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 using Tyrrrz.Extensions;
 
 namespace Common.Config {
     public class PlayerEffectBase : FilterMapBase {
+        private static readonly NoConverterContractResolver NoConverterContractResolverInstance = new NoConverterContractResolver();
         public PlayerEffectBase(string displayName, IDictionary<string, IFilterOptions>? filterOptionsMap = null) {
             DisplayName = displayName;
             if (filterOptionsMap != null) {
@@ -33,7 +32,7 @@ namespace Common.Config {
             List<IEntry> errors = new List<IEntry>();
 
             Verify(!DisplayName.IsNullOrWhiteSpace() && DisplayName?.Length is > 4 and < 15, "NameLength", 4, 15);
-            
+
             Verify(Filters.Count > 0, "FiltersCount");
 
             // if (Distortion != null) { }
@@ -41,12 +40,12 @@ namespace Common.Config {
             // if (LowPass != null) { }
             if (Equalizer != null) {
                 Verify(Equalizer.Bands.Any(), "ParametersCount", nameof(Equalizer));
-                
+
                 Verify(Equalizer.Bands.Any(band => band.Band is < 0 or > 14), "BandsNumbers");
                 foreach (var grouping in Equalizer.Bands.GroupBy(band => band.Band).Where(bands => bands.Count() > 1)) {
                     Verify(false, "BandsDuplicate", grouping.Key);
                 }
-                
+
                 foreach (var equalizerBand in Equalizer.Bands.Where(band => band.Gain is < -0.25f or > 1f)) {
                     Verify(false, "Between", nameof(Equalizer), $"Band {equalizerBand.Band} Gain", "-0.25", "1");
                 }
@@ -66,7 +65,7 @@ namespace Common.Config {
                 Verify(Tremolo.Depth is > 0 and <= 1, "Between", nameof(Tremolo), nameof(Tremolo.Depth), 0, 1);
                 Verify(Tremolo.Frequency > 0, "MoreThen", nameof(Tremolo), nameof(Tremolo.Frequency), 0);
             }
-            
+
             if (Vibrato != null) {
                 Verify(Vibrato.Depth is > 0 and <= 1, "Between", nameof(Vibrato), nameof(Vibrato.Depth), 0, 1);
                 Verify(Vibrato.Frequency is > 0 and <= 14, "Between", nameof(Vibrato), nameof(Vibrato.Frequency), 0, 14);
@@ -84,7 +83,7 @@ namespace Common.Config {
             }
 
             if (!errors.Any()) return true;
-            errorEntry = new EntryString(errors.Select((entry, i) => $"{{{i}}}\n").JoinToString(""), errors.ToArray()); 
+            errorEntry = new EntryString(errors.Select((entry, i) => $"{{{i}}}\n").JoinToString(""), errors.ToArray());
             return false;
 
             void Verify(bool expected, string errorLocId, params object[] errorParams) {
@@ -93,16 +92,12 @@ namespace Common.Config {
                 }
             }
         }
-
-        private static readonly NoConverterContractResolver NoConverterContractResolverInstance = new NoConverterContractResolver();
         public static PlayerEffectBase? FromDefaultJson(string json) {
-            return JsonConvert.DeserializeObject<PlayerEffectBase>(json, new JsonSerializerSettings() {ContractResolver = NoConverterContractResolverInstance});
+            return JsonConvert.DeserializeObject<PlayerEffectBase>(json, new JsonSerializerSettings() { ContractResolver = NoConverterContractResolverInstance });
         }
 
-        private sealed class NoConverterContractResolver : DefaultContractResolver
-        {
-            protected override JsonConverter? ResolveContractConverter(Type objectType)
-            {
+        private sealed class NoConverterContractResolver : DefaultContractResolver {
+            protected override JsonConverter? ResolveContractConverter(Type objectType) {
                 return null;
             }
         }

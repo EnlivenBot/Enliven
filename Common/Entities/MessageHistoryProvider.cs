@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Linq;
 using Common.Config;
 using Discord;
@@ -49,7 +48,7 @@ namespace Common.Entities {
                 history.AddSnapshot(message);
                 history.Save();
             }
-            
+
             return history;
         }
 

@@ -1,7 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Common.Config;
-using LiteDB;
 
 namespace Common.Music.Effects {
     public class EffectSourceProvider {
@@ -9,7 +8,7 @@ namespace Common.Music.Effects {
         public EffectSourceProvider(IUserDataProvider userDataProvider) {
             _userDataProvider = userDataProvider;
         }
-        
+
         public bool TryResolve(UserLink? link, string effectName, [NotNullWhen(true)] out IPlayerEffectSource? source) {
             if (PlayerEffectSource.DefaultEffectsMap.TryGetValue(effectName, out source)) {
                 return true;
@@ -21,7 +20,7 @@ namespace Common.Music.Effects {
             source = new PlayerEffectSource(userEffect);
             return true;
         }
-        
+
         public IPlayerEffectSource? Resolve(UserLink? link, string effectName) {
             return TryResolve(link, effectName, out var effectSource) ? effectSource : null;
         }

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -11,7 +10,6 @@ using Common.Localization.Providers;
 using Discord;
 using DiscordChatExporter.Core.Discord;
 using DiscordChatExporter.Core.Discord.Data;
-using DiscordChatExporter.Core.Exporting.Writers.Html;
 using NLog;
 using Tyrrrz.Extensions;
 
@@ -31,7 +29,7 @@ namespace ChatExporter.Exporter.MessageHistories {
                 var messageTask = GetMessageAsync(messageHistory, existentMessage, channelTask);
                 var guildTask = GetGuildAsync(guild, channelTask);
                 StringBuilder builder = new StringBuilder();
-                var exportContext = new MessageHistoryExportContext(messageHistory, willBeRenderedToImage, 
+                var exportContext = new MessageHistoryExportContext(messageHistory, willBeRenderedToImage,
                     arg => MemberResolver(arg, guildTask),
                     arg => ChannelResolver(arg, messageHistory.ChannelId, channelTask),
                     arg => RoleResolver(arg, guildTask));
@@ -74,7 +72,7 @@ namespace ChatExporter.Exporter.MessageHistories {
             if (channel == null) return null;
             return await channel.GetMessageAsync(messageHistory.MessageId);
         }
-        
+
         private async Task<ITextChannel?> GetChannelAsync(MessageHistory messageHistory, Optional<ITextChannel?> messageChannel) {
             if (messageChannel.IsSpecified) return messageChannel.Value;
             return await _enlivenShardedClient.GetChannelAsync(messageHistory.ChannelId) as ITextChannel;
@@ -83,7 +81,7 @@ namespace ChatExporter.Exporter.MessageHistories {
         private Role? RoleResolver(ulong arg, Task<IGuild?> guildTask) {
             return guildTask.GetAwaiter().GetResult()?.GetRole(arg).ToRole();
         }
-        
+
         private Channel? ChannelResolver(ulong @ulong, ulong messageHistoryChannelId, Task<ITextChannel?> channelTask) {
             if (messageHistoryChannelId == @ulong) {
                 return channelTask.GetAwaiter().GetResult()?.ToChannel().GetAwaiter().GetResult();

@@ -4,18 +4,17 @@ using System.Threading.Tasks;
 using Common.Config;
 using Common.Localization.Entries;
 using Common.Utils;
-using Discord.Commands;
 using Lavalink4NET.Filters;
 using Tyrrrz.Extensions;
 
 namespace Common.Music.Effects {
     public class BassBoostEffectSource : IPlayerEffectSource {
-        private static readonly string AvailableBassBoostModes = 
+        private static readonly string AvailableBassBoostModes =
             Enum.GetValues(typeof(BassBoostMode))
                 .Cast<BassBoostMode>()
                 .Select(mode => $"`{mode}`")
                 .JoinToString(", ");
-        
+
         private static EntryLocalized _parseBassBoostFailedEntry = new EntryLocalized("Music.EffectParseFailedWithDefault", AvailableBassBoostModes, nameof(BassBoostMode.Medium));
 
         public Task<PlayerEffect> CreateEffect(string? args) {
@@ -29,7 +28,7 @@ namespace Common.Music.Effects {
 
             return Task.FromException<PlayerEffect>(new LocalizedException(_parseBassBoostFailedEntry));
         }
-        
+
         public string GetSourceName() {
             return "BassBoost";
         }
@@ -42,12 +41,13 @@ namespace Common.Music.Effects {
                 BassBoostMode.Extreme => 1,
                 _                     => throw new ArgumentOutOfRangeException(nameof(mode), mode, null)
             };
-            return new PlayerEffect(UserLink.Current, $"BassBoost ({mode})", "BassBoost")
-                {Equalizer = new EqualizerFilterOptions() {
+            return new PlayerEffect(UserLink.Current, $"BassBoost ({mode})", "BassBoost") {
+                Equalizer = new EqualizerFilterOptions() {
                     Bands = PlayerEffect.EffectBassboost.Equalizer!.Bands
-                        .Select(band => new EqualizerBand(band.Band, (float) (band.Gain * multiplier)))
+                        .Select(band => new EqualizerBand(band.Band, (float)(band.Gain * multiplier)))
                         .ToList()
-                }};
+                }
+            };
         }
     }
 }

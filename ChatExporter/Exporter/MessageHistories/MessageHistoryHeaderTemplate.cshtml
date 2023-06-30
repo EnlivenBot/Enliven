@@ -1,13 +1,6 @@
-﻿@using System
-@using System.Linq
+﻿@namespace ChatExporter.Exporter.MessageHistories
 @using System.Threading.Tasks
-@using ChatExporter.Exporter
 @using Discord
-@using DiscordChatExporter.Core.Discord
-@using DiscordChatExporter.Core.Exporting.Writers.Html;
-@using DiscordChatExporter.Core.Utils.Extensions
-
-@namespace ChatExporter.Exporter.MessageHistories
 @inherits MiniRazor.TemplateBase<ChatExporter.Exporter.MessageHistories.MessageHistoryHeaderTemplateContext>
 
 @{
@@ -19,7 +12,7 @@
 
         return $"Channel: Unknown <#{Model.Context.MessageHistory.ChannelId}>";
     }
-    
+
     string GetCreationTimeString() {
         var creationTime = Model.GetCreationTime();
         return creationTime != null ? $"Created at {creationTime.Value.Format()}" : "";
@@ -33,6 +26,7 @@
     }
 
     var userMember = Model.Context.TryGetMember(Model.Context.MessageHistory.Author);
+
     string GetAuthorString() {
         if (userMember == null || userMember.User.Name == null && userMember.Nick == null) {
             return $"Author: Unknown <@{Model.Context.MessageHistory.Author.UserId}>";

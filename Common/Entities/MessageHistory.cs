@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Subjects;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Common.Config;
 using Common.Localization.Providers;
@@ -12,6 +11,7 @@ using LiteDB;
 
 namespace Common.Entities {
     public class MessageHistory {
+        [BsonIgnore] public ISubject<MessageHistory> SaveRequest = new Subject<MessageHistory>();
         public List<string>? Attachments { get; set; }
 
         public bool IsHistoryUnavailable { get; set; }
@@ -21,15 +21,13 @@ namespace Common.Entities {
         public UserLink Author { get; set; } = null!;
 
         internal List<MessageSnapshotEntity> Edits { get; set; } = new();
-        
+
         [BsonIgnore] public ulong ChannelId => Convert.ToUInt64(Id.Split(":")[0]);
 
         [BsonIgnore] public ulong MessageId => Convert.ToUInt64(Id.Split(":")[1]);
-        
+
 
         [BsonIgnore] public bool HasAttachments => Attachments != null && Attachments.Count != 0;
-
-        [BsonIgnore] public ISubject<MessageHistory> SaveRequest = new Subject<MessageHistory>();
 
         [BsonIgnore] public int EditsCount => Edits.Count;
 
@@ -47,7 +45,7 @@ namespace Common.Entities {
             AddSnapshotInternal(editTime, Patch.Compute(GetLastContent(), newContent).ToText());
             #pragma warning restore 618
         }
-        
+
         [Obsolete("Use AddSnapshot. This method for ")]
         internal void AddSnapshotInternal(DateTimeOffset editTime, string diff) {
             Edits.Add(new MessageSnapshotEntity {
@@ -79,7 +77,7 @@ namespace Common.Entities {
                 yield return snapshots.Last();
             }
         }
-        
+
         public async Task<IMessage?> GetRealMessage(EnlivenShardedClient client) {
             try {
                 if (await client.GetChannelAsync(ChannelId) is not ITextChannel textChannel) return null;

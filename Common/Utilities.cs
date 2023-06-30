@@ -3,15 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Discord;
-using NLog;
 
 namespace Common {
     public static class Utilities {
         public static IEnumerable<string> SplitToLines(string stringToSplit, int maximumLineLength) {
             return Regex.Matches(stringToSplit, @"(.{1," + maximumLineLength + @"})(?:\s|$)").Select(match => match.Value);
         }
-        
+
         public static async Task<TResult> TryAsync<TResult>(Func<Task<TResult>> action, Func<Exception, TResult> onFail) {
             try {
                 return await action();
@@ -20,7 +18,7 @@ namespace Common {
                 return onFail(e);
             }
         }
-        
+
         public static TResult Try<TResult>(Func<TResult> action, Func<Exception, TResult> onFail) {
             try {
                 return action();
@@ -29,7 +27,7 @@ namespace Common {
                 return onFail(e);
             }
         }
-        
+
         public static TResult Try<TResult>(Func<TResult> action, TResult onFail) {
             try {
                 return action();

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Lavalink4NET.Player;
@@ -8,8 +7,8 @@ using NLog;
 
 namespace Common.Music.Encoders {
     public class TrackEncoderUtils {
-        private Dictionary<int, ITrackEncoderUtil> _trackEncoders;
         private ILogger _logger;
+        private Dictionary<int, ITrackEncoderUtil> _trackEncoders;
 
         public TrackEncoderUtils(IEnumerable<ITrackEncoderUtil> encoders, ILogger logger) {
             _logger = logger;
@@ -31,7 +30,7 @@ namespace Common.Music.Encoders {
             if (_trackEncoders.TryGetValue(track.EncoderId, out var encoder)) {
                 return await encoder.Decode(track.Data);
             }
-            
+
             _logger.Error("No encoder with {id} id registered", track.EncoderId);
             throw new Exception($"No encoder with {track.EncoderId} id registered");
         }
