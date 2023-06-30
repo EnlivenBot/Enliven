@@ -32,111 +32,111 @@ using YandexMusicResolver;
 using YandexMusicResolver.Config;
 using YandexMusicResolver.Loaders;
 
-namespace Bot {
-    internal static class DiHelpers {
-        private static readonly ILogger Logger = LogManager.GetCurrentClassLogger();
+namespace Bot;
 
-        public static ContainerBuilder AddEnlivenServices(this ContainerBuilder builder) {
-            builder.RegisterType<MusicResolverService>().AsSelf().SingleInstance();
-            builder.RegisterModule<BotInstanceNlogModule>();
-            builder.RegisterType<EnlivenBot>().InstancePerBot();
-            builder.Register(context => new EnlivenShardedClient(new DiscordSocketConfig { MessageCacheSize = 100 }))
-                .AsSelf().AsImplementedInterfaces().As<DiscordShardedClient>().InstancePerBot();
+internal static class DiHelpers {
+    private static readonly ILogger Logger = LogManager.GetCurrentClassLogger();
 
-            // Discord type readers
-            builder.RegisterType<ChannelFunctionTypeReader>().As<CustomTypeReader>().SingleInstance();
-            builder.RegisterType<LoopingStateTypeReader>().As<CustomTypeReader>().SingleInstance();
+    public static ContainerBuilder AddEnlivenServices(this ContainerBuilder builder) {
+        builder.RegisterType<MusicResolverService>().AsSelf().SingleInstance();
+        builder.RegisterModule<BotInstanceNlogModule>();
+        builder.RegisterType<EnlivenBot>().InstancePerBot();
+        builder.Register(context => new EnlivenShardedClient(new DiscordSocketConfig { MessageCacheSize = 100 }))
+            .AsSelf().AsImplementedInterfaces().As<DiscordShardedClient>().InstancePerBot();
 
-            // Database types
-            builder.Register(context => context.GetDatabase().GetCollection<SpotifyAssociation>(@"SpotifyAssociations")).SingleInstance();
-            builder.Register(context => context.GetDatabase().GetCollection<MessageHistory>(@"MessageHistory")).SingleInstance();
+        // Discord type readers
+        builder.RegisterType<ChannelFunctionTypeReader>().As<CustomTypeReader>().SingleInstance();
+        builder.RegisterType<LoopingStateTypeReader>().As<CustomTypeReader>().SingleInstance();
 
-            // Music resolvers
-            builder.RegisterType<DeezerMusicResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
+        // Database types
+        builder.Register(context => context.GetDatabase().GetCollection<SpotifyAssociation>(@"SpotifyAssociations")).SingleInstance();
+        builder.Register(context => context.GetDatabase().GetCollection<MessageHistory>(@"MessageHistory")).SingleInstance();
 
-            builder.ConfigureOptions<SpotifyCredentials>();
-            builder.RegisterType<SpotifyMusicResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
-            builder.RegisterType<SpotifyClientResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
+        // Music resolvers
+        builder.RegisterType<DeezerMusicResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
 
-            builder.RegisterType<Music.Yandex.YandexMusicResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
+        builder.ConfigureOptions<SpotifyCredentials>();
+        builder.RegisterType<SpotifyMusicResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
+        builder.RegisterType<SpotifyClientResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
 
-            builder.RegisterType<SpotifyTrackEncoderUtil>().PropertiesAutowired(PropertyWiringOptions.AllowCircularDependencies)
-                .AsSelf().AsImplementedInterfaces().SingleInstance();
-            builder.RegisterType<YandexTrackEncoderUtil>().AsSelf().AsImplementedInterfaces().SingleInstance();
+        builder.RegisterType<Music.Yandex.YandexMusicResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
 
-            // Providers
-            builder.RegisterType<SpotifyAssociationProvider>().As<ISpotifyAssociationProvider>().SingleInstance();
-            builder.RegisterType<MessageHistoryProvider>().SingleInstance();
-            builder.RegisterType<EmbedPlayerDisplayProvider>().As<IService>().AsSelf().InstancePerBot();
-            builder.RegisterType<EmbedPlayerQueueDisplayProvider>().InstancePerBot();
-            builder.RegisterType<EmbedPlayerEffectsDisplayProvider>().InstancePerBot();
-            builder.RegisterType<EffectSourceProvider>().SingleInstance();
+        builder.RegisterType<SpotifyTrackEncoderUtil>().PropertiesAutowired(PropertyWiringOptions.AllowCircularDependencies)
+            .AsSelf().AsImplementedInterfaces().SingleInstance();
+        builder.RegisterType<YandexTrackEncoderUtil>().AsSelf().AsImplementedInterfaces().SingleInstance();
 
-            // Services
-            builder.RegisterType<CustomCommandService>().As<IService>().AsSelf().InstancePerBot();
-            builder.RegisterType<CustomInteractionService>().As<IService>().AsSelf().InstancePerBot();
-            builder.RegisterType<MessageHistoryService>().As<IService>().AsSelf().InstancePerBot();
-            builder.RegisterType<GlobalBehaviorsService>().As<IService>().AsSelf().InstancePerBot();
-            builder.RegisterType<ScopedReliabilityService>().As<IService>().AsSelf().InstancePerBot();
-            builder.RegisterType<InteractionHandlerService>().As<IService>().AsSelf().InstancePerBot();
-            builder.RegisterType<CommandHandlerService>().As<IService>().AsSelf().InstancePerBot();
-            builder.RegisterType<StatisticsService>().As<IStatisticsService>().AsSelf().InstancePerBot();
-            builder.RegisterType<MessageComponentService>().AsSelf().InstancePerBot();
-            builder.RegisterType<HtmlRendererService>().AsSelf().SingleInstance();
-            builder.RegisterType<MessageHistoryHtmlExporter>().InstancePerBot();
-            builder.RegisterType<CollectorService>().InstancePerBot();
-            builder.RegisterType<ArtworkService>().As<IArtworkService>().SingleInstance();
+        // Providers
+        builder.RegisterType<SpotifyAssociationProvider>().As<ISpotifyAssociationProvider>().SingleInstance();
+        builder.RegisterType<MessageHistoryProvider>().SingleInstance();
+        builder.RegisterType<EmbedPlayerDisplayProvider>().As<IService>().AsSelf().InstancePerBot();
+        builder.RegisterType<EmbedPlayerQueueDisplayProvider>().InstancePerBot();
+        builder.RegisterType<EmbedPlayerEffectsDisplayProvider>().InstancePerBot();
+        builder.RegisterType<EffectSourceProvider>().SingleInstance();
 
-            // MessageHistory Printers
-            builder.RegisterType<MessageHistoryPrinter>().InstancePerBot();
-            builder.RegisterType<MessageHistoryPackPrinter>().InstancePerBot();
+        // Services
+        builder.RegisterType<CustomCommandService>().As<IService>().AsSelf().InstancePerBot();
+        builder.RegisterType<CustomInteractionService>().As<IService>().AsSelf().InstancePerBot();
+        builder.RegisterType<MessageHistoryService>().As<IService>().AsSelf().InstancePerBot();
+        builder.RegisterType<GlobalBehaviorsService>().As<IService>().AsSelf().InstancePerBot();
+        builder.RegisterType<ScopedReliabilityService>().As<IService>().AsSelf().InstancePerBot();
+        builder.RegisterType<InteractionHandlerService>().As<IService>().AsSelf().InstancePerBot();
+        builder.RegisterType<CommandHandlerService>().As<IService>().AsSelf().InstancePerBot();
+        builder.RegisterType<StatisticsService>().As<IStatisticsService>().AsSelf().InstancePerBot();
+        builder.RegisterType<MessageComponentService>().AsSelf().InstancePerBot();
+        builder.RegisterType<HtmlRendererService>().AsSelf().SingleInstance();
+        builder.RegisterType<MessageHistoryHtmlExporter>().InstancePerBot();
+        builder.RegisterType<CollectorService>().InstancePerBot();
+        builder.RegisterType<ArtworkService>().As<IArtworkService>().SingleInstance();
 
-            return builder;
-        }
+        // MessageHistory Printers
+        builder.RegisterType<MessageHistoryPrinter>().InstancePerBot();
+        builder.RegisterType<MessageHistoryPackPrinter>().InstancePerBot();
 
-        public static ContainerBuilder AddYandexResolver(this ContainerBuilder builder) {
-            builder.Configure<YandexCredentials>();
-            builder.RegisterType<YandexMusicAuthService>().As<IYandexMusicAuthService>().SingleInstance()
-                .UsingConstructor(typeof(IHttpClientFactory));
-            builder.RegisterType<YandexCredentialsProvider>().As<IYandexCredentialsProvider>().SingleInstance();
-            builder.RegisterType<YandexMusicMainResolver>().As<IYandexMusicMainResolver>().SingleInstance()
-                .UsingConstructor(typeof(IYandexCredentialsProvider), typeof(IHttpClientFactory),
-                    typeof(IYandexMusicPlaylistLoader), typeof(IYandexMusicTrackLoader), typeof(IYandexMusicDirectUrlLoader), typeof(IYandexMusicSearchResultLoader));
+        return builder;
+    }
 
-            return builder;
-        }
+    public static ContainerBuilder AddYandexResolver(this ContainerBuilder builder) {
+        builder.Configure<YandexCredentials>();
+        builder.RegisterType<YandexMusicAuthService>().As<IYandexMusicAuthService>().SingleInstance()
+            .UsingConstructor(typeof(IHttpClientFactory));
+        builder.RegisterType<YandexCredentialsProvider>().As<IYandexCredentialsProvider>().SingleInstance();
+        builder.RegisterType<YandexMusicMainResolver>().As<IYandexMusicMainResolver>().SingleInstance()
+            .UsingConstructor(typeof(IYandexCredentialsProvider), typeof(IHttpClientFactory),
+                typeof(IYandexMusicPlaylistLoader), typeof(IYandexMusicTrackLoader), typeof(IYandexMusicDirectUrlLoader), typeof(IYandexMusicSearchResultLoader));
 
-        public static ContainerBuilder ConfigureOptions<T>(this ContainerBuilder builder) where T : class {
-            builder.Register(context => new OptionsWrapper<T>(context.Resolve<IConfiguration>().GetSection(typeof(T).Name).Get<T>()!))
-                .As<IOptions<T>>();
+        return builder;
+    }
 
-            return builder;
-        }
+    public static ContainerBuilder ConfigureOptions<T>(this ContainerBuilder builder) where T : class {
+        builder.Register(context => new OptionsWrapper<T>(context.Resolve<IConfiguration>().GetSection(typeof(T).Name).Get<T>()!))
+            .As<IOptions<T>>();
 
-        public static ContainerBuilder Configure<T>(this ContainerBuilder builder) where T : class {
-            builder.Register(context => context.Resolve<IConfiguration>().GetSection(typeof(T).Name).Get<T>()!);
+        return builder;
+    }
 
-            return builder;
-        }
+    public static ContainerBuilder Configure<T>(this ContainerBuilder builder) where T : class {
+        builder.Register(context => context.Resolve<IConfiguration>().GetSection(typeof(T).Name).Get<T>()!);
 
-        public static ContainerBuilder AddVk(this ContainerBuilder builder) {
-            builder.ConfigureOptions<VkCredentials>();
-            builder.Register(c => new VkApi(new ServiceCollection().AddAudioBypass()))
-                .AsImplementedInterfaces()
-                .AsSelf()
-                .SingleInstance();
-            builder.Register(_ => new VkMusicCacheService(TimeSpan.FromDays(1), ".cache/vkmusic/", "mp3"))
-                .AsSelf();
-            builder.RegisterType<VkMusicSeederService>()
-                .AsImplementedInterfaces()
-                .AsSelf()
-                .SingleInstance();
-            builder.RegisterType<VkMusicResolver>()
-                .AsImplementedInterfaces()
-                .AsSelf()
-                .SingleInstance();
+        return builder;
+    }
 
-            return builder;
-        }
+    public static ContainerBuilder AddVk(this ContainerBuilder builder) {
+        builder.ConfigureOptions<VkCredentials>();
+        builder.Register(c => new VkApi(new ServiceCollection().AddAudioBypass()))
+            .AsImplementedInterfaces()
+            .AsSelf()
+            .SingleInstance();
+        builder.Register(_ => new VkMusicCacheService(TimeSpan.FromDays(1), ".cache/vkmusic/", "mp3"))
+            .AsSelf();
+        builder.RegisterType<VkMusicSeederService>()
+            .AsImplementedInterfaces()
+            .AsSelf()
+            .SingleInstance();
+        builder.RegisterType<VkMusicResolver>()
+            .AsImplementedInterfaces()
+            .AsSelf()
+            .SingleInstance();
+
+        return builder;
     }
 }

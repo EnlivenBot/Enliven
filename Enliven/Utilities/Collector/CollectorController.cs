@@ -2,24 +2,24 @@
 using System.Threading;
 using Common.Utils;
 
-namespace Bot.Utilities.Collector {
-    public class CollectorController : DisposableBase {
-        public event EventHandler<CollectorEventArgsBase>? RemoveArgsFailed;
-        private Timer? _timer;
+namespace Bot.Utilities.Collector;
 
-        public void SetTimeout(TimeSpan timeout) {
-            if (_timer == null)
-                _timer = new Timer(state => { Dispose(); }, null, timeout, TimeSpan.FromSeconds(0));
-            else
-                _timer.Change(timeout, TimeSpan.FromSeconds(0));
-        }
+public class CollectorController : DisposableBase {
+    private Timer? _timer;
+    public event EventHandler<CollectorEventArgsBase>? RemoveArgsFailed;
 
-        protected override void DisposeInternal() {
-            _timer?.Dispose();
-        }
+    public void SetTimeout(TimeSpan timeout) {
+        if (_timer == null)
+            _timer = new Timer(state => { Dispose(); }, null, timeout, TimeSpan.FromSeconds(0));
+        else
+            _timer.Change(timeout, TimeSpan.FromSeconds(0));
+    }
 
-        public virtual void OnRemoveArgsFailed(CollectorEventArgsBase e) {
-            RemoveArgsFailed?.Invoke(this, e);
-        }
+    protected override void DisposeInternal() {
+        _timer?.Dispose();
+    }
+
+    public virtual void OnRemoveArgsFailed(CollectorEventArgsBase e) {
+        RemoveArgsFailed?.Invoke(this, e);
     }
 }

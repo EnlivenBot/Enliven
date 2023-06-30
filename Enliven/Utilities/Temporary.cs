@@ -1,38 +1,36 @@
 ﻿using System;
 
-namespace Bot.Utilities {
-    public class Temporary<T> {
-        private readonly Func<T> _factory;
-        private readonly TimeSpan _lifetime;
-        private readonly object _valueLock = new object();
+namespace Bot.Utilities;
 
-        private T _value = default!;
-        private bool _hasValue;
-        private DateTime _creationTime;
+public class Temporary<T> {
+    private readonly Func<T> _factory;
+    private readonly TimeSpan _lifetime;
+    private readonly object _valueLock = new();
+    private DateTime _creationTime;
+    private bool _hasValue;
 
-        public Temporary(Func<T> factory, TimeSpan lifetime) {
-            _factory = factory;
-            _lifetime = lifetime;
-        }
+    private T _value = default!;
 
-        public T Value {
-            get {
-                var now = DateTime.Now;
-                lock (_valueLock) {
-                    if (_hasValue) {
-                        if (_creationTime.Add(_lifetime) < now) {
-                            _hasValue = false;
-                        }
-                    }
+    public Temporary(Func<T> factory, TimeSpan lifetime) {
+        _factory = factory;
+        _lifetime = lifetime;
+    }
 
-                    if (_hasValue) return _value;
-                    _value = _factory();
-                    _hasValue = true;
-                        
-                    _creationTime = DateTime.Now;
-
-                    return _value;
+    public T Value {
+        get {
+            var now = DateTime.Now;
+            lock (_valueLock) {
+                if (_hasValue) {
+                    if (_creationTime.Add(_lifetime) < now) _hasValue = false;
                 }
+
+                if (_hasValue) return _value;
+                _value = _factory();
+                _hasValue = true;
+
+                _creationTime = DateTime.Now;
+
+                return _value;
             }
         }
     }

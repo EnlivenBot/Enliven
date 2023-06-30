@@ -10,71 +10,71 @@ using Common.Music.Controller;
 using Common.Utils;
 using NLog;
 
-namespace Bot {
-    public class EnlivenBotWrapper {
-        private static ILogger Logger = LogManager.GetCurrentClassLogger();
-        private TaskCompletionSource<bool>? _firstStartResult;
-        private InstanceConfig _instanceConfig = null!;
-        public EnlivenBotWrapper(InstanceConfig config) {
-            _instanceConfig = config;
-        }
+namespace Bot;
 
-        /// <summary>
-        /// Attempts to start bot instance
-        /// </summary>
-        /// <returns>True if start successful, otherwise False</returns>
-        public Task<bool> StartAsync(ILifetimeScope container, CancellationToken cancellationToken) {
-            if (_firstStartResult != null) throw new Exception("Current instance already started");
+public class EnlivenBotWrapper {
+    private static ILogger Logger = LogManager.GetCurrentClassLogger();
+    private TaskCompletionSource<bool>? _firstStartResult;
+    private InstanceConfig _instanceConfig = null!;
+    public EnlivenBotWrapper(InstanceConfig config) {
+        _instanceConfig = config;
+    }
 
-            _firstStartResult = new TaskCompletionSource<bool>();
+    /// <summary>
+    /// Attempts to start bot instance
+    /// </summary>
+    /// <returns>True if start successful, otherwise False</returns>
+    public Task<bool> StartAsync(ILifetimeScope container, CancellationToken cancellationToken) {
+        if (_firstStartResult != null) throw new Exception("Current instance already started");
 
-            _ = RunLoopAsync(container, cancellationToken);
+        _firstStartResult = new TaskCompletionSource<bool>();
 
-            return _firstStartResult!.Task;
-        }
+        _ = RunLoopAsync(container, cancellationToken);
 
-        private async Task RunLoopAsync(ILifetimeScope container, CancellationToken cancellationToken) {
-            var isFirst = true;
+        return _firstStartResult!.Task;
+    }
 
-            while (!cancellationToken.IsCancellationRequested) {
+    private async Task RunLoopAsync(ILifetimeScope container, CancellationToken cancellationToken) {
+        var isFirst = true;
+
+        while (!cancellationToken.IsCancellationRequested) {
+            try {
+                await using var lifetimeScope = container.BeginLifetimeScope(Constants.BotLifetimeScopeTag, ConfigureBotLifetime);
+                var bot = lifetimeScope.Resolve<EnlivenBot>();
+                await bot.StartAsync();
+                _firstStartResult!.TrySetResult(true);
+
                 try {
-                    await using var lifetimeScope = container.BeginLifetimeScope(Constants.BotLifetimeScopeTag, ConfigureBotLifetime);
-                    var bot = lifetimeScope.Resolve<EnlivenBot>();
-                    await bot.StartAsync();
-                    _firstStartResult!.TrySetResult(true);
-
-                    try {
-                        await bot.Disposed.ToTask(cancellationToken);
-                    }
-                    catch (Exception) {
-                        // ignored
-                    }
+                    await bot.Disposed.ToTask(cancellationToken);
                 }
-                catch (Exception e) {
-                    Logger.Fatal(e, $"Failed to start bot instance with config {Path.GetFileName(_instanceConfig.Name)}");
-                    _firstStartResult!.TrySetResult(false);
-                    if (isFirst) return;
+                catch (Exception) {
+                    // ignored
                 }
-
-                isFirst = false;
             }
-        }
+            catch (Exception e) {
+                Logger.Fatal(e, $"Failed to start bot instance with config {Path.GetFileName(_instanceConfig.Name)}");
+                _firstStartResult!.TrySetResult(false);
+                if (isFirst) return;
+            }
 
-        private void ConfigureBotLifetime(ContainerBuilder builder) {
-            builder.Register(context => _instanceConfig)
-                .AsSelf()
-                .SingleInstance();
-            builder.Register(context => _instanceConfig)
-                .AsSelf()
-                .AsImplementedInterfaces()
-                .SingleInstance();
-            builder.RegisterType<MusicController>()
-                .AsSelf()
-                .AsImplementedInterfaces()
-                .SingleInstance();
-            builder.RegisterType<ServiceScopeFactoryAdapter>()
-                .AsImplementedInterfaces()
-                .SingleInstance();
+            isFirst = false;
         }
+    }
+
+    private void ConfigureBotLifetime(ContainerBuilder builder) {
+        builder.Register(context => _instanceConfig)
+            .AsSelf()
+            .SingleInstance();
+        builder.Register(context => _instanceConfig)
+            .AsSelf()
+            .AsImplementedInterfaces()
+            .SingleInstance();
+        builder.RegisterType<MusicController>()
+            .AsSelf()
+            .AsImplementedInterfaces()
+            .SingleInstance();
+        builder.RegisterType<ServiceScopeFactoryAdapter>()
+            .AsImplementedInterfaces()
+            .SingleInstance();
     }
 }

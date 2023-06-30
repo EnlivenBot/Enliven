@@ -2,33 +2,33 @@
 using System.Threading.Tasks;
 using Common.Criteria;
 
-namespace Bot.Utilities {
-    public class TimeChecker {
-        private CustomCriterion? _customCriterion;
+namespace Bot.Utilities;
 
-        public TimeChecker(TimeSpan timeout) : this(timeout, DateTime.Now) { }
+public class TimeChecker {
+    private CustomCriterion? _customCriterion;
 
-        public TimeChecker(TimeSpan timeout, DateTime lastTime) {
-            Timeout = timeout;
-            LastTime = lastTime;
-        }
+    public TimeChecker(TimeSpan timeout) : this(timeout, DateTime.Now) { }
 
-        public TimeSpan Timeout { get; set; }
-        public DateTime LastTime { get; set; }
+    public TimeChecker(TimeSpan timeout, DateTime lastTime) {
+        Timeout = timeout;
+        LastTime = lastTime;
+    }
 
-        public bool IsTimeoutPassed => LastTime + Timeout < DateTime.Now;
+    public TimeSpan Timeout { get; set; }
+    public DateTime LastTime { get; set; }
 
-        public void Update(DateTime? targetTime = null) {
-            LastTime = targetTime ?? DateTime.Now;
-        }
+    public bool IsTimeoutPassed => LastTime + Timeout < DateTime.Now;
 
-        public ICriterion ToCriterion() {
-            _customCriterion ??= new CustomCriterion(() => Task.FromResult(IsTimeoutPassed));
-            return _customCriterion;
-        }
-        
-        public Criteria ToCriteria() {
-            return ToCriterion().ToCriteria();
-        }
+    public void Update(DateTime? targetTime = null) {
+        LastTime = targetTime ?? DateTime.Now;
+    }
+
+    public ICriterion ToCriterion() {
+        _customCriterion ??= new CustomCriterion(() => Task.FromResult(IsTimeoutPassed));
+        return _customCriterion;
+    }
+
+    public Criteria ToCriteria() {
+        return ToCriterion().ToCriteria();
     }
 }

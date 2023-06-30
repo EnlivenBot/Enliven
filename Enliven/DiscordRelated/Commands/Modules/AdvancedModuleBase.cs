@@ -9,58 +9,61 @@ using Discord.Interactions;
 using Discord.Interactions.Builders;
 using ModuleInfo = Discord.Interactions.ModuleInfo;
 
-namespace Bot.DiscordRelated.Commands.Modules {
-    public class AdvancedModuleBase : IModuleBase, IInteractionModuleBase, IGenericModuleBase {
-        private ILocalizationProvider? _loc;
-        private GuildConfig? _guildConfig;
-        public IComponentContext ComponentContext { get; set; } = null!;
-        [DontInject] public ILocalizationProvider Loc => _loc ??= GuildConfig.Loc;
-        [DontInject] public GuildConfig GuildConfig => _guildConfig ??= ComponentContext.Resolve<IGuildConfigProvider>().Get(Context.Guild.Id);
+namespace Bot.DiscordRelated.Commands.Modules;
 
-        public ICommonModuleContext Context { get; private set; } = null!;
+public class AdvancedModuleBase : IModuleBase, IInteractionModuleBase, IGenericModuleBase {
+    private GuildConfig? _guildConfig;
+    private ILocalizationProvider? _loc;
+    public IComponentContext ComponentContext { get; set; } = null!;
+    [DontInject] public ILocalizationProvider Loc => _loc ??= GuildConfig.Loc;
+    [DontInject] public GuildConfig GuildConfig => _guildConfig ??= ComponentContext.Resolve<IGuildConfigProvider>().Get(Context.Guild.Id);
 
-        #region Interactions
+    public ICommonModuleContext Context { get; private set; } = null!;
 
-        private ICommandInfo _interactionCommandInfo = null!;
-        public void SetContext(IInteractionContext context) {
-            Context = new InteractionsModuleContext(context, () => _interactionCommandInfo);
-        }
-        /// <inheritdoc />
-        public virtual async Task BeforeExecuteAsync(ICommandInfo command) {
-            _interactionCommandInfo = command;
-            await Context.BeforeExecuteAsync();
-        }
-        /// <inheritdoc />
-        public void BeforeExecute(ICommandInfo command) { }
-        /// <inheritdoc />
-        public virtual async Task AfterExecuteAsync(ICommandInfo command) 
-            => await Context.AfterExecuteAsync();
-        /// <inheritdoc />
-        public void AfterExecute(ICommandInfo command) { }
-        /// <inheritdoc />
-        public void OnModuleBuilding(InteractionService commandService, ModuleInfo module) { }
-        /// <inheritdoc />
-        public void Construct(ModuleBuilder builder, InteractionService commandService) { }
+    #region Interactions
 
-        #endregion
-
-        #region Text
-
-        /// <inheritdoc />
-        public void SetContext(ICommandContext context) {
-            Context = new TextCommandsModuleContext(context);
-        }
-        public virtual async Task BeforeExecuteAsync(CommandInfo command)
-            => await Context.BeforeExecuteAsync();
-        /// <inheritdoc />
-        public void BeforeExecute(CommandInfo command) { }
-        public virtual async Task AfterExecuteAsync(CommandInfo command) 
-            => await Context.BeforeExecuteAsync();
-        /// <inheritdoc />
-        public void AfterExecute(CommandInfo command) { }
-        /// <inheritdoc />
-        public void OnModuleBuilding(CommandService commandService, Discord.Commands.Builders.ModuleBuilder builder) { }
-
-        #endregion
+    private ICommandInfo _interactionCommandInfo = null!;
+    public void SetContext(IInteractionContext context) {
+        Context = new InteractionsModuleContext(context, () => _interactionCommandInfo);
     }
+    /// <inheritdoc />
+    public virtual async Task BeforeExecuteAsync(ICommandInfo command) {
+        _interactionCommandInfo = command;
+        await Context.BeforeExecuteAsync();
+    }
+    /// <inheritdoc />
+    public void BeforeExecute(ICommandInfo command) { }
+    /// <inheritdoc />
+    public virtual async Task AfterExecuteAsync(ICommandInfo command) {
+        await Context.AfterExecuteAsync();
+    }
+    /// <inheritdoc />
+    public void AfterExecute(ICommandInfo command) { }
+    /// <inheritdoc />
+    public void OnModuleBuilding(InteractionService commandService, ModuleInfo module) { }
+    /// <inheritdoc />
+    public void Construct(ModuleBuilder builder, InteractionService commandService) { }
+
+    #endregion
+
+    #region Text
+
+    /// <inheritdoc />
+    public void SetContext(ICommandContext context) {
+        Context = new TextCommandsModuleContext(context);
+    }
+    public virtual async Task BeforeExecuteAsync(CommandInfo command) {
+        await Context.BeforeExecuteAsync();
+    }
+    /// <inheritdoc />
+    public void BeforeExecute(CommandInfo command) { }
+    public virtual async Task AfterExecuteAsync(CommandInfo command) {
+        await Context.BeforeExecuteAsync();
+    }
+    /// <inheritdoc />
+    public void AfterExecute(CommandInfo command) { }
+    /// <inheritdoc />
+    public void OnModuleBuilding(CommandService commandService, Discord.Commands.Builders.ModuleBuilder builder) { }
+
+    #endregion
 }
