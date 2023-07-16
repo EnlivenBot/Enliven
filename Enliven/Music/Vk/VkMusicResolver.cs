@@ -37,16 +37,25 @@ public class VkMusicResolver : IMusicResolver {
     public async Task<IEnumerable<LavalinkTrack>> Resolve(LavalinkCluster cluster, string query) {
         if (!_vkApi.IsAuthorized || !_vkSeederService.IsVkSeedAvailable) return Array.Empty<LavalinkTrack>();
 
+        var fetchedAudios = await FetchFromVkAsync(query);
+        if (fetchedAudios is not null) {
+            return fetchedAudios
+                .Where(audio => audio.Url is not null)
+                .Select(audio => VkLavalinkTrack.CreateInstance(audio, _vkSeederService));
+        }
+
+        return Array.Empty<LavalinkTrack>();
+    }
+
+    private async Task<IEnumerable<Audio>?> FetchFromVkAsync(string query) {
         var trackMatch = VkTrackRegex.Match(query);
         if (trackMatch.Success) {
-            var audios = await _vkApi.Audio.GetByIdAsync(new[] { trackMatch.Groups[1].Value });
-
-            return audios.Select(audio => VkLavalinkTrack.CreateInstance(audio, _vkSeederService));
+            return await _vkApi.Audio.GetByIdAsync(new[] { trackMatch.Groups[1].Value });
         }
 
         var albumMatch = VkAlbumRegex.Match(query);
         if (albumMatch.Success) {
-            var audios = await _vkApi.CallAsync<VkCollection<Audio>>("audio.get", new VkParameters() {
+            return await _vkApi.CallAsync<VkCollection<Audio>>("audio.get", new VkParameters() {
                 {
                     "owner_id", long.Parse(albumMatch.Groups[1].Value)
                 }, {
@@ -55,22 +64,18 @@ public class VkMusicResolver : IMusicResolver {
                     "access_key", albumMatch.Groups[3].Value
                 }
             });
-
-            return audios.Select(audio => VkLavalinkTrack.CreateInstance(audio, _vkSeederService));
         }
 
         var userMatch = VkUserRegex.Match(query);
         if (userMatch.Success) {
-            var audios = await _vkApi.CallAsync<VkCollection<Audio>>("audio.get", new VkParameters() {
+            return await _vkApi.CallAsync<VkCollection<Audio>>("audio.get", new VkParameters() {
                 {
                     "owner_id", long.Parse(userMatch.Groups[1].Value)
                 }
             });
-
-            return audios.Select(audio => VkLavalinkTrack.CreateInstance(audio, _vkSeederService));
         }
 
-        return Array.Empty<LavalinkTrack>();
+        return null;
     }
 
     private async Task InitializeVkNet() {
