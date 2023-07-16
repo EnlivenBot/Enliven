@@ -113,25 +113,33 @@ namespace Common.Music.Players {
                 await base.OnTrackEndAsync(eventArgs);
             }
         }
-        public virtual async Task<int> PlayAsync(LavalinkTrack track, bool enqueue, TimeSpan? startTime = null, TimeSpan? endTime = null,
-                                                 bool noReplace = false) {
+        public virtual async Task PlayAsync(LavalinkTrack track, bool enqueue, TimeSpan? startTime = null, TimeSpan? endTime = null,
+                                            bool noReplace = false) {
             EnsureNotDestroyed();
             EnsureConnected();
             if (enqueue) Playlist.Add(track);
-            if (enqueue && State == PlayerState.Playing) return Playlist.Count;
+            if (enqueue && State == PlayerState.Playing) return;
             try {
                 await base.PlayAsync(track, startTime, endTime, noReplace);
             }
             catch (Exception e) when (e is not InvalidOperationException) {
                 Logger.Error(e, "An error occurred while trying to start playing track {TrackName}. Track {TrackType} identifier: {TrackIdentifier}", track.Title, track.GetType().Name, track.Identifier);
-                WriteToQueueHistory(StartPlayingFailedEntry.WithArg(Common.Music.Controller.MusicController.EscapeTrack(track.Title.SafeSubstring(30))));
-                Playlist.Remove(track);
-                await SkipAsync(0);
-                return 0;
+                _ = OnPlayErrored(track);
             }
             UpdateCurrentTrackIndex();
             if (Playlist.TryGetValue(CurrentTrackIndex + 1, out var nextTrack) && nextTrack is ITrackNeedPrefetch needPrefetchTrack) _ = needPrefetchTrack.PrefetchTrack();
-            return 0;
+        }
+
+        private async Task OnPlayErrored(LavalinkTrack track) {
+            // Some delay to allow return control flow of PlayAsync to caller
+            await Task.Delay(100);
+            WriteToQueueHistory(StartPlayingFailedEntry.WithArg(Common.Music.Controller.MusicController.EscapeTrack(track.Title.SafeSubstring(30))));
+            var nextTrack = Playlist.TryGetValue(CurrentTrackIndex + 1, out var _nextTrack)
+                ? _nextTrack
+                : null;
+            Playlist.Remove(track);
+            if (nextTrack != null)
+                await PlayAsync(nextTrack);
         }
 
         public virtual async Task<bool> SkipAsync(int count = 1, bool force = false) {
