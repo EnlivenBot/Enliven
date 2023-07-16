@@ -81,6 +81,7 @@
       "SearchResultsDescription": "{0} search results for `{1}`:\n\n",
       "NothingFound": "Nothing found 😩",
       "CantConnect": "The bot cannot join your voice channel `{0}`",
+      "StartPlayingFailed": "An error occurred while trying to start playing track `{0}`. In order to continue, we are removing it from the playlist.",
       "Parameters": "Parameters",
       "PlaybackNothingPlaying": "Nothing playing",
       "Waiting": "Waiting...",

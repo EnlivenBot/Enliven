@@ -20,27 +20,36 @@ using Tyrrrz.Extensions;
 namespace Common.Music.Players {
     public class AdvancedLavalinkPlayer : WrappedLavalinkPlayer {
         public const int MaxEffectsCount = 4;
-        
-        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
-        public readonly HistoryCollection QueueHistory = new HistoryCollection(512, 1000, false);
-        private readonly Subject<FilterMapBase> _filtersChanged = new Subject<FilterMapBase>();
+        protected static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+        private static readonly IEntry ConcatLines = new EntryString("{0}\n{1}");
+        private static readonly IEntry ResumeViaPlaylists = new EntryLocalized("Music.ResumeViaPlaylists");
+        private static readonly IEntry PlaybackStopped = new EntryLocalized("Music.PlaybackStopped");
+
+        private static readonly IEntry PlaybackStoppedEntry = new EntryLocalized("Music.PlaybackStopped");
+        private static readonly IEntry TryReconnectAfterDisposeEntry = new EntryLocalized("Music.TryReconnectAfterDispose");
+        private static readonly PlayerShutdownParameters ParametersForDisposedPlayer = new() { ShutdownDisplays = false, SavePlaylist = true };
         private readonly List<PlayerEffectUse> _effectsList = new List<PlayerEffectUse>();
+        private readonly Subject<FilterMapBase> _filtersChanged = new Subject<FilterMapBase>();
         private readonly TaskCompletionSource<PlayerSnapshot> _shutdownTaskCompletionSource = new TaskCompletionSource<PlayerSnapshot>();
 
-        public Task<PlayerSnapshot> ShutdownTask => _shutdownTaskCompletionSource.Task;
-        public IObservable<FilterMapBase> FiltersChanged => _filtersChanged.AsObservable();
+        public readonly HistoryCollection QueueHistory = new HistoryCollection(512, 1000, false);
         private GuildConfig? _guildConfig;
+        private IGuildConfigProvider _guildConfigProvider;
+
+        private bool _isShutdownRequested;
         private ulong _lastVoiceChannelId;
         private protected IMusicController MusicController;
-        private IGuildConfigProvider _guildConfigProvider;
-        public List<IPlayerDisplay> Displays { get; } = new List<IPlayerDisplay>();
-        public ImmutableList<PlayerEffectUse> Effects => _effectsList.ToImmutableList();
-        
+
         protected AdvancedLavalinkPlayer(IMusicController musicController, IGuildConfigProvider guildConfigProvider) {
             _guildConfigProvider = guildConfigProvider;
             MusicController = musicController;
         }
+
+        public Task<PlayerSnapshot> ShutdownTask => _shutdownTaskCompletionSource.Task;
+        public IObservable<FilterMapBase> FiltersChanged => _filtersChanged.AsObservable();
+        public List<IPlayerDisplay> Displays { get; } = new List<IPlayerDisplay>();
+        public ImmutableList<PlayerEffectUse> Effects => _effectsList.ToImmutableList();
 
         protected GuildConfig GuildConfig => _guildConfig ??= _guildConfigProvider.Get(GuildId);
         public bool IsShutdowned => _shutdownTaskCompletionSource.Task.IsCompleted;
@@ -55,11 +64,6 @@ namespace Common.Music.Players {
             GuildConfig.Volume = (int)(Volume * 200);
             GuildConfig.Save();
         }
-
-        private bool _isShutdownRequested;
-        private static readonly IEntry ConcatLines = new EntryString("{0}\n{1}");
-        private static readonly IEntry ResumeViaPlaylists = new EntryLocalized("Music.ResumeViaPlaylists");
-        private static readonly IEntry PlaybackStopped = new EntryLocalized("Music.PlaybackStopped");
         public virtual async Task Shutdown(IEntry reason, PlayerShutdownParameters parameters) {
             if (IsShutdowned || _isShutdownRequested) return;
             _isShutdownRequested = true;
@@ -114,7 +118,7 @@ namespace Common.Music.Players {
         public virtual void WriteToQueueHistory(HistoryEntry entry) {
             QueueHistory.Add(entry);
         }
-        
+
         public virtual void WriteToQueueHistory(IEnumerable<HistoryEntry> entries) {
             QueueHistory.AddRange(entries);
         }
@@ -133,7 +137,7 @@ namespace Common.Music.Players {
         public virtual async Task ApplyStateSnapshot(PlayerStateSnapshot playerSnapshot) {
             if (playerSnapshot.LastTrack != null) await PlayAsync(playerSnapshot.LastTrack, playerSnapshot.TrackPosition);
             if (playerSnapshot.PlayerState == PlayerState.Paused) await PauseAsync();
-            
+
             _effectsList.Clear();
             foreach (var playerEffectUse in playerSnapshot.Effects) {
                 _effectsList.Add(new PlayerEffectUse(playerEffectUse.User, playerEffectUse.Effect));
@@ -141,10 +145,6 @@ namespace Common.Music.Players {
             await ApplyFiltersAsync();
         }
 
-        private static readonly IEntry PlaybackStoppedEntry = new EntryLocalized("Music.PlaybackStopped");
-        private static readonly IEntry TryReconnectAfterDisposeEntry = new EntryLocalized("Music.TryReconnectAfterDispose");
-        private static readonly PlayerShutdownParameters ParametersForDisposedPlayer = new() {ShutdownDisplays = false, SavePlaylist = true};
-        
         /// <remarks>
         /// We don't call Dispose or DisposeAsync on our side of the player.
         /// If Dispose was called on the player, something happened in the Lavalink and our job is to try to restart the player
@@ -176,7 +176,7 @@ namespace Common.Music.Players {
             catch (Exception e) {
                 Logger.Error(e, "Error while disposing player");
             }
-            
+
             Task LeaveNotificationToDisplay(IPlayerDisplay display, PlayerSnapshot snapshot)
                 => display.LeaveNotification(PlaybackStoppedEntry, TryReconnectAfterDisposeEntry.WithArg(snapshot.StoredPlaylist!.Id));
         }
@@ -215,7 +215,7 @@ namespace Common.Music.Players {
             Filters.Volume = effects.GetValueOrDefault(VolumeFilterOptions.Name) as VolumeFilterOptions;
             Filters.ChannelMix = effects.GetValueOrDefault(ChannelMixFilterOptions.Name) as ChannelMixFilterOptions;
             Filters.LowPass = effects.GetValueOrDefault(LowPassFilterOptions.Name) as LowPassFilterOptions;
-            
+
             await Filters.CommitAsync();
             _filtersChanged.OnNext(Filters);
         }

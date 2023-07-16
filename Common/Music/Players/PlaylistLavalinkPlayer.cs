@@ -18,6 +18,7 @@ using Tyrrrz.Extensions;
 
 namespace Common.Music.Players {
     public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer {
+        private static readonly IEntry StartPlayingFailedEntry = new EntryLocalized("Music.StartPlayingFailed");
         private readonly ISubject<int> _currentTrackIndexChanged = new Subject<int>();
 
         private readonly SemaphoreSlim _enqueueLock = new SemaphoreSlim(1);
@@ -112,14 +113,22 @@ namespace Common.Music.Players {
                 await base.OnTrackEndAsync(eventArgs);
             }
         }
-
         public virtual async Task<int> PlayAsync(LavalinkTrack track, bool enqueue, TimeSpan? startTime = null, TimeSpan? endTime = null,
                                                  bool noReplace = false) {
             EnsureNotDestroyed();
             EnsureConnected();
             if (enqueue) Playlist.Add(track);
             if (enqueue && State == PlayerState.Playing) return Playlist.Count;
-            await base.PlayAsync(track, startTime, endTime, noReplace);
+            try {
+                await base.PlayAsync(track, startTime, endTime, noReplace);
+            }
+            catch (Exception e) when (e is not InvalidOperationException) {
+                Logger.Error(e, "An error occurred while trying to start playing track {TrackName}. Track {TrackType} identifier: {TrackIdentifier}", track.Title, track.GetType().Name, track.Identifier);
+                WriteToQueueHistory(StartPlayingFailedEntry.WithArg(Common.Music.Controller.MusicController.EscapeTrack(track.Title.SafeSubstring(30))));
+                Playlist.Remove(track);
+                await SkipAsync(0);
+                return 0;
+            }
             UpdateCurrentTrackIndex();
             if (Playlist.TryGetValue(CurrentTrackIndex + 1, out var nextTrack) && nextTrack is ITrackNeedPrefetch needPrefetchTrack) _ = needPrefetchTrack.PrefetchTrack();
             return 0;
