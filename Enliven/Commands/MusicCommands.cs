@@ -62,6 +62,10 @@ public sealed class MusicCommands : MusicModuleBase {
     public async Task Goto([Summary("goto0_0s")] int index) {
         //For programmers who count from 0
         if (index == 0) index = 1;
+        if (index < 0) {
+            // Python like syntax, so -1 is last track
+            index = Player.Playlist.Count + index + 1;
+        }
 
         if (Player.Playlist.TryGetValue(index - 1, out var track)) {
             await Player.PlayAsync(track!, false);
