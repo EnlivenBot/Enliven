@@ -133,7 +133,7 @@ namespace Common.Music.Players {
         private async Task OnPlayErrored(LavalinkTrack track) {
             // Some delay to allow return control flow of PlayAsync to caller
             await Task.Delay(100);
-            WriteToQueueHistory(StartPlayingFailedEntry.WithArg(Common.Music.Controller.MusicController.EscapeTrack(track.Title.SafeSubstring(30))));
+            WriteToQueueHistory(StartPlayingFailedEntry.WithArg(track.Title.RemoveNonPrintableChars().SafeSubstring(30) ?? "null"));
             var nextTrack = Playlist.TryGetValue(CurrentTrackIndex + 1, out var _nextTrack)
                 ? _nextTrack
                 : null;
@@ -214,8 +214,8 @@ namespace Common.Music.Players {
                 }
 
                 await PlayAsync(track, false, position);
-                WriteToQueueHistory(new HistoryEntry(new EntryLocalized("MusicQueues.Jumped", requester, CurrentTrackIndex + 1,
-                    Controller.MusicController.EscapeTrack(CurrentTrack!.Title).SafeSubstring(100, "...")!)));
+                WriteToQueueHistory(new EntryLocalized("MusicQueues.Jumped", requester, CurrentTrackIndex + 1,
+                    CurrentTrack!.Title.RemoveNonPrintableChars().SafeSubstring(100, "...")!));
             }
             else if (State == PlayerState.NotPlaying) {
                 await PlayAsync(Playlist[0], false);
@@ -264,8 +264,7 @@ namespace Common.Music.Players {
                 }
 
                 if (addedTracks.Count == 1) {
-                    WriteToQueueHistory(new HistoryEntry(new EntryLocalized("MusicQueues.Enqueued", author,
-                        Controller.MusicController.EscapeTrack(addedTracks[0].Title))));
+                    WriteToQueueHistory(new HistoryEntry(new EntryLocalized("MusicQueues.Enqueued", author, addedTracks[0].Title.RemoveNonPrintableChars()!)));
                 }
                 else if (addedTracks.Count > 1) {
                     WriteToQueueHistory(new HistoryEntry(new EntryLocalized("MusicQueues.EnqueuedMany", author, addedTracks.Count)));

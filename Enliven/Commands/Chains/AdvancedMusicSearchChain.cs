@@ -156,7 +156,7 @@ public class AdvancedMusicSearchChain : ChainBase {
         var authoredLavalinkTracks = tracks.Select(track => track.AddAuthor(_requester.Username)).ToList();
         switch (authoredLavalinkTracks.Count) {
             case 1:
-                _player.WriteToQueueHistory(Loc.Get("MusicQueues.Enqueued", _requester.Username, MusicController.EscapeTrack(authoredLavalinkTracks[0].Title)));
+                _player.WriteToQueueHistory(Loc.Get("MusicQueues.Enqueued", _requester.Username, authoredLavalinkTracks[0].Title.RemoveNonPrintableChars()));
                 break;
             default:
                 _player.WriteToQueueHistory(Loc.Get("Music.AddTracks", _requester.Username, authoredLavalinkTracks.Count));

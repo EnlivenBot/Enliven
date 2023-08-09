@@ -17,7 +17,6 @@ using Common.History;
 using Common.Localization.Entries;
 using Common.Localization.Providers;
 using Common.Music;
-using Common.Music.Controller;
 using Common.Music.Players;
 using Common.Music.Tracks;
 using Common.Utils;
@@ -28,7 +27,7 @@ using NLog;
 using Tyrrrz.Extensions;
 #pragma warning disable 4014
 
-namespace Bot.DiscordRelated.Music; 
+namespace Bot.DiscordRelated.Music;
 
 public class EmbedPlayerDisplay : PlayerDisplayBase {
     private readonly IArtworkService _artworkService;
@@ -383,8 +382,8 @@ public class EmbedPlayerDisplay : PlayerDisplayBase {
             var artwork = await track.ResolveArtwork(_artworkService);
             _embedBuilder
                 .WithAuthor(track!.Author.SafeSubstring(Constants.MaxEmbedAuthorLength, "...").IsBlank("Unknown"), artwork?.ToString())
-                .WithTitle(MusicController.EscapeTrack(track!.Title).SafeSubstring(EmbedBuilder.MaxTitleLength, "...")!)
-                .WithUrl(track.Source!);
+                .WithTitle(track.Title.RemoveNonPrintableChars().SafeSubstring(EmbedBuilder.MaxTitleLength, "...")!)
+                .WithUrl(track.Uri?.ToString()!);
         }
         else {
             _embedBuilder.Author = new EmbedAuthorBuilder();
@@ -443,7 +442,7 @@ public class EmbedPlayerDisplay : PlayerDisplayBase {
 
             string GetTrackString(string title, int trackNumber, bool isCurrent, char listChar) {
                 var trackNumberString = trackNumber.ToString();
-                var track = MusicController.EscapeTrack(title).SafeSubstring(150, "...");
+                var track = title.RemoveNonPrintableChars().SafeSubstring(150, "...");
                 var prefix = isCurrent ? '@' : ' ';
                 return prefix + trackNumberString + new string(' ', 4 - trackNumberString.Length) + listChar + track;
             }

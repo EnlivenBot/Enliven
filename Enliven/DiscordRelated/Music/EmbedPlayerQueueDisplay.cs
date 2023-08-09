@@ -7,7 +7,6 @@ using Bot.Utilities.Collector;
 using Common;
 using Common.Localization.Entries;
 using Common.Localization.Providers;
-using Common.Music.Controller;
 using Common.Music.Players;
 using Common.Utils;
 using Discord;
@@ -46,7 +45,7 @@ public class EmbedPlayerQueueDisplay : PlayerDisplayBase {
         _paginatedMessage?.SetPages(string.Join("\n",
                 Player!.Playlist.Select((track, i) =>
                     (Player.CurrentTrackIndex == i ? "@" : " ")
-                  + $"{i + 1}: {MusicController.EscapeTrack(Player.Playlist[i].Title)}")),
+                  + $"{i + 1}: {Player.Playlist[i].Title.RemoveNonPrintableChars()}")),
             "```py\n{0}```", 50);
     }
 

@@ -237,12 +237,5 @@ namespace Common.Music.Controller {
 
             return Task.CompletedTask;
         }
-
-        public static string EscapeTrack(string track) {
-            track = track.Replace("'", "");
-            track = track.Replace("\"", "");
-            track = track.Replace("#", "");
-            return track;
-        }
     }
 }

@@ -51,8 +51,7 @@ public sealed class MusicCommands : MusicModuleBase {
     public async Task Jump([Summary("jump0_0s")] int index = 1) {
         await Player.SkipAsync(index, true);
         Player.WriteToQueueHistory(Loc.Get("MusicQueues.Jumped", Context.User.Username,
-            Player.CurrentTrackIndex + 1,
-            Common.Music.Controller.MusicController.EscapeTrack(Player.CurrentTrack!.Title).SafeSubstring(0, 40) + "..."));
+            Player.CurrentTrackIndex + 1, Player.CurrentTrack!.Title.RemoveNonPrintableChars().SafeSubstring(0, 40) + "..."));
     }
 
     [RequireNonEmptyPlaylist]
@@ -227,7 +226,7 @@ public sealed class MusicCommands : MusicModuleBase {
             var deletedTrack = Player.Playlist[start - 1];
             Player.Playlist.RemoveRange(start - 1, countToRemove);
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.Remove", Context.User.Username, start,
-                Common.Music.Controller.MusicController.EscapeTrack(deletedTrack.Title.SafeSubstring(30)!)));
+                deletedTrack.Title.RemoveNonPrintableChars().SafeSubstring(30)));
         }
         else {
             Player.Playlist.RemoveRange(start - 1, countToRemove);
