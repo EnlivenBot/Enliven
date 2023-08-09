@@ -16,9 +16,9 @@ using VkNet.Utils;
 namespace Bot.Music.Vk;
 
 public class VkMusicResolver : IMusicResolver {
-    private static readonly Regex VkTrackRegex = new(@"https:\/\/vk\.com\/audio(-?\d*_\d*)", RegexOptions.Compiled);
-    private static readonly Regex VkAlbumRegex = new(@"https:\/\/vk\.com\/music\/album\/(-?\d*)_(\d*)_(\S*)", RegexOptions.Compiled);
-    private static readonly Regex VkUserRegex = new(@"https:\/\/vk\.com\/audios(-?\d*)", RegexOptions.Compiled);
+    private static readonly Regex VkTrackRegex = new(@"https://vk\.com/audio(-?\d*_\d*)", RegexOptions.Compiled);
+    private static readonly Regex VkAlbumRegex = new(@"https://vk\.com/music/album/(-?\d*)_(\d*)_(\S*)", RegexOptions.Compiled);
+    private static readonly Regex VkUserRegex = new(@"https://vk\.com/audios(-?\d*)", RegexOptions.Compiled);
     private readonly VkCredentials _credentials;
     private readonly ILogger<VkMusicResolver> _logger;
     private readonly IVkApi _vkApi;
