@@ -279,10 +279,13 @@ namespace Common {
 
         [return: NotNullIfNotNull("input")]
         public static string? RemoveNonPrintableChars(this string? input) {
-            return input?
+            if (input is null) return null;
+
+            return new StringBuilder(input)
                 .Replace("'", "")
                 .Replace("\"", "")
-                .Replace("#", "");
+                .Replace("#", "")
+                .ToString();
         }
     }
 }

@@ -30,6 +30,9 @@ using Tyrrrz.Extensions;
 namespace Bot.DiscordRelated.Music;
 
 public class EmbedPlayerDisplay : PlayerDisplayBase {
+    public const int TrackAuthorMaxLength = 70;
+    public const int TrackTitleMaxLength = 170;
+
     private readonly IArtworkService _artworkService;
     private readonly CommandHandlerService _commandHandlerService;
     private readonly SingleTask _controlMessageSendTask;
@@ -381,8 +384,8 @@ public class EmbedPlayerDisplay : PlayerDisplayBase {
         else if (track != null && (Player.State != PlayerState.NotPlaying || Player.State != PlayerState.NotConnected || Player.State != PlayerState.Destroyed)) {
             var artwork = await track.ResolveArtwork(_artworkService);
             _embedBuilder
-                .WithAuthor(track!.Author.SafeSubstring(Constants.MaxEmbedAuthorLength, "...").IsBlank("Unknown"), artwork?.ToString())
-                .WithTitle(track.Title.RemoveNonPrintableChars().SafeSubstring(EmbedBuilder.MaxTitleLength, "...")!)
+                .WithAuthor(track!.Author.SafeSubstring(TrackAuthorMaxLength, "...").IsBlank("Unknown"), artwork?.ToString())
+                .WithTitle(track.Title.RemoveNonPrintableChars().SafeSubstring(TrackTitleMaxLength, "...")!)
                 .WithUrl(track.Uri?.ToString()!);
         }
         else {
