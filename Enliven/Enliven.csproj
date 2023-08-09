@@ -13,11 +13,11 @@
     <ItemGroup>
         <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="8.0.0"/>
         <PackageReference Include="SpotifyAPI.Web" Version="7.0.0"/>
-        <PackageReference Include="VkNet" Version="1.72.0"/>
-        <PackageReference Include="VkNet.AudioBypassService" Version="1.7.4"/>
+        <PackageReference Include="VkNet" Version="1.75.0"/>
+        <PackageReference Include="VkNet.AudioBypassService" Version="1.7.6"/>
         <PackageReference Include="Xabe.FFmpeg.Downloader" Version="5.2.6"/>
         <PackageReference Include="YandexMusicResolver" Version="5.1.0"/>
-        <PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.0"/>
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.1"/>
     </ItemGroup>
 
     <ItemGroup>

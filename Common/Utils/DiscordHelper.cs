@@ -5,9 +5,8 @@ using Discord;
 
 namespace Common.Utils {
     public static class DiscordHelper {
-        private static readonly Regex AttachmentParseRegex = new Regex(@"\/(\d+)\/([^\/]+\.\S+)");
-
         public delegate bool NeedFetchSize(string format);
+        private static readonly Regex AttachmentParseRegex = new Regex(@"\/(\d+)\/([^\/]+\.\S+)");
         public static NeedFetchSize AlwaysFetch = _ => true;
         public static NeedFetchSize NeverFetch = _ => false;
         public static async Task<IAttachment> ParseAttachmentFromUrlAsync(string url, NeedFetchSize needFetchSizePredicate) {
@@ -23,7 +22,7 @@ namespace Common.Utils {
 
             return new FakeAttachment(id, name, url, url, (int)size, 0, 0);
         }
-        
+
         private class FakeAttachment : IAttachment {
             public FakeAttachment(ulong id, string filename, string url, string proxyUrl, int size, int? height, int? width) {
                 Id = id;
@@ -44,6 +43,12 @@ namespace Common.Utils {
             public bool Ephemeral { get; }
             public string Description { get; }
             public string ContentType { get; }
+
+            /// <inheritdoc />
+            public double? Duration { get; }
+
+            /// <inheritdoc />
+            public string Waveform { get; }
         }
     }
 }

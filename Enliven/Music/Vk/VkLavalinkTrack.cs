@@ -6,7 +6,7 @@ using Common.Music.Tracks;
 using Discord;
 using Lavalink4NET.Decoding;
 using Lavalink4NET.Player;
-using VkNet.Model.Attachments;
+using VkNet.Model;
 
 namespace Bot.Music.Vk;
 

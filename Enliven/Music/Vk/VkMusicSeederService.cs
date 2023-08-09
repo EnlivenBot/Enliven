@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using VkNet.Model.Attachments;
+using VkNet.Model;
 using Xabe.FFmpeg;
 using Xabe.FFmpeg.Downloader;
 

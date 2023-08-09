@@ -11,7 +11,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using VkNet.Abstractions;
 using VkNet.Model;
-using VkNet.Model.Attachments;
 using VkNet.Utils;
 
 namespace Bot.Music.Vk;
