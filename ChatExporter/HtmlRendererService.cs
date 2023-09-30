@@ -4,15 +4,16 @@ using System.Threading;
 using System.Threading.Tasks;
 using NLog;
 using PuppeteerSharp;
+using PuppeteerSharp.BrowserData;
 
 namespace ChatExporter {
     public sealed class HtmlRendererService : IDisposable, IAsyncDisposable {
+        private readonly Task<InstalledBrowser>? _browserDownloadingTask;
         private readonly SemaphoreSlim _semaphoreSlim = new(1);
         private IBrowser? _browser;
-        private Task<RevisionInfo>? _browserDownloadingTask;
         public HtmlRendererService(ILogger logger) {
             logger.Info("Starting Chrome downloading");
-            _browserDownloadingTask = new BrowserFetcher().DownloadAsync(BrowserFetcher.DefaultChromiumRevision);
+            _browserDownloadingTask = new BrowserFetcher().DownloadAsync(BrowserTag.Stable);
             _browserDownloadingTask.ContinueWith(task => {
                 logger.Fatal(task.Exception?.Flatten(), "Chrome downloaded failed");
             }, TaskContinuationOptions.OnlyOnFaulted);
@@ -31,7 +32,7 @@ namespace ChatExporter {
 
         private async Task<IBrowser> InitializeBrowser() {
             if (_browserDownloadingTask == null) {
-                throw new Exception("HtmlRendererService start initialization only after OnPostDiscordStart call (after starting Discord client)");
+                throw new InvalidOperationException("HtmlRendererService start initialization only after OnPostDiscordStart call (after starting Discord client)");
             }
 
             await _semaphoreSlim.WaitAsync();
@@ -56,7 +57,7 @@ namespace ChatExporter {
         }
 
         public async Task<MemoryStream> RenderHtmlToStream(string html, int? pageWidth = null) {
-            var tempFileName = Path.GetTempFileName();
+            var tempFileName = Path.GetRandomFileName();
             try {
                 await RenderHtml(html, tempFileName, pageWidth);
                 return new MemoryStream(await File.ReadAllBytesAsync(tempFileName));
