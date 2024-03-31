@@ -32,26 +32,8 @@ The best opportunities for logging messages.
      * This and more in one control message:  
      <img src="https://gitlab.com/enlivenbot/enliven/-/wikis/uploads/e0810f0e0e8ca07b5bb202286181ac8d/image.png" />
    * Various music sources
-     * Youtube, Twitch, SoundCloud and all [supported by youtube-dl sites](https://ytdl-org.github.io/youtube-dl/supportedsites.html)
-     * Radio
-     * Spotify
-     * Yandex Music
-     * Live streams
    * Custom playlists
    * Multiple player nodes
- * Logging
-   * Collects a full changes history
-   * With attachment links
-   * Display all message changes in one place
-   * Fully configurable
-   * Export changes history to image
-     * Highlighting deletions and additions
-     * Full support for rendering:
-       * Emote
-       * Custom emoji
-       * Links
-       * Mentions
-     * [Example result (warning: *large image*)](https://cdn.discordapp.com/attachments/667271058461687809/722864116741439629/History-672479528634941440-722861553564778588.png)
  * Multilingual
 
 ## Getting started
