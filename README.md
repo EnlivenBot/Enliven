@@ -39,13 +39,11 @@ The best opportunities for logging messages.
 ## Getting started
 
 1. You need to add the bot to your server using [this link][invite]
-2. To find out all available commands use `&help`
+2. To find out all available commands use `/help`
 
 ### Initial Configuration
 
-* The default prefix for all commands is `&` (*or bot user mention*) by default. Set a custom server prefix with the `setprefix` command!  
-* You can choose the language for the bot using the `language` command.  
-* You can set up message logging using the `logging` command. 
+* You can choose the language for the bot using the `language` command.
 
 ## Contributing
 
