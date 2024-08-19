@@ -1,35 +1,49 @@
 ﻿using System;
 using Common.Localization.Providers;
 
-namespace Common.Localization.Entries {
-    public class EntryLocalized : EntryString {
-        public static readonly IEntry Success = new EntryLocalized("Commands.Success");
-        public static readonly IEntry Fail = new EntryLocalized("Commands.Fail");
-        public EntryLocalized(string id) : base(id) { }
+namespace Common.Localization.Entries;
 
-        public EntryLocalized(string id, params object[] args) : base(id, args) { }
-        public EntryLocalized(string id, params Func<object>[] args) : base(id, args) { }
+public class EntryLocalized : EntryString
+{
+    public static readonly IEntry Success = new EntryLocalized("Commands.Success");
+    public static readonly IEntry Fail = new EntryLocalized("Commands.Fail");
 
-        public static EntryLocalized Create(string group, string id) {
-            return new EntryLocalized($"{group}.{id}");
-        }
+    public EntryLocalized(string id) : base(id)
+    {
+    }
 
-        public override bool CanGet() {
-            return LocalizationManager.IsLocalizationExists(Content);
-        }
+    public EntryLocalized(string id, params object[] args) : base(id, args)
+    {
+    }
 
-        private protected override string GetFormatString(ILocalizationProvider provider) {
-            return provider.Get(Content);
-        }
+    public EntryLocalized(string id, params Func<object>[] args) : base(id, args)
+    {
+    }
 
-        public new EntryLocalized Add(params string[] args) {
-            base.Add(args);
-            return this;
-        }
+    public static EntryLocalized Create(string group, string id)
+    {
+        return new EntryLocalized($"{group}.{id}");
+    }
 
-        public new EntryLocalized Add(params Func<string>[] args) {
-            base.Add(args);
-            return this;
-        }
+    public override bool CanGet()
+    {
+        return LocalizationManager.IsLocalizationExists(Content);
+    }
+
+    private protected override string GetFormatString(ILocalizationProvider provider)
+    {
+        return provider.Get(Content);
+    }
+
+    public new EntryLocalized Add(params string[] args)
+    {
+        base.Add(args);
+        return this;
+    }
+
+    public new EntryLocalized Add(params Func<string>[] args)
+    {
+        base.Add(args);
+        return this;
     }
 }

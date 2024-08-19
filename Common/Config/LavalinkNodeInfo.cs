@@ -1,8 +1,10 @@
-namespace Common.Config {
-    public struct LavalinkNodeInfo {
-        public string RestUri { get; set; }
-        public string WebSocketUri { get; set; }
-        public string Password { get; set; }
-        public string Name { get; set; }
-    }
+using System;
+
+namespace Common.Config;
+
+public struct LavalinkNodeInfo
+{
+    public Uri RestUri { get; set; }
+    public string Password { get; set; }
+    public string Name { get; set; }
 }

@@ -2,24 +2,31 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Common.Utils {
-    public class Disposables : IDisposable {
-        private readonly List<IDisposable> _disposables = new List<IDisposable>();
+namespace Common.Utils;
 
-        public Disposables() { }
+public class Disposables : IDisposable
+{
+    private readonly List<IDisposable> _disposables = new();
 
-        public Disposables(params IDisposable[] disposables) {
-            _disposables = disposables.ToList();
-        }
+    public Disposables()
+    {
+    }
 
-        public Disposables(IEnumerable<IDisposable> disposables) {
-            _disposables = disposables.ToList();
-        }
+    public Disposables(params IDisposable[] disposables)
+    {
+        _disposables = disposables.ToList();
+    }
 
-        public void Dispose() {
-            foreach (var disposable in _disposables.ToList()) {
-                disposable.Dispose();
-            }
+    public Disposables(IEnumerable<IDisposable> disposables)
+    {
+        _disposables = disposables.ToList();
+    }
+
+    public void Dispose()
+    {
+        foreach (var disposable in _disposables.ToList())
+        {
+            disposable.Dispose();
         }
     }
 }

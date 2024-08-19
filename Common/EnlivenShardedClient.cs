@@ -5,75 +5,89 @@ using System.Threading.Tasks;
 using Discord;
 using Discord.WebSocket;
 
-namespace Common {
-    public class EnlivenShardedClient : DiscordShardedClient {
-        private readonly TaskCompletionSource<object> _readyTaskCompletionSource = new();
-        private readonly Subject<SocketInteraction> _interactionCreatedSubject = new();
-        private readonly Subject<SocketMessage> _messageReceivedSubject = new();
-        public EnlivenShardedClient() : base() {
-            SubscribeToEvents();
-            SubscribeToMessageComponents();
-        }
+namespace Common;
 
-        public EnlivenShardedClient(DiscordSocketConfig config) : base(config) {
-            SubscribeToEvents();
-            SubscribeToMessageComponents();
-        }
+public class EnlivenShardedClient : DiscordShardedClient
+{
+    private readonly Subject<SocketInteraction> _interactionCreatedSubject = new();
+    private readonly Subject<SocketMessage> _messageReceivedSubject = new();
+    private readonly TaskCompletionSource<object> _readyTaskCompletionSource = new();
 
-        public EnlivenShardedClient(int[] ids) : base(ids) {
-            SubscribeToEvents();
-            SubscribeToMessageComponents();
-        }
+    public EnlivenShardedClient() : base()
+    {
+        SubscribeToEvents();
+        SubscribeToMessageComponents();
+    }
 
-        public EnlivenShardedClient(int[] ids, DiscordSocketConfig config) : base(ids, config) {
-            SubscribeToEvents();
-            SubscribeToMessageComponents();
-        }
+    public EnlivenShardedClient(DiscordSocketConfig config) : base(config)
+    {
+        SubscribeToEvents();
+        SubscribeToMessageComponents();
+    }
 
-        public bool IsReady => Ready.IsCompleted;
-        public Task Ready => _readyTaskCompletionSource.Task;
-        public IObservable<SocketMessageComponent> MessageComponentUse { get; private set; } = null!;
-        public IObservable<SocketInteraction> InteractionCreate { get; private set; } = null!;
+    public EnlivenShardedClient(int[] ids) : base(ids)
+    {
+        SubscribeToEvents();
+        SubscribeToMessageComponents();
+    }
 
-        private void SubscribeToEvents() {
-            ShardReady += OnShardReady;
-            InteractionCreated += OnInteractionCreated;
-            MessageReceived += OnMessageReceived;
-        }
+    public EnlivenShardedClient(int[] ids, DiscordSocketConfig config) : base(ids, config)
+    {
+        SubscribeToEvents();
+        SubscribeToMessageComponents();
+    }
 
-        private Task OnShardReady(DiscordSocketClient client) {
-            _readyTaskCompletionSource.TrySetResult(true);
-            return Task.CompletedTask;
-        }
+    public bool IsReady => Ready.IsCompleted;
+    public Task Ready => _readyTaskCompletionSource.Task;
+    public IObservable<SocketMessageComponent> MessageComponentUse { get; private set; } = null!;
+    public IObservable<SocketInteraction> InteractionCreate { get; private set; } = null!;
 
-        private Task OnInteractionCreated(SocketInteraction interaction) {
-            _interactionCreatedSubject.OnNext(interaction);
-            return Task.CompletedTask;
-        }
+    private void SubscribeToEvents()
+    {
+        ShardReady += OnShardReady;
+        InteractionCreated += OnInteractionCreated;
+        MessageReceived += OnMessageReceived;
+    }
 
-        private Task OnMessageReceived(SocketMessage message) {
-            _messageReceivedSubject.OnNext(message);
-            return Task.CompletedTask;
-        }
+    private Task OnShardReady(DiscordSocketClient client)
+    {
+        _readyTaskCompletionSource.TrySetResult(true);
+        return Task.CompletedTask;
+    }
 
-        private void SubscribeToMessageComponents() {
-            InteractionCreate = _interactionCreatedSubject.AsObservable();
-            MessageComponentUse = _interactionCreatedSubject
-                .Where(interaction => interaction.Type == InteractionType.MessageComponent)
-                .Select(interaction => (SocketMessageComponent)interaction)
-                .AsObservable();
-        }
+    private Task OnInteractionCreated(SocketInteraction interaction)
+    {
+        _interactionCreatedSubject.OnNext(interaction);
+        return Task.CompletedTask;
+    }
 
-        public async Task<IUser?> GetUserAsync(ulong id) {
-            return GetUser(id) ?? (IUser)await Rest.GetUserAsync(id);
-        }
+    private Task OnMessageReceived(SocketMessage message)
+    {
+        _messageReceivedSubject.OnNext(message);
+        return Task.CompletedTask;
+    }
 
-        public async Task<IChannel?> GetChannelAsync(ulong id) {
-            return GetChannel(id) ?? (IChannel)await Rest.GetChannelAsync(id);
-        }
+    private void SubscribeToMessageComponents()
+    {
+        InteractionCreate = _interactionCreatedSubject.AsObservable();
+        MessageComponentUse = _interactionCreatedSubject
+            .Where(interaction => interaction.Type == InteractionType.MessageComponent)
+            .Select(interaction => (SocketMessageComponent)interaction)
+            .AsObservable();
+    }
 
-        public async Task<IGuild?> GetGuildAsync(ulong id) {
-            return GetGuild(id) ?? (IGuild)await Rest.GetGuildAsync(id);
-        }
+    public async Task<IUser?> GetUserAsync(ulong id)
+    {
+        return GetUser(id) ?? (IUser)await Rest.GetUserAsync(id);
+    }
+
+    public async Task<IChannel?> GetChannelAsync(ulong id)
+    {
+        return GetChannel(id) ?? (IChannel)await Rest.GetChannelAsync(id);
+    }
+
+    public async Task<IGuild?> GetGuildAsync(ulong id)
+    {
+        return GetGuild(id) ?? (IGuild)await Rest.GetGuildAsync(id);
     }
 }

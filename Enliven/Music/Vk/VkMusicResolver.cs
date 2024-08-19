@@ -1,30 +1,32 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Common.Config;
 using Common.Music.Resolvers;
-using Lavalink4NET.Cluster;
-using Lavalink4NET.Player;
+using Lavalink4NET;
+using Lavalink4NET.Rest;
+using Lavalink4NET.Rest.Entities.Tracks;
+using Lavalink4NET.Tracks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using VkNet.Abstractions;
 using VkNet.Model;
-using VkNet.Utils;
 
 namespace Bot.Music.Vk;
 
-public class VkMusicResolver : IMusicResolver {
-    private static readonly Regex VkTrackRegex = new(@"https://vk\.com/audio(-?\d*_\d*)", RegexOptions.Compiled);
-    private static readonly Regex VkAlbumRegex = new(@"https://vk\.com/music/album/(-?\d*)_(\d*)_(\S*)", RegexOptions.Compiled);
-    private static readonly Regex VkUserRegex = new(@"https://vk\.com/audios(-?\d*)", RegexOptions.Compiled);
+public class VkMusicResolver : MusicResolverBase<VkLavalinkTrack, VkTrackData>
+{
     private readonly VkCredentials _credentials;
     private readonly ILogger<VkMusicResolver> _logger;
     private readonly IVkApi _vkApi;
     private readonly VkMusicSeederService _vkSeederService;
     private bool _isAuthAttempted;
-    public VkMusicResolver(IVkApi vkApi, IOptions<VkCredentials> credentials, VkMusicSeederService vkSeederService, ILogger<VkMusicResolver> logger) {
+
+    public VkMusicResolver(IVkApi vkApi, IOptions<VkCredentials> credentials, VkMusicSeederService vkSeederService,
+        ILogger<VkMusicResolver> logger)
+    {
         _vkApi = vkApi;
         _vkSeederService = vkSeederService;
         _credentials = credentials.Value;
@@ -32,64 +34,54 @@ public class VkMusicResolver : IMusicResolver {
         _ = InitializeVkNet();
     }
 
-    /// <inheritdoc />
-    public async Task<IEnumerable<LavalinkTrack>> Resolve(LavalinkCluster cluster, string query) {
-        if (!_vkApi.IsAuthorized || !_vkSeederService.IsVkSeedAvailable) return Array.Empty<LavalinkTrack>();
+    public override bool IsAvailable => _vkApi.IsAuthorized && _vkSeederService.IsVkSeedAvailable;
 
-        var fetchedAudios = await FetchFromVkAsync(query);
-        if (fetchedAudios is not null) {
-            return fetchedAudios
-                .Where(audio => audio.Url is not null)
-                .Select(audio => VkLavalinkTrack.CreateInstance(audio, _vkSeederService));
-        }
-
-        return Array.Empty<LavalinkTrack>();
-    }
-
-    private async Task<IEnumerable<Audio>?> FetchFromVkAsync(string query) {
-        var trackMatch = VkTrackRegex.Match(query);
-        if (trackMatch.Success) {
-            return await _vkApi.Audio.GetByIdAsync(new[] { trackMatch.Groups[1].Value });
-        }
-
-        var albumMatch = VkAlbumRegex.Match(query);
-        if (albumMatch.Success) {
-            return await _vkApi.CallAsync<VkCollection<Audio>>("audio.get", new VkParameters() {
-                {
-                    "owner_id", long.Parse(albumMatch.Groups[1].Value)
-                }, {
-                    "playlist_id", long.Parse(albumMatch.Groups[2].Value)
-                }, {
-                    "access_key", albumMatch.Groups[3].Value
-                }
-            });
-        }
-
-        var userMatch = VkUserRegex.Match(query);
-        if (userMatch.Success) {
-            return await _vkApi.CallAsync<VkCollection<Audio>>("audio.get", new VkParameters() {
-                {
-                    "owner_id", long.Parse(userMatch.Groups[1].Value)
-                }
-            });
-        }
-
-        return null;
-    }
-
-    private async Task InitializeVkNet() {
+    private async Task InitializeVkNet()
+    {
         if (_isAuthAttempted || _vkApi.IsAuthorized) return;
         _isAuthAttempted = true;
 
-        if (string.IsNullOrEmpty(_credentials.AccessToken)) _logger.LogInformation("VK access token doesn't provided. VK resolving disabled");
+        if (string.IsNullOrEmpty(_credentials.AccessToken))
+            _logger.LogInformation("VK access token doesn't provided. VK resolving disabled");
 
         _logger.LogInformation("Trying to authorize in VK, using provided access token");
-        try {
+        try
+        {
             await _vkApi.AuthorizeAsync(new ApiAuthParams() { AccessToken = _credentials.AccessToken });
             _logger.LogInformation("VK authorization successful");
         }
-        catch (Exception e) {
-            _logger.LogInformation(e, "VK authorization doesn't completed. Probably something wrong with the token. VK resolving disabled");
+        catch (Exception e)
+        {
+            _logger.LogInformation(e,
+                "VK authorization doesn't completed. Probably something wrong with the token. VK resolving disabled");
         }
+    }
+
+    public override bool CanResolve(string query) => new VkUrl(query).IsValid;
+
+    public override async ValueTask<TrackLoadResult> Resolve(IAudioService cluster,
+        LavalinkApiResolutionScope resolutionScope, string query)
+    {
+        var vkUrl = new VkUrl(query);
+        var audios = await vkUrl.Resolve(_vkApi);
+        var vkLavalinkTracks = audios
+            .Select(audio => new VkLavalinkTrack(audio, _vkSeederService))
+            .Cast<LavalinkTrack>();
+        return TrackLoadResult.CreateSearch(vkLavalinkTracks.ToImmutableArray());
+    }
+
+    protected override ValueTask<IEncodedTrack> EncodeTrackInternal(VkLavalinkTrack track)
+    {
+        return new ValueTask<IEncodedTrack>(new VkTrackData(track.Audio.Id, track.Audio.Url.ToString()));
+    }
+
+    public override async ValueTask<IReadOnlyList<LavalinkTrack>> DecodeTracksInternal(IEnumerable<VkTrackData> tracks)
+    {
+        var ids = tracks.Select(data => data.Id?.ToString() ?? new VkUrl(data.Url).Id);
+        var vkTracks = await _vkApi.Audio.GetByIdAsync(ids);
+        return vkTracks
+            .Select(audio => new VkLavalinkTrack(audio, _vkSeederService))
+            .Cast<LavalinkTrack>()
+            .ToImmutableArray();
     }
 }

@@ -1,13 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Common;
-using Common.Music;
+using Common.Config;
 using Common.Music.Resolvers;
-using Lavalink4NET.Cluster;
-using Lavalink4NET.Player;
+using Common.Music.Resolvers.Lavalink;
+using Lavalink4NET;
+using Lavalink4NET.Rest;
+using Lavalink4NET.Rest.Entities.Tracks;
+using Lavalink4NET.Tracks;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using SpotifyAPI.Web;
+
 #pragma warning disable 1998
 
 #pragma warning disable 8604
@@ -15,62 +22,97 @@ using SpotifyAPI.Web;
 
 namespace Bot.Music.Spotify;
 
-public class SpotifyMusicResolver : IMusicResolver, ISpotifyAssociationCreator {
+public class SpotifyMusicResolver : IMusicResolver
+{
     private readonly LavalinkMusicResolver _lavalinkMusicResolver;
-    private readonly ISpotifyAssociationProvider _spotifyAssociationProvider;
-    private readonly SpotifyClientResolver _spotifyClientResolver;
+    private readonly ILogger<SpotifyMusicResolver> _logger;
+    private readonly SpotifyCredentials _spotifyCredentials;
+    private SpotifyClient? _spotifyClient;
 
-    public SpotifyMusicResolver(ISpotifyAssociationProvider spotifyAssociationProvider, SpotifyClientResolver spotifyClientResolver, LavalinkMusicResolver lavalinkMusicResolver) {
-        _spotifyClientResolver = spotifyClientResolver;
+    public SpotifyMusicResolver(LavalinkMusicResolver lavalinkMusicResolver,
+        IOptions<SpotifyCredentials> options, ILogger<SpotifyMusicResolver> logger)
+    {
         _lavalinkMusicResolver = lavalinkMusicResolver;
-        _spotifyAssociationProvider = spotifyAssociationProvider;
+        _logger = logger;
+        _spotifyCredentials = options.Value;
+
+        _ = InitializeSpotifyInternal();
     }
 
-    public async Task<IEnumerable<LavalinkTrack>> Resolve(LavalinkCluster cluster, string query) {
-        var url = new SpotifyUrl(query);
+    public bool IsAvailable => _spotifyClient != null;
+    public bool CanResolve(string query) => new SpotifyUrl(query).IsValid;
 
-        if (!url.IsValid || await _spotifyClientResolver.GetSpotify() is not { } client) return Array.Empty<LavalinkTrack>();
-        return await Resolve(url, cluster, client);
+    public async ValueTask<TrackLoadResult> Resolve(IAudioService cluster, LavalinkApiResolutionScope resolutionScope,
+        string query)
+    {
+        var spotifyClient = _spotifyClient!;
+        var spotifyUrl = new SpotifyUrl(query);
+        var spotifyTrackWrappers = await spotifyUrl.Resolve(spotifyClient);
+        var spotifyLavalinkTracks =
+            await ResolveInternal(cluster, resolutionScope, spotifyTrackWrappers, spotifyClient);
+
+        return TrackLoadResult.CreateSearch(spotifyLavalinkTracks);
     }
 
-    public async Task<SpotifyAssociation?> ResolveAssociation(SpotifyTrackWrapper spotifyTrackWrapper, LavalinkCluster lavalinkCluster) {
-        var cachedTrack = _spotifyAssociationProvider.Get(spotifyTrackWrapper.Id);
-        if (cachedTrack != null) return cachedTrack;
+    public bool CanEncodeTrack(LavalinkTrack track) => false;
 
-        try {
-            var spotifyClient = (await _spotifyClientResolver.GetSpotify())!;
-            var trackInfo = await spotifyTrackWrapper.GetTrackInfo(spotifyClient);
-            var lavalinkTracks = await _lavalinkMusicResolver.Resolve(lavalinkCluster, trackInfo);
-            var spotifyTrackAssociation = _spotifyAssociationProvider.Create(spotifyTrackWrapper.Id, lavalinkTracks.First().Identifier);
-            spotifyTrackAssociation.Save();
-            return spotifyTrackAssociation;
-        }
-        catch (Exception) {
-            // ignored
-        }
+    public ValueTask<IEncodedTrack> EncodeTrack(LavalinkTrack track) => throw new NotSupportedException();
 
-        return null;
+    public bool CanDecodeTrack(IEncodedTrack track) => false;
+
+    public ValueTask<IReadOnlyList<LavalinkTrack>> DecodeTracks(params IEncodedTrack[] tracks) =>
+        throw new NotSupportedException();
+
+    private async Task<ImmutableArray<LavalinkTrack>> ResolveInternal(IAudioService cluster,
+        LavalinkApiResolutionScope resolutionScope,
+        IReadOnlyCollection<SpotifyTrackWrapper> spotifyTrackWrappers, SpotifyClient spotifyClient)
+    {
+        var lavalinkTracks = await spotifyTrackWrappers
+            .Select(async wrapper => (
+                await cluster.Tracks.LoadTrackAsync(await wrapper.GetTrackInfo(spotifyClient),
+                    TrackSearchMode.SoundCloud, resolutionScope), wrapper))
+            .PipeEveryAsync(x =>
+                x.Item1 is not null ? new SpotifyLavalinkTrack(x.wrapper, x.Item1, _spotifyClient) : null)
+            .WhenAll();
+
+        var spotifyLavalinkTracks = lavalinkTracks
+            .Where(track => track is not null)
+            .OfType<LavalinkTrack>()
+            .ToImmutableArray();
+        return spotifyLavalinkTracks;
     }
 
-    public async Task<IEnumerable<LavalinkTrack>> Resolve(SpotifyUrl url, LavalinkCluster cluster, SpotifyClient? spotify = null) {
-        try {
-            spotify ??= await _spotifyClientResolver.GetSpotify();
-            var spotifyTracks = await url.Resolve(spotify);
-            var lavalinkTracks = await spotifyTracks
-                .Select(async s => {
-                        var association = await ResolveAssociation(s, cluster);
-                        return association != null ? new SpotifyLavalinkTrack(s, association.GetBestAssociation().Association, spotify) : null;
-                    }
-                )
-                .WhenAllAsync()
-                .PipeAsync(tracks => tracks
-                    .OfType<LavalinkTrack>()
-                );
-
-            return lavalinkTracks;
+    private async Task InitializeSpotifyInternal()
+    {
+        if (_spotifyCredentials.SpotifyClientID == null || _spotifyCredentials.SpotifyClientSecret == null)
+        {
+            _logger.LogWarning("Spotify credentials not supplied. Spotify disabled");
         }
-        catch (Exception) {
-            throw new TrackNotFoundException(false);
+
+        try
+        {
+            var spotifyConfig = SpotifyClientConfig.CreateDefault();
+
+            var request = new ClientCredentialsRequest(_spotifyCredentials.SpotifyClientID,
+                _spotifyCredentials.SpotifyClientSecret);
+            // If credentials wrong, this \/ line will throw the exception
+            await new OAuthClient(spotifyConfig).RequestToken(request);
+
+            _logger.LogInformation("Spotify auth completed");
+
+            var actualConfig = SpotifyClientConfig
+                .CreateDefault()
+                .WithAuthenticator(new ClientCredentialsAuthenticator(_spotifyCredentials.SpotifyClientID,
+                    _spotifyCredentials.SpotifyClientSecret));
+            _spotifyClient = new SpotifyClient(actualConfig);
+        }
+        catch (APIException apiException)
+        {
+            _logger.LogError(apiException, "Wrong Spotify credentials. Check credentials in options file");
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Spotify auth failed due to unknown reasons. We will try again later");
         }
     }
 }

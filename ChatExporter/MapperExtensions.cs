@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
-using DiscordChatExporter.Core.Discord;
-using DiscordChatExporter.Core.Discord.Data;
 using Discord;
 using Discord.Rest;
 using Discord.WebSocket;
+using DiscordChatExporter.Core.Discord;
+using DiscordChatExporter.Core.Discord.Data;
 using DiscordChatExporter.Core.Discord.Data.Common;
 using DiscordChatExporter.Core.Utils.Extensions;
 using NLog;
@@ -21,10 +21,12 @@ using Embed = DiscordChatExporter.Core.Discord.Data.Embeds.Embed;
 using Emoji = DiscordChatExporter.Core.Discord.Data.Emoji;
 using MessageReference = DiscordChatExporter.Core.Discord.Data.MessageReference;
 
-namespace ChatExporter {
-    internal static class MapperExtensions {
-        private static ILogger Logger = LogManager.GetCurrentClassLogger();
-        
+namespace ChatExporter
+{
+    internal static class MapperExtensions
+    {
+        private static ILogger _logger = LogManager.GetCurrentClassLogger();
+
         public static User ToUser(this IUser user) =>
             new User(new Snowflake(user.Id), user.IsBot, user.DiscriminatorValue, user.Username, user.GetAvatarUrl());
 
@@ -34,14 +36,16 @@ namespace ChatExporter {
         public static Guild ToGuild(this IGuild guild) =>
             new Guild(new Snowflake(guild.Id), guild.Name, guild.IconUrl);
 
-        private static ChannelCategory GetFallbackCategory(ChannelKind channelKind) {
-            var name = channelKind switch {
-                ChannelKind.GuildTextChat       => "Text",
-                ChannelKind.DirectTextChat      => "Private",
+        private static ChannelCategory GetFallbackCategory(ChannelKind channelKind)
+        {
+            var name = channelKind switch
+            {
+                ChannelKind.GuildTextChat => "Text",
+                ChannelKind.DirectTextChat => "Private",
                 ChannelKind.DirectGroupTextChat => "Group",
-                ChannelKind.GuildNews           => "News",
-                ChannelKind.GuildStore          => "Store",
-                _                               => "Default"
+                ChannelKind.GuildNews => "News",
+                ChannelKind.GuildStore => "Store",
+                _ => "Default"
             };
             return new ChannelCategory(Snowflake.Zero, name, null);
         }
@@ -50,20 +54,24 @@ namespace ChatExporter {
             new ChannelCategory(new Snowflake(categoryChannel.Id), categoryChannel.Name, categoryChannel.Position);
 
         public static ChannelKind ToChannelKind(this IChannel channel) =>
-            channel switch {
+            channel switch
+            {
                 ICategoryChannel _ => ChannelKind.GuildCategory,
-                IDMChannel _       => ChannelKind.DirectTextChat,
-                IGroupChannel _    => ChannelKind.DirectGroupTextChat,
-                INewsChannel _     => ChannelKind.GuildNews,
-                IVoiceChannel _    => ChannelKind.GuildVoiceChat,
-                ITextChannel _     => ChannelKind.GuildTextChat,
-                _                  => throw new ArgumentOutOfRangeException(nameof(channel), channel, null)
+                IDMChannel _ => ChannelKind.DirectTextChat,
+                IGroupChannel _ => ChannelKind.DirectGroupTextChat,
+                INewsChannel _ => ChannelKind.GuildNews,
+                IVoiceChannel _ => ChannelKind.GuildVoiceChat,
+                ITextChannel _ => ChannelKind.GuildTextChat,
+                _ => throw new ArgumentOutOfRangeException(nameof(channel), channel, null)
             };
 
         private static async Task<ChannelCategory> GetCategory(IChannel channel, ChannelKind kind) =>
-            channel is INestedChannel nestedChannel ? ToChannelCategory(await nestedChannel.GetCategoryAsync()) : GetFallbackCategory(kind);
+            channel is INestedChannel nestedChannel
+                ? ToChannelCategory(await nestedChannel.GetCategoryAsync())
+                : GetFallbackCategory(kind);
 
-        public static async Task<Channel> ToChannel(this IChannel channel) {
+        public static async Task<Channel> ToChannel(this IChannel channel)
+        {
             var kind = ToChannelKind(channel);
             var guildId = new Snowflake((channel as IGuildChannel)?.GuildId ?? 0UL);
             var channelCategory = await GetCategory(channel, kind);
@@ -80,7 +88,8 @@ namespace ChatExporter {
         public static string GetEmojiImageUrl(string? id, string name, bool isAnimated)
         {
             // Custom emoji
-            if (!string.IsNullOrWhiteSpace(id)) {
+            if (!string.IsNullOrWhiteSpace(id))
+            {
                 return isAnimated
                     ? $"https://cdn.discordapp.com/emojis/{id}.gif"
                     : $"https://cdn.discordapp.com/emojis/{id}.png";
@@ -95,8 +104,9 @@ namespace ChatExporter {
                 .JoinToString("-");
             return $"https://twemoji.maxcdn.com/2/svg/{twemojiName}.svg";
         }
-        
-        public static Emoji ToEmoji(this IEmote emote) {
+
+        public static Emoji ToEmoji(this IEmote emote)
+        {
             var id = (emote as Emote)?.Id.ToString();
             var isAnimated = (emote as Emote)?.Animated ?? false;
             var imageUrl = GetEmojiImageUrl(id, emote.Name, isAnimated);
@@ -105,22 +115,24 @@ namespace ChatExporter {
 
         public static Reaction ToReaction(this IEmote emoji, ReactionMetadata reactionMetadata) =>
             new Reaction(emoji.ToEmoji(), reactionMetadata.ReactionCount);
-        
+
         public static Attachment ToAttachment(this IAttachment attachment) =>
-            new Attachment(new Snowflake(attachment.Id), attachment.Url, attachment.Filename, attachment.Width, attachment.Height, new FileSize(attachment.Size));
+            new Attachment(new Snowflake(attachment.Id), attachment.Url, attachment.Filename, attachment.Width,
+                attachment.Height, new FileSize(attachment.Size));
 
         public static MessageKind ToMessageKind(this MessageType messageType) =>
-            messageType switch {
-                MessageType.Default              => MessageKind.Default,
-                MessageType.RecipientAdd         => MessageKind.RecipientAdd,
-                MessageType.RecipientRemove      => MessageKind.RecipientRemove,
-                MessageType.Call                 => MessageKind.Call,
-                MessageType.ChannelNameChange    => MessageKind.ChannelNameChange,
-                MessageType.ChannelIconChange    => MessageKind.ChannelIconChange,
+            messageType switch
+            {
+                MessageType.Default => MessageKind.Default,
+                MessageType.RecipientAdd => MessageKind.RecipientAdd,
+                MessageType.RecipientRemove => MessageKind.RecipientRemove,
+                MessageType.Call => MessageKind.Call,
+                MessageType.ChannelNameChange => MessageKind.ChannelNameChange,
+                MessageType.ChannelIconChange => MessageKind.ChannelIconChange,
                 MessageType.ChannelPinnedMessage => MessageKind.ChannelPinnedMessage,
-                MessageType.GuildMemberJoin      => MessageKind.GuildMemberJoin,
-                MessageType.Reply                => MessageKind.Reply,
-                _                                => MessageKind.Default
+                MessageType.GuildMemberJoin => MessageKind.GuildMemberJoin,
+                MessageType.Reply => MessageKind.Reply,
+                _ => MessageKind.Default
             };
 
         public static EmbedAuthor ToEmbedAuthor(this Discord.EmbedAuthor embedAuthor) =>
@@ -134,23 +146,27 @@ namespace ChatExporter {
 
         public static EmbedImage ToEmbedImage(Discord.EmbedImage embedImage) =>
             new EmbedImage(embedImage.Url, embedImage.ProxyUrl, embedImage.Width, embedImage.Height);
-        
+
         public static EmbedImage ToEmbedImage(EmbedThumbnail embedThumbnail) =>
             new EmbedImage(embedThumbnail.Url, embedThumbnail.ProxyUrl, embedThumbnail.Width, embedThumbnail.Height);
 
-        public static Embed ToEmbed(IEmbed embed) {
-            var embedAuthor = embed.Author != null ? ToEmbedAuthor((Discord.EmbedAuthor) embed.Author) : null;
+        public static Embed ToEmbed(IEmbed embed)
+        {
+            var embedAuthor = embed.Author != null ? ToEmbedAuthor((Discord.EmbedAuthor)embed.Author) : null;
             var fields = embed.Fields.Select(ToEmbedField).ToList();
-            var thumbnail = embed.Thumbnail != null ? ToEmbedImage((EmbedThumbnail) embed.Thumbnail) : null;
-            var image = embed.Image != null ? ToEmbedImage((Discord.EmbedImage) embed.Image) : null;
-            var footer = embed.Footer != null ? ToEmbedFooter((Discord.EmbedFooter) embed.Footer) : null;
-            return new Embed(embed.Title, embed.Url, embed.Timestamp, embed.Color, embedAuthor, embed.Description, fields, thumbnail, image, footer);
+            var thumbnail = embed.Thumbnail != null ? ToEmbedImage((EmbedThumbnail)embed.Thumbnail) : null;
+            var image = embed.Image != null ? ToEmbedImage((Discord.EmbedImage)embed.Image) : null;
+            var footer = embed.Footer != null ? ToEmbedFooter((Discord.EmbedFooter)embed.Footer) : null;
+            return new Embed(embed.Title, embed.Url, embed.Timestamp, embed.Color, embedAuthor, embed.Description,
+                fields, thumbnail, image, footer);
         }
 
         public static MessageReference ToMessageReference(Discord.MessageReference messageReference) =>
-            new MessageReference(new Snowflake(messageReference.MessageId.GetValueOrDefault(0)), new Snowflake(messageReference.ChannelId), new Snowflake((ulong) messageReference.GuildId));
+            new MessageReference(new Snowflake(messageReference.MessageId.GetValueOrDefault(0)),
+                new Snowflake(messageReference.ChannelId), new Snowflake((ulong)messageReference.GuildId));
 
-        public static Message ToMessage(this IMessage message) {
+        public static Message ToMessage(this IMessage message)
+        {
             var attachments = message.Attachments.Select(ToAttachment).ToList();
             var embeds = message.Embeds.Select(ToEmbed).ToList();
             var reactions = message.Reactions.Select(item => item.Key.ToReaction(item.Value)).ToList();
@@ -165,37 +181,45 @@ namespace ChatExporter {
         }
 
         [SuppressMessage("ReSharper", "RedundantEnumerableCastCall")]
-        private static List<User> GetMentionedUsers(IMessage message) {
-            try {
-                return (message switch {
-                    RestMessage restMessage     => restMessage.MentionedUsers.Cast<IUser>(),
+        private static List<User> GetMentionedUsers(IMessage message)
+        {
+            try
+            {
+                return (message switch
+                {
+                    RestMessage restMessage => restMessage.MentionedUsers.Cast<IUser>(),
                     SocketMessage socketMessage => socketMessage.MentionedUsers.Cast<IUser>(),
-                    _                           => throw new ArgumentOutOfRangeException(nameof(message))
+                    _ => throw new ArgumentOutOfRangeException(nameof(message))
                 }).Select(user => user.ToUser()).ToList();
             }
-            catch (ArgumentOutOfRangeException e) {
-                Logger.Error(e, "Cannot get MentionedUsers from IMessage");
+            catch (ArgumentOutOfRangeException e)
+            {
+                _logger.Error(e, "Cannot get MentionedUsers from IMessage");
                 return new List<User>();
             }
         }
-        
+
         [SuppressMessage("ReSharper", "RedundantEnumerableCastCall")]
-        private static Message? GetReferencedMessage(IMessage message) {
-            try {
-                return (message switch {
-                    RestFollowupMessage restFollowupMessage       => restFollowupMessage.ReferencedMessage,
+        private static Message? GetReferencedMessage(IMessage message)
+        {
+            try
+            {
+                return (message switch
+                {
+                    RestFollowupMessage restFollowupMessage => restFollowupMessage.ReferencedMessage,
                     RestInteractionMessage restInteractionMessage => restInteractionMessage.ReferencedMessage,
-                    RestSystemMessage restSystemMessage           => null,
-                    RestUserMessage restUserMessage               => restUserMessage.ReferencedMessage,
-                    RestMessage restMessage                       => null,
-                    SocketSystemMessage socketSystemMessage       => null,
-                    SocketUserMessage socketUserMessage           => socketUserMessage.ReferencedMessage,
-                    SocketMessage socketMessage                   => null,
-                    _                                             => throw new ArgumentOutOfRangeException(nameof(message))
+                    RestSystemMessage restSystemMessage => null,
+                    RestUserMessage restUserMessage => restUserMessage.ReferencedMessage,
+                    RestMessage restMessage => null,
+                    SocketSystemMessage socketSystemMessage => null,
+                    SocketUserMessage socketUserMessage => socketUserMessage.ReferencedMessage,
+                    SocketMessage socketMessage => null,
+                    _ => throw new ArgumentOutOfRangeException(nameof(message))
                 })?.ToMessage() ?? null;
             }
-            catch (ArgumentOutOfRangeException e) {
-                Logger.Error(e, "Cannot get ReferencedMessage from IMessage");
+            catch (ArgumentOutOfRangeException e)
+            {
+                _logger.Error(e, "Cannot get ReferencedMessage from IMessage");
                 return null;
             }
         }

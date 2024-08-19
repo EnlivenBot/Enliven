@@ -7,47 +7,60 @@ using Common.Utils;
 using Lavalink4NET.Filters;
 using Tyrrrz.Extensions;
 
-namespace Common.Music.Effects {
-    public class BassBoostEffectSource : IPlayerEffectSource {
-        private static readonly string AvailableBassBoostModes =
-            Enum.GetValues(typeof(BassBoostMode))
-                .Cast<BassBoostMode>()
-                .Select(mode => $"`{mode}`")
-                .JoinToString(", ");
+namespace Common.Music.Effects;
 
-        private static EntryLocalized _parseBassBoostFailedEntry = new EntryLocalized("Music.EffectParseFailedWithDefault", AvailableBassBoostModes, nameof(BassBoostMode.Medium));
+public class BassBoostEffectSource : IPlayerEffectSource
+{
+    private static readonly string AvailableBassBoostModes =
+        Enum.GetValues(typeof(BassBoostMode))
+            .Cast<BassBoostMode>()
+            .Select(mode => $"`{mode}`")
+            .JoinToString(", ");
 
-        public Task<PlayerEffect> CreateEffect(string? args) {
-            if (string.IsNullOrWhiteSpace(args)) {
-                return Task.FromResult(ConstructBassBoostEffect(BassBoostMode.Medium));
-            }
+    private static readonly EntryLocalized ParseBassBoostFailedEntry = new("Music.EffectParseFailedWithDefault",
+        AvailableBassBoostModes, nameof(BassBoostMode.Medium));
 
-            if (Enum.TryParse(args, true, out BassBoostMode result)) {
-                return Task.FromResult(ConstructBassBoostEffect(result));
-            }
-
-            return Task.FromException<PlayerEffect>(new LocalizedException(_parseBassBoostFailedEntry));
+    public Task<PlayerEffect> CreateEffect(string? args)
+    {
+        if (string.IsNullOrWhiteSpace(args))
+        {
+            return Task.FromResult(ConstructBassBoostEffect(BassBoostMode.Medium));
         }
 
-        public string GetSourceName() {
-            return "BassBoost";
+        if (Enum.TryParse(args, true, out BassBoostMode result))
+        {
+            return Task.FromResult(ConstructBassBoostEffect(result));
         }
 
-        private PlayerEffect ConstructBassBoostEffect(BassBoostMode mode) {
-            var multiplier = mode switch {
-                BassBoostMode.Low     => 0.15,
-                BassBoostMode.Medium  => 0.4,
-                BassBoostMode.High    => 0.8,
-                BassBoostMode.Extreme => 1,
-                _                     => throw new ArgumentOutOfRangeException(nameof(mode), mode, null)
-            };
-            return new PlayerEffect(UserLink.Current, $"BassBoost ({mode})", "BassBoost") {
-                Equalizer = new EqualizerFilterOptions() {
-                    Bands = PlayerEffect.EffectBassboost.Equalizer!.Bands
-                        .Select(band => new EqualizerBand(band.Band, (float)(band.Gain * multiplier)))
-                        .ToList()
-                }
-            };
-        }
+        return Task.FromException<PlayerEffect>(new LocalizedException(ParseBassBoostFailedEntry));
+    }
+
+    public string GetSourceName()
+    {
+        return "BassBoost";
+    }
+
+    private PlayerEffect ConstructBassBoostEffect(BassBoostMode mode)
+    {
+        var multiplier = mode switch
+        {
+            BassBoostMode.Low => 0.15f,
+            BassBoostMode.Medium => 0.4f,
+            BassBoostMode.High => 0.8f,
+            BassBoostMode.Extreme => 1f,
+            _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, null)
+        };
+        return new PlayerEffect(UserLink.Current, $"BassBoost ({mode})", "BassBoost")
+        {
+            Equalizer = new EqualizerFilterOptions(new Equalizer()
+            {
+                Band0 = 0.65f * multiplier,
+                Band1 = 0.85f * multiplier,
+                Band2 = 0.45f * multiplier,
+                Band3 = 0.20f * multiplier,
+                Band4 = 0.10f * multiplier,
+                Band5 = 0.05f * multiplier,
+            })
+        };
     }
 }

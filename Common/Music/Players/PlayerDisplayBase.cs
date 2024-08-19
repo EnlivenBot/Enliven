@@ -4,43 +4,49 @@ using System.Reactive.Subjects;
 using System.Threading.Tasks;
 using Common.Localization.Entries;
 
-namespace Common.Music.Players {
-    public abstract class PlayerDisplayBase : IPlayerDisplay {
-        private Subject<IPlayerDisplay> _shutdownObserver = null!;
+namespace Common.Music.Players;
 
-        protected PlayerDisplayBase() {
-            _shutdownObserver = new Subject<IPlayerDisplay>();
-            Shutdown = _shutdownObserver.AsObservable();
-        }
-        public FinalLavalinkPlayer Player { get; private set; } = null!;
-        public bool IsInitialized { get; private set; }
+public abstract class PlayerDisplayBase : IPlayerDisplay
+{
+    private Subject<IPlayerDisplay> _shutdownObserver = null!;
 
-        public virtual async Task Initialize(FinalLavalinkPlayer finalLavalinkPlayer) {
-            await ChangePlayer(finalLavalinkPlayer);
-            IsInitialized = true;
-        }
-
-        public virtual Task ChangePlayer(FinalLavalinkPlayer newPlayer) {
-            // ReSharper disable once ConstantConditionalAccessQualifier
-            Player?.Displays.Remove(this);
-            Player = newPlayer;
-            Player.Displays.Add(this);
-
-            return Task.CompletedTask;
-        }
-
-        public virtual Task ExecuteShutdown(IEntry header, IEntry body) {
-            Player?.Displays.Remove(this);
-            IsShutdowned = true;
-            _shutdownObserver.OnNext(this);
-            _shutdownObserver.OnCompleted();
-            return Task.CompletedTask;
-        }
-
-        public abstract Task LeaveNotification(IEntry header, IEntry body);
-
-        public bool IsShutdowned { get; private set; }
-
-        public IObservable<IPlayerDisplay> Shutdown { get; }
+    protected PlayerDisplayBase()
+    {
+        _shutdownObserver = new Subject<IPlayerDisplay>();
+        Shutdown = _shutdownObserver.AsObservable();
     }
+
+    public EnlivenLavalinkPlayer Player { get; private set; } = null!;
+    public bool IsInitialized { get; private set; }
+
+    public virtual async Task Initialize(EnlivenLavalinkPlayer enlivenLavalinkPlayer)
+    {
+        await ChangePlayer(enlivenLavalinkPlayer);
+        IsInitialized = true;
+    }
+
+    public virtual Task ChangePlayer(EnlivenLavalinkPlayer newPlayer)
+    {
+        // ReSharper disable once ConstantConditionalAccessQualifier
+        Player?.Displays.Remove(this);
+        Player = newPlayer;
+        Player.Displays.Add(this);
+
+        return Task.CompletedTask;
+    }
+
+    public virtual Task ExecuteShutdown(IEntry header, IEntry body)
+    {
+        Player?.Displays.Remove(this);
+        IsShutdowned = true;
+        _shutdownObserver.OnNext(this);
+        _shutdownObserver.OnCompleted();
+        return Task.CompletedTask;
+    }
+
+    public abstract Task LeaveNotification(IEntry header, IEntry body);
+
+    public bool IsShutdowned { get; private set; }
+
+    public IObservable<IPlayerDisplay> Shutdown { get; }
 }

@@ -9,16 +9,19 @@ using Common;
 using Common.Config;
 using Discord;
 using Lavalink4NET.Artwork;
-using Lavalink4NET.Player;
+using Lavalink4NET.Cluster;
+using Lavalink4NET.Players;
 using Newtonsoft.Json;
 using NLog;
 
 namespace Bot.DiscordRelated.Music;
 
-public class EmbedPlayerDisplayProvider : IService, IDisposable {
+public class EmbedPlayerDisplayProvider : IService, IDisposable
+{
     private readonly IArtworkService _artworkService;
     private readonly ConcurrentDictionary<string, EmbedPlayerDisplay> _cache = new();
     private readonly EnlivenShardedClient _client;
+    private readonly IClusterAudioService _clusterAudioService;
     private readonly CommandHandlerService _commandHandlerService;
     private readonly IGuildConfigProvider _guildConfigProvider;
     private readonly ILogger _logger;
@@ -26,72 +29,90 @@ public class EmbedPlayerDisplayProvider : IService, IDisposable {
     private IDisposable? _restoreStoppedHandled;
 
     public EmbedPlayerDisplayProvider(EnlivenShardedClient client, IGuildConfigProvider guildConfigProvider,
-                                      CommandHandlerService commandHandlerService, MessageComponentService messageComponentService,
-                                      ILogger logger, IArtworkService artworkService) {
+        CommandHandlerService commandHandlerService, MessageComponentService messageComponentService,
+        ILogger logger, IArtworkService artworkService, IClusterAudioService clusterAudioService)
+    {
         _messageComponentService = messageComponentService;
         _commandHandlerService = commandHandlerService;
         _logger = logger;
         _artworkService = artworkService;
+        _clusterAudioService = clusterAudioService;
         _client = client;
         _guildConfigProvider = guildConfigProvider;
     }
 
-    public void Dispose() {
+    public void Dispose()
+    {
         _restoreStoppedHandled?.Dispose();
     }
 
-    public Task OnPreDiscordStart() {
+    public Task OnPreDiscordStart()
+    {
         _restoreStoppedHandled = _messageComponentService.MessageComponentUse
             .Where(component => component.Data.CustomId == "restoreStoppedPlayer")
-            .SubscribeAsync(component => {
+            .SubscribeAsync(component =>
+            {
                 var guild = (component.Channel as IGuildChannel)?.Guild;
                 if (guild == null) return Task.CompletedTask;
-                var context = new ControllableCommandContext(_client) { Guild = guild, Channel = component.Channel, User = component.User };
+                var context = new ControllableCommandContext(_client)
+                    { Guild = guild, Channel = component.Channel, User = component.User };
                 return _commandHandlerService.ExecuteCommand("resume", context, component.User.Id.ToString());
             });
         new Task(UpdateCycle, TaskCreationOptions.LongRunning).Start();
         return Task.CompletedTask;
     }
 
-    public EmbedPlayerDisplay? Get(string id) {
+    public EmbedPlayerDisplay? Get(string id)
+    {
         return _cache.TryGetValue(id, out var display) ? display : null;
     }
 
-    public EmbedPlayerDisplay? Get(ITextChannel channel) {
+    public EmbedPlayerDisplay? Get(ITextChannel channel)
+    {
         return Get($"guild-{channel.GuildId}");
     }
 
-    public EmbedPlayerDisplay Provide(ITextChannel channel) {
+    public EmbedPlayerDisplay Provide(ITextChannel channel)
+    {
         return ProvideInternal($"guild-{channel.GuildId}", channel);
     }
 
-    private EmbedPlayerDisplay ProvideInternal(string id, ITextChannel channel, int recursiveCount = 0) {
-        var embedPlayerDisplay = _cache.GetOrAdd(id, s => {
+    private EmbedPlayerDisplay ProvideInternal(string id, ITextChannel channel, int recursiveCount = 0)
+    {
+        var embedPlayerDisplay = _cache.GetOrAdd(id, s =>
+        {
             var guildConfig = _guildConfigProvider.Get(channel.GuildId);
             // TODO: Implement proper logger creation
-            return new EmbedPlayerDisplay(channel, _client, guildConfig.Loc, _commandHandlerService, _messageComponentService, _logger, _artworkService);
+            return new EmbedPlayerDisplay(channel, _client, guildConfig.Loc, _commandHandlerService,
+                _messageComponentService, _logger, _artworkService, _clusterAudioService);
         });
-        if (!embedPlayerDisplay.IsShutdowned && !embedPlayerDisplay.Player?.IsShutdowned != false) return embedPlayerDisplay;
+        if (!embedPlayerDisplay.IsShutdowned && !embedPlayerDisplay.Player?.IsShutdowned != false)
+            return embedPlayerDisplay;
         _cache.TryRemove(id, out _);
         if (recursiveCount <= 1) return ProvideInternal(id, channel, ++recursiveCount);
-        _logger.Fatal("Provider recursive call. Provider: {data}",
+        _logger.Fatal("Provider recursive call. Provider: {Data}",
             JsonConvert.SerializeObject(embedPlayerDisplay, Formatting.None,
                 new JsonSerializerSettings() { ReferenceLoopHandling = ReferenceLoopHandling.Ignore }));
         return embedPlayerDisplay;
     }
 
-    private async void UpdateCycle() {
-        while (true) {
+    private async void UpdateCycle()
+    {
+        while (true)
+        {
             var waitCycle = Task.Delay(Constants.PlayerEmbedUpdateDelay);
             var displays = _cache.Values.ToList();
-            foreach (var display in displays) {
-                try {
+            foreach (var display in displays)
+            {
+                try
+                {
                     if (display.Player.State != PlayerState.Playing) continue;
                     display.UpdateProgress();
                     display.UpdateMessageComponents();
                     await display.UpdateControlMessage(true);
                 }
-                catch (Exception) {
+                catch (Exception)
+                {
                     // ignored
                 }
             }

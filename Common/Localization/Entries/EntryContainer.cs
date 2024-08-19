@@ -1,29 +1,35 @@
 ﻿using System;
 using Common.Localization.Providers;
 
-namespace Common.Localization.Entries {
-    public class EntryContainer : EntryBase {
-        public EntryContainer(IEntry entry) {
-            SetEntry(entry);
-        }
+namespace Common.Localization.Entries;
 
-        public EntryContainer(Func<IEntry> entryFunc) {
-            SetEntry(entryFunc);
-        }
+public class EntryContainer : EntryBase
+{
+    public EntryContainer(IEntry entry)
+    {
+        SetEntry(entry);
+    }
 
-        private IEntry? Entry { get; set; }
-        private Func<IEntry>? EntryFunc { get; set; }
+    public EntryContainer(Func<IEntry> entryFunc)
+    {
+        SetEntry(entryFunc);
+    }
 
-        public override string Get(ILocalizationProvider provider, params object[] additionalArgs) {
-            return (Entry ?? EntryFunc!()).Get(provider, additionalArgs);
-        }
+    private IEntry? Entry { get; set; }
+    private Func<IEntry>? EntryFunc { get; set; }
 
-        public void SetEntry(IEntry entry) {
-            Entry = entry;
-        }
+    public override string Get(ILocalizationProvider provider, params object[] additionalArgs)
+    {
+        return (Entry ?? EntryFunc!()).Get(provider, additionalArgs);
+    }
 
-        public void SetEntry(Func<IEntry> entryFunc) {
-            EntryFunc = entryFunc;
-        }
+    public void SetEntry(IEntry entry)
+    {
+        Entry = entry;
+    }
+
+    public void SetEntry(Func<IEntry> entryFunc)
+    {
+        EntryFunc = entryFunc;
     }
 }

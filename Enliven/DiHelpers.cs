@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net.Http;
 using Autofac;
+using Autofac.Extensions.DependencyInjection;
 using Bot.DiscordRelated;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Interactions;
@@ -10,7 +11,6 @@ using Bot.DiscordRelated.Music;
 using Bot.Music.Deezer;
 using Bot.Music.Spotify;
 using Bot.Music.Vk;
-using Bot.Music.Yandex;
 using Bot.Utilities.Collector;
 using Bot.Utilities.Logging;
 using ChatExporter;
@@ -18,10 +18,13 @@ using ChatExporter.Exporter.MessageHistories;
 using Common;
 using Common.Config;
 using Common.Entities;
+using Common.Music.Cluster;
 using Common.Music.Effects;
 using Common.Music.Resolvers;
 using Discord.WebSocket;
-using Lavalink4NET.Artwork;
+using Lavalink4NET;
+using Lavalink4NET.Cluster.Extensions;
+using Lavalink4NET.DiscordNet;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -34,10 +37,12 @@ using YandexMusicResolver.Loaders;
 
 namespace Bot;
 
-internal static class DiHelpers {
+internal static class DiHelpers
+{
     private static readonly ILogger Logger = LogManager.GetCurrentClassLogger();
 
-    public static ContainerBuilder AddEnlivenServices(this ContainerBuilder builder) {
+    public static ContainerBuilder AddEnlivenServices(this ContainerBuilder builder)
+    {
         builder.RegisterType<MusicResolverService>().AsSelf().SingleInstance();
         builder.RegisterModule<BotInstanceNlogModule>();
         builder.RegisterType<EnlivenBot>().InstancePerBot();
@@ -49,24 +54,18 @@ internal static class DiHelpers {
         builder.RegisterType<LoopingStateTypeReader>().As<CustomTypeReader>().SingleInstance();
 
         // Database types
-        builder.Register(context => context.GetDatabase().GetCollection<SpotifyAssociation>(@"SpotifyAssociations")).SingleInstance();
-        builder.Register(context => context.GetDatabase().GetCollection<MessageHistory>(@"MessageHistory")).SingleInstance();
+        builder.Register(context => context.GetDatabase().GetCollection<MessageHistory>(@"MessageHistory"))
+            .SingleInstance();
 
         // Music resolvers
         builder.RegisterType<DeezerMusicResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
 
         builder.ConfigureOptions<SpotifyCredentials>();
         builder.RegisterType<SpotifyMusicResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
-        builder.RegisterType<SpotifyClientResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
 
         builder.RegisterType<Music.Yandex.YandexMusicResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
 
-        builder.RegisterType<SpotifyTrackEncoderUtil>().PropertiesAutowired(PropertyWiringOptions.AllowCircularDependencies)
-            .AsSelf().AsImplementedInterfaces().SingleInstance();
-        builder.RegisterType<YandexTrackEncoderUtil>().AsSelf().AsImplementedInterfaces().SingleInstance();
-
         // Providers
-        builder.RegisterType<SpotifyAssociationProvider>().As<ISpotifyAssociationProvider>().SingleInstance();
         builder.RegisterType<MessageHistoryProvider>().SingleInstance();
         builder.RegisterType<EmbedPlayerDisplayProvider>().As<IService>().AsSelf().InstancePerBot();
         builder.RegisterType<EmbedPlayerQueueDisplayProvider>().InstancePerBot();
@@ -86,7 +85,6 @@ internal static class DiHelpers {
         builder.RegisterType<HtmlRendererService>().AsSelf().SingleInstance();
         builder.RegisterType<MessageHistoryHtmlExporter>().InstancePerBot();
         builder.RegisterType<CollectorService>().InstancePerBot();
-        builder.RegisterType<ArtworkService>().As<IArtworkService>().SingleInstance();
 
         // MessageHistory Printers
         builder.RegisterType<MessageHistoryPrinter>().InstancePerBot();
@@ -95,32 +93,52 @@ internal static class DiHelpers {
         return builder;
     }
 
-    public static ContainerBuilder AddYandexResolver(this ContainerBuilder builder) {
+    public static ContainerBuilder AddYandexResolver(this ContainerBuilder builder)
+    {
         builder.Configure<YandexCredentials>();
         builder.RegisterType<YandexMusicAuthService>().As<IYandexMusicAuthService>().SingleInstance()
             .UsingConstructor(typeof(IHttpClientFactory));
         builder.RegisterType<YandexCredentialsProvider>().As<IYandexCredentialsProvider>().SingleInstance();
         builder.RegisterType<YandexMusicMainResolver>().As<IYandexMusicMainResolver>().SingleInstance()
             .UsingConstructor(typeof(IYandexCredentialsProvider), typeof(IHttpClientFactory),
-                typeof(IYandexMusicPlaylistLoader), typeof(IYandexMusicTrackLoader), typeof(IYandexMusicDirectUrlLoader), typeof(IYandexMusicSearchResultLoader));
+                typeof(IYandexMusicPlaylistLoader), typeof(IYandexMusicTrackLoader),
+                typeof(IYandexMusicDirectUrlLoader), typeof(IYandexMusicSearchResultLoader));
 
         return builder;
     }
 
-    public static ContainerBuilder ConfigureOptions<T>(this ContainerBuilder builder) where T : class {
-        builder.Register(context => new OptionsWrapper<T>(context.Resolve<IConfiguration>().GetSection(typeof(T).Name).Get<T>()!))
+    public static ContainerBuilder AddLavalink(this ContainerBuilder builder, InstanceConfig instanceConfig)
+    {
+        var serviceCollection = new ServiceCollection()
+            .AddSingleton<IEnlivenClusterAudioService, EnlivenClusterAudioService>()
+            .AddSingleton<IAudioService>(provider => provider.GetRequiredService<IEnlivenClusterAudioService>())
+            .AddLavalinkCluster<DiscordClientWrapper>()
+            .AddSingleton(instanceConfig)
+            .ConfigureOptions<ClusterAudioServiceOptionsConfigurator>();
+
+        builder.Populate(serviceCollection, Constants.BotLifetimeScopeTag);
+
+        return builder;
+    }
+
+    public static ContainerBuilder ConfigureOptions<T>(this ContainerBuilder builder) where T : class
+    {
+        builder.Register(context =>
+                new OptionsWrapper<T>(context.Resolve<IConfiguration>().GetSection(typeof(T).Name).Get<T>()!))
             .As<IOptions<T>>();
 
         return builder;
     }
 
-    public static ContainerBuilder Configure<T>(this ContainerBuilder builder) where T : class {
+    public static ContainerBuilder Configure<T>(this ContainerBuilder builder) where T : class
+    {
         builder.Register(context => context.Resolve<IConfiguration>().GetSection(typeof(T).Name).Get<T>()!);
 
         return builder;
     }
 
-    public static ContainerBuilder AddVk(this ContainerBuilder builder) {
+    public static ContainerBuilder AddVk(this ContainerBuilder builder)
+    {
         builder.ConfigureOptions<VkCredentials>();
         builder.Register(c => new VkApi(new ServiceCollection().AddAudioBypass()))
             .AsImplementedInterfaces()
