@@ -38,7 +38,7 @@ public static class CommonDiHelpers
             .SingleInstance();
 
         // Music
-        builder.RegisterType<MusicResolverService>().SingleInstance();
+        builder.RegisterType<MusicResolverService>().InstancePerBot();
         builder.RegisterType<LavalinkMusicResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
 
         // Data providers

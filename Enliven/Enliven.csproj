@@ -6,7 +6,7 @@
         <AssemblyName>Enliven</AssemblyName>
         <Version>19.0</Version>
         <Nullable>enable</Nullable>
-        <LangVersion>10</LangVersion>
+        <LangVersion>11</LangVersion>
         <UserSecretsId>d6df00aa-ccf3-410e-92e6-723b9cd92b2f</UserSecretsId>
     </PropertyGroup>
 

@@ -4,7 +4,7 @@ namespace Common.Music.Tracks;
 
 public readonly record struct TrackRequester
 {
-    private readonly object _value;
+    private readonly object? _value;
 
     public TrackRequester(string value)
     {
@@ -18,16 +18,17 @@ public readonly record struct TrackRequester
 
     public override string ToString()
     {
-        if (_value is string s)
-        {
-            return s;
-        }
+        return ToString(true);
+    }
 
-        if (_value is IUser user)
+    public string ToString(bool useMention)
+    {
+        return _value switch
         {
-            return user.Mention;
-        }
-
-        return "UNKNOWN";
+            string s => s,
+            IUser user when useMention => user.Mention,
+            IUser user => user.Username,
+            _ => "UNKNOWN"
+        };
     }
 }

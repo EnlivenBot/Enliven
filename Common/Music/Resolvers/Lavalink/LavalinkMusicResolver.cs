@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
-using Lavalink4NET;
 using Lavalink4NET.Rest;
 using Lavalink4NET.Rest.Entities.Tracks;
 using Lavalink4NET.Tracks;
@@ -18,11 +18,18 @@ public sealed class LavalinkMusicResolver : MusicResolverBase<LavalinkTrack, Lav
         return true;
     }
 
-    public override ValueTask<TrackLoadResult> Resolve(IAudioService cluster,
+    public override async ValueTask<TrackLoadResult> Resolve(ITrackManager cluster,
         LavalinkApiResolutionScope resolutionScope, string query)
     {
-        var trackSearchMode = Utilities.IsValidUrl(query) ? TrackSearchMode.None : TrackSearchMode.YouTube;
-        return cluster.Tracks.LoadTracksAsync(query, trackSearchMode, resolutionScope);
+        TrackSearchMode trackSearchMode;
+        if (Utilities.IsValidUrl(query))
+            return await cluster.LoadTracksAsync(query, TrackSearchMode.None, resolutionScope);
+
+        var track = await cluster.LoadTrackAsync(query, TrackSearchMode.YouTube, resolutionScope,
+            CancellationToken.None);
+        return track is not null
+            ? TrackLoadResult.CreateTrack(track)
+            : TrackLoadResult.CreateEmpty();
     }
 
     protected override ValueTask<IEncodedTrack> EncodeTrackInternal(LavalinkTrack track)

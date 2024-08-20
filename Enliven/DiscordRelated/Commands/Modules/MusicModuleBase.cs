@@ -14,7 +14,6 @@ using Common.Music.Players.Options;
 using Discord;
 using Discord.Commands;
 using Discord.Interactions;
-using Lavalink4NET.Cluster.Nodes;
 using Lavalink4NET.Players;
 using Microsoft.Extensions.Options;
 
@@ -78,10 +77,11 @@ public partial class MusicModuleBase : AdvancedModuleBase
         await ReplyAndThrowIfAsync(!channelInfo.IsCommandAllowed,
             ChannelNotAllowedEntry.WithArg(Context.User.Mention, channelInfo.MusicChannel!));
 
-        if (!AudioService.Nodes.Any(node => node.Status == LavalinkNodeStatus.Available))
+        var anyNodeAvailableTask = AudioService.WaitForAnyNodeAvailable();
+        if (!anyNodeAvailableTask.IsCompleted)
         {
             var loadingEntry = await ReplyEntryAsync(AwaitingNodeConnectionEntry, TimeSpan.FromDays(1));
-            await Task.WhenAny(AudioService.Nodes.Select(node => node.WaitForReadyAsync().AsTask()));
+            await anyNodeAvailableTask;
             await loadingEntry.DeleteAsync();
         }
 
@@ -105,7 +105,10 @@ public partial class MusicModuleBase : AdvancedModuleBase
             await ReplyAndThrowIfAsync(!perms.Connect, CantConnectEntry.WithArg($"<#{userVoiceChannelId}>"));
 
             var optionsWrapper = new OptionsWrapper<PlaylistLavalinkPlayerOptions>(new PlaylistLavalinkPlayerOptions());
-            var playerRetrieveOptions = new PlayerRetrieveOptions();
+            var playerRetrieveOptions = new PlayerRetrieveOptions
+            {
+                ChannelBehavior = PlayerChannelBehavior.Join
+            };
             var retrieveResult = await AudioService.Players.RetrieveAsync(Context.Guild.Id, userVoiceChannelId!.Value,
                 EnlivenClusterAudioService.EnlivenPlayerFactory, optionsWrapper, playerRetrieveOptions);
             if (!retrieveResult.IsSuccess)

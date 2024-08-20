@@ -86,7 +86,7 @@ public class EmbedPlayerDisplayProvider : IService, IDisposable
             return new EmbedPlayerDisplay(channel, _client, guildConfig.Loc, _commandHandlerService,
                 _messageComponentService, _logger, _artworkService, _clusterAudioService);
         });
-        if (!embedPlayerDisplay.IsShutdowned && !embedPlayerDisplay.Player?.IsShutdowned != false)
+        if (!embedPlayerDisplay.IsShutdowned && embedPlayerDisplay.Player?.State != PlayerState.Destroyed)
             return embedPlayerDisplay;
         _cache.TryRemove(id, out _);
         if (recursiveCount <= 1) return ProvideInternal(id, channel, ++recursiveCount);

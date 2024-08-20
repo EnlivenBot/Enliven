@@ -16,7 +16,7 @@ public abstract class PlayerDisplayBase : IPlayerDisplay
         Shutdown = _shutdownObserver.AsObservable();
     }
 
-    public EnlivenLavalinkPlayer Player { get; private set; } = null!;
+    public EnlivenLavalinkPlayer? Player { get; private set; }
     public bool IsInitialized { get; private set; }
 
     public virtual async Task Initialize(EnlivenLavalinkPlayer enlivenLavalinkPlayer)

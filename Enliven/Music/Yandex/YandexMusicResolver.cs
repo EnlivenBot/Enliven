@@ -5,7 +5,6 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Common;
 using Common.Music.Resolvers;
-using Lavalink4NET;
 using Lavalink4NET.Rest;
 using Lavalink4NET.Rest.Entities.Tracks;
 using Lavalink4NET.Tracks;
@@ -25,7 +24,7 @@ public class YandexMusicResolver : MusicResolverBase<YandexLavalinkTrack, Yandex
     public override bool IsAvailable => true;
     public override bool CanResolve(string query) => _musicMainResolver.CanResolveQuery(query, false);
 
-    public override async ValueTask<TrackLoadResult> Resolve(IAudioService cluster,
+    public override async ValueTask<TrackLoadResult> Resolve(ITrackManager cluster,
         LavalinkApiResolutionScope resolutionScope,
         string query)
     {

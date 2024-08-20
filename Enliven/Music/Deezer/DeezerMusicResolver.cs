@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using Common;
 using Common.Music.Resolvers;
 using Common.Music.Resolvers.Lavalink;
-using Lavalink4NET;
 using Lavalink4NET.Protocol.Models;
 using Lavalink4NET.Rest;
 using Lavalink4NET.Rest.Entities.Tracks;
@@ -27,23 +26,21 @@ public sealed class DeezerMusicResolver : IMusicResolver
         new(@"(?:deezer\.com\/\D*\/(?:album|track|playlist)|deezer\.page\.link\/\w*)");
 
     private static readonly HttpClient HttpClient = new();
-    private readonly IAudioService _audioService;
 
     private readonly LavalinkMusicResolver _lavalinkMusicResolver;
     private readonly ILogger<DeezerMusicResolver> _logger;
 
-    public DeezerMusicResolver(LavalinkMusicResolver lavalinkMusicResolver, IAudioService audioService,
+    public DeezerMusicResolver(LavalinkMusicResolver lavalinkMusicResolver,
         ILogger<DeezerMusicResolver> logger)
     {
         _lavalinkMusicResolver = lavalinkMusicResolver;
-        _audioService = audioService;
         _logger = logger;
     }
 
     public bool IsAvailable => true;
     public bool CanResolve(string query) => DeezerLinkRegex.IsMatch(query);
 
-    public async ValueTask<TrackLoadResult> Resolve(IAudioService cluster, LavalinkApiResolutionScope resolutionScope,
+    public async ValueTask<TrackLoadResult> Resolve(ITrackManager cluster, LavalinkApiResolutionScope resolutionScope,
         string query)
     {
         try
@@ -63,7 +60,7 @@ public sealed class DeezerMusicResolver : IMusicResolver
                     Artist = token!.Value<string>("ART_NAME")
                 })
                 .Select(arg =>
-                    _lavalinkMusicResolver.Resolve(_audioService, resolutionScope, $"{arg.Title} {arg.Artist}"))
+                    _lavalinkMusicResolver.Resolve(cluster, resolutionScope, $"{arg.Title} {arg.Artist}"))
                 .WhenAll();
 
             var lavalinkTracks = trackLoadResults

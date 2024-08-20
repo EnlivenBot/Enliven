@@ -402,14 +402,13 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
     {
         if (Player.CurrentTrack != null)
         {
-            _embedBuilder.Fields["State"].Name =
-                _loc.Get("Music.RequestedBy").Format(Player.CurrentItem?.Requester.ToString());
+            _embedBuilder.Fields["State"].Name = _loc.Get("Music.RequestedBy")
+                .Format(Player.CurrentItem?.Requester.ToString(false));
 
             var progressPercentage = Convert.ToInt32(Player.Position?.Position.TotalSeconds /
                 Player.CurrentTrack.Duration.TotalSeconds * 100);
-            var progressBar =
-                (_isExternalEmojiAllowed ? ProgressEmoji.CustomEmojiPack : ProgressEmoji.TextEmojiPack).GetProgress(
-                    progressPercentage);
+            var emojiPack = _isExternalEmojiAllowed ? ProgressEmoji.CustomEmojiPack : ProgressEmoji.TextEmojiPack;
+            var progressBar = emojiPack.GetProgress(progressPercentage);
 
             var stateString = Player.State switch
             {
@@ -530,7 +529,7 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
             var helper = new PlaylistQueueHelper(Player.Playlist, Player.CurrentTrackIndex - 1, 5);
             foreach (var track in helper)
             {
-                if (helper.IsFirstInGroup) builder.AppendLine($"─────┬────{track.Requester}");
+                if (helper.IsFirstInGroup) builder.AppendLine($"─────┬────{track.Requester.ToString(false)}");
                 var isCurrent = helper.CurrentTrackIndex == Player.CurrentTrackIndex;
                 var listChar = helper.IsLastInGroup ? '└' : '├';
                 builder.AppendLine(GetTrackString(track.Track.Title, helper.CurrentTrackNumber, isCurrent, listChar));

@@ -7,7 +7,6 @@ using Common;
 using Common.Config;
 using Common.Music.Resolvers;
 using Common.Music.Resolvers.Lavalink;
-using Lavalink4NET;
 using Lavalink4NET.Rest;
 using Lavalink4NET.Rest.Entities.Tracks;
 using Lavalink4NET.Tracks;
@@ -42,7 +41,7 @@ public class SpotifyMusicResolver : IMusicResolver
     public bool IsAvailable => _spotifyClient != null;
     public bool CanResolve(string query) => new SpotifyUrl(query).IsValid;
 
-    public async ValueTask<TrackLoadResult> Resolve(IAudioService cluster, LavalinkApiResolutionScope resolutionScope,
+    public async ValueTask<TrackLoadResult> Resolve(ITrackManager cluster, LavalinkApiResolutionScope resolutionScope,
         string query)
     {
         var spotifyClient = _spotifyClient!;
@@ -63,13 +62,13 @@ public class SpotifyMusicResolver : IMusicResolver
     public ValueTask<IReadOnlyList<LavalinkTrack>> DecodeTracks(params IEncodedTrack[] tracks) =>
         throw new NotSupportedException();
 
-    private async Task<ImmutableArray<LavalinkTrack>> ResolveInternal(IAudioService cluster,
+    private async Task<ImmutableArray<LavalinkTrack>> ResolveInternal(ITrackManager cluster,
         LavalinkApiResolutionScope resolutionScope,
         IReadOnlyCollection<SpotifyTrackWrapper> spotifyTrackWrappers, SpotifyClient spotifyClient)
     {
         var lavalinkTracks = await spotifyTrackWrappers
             .Select(async wrapper => (
-                await cluster.Tracks.LoadTrackAsync(await wrapper.GetTrackInfo(spotifyClient),
+                await cluster.LoadTrackAsync(await wrapper.GetTrackInfo(spotifyClient),
                     TrackSearchMode.SoundCloud, resolutionScope), wrapper))
             .PipeEveryAsync(x =>
                 x.Item1 is not null ? new SpotifyLavalinkTrack(x.wrapper, x.Item1, _spotifyClient) : null)

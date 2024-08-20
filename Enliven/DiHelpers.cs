@@ -23,6 +23,7 @@ using Common.Music.Effects;
 using Common.Music.Resolvers;
 using Discord.WebSocket;
 using Lavalink4NET;
+using Lavalink4NET.Cluster;
 using Lavalink4NET.Cluster.Extensions;
 using Lavalink4NET.DiscordNet;
 using Microsoft.Extensions.Configuration;
@@ -111,12 +112,13 @@ internal static class DiHelpers
     {
         var serviceCollection = new ServiceCollection()
             .AddSingleton<IEnlivenClusterAudioService, EnlivenClusterAudioService>()
+            .AddSingleton<IClusterAudioService>(provider => provider.GetRequiredService<IEnlivenClusterAudioService>())
             .AddSingleton<IAudioService>(provider => provider.GetRequiredService<IEnlivenClusterAudioService>())
             .AddLavalinkCluster<DiscordClientWrapper>()
             .AddSingleton(instanceConfig)
             .ConfigureOptions<ClusterAudioServiceOptionsConfigurator>();
 
-        builder.Populate(serviceCollection, Constants.BotLifetimeScopeTag);
+        builder.Populate(serviceCollection);
 
         return builder;
     }

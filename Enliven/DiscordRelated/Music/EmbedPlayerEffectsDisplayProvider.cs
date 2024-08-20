@@ -7,6 +7,7 @@ using Common.Config;
 using Common.Localization.Providers;
 using Common.Music.Players;
 using Discord;
+using Lavalink4NET.Players;
 
 namespace Bot.DiscordRelated.Music;
 
@@ -37,7 +38,7 @@ public class EmbedPlayerEffectsDisplayProvider
     private async Task<EmbedPlayerEffectsDisplay> ProvideInternal(IMessageChannel channel,
         EnlivenLavalinkPlayer finalLavalinkPlayer)
     {
-        if (finalLavalinkPlayer.IsShutdowned)
+        if (finalLavalinkPlayer.State == PlayerState.Destroyed)
             throw new InvalidOperationException("You try to provide display for shutdowned player");
         var display = _cache.GetOrAdd(channel, messageChannel =>
         {

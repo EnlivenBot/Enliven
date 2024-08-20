@@ -59,10 +59,10 @@ public record YandexLavalinkTrack : LavalinkTrack, ITrackHasArtwork, ITrackHasCu
             Duration = Duration,
             IsLiveStream = IsLiveStream,
             IsSeekable = IsSeekable,
-            StartPosition = this.StartPosition,
+            StartPosition = StartPosition,
             Uri = new Uri(directUrl),
             Title = Title,
-            Identifier = directUrl,
+            Identifier = Identifier,
             SourceName = "http",
             ProbeInfo = "mp3"
         };

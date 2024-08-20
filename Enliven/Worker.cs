@@ -19,12 +19,14 @@ public class Worker : BackgroundService
 
     private readonly IHostApplicationLifetime _hostApplicationLifetime;
     private readonly ILifetimeScope _lifetimeScope;
+    private readonly IServiceProvider _serviceProvider;
 
     public Worker(IHostApplicationLifetime hostApplicationLifetime, ILifetimeScope lifetimeScope,
-        IConfiguration configuration)
+        IServiceProvider serviceProvider, IConfiguration configuration)
     {
         _hostApplicationLifetime = hostApplicationLifetime;
         _lifetimeScope = lifetimeScope;
+        _serviceProvider = serviceProvider;
         _configuration = configuration;
         _lifetimeScope.Disposer.AddInstanceForDisposal(this);
     }
@@ -42,7 +44,7 @@ public class Worker : BackgroundService
             throw new InvalidOperationException("No bot instances configured. Check your appsettings");
         var enlivenBotWrappers = configs!.Select(config => new EnlivenBotWrapper(config, _configuration));
         var startTasks = enlivenBotWrappers
-            .Select(wrapper => wrapper.StartAsync(_lifetimeScope, CancellationToken.None)).ToList();
+            .Select(wrapper => wrapper.StartAsync(_lifetimeScope, _serviceProvider, CancellationToken.None)).ToList();
 
         var whenAll = await Task.WhenAll(startTasks);
         if (whenAll.All(b => !b))

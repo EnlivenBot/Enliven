@@ -55,7 +55,6 @@ public class AdvancedLavalinkPlayer : WrappedLavalinkPlayer, IPlayerOnReady, IPl
     public IReadOnlyList<PlayerEffectUse> Effects => _effectsList;
 
     protected GuildConfig GuildConfig => _guildConfig ??= _guildConfigProvider.Get(GuildId);
-    public bool IsShutdowned => _shutdownTaskCompletionSource.Task.IsCompleted;
 
     public async Task OnReady()
     {
@@ -101,7 +100,6 @@ public class AdvancedLavalinkPlayer : WrappedLavalinkPlayer, IPlayerOnReady, IPl
     {
         snapshot.GuildId = GuildId;
         snapshot.LastVoiceChannelId = VoiceChannelId;
-        snapshot.LastTrack = CurrentItem;
         snapshot.TrackPosition = Position?.Position;
         snapshot.PlayerState = State;
         snapshot.Effects = _effectsList.ToList();
@@ -163,8 +161,8 @@ public class AdvancedLavalinkPlayer : WrappedLavalinkPlayer, IPlayerOnReady, IPl
     /// </remarks>
     protected override async ValueTask DisposeAsyncCore()
     {
+        if (State == PlayerState.Destroyed || _isShutdownRequested) return;
         Logger.Warn("Got player in {GuildId} dispose request\n{StackTrace}", GuildId, new StackTrace());
-        if (IsShutdowned || _isShutdownRequested) return;
         await Shutdown(new EntryLocalized("Music.PlaybackStopped"),
             new PlayerShutdownParameters() { RestartPlayer = true, SavePlaylist = true, ShutdownDisplays = false });
     }

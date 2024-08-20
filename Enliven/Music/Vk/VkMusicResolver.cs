@@ -5,7 +5,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Common.Config;
 using Common.Music.Resolvers;
-using Lavalink4NET;
 using Lavalink4NET.Rest;
 using Lavalink4NET.Rest.Entities.Tracks;
 using Lavalink4NET.Tracks;
@@ -59,7 +58,7 @@ public class VkMusicResolver : MusicResolverBase<VkLavalinkTrack, VkTrackData>
 
     public override bool CanResolve(string query) => new VkUrl(query).IsValid;
 
-    public override async ValueTask<TrackLoadResult> Resolve(IAudioService cluster,
+    public override async ValueTask<TrackLoadResult> Resolve(ITrackManager cluster,
         LavalinkApiResolutionScope resolutionScope, string query)
     {
         var vkUrl = new VkUrl(query);

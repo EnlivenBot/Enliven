@@ -67,7 +67,7 @@ public record VkLavalinkTrack : LavalinkTrack, ITrackHasCustomSource, ITrackHasA
             StartPosition = StartPosition,
             Uri = directUrl,
             Title = Title,
-            Identifier = directUrl.ToString(),
+            Identifier = Identifier,
             SourceName = "http",
             ProbeInfo = "mp3"
         };

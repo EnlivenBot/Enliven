@@ -9,6 +9,7 @@ using Common.Music.Players.Options;
 using Common.Music.Resolvers;
 using Lavalink4NET.Clients;
 using Lavalink4NET.Cluster;
+using Lavalink4NET.Cluster.Nodes;
 using Lavalink4NET.Integrations;
 using Lavalink4NET.Players;
 using Lavalink4NET.Rest;
@@ -23,6 +24,8 @@ public interface IEnlivenClusterAudioService : IClusterAudioService
 {
     public Task ShutdownPlayer(AdvancedLavalinkPlayer player, PlayerShutdownParameters shutdownParameters,
         IEntry shutdownReason);
+
+    ValueTask WaitForAnyNodeAvailable();
 }
 
 public class EnlivenClusterAudioService : ClusterAudioService, IEnlivenClusterAudioService
@@ -139,6 +142,17 @@ public class EnlivenClusterAudioService : ClusterAudioService, IEnlivenClusterAu
                 _logger.LogError(e, "Error while shutdowning {DisplayType}", display.GetType().Name);
             }
         }
+    }
+
+    public async ValueTask WaitForAnyNodeAvailable()
+    {
+        if (Nodes.Any(node => node.Status == LavalinkNodeStatus.Available)) return;
+
+        await Nodes
+            .Select(node => node.StartAsync())
+            .WhenAll();
+
+        await Task.WhenAny(Nodes.Select(node => node.WaitForReadyAsync().AsTask()));
     }
 
     private static PlaylistLavalinkPlayerOptions ConvertSnapshotToOptions(PlayerSnapshot snapshot)

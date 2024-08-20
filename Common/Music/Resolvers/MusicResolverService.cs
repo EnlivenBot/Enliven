@@ -4,7 +4,6 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Common.Music.Tracks;
-using Lavalink4NET;
 using Lavalink4NET.Protocol.Models;
 using Lavalink4NET.Rest;
 using Lavalink4NET.Rest.Entities.Tracks;
@@ -12,7 +11,7 @@ using Lavalink4NET.Tracks;
 
 namespace Common.Music.Resolvers;
 
-public class MusicResolverService(IEnumerable<IMusicResolver> musicResolvers, IAudioService cluster)
+public class MusicResolverService(IEnumerable<IMusicResolver> musicResolvers, ITrackManager cluster)
 {
     public async Task<TrackLoadResult> ResolveTracks(LavalinkApiResolutionScope resolutionScope, string query)
     {

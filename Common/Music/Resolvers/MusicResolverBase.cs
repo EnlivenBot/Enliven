@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Lavalink4NET;
 using Lavalink4NET.Rest;
 using Lavalink4NET.Rest.Entities.Tracks;
 using Lavalink4NET.Tracks;
@@ -15,7 +14,7 @@ public abstract class MusicResolverBase<TTrack, TEncodedTrack> : IMusicResolver
     public abstract bool IsAvailable { get; }
     public abstract bool CanResolve(string query);
 
-    public abstract ValueTask<TrackLoadResult> Resolve(IAudioService cluster,
+    public abstract ValueTask<TrackLoadResult> Resolve(ITrackManager cluster,
         LavalinkApiResolutionScope resolutionScope, string query);
 
     public bool CanEncodeTrack(LavalinkTrack track)

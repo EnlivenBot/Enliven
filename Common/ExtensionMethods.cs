@@ -328,6 +328,33 @@ public static class ExtensionMethods
             : throw new AggregateException(exceptions);
     }
 
+    public static async ValueTask WhenAll(this IEnumerable<ValueTask> tasksEnumerable)
+    {
+        var tasks = tasksEnumerable
+            .Where(task => !task.IsCompleted)
+            .ToArray();
+        ArgumentNullException.ThrowIfNull(tasks);
+        if (tasks.Length == 0)
+            return;
+
+        // We don't allocate the list if no task throws
+        List<Exception>? exceptions = null;
+
+        for (var i = 0; i < tasks.Length; i++)
+            try
+            {
+                await tasks[i].ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                exceptions ??= new List<Exception>(tasks.Length);
+                exceptions.Add(ex);
+            }
+
+        if (exceptions is not null)
+            throw new AggregateException(exceptions);
+    }
+
     public static async Task<IDisposable> WaitDisposableAsync(this SemaphoreSlim semaphore,
         CancellationToken? token = null)
     {

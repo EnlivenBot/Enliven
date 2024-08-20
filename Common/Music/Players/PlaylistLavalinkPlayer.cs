@@ -352,6 +352,7 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
 
     protected override async ValueTask FillPlayerSnapshot(PlayerSnapshot snapshot)
     {
+        snapshot.LastTrack = CurrentItem;
         snapshot.LoopingState = LoopingState;
         snapshot.Playlist = Playlist.ToList();
         await base.FillPlayerSnapshot(snapshot);
