@@ -31,7 +31,7 @@ public record YandexLavalinkTrack : LavalinkTrack, ITrackHasArtwork, ITrackHasCu
         Author = relatedYandexTrack.Author;
         Duration = relatedYandexTrack.Length;
         IsSeekable = true;
-        Identifier = relatedYandexTrack.Id.ToString();
+        Identifier = "yam_" + relatedYandexTrack.Id;
         SourceName = "http";
         ProbeInfo = "mp3";
     }
@@ -62,7 +62,7 @@ public record YandexLavalinkTrack : LavalinkTrack, ITrackHasArtwork, ITrackHasCu
             StartPosition = StartPosition,
             Uri = new Uri(directUrl),
             Title = Title,
-            Identifier = Identifier,
+            Identifier = directUrl,
             SourceName = "http",
             ProbeInfo = "mp3"
         };
