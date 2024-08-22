@@ -21,7 +21,8 @@ LocalizationManager.Initialize();
 var logger = LogManager.GetLogger("Global");
 AppDomain.CurrentDomain.UnhandledException += (sender, args) =>
     logger.Fatal(args.ExceptionObject as Exception, "Global uncaught exception");
-TaskScheduler.UnobservedTaskException += (sender, args) => {
+TaskScheduler.UnobservedTaskException += (sender, args) =>
+{
     logger.Fatal(args.Exception?.Flatten(), "Global uncaught task exception");
     args.SetObserved();
 };
@@ -31,11 +32,13 @@ TaskScheduler.UnobservedTaskException += (sender, args) => {
 var builder = WebApplication.CreateBuilder(args);
 builder.Host
     .UseServiceProviderFactory(new AutofacServiceProviderFactory())
-    .ConfigureServices(services => {
+    .ConfigureServices(services =>
+    {
         services.AddHostedService<Worker>();
         services.AddHttpClient();
     })
-    .ConfigureContainer<ContainerBuilder>(container => {
+    .ConfigureContainer<ContainerBuilder>(container =>
+    {
         container
             .AddEnlivenServices()
             .AddCommonServices()
@@ -45,7 +48,7 @@ builder.Host
 
 var app = builder.Build();
 
-app.MapGet("/", _ => Task.FromResult("Enliven web host started"));
+app.MapGet("/", () => "Enliven web host started");
 var endpointProviders = app.Services.GetServices<IEndpointProvider>();
 await Task.WhenAll(endpointProviders.Select(provider => provider.ConfigureEndpoints(app)));
 
