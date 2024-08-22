@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Threading;
 using System.Threading.Tasks;
 using Common.Music.Tracks;
 using Lavalink4NET.Players;
+using Lavalink4NET.Players.Queued;
 using Lavalink4NET.Protocol.Payloads.Events;
 
 #pragma warning disable CS0809 // Obsolete member overrides non-obsolete member
@@ -25,7 +27,16 @@ public class WrappedLavalinkPlayer : LavalinkPlayer
     public IObservable<int> VolumeChanged => _volumeChanged.AsObservable();
     public IObservable<PlayerState> StateChanged => _stateChanged.AsObservable();
 
-    public new IEnlivenQueueItem? CurrentItem => (IEnlivenQueueItem?)base.CurrentItem;
+    public new IEnlivenQueueItem? CurrentItem
+    {
+        get
+        {
+            var trackQueueItem = base.CurrentItem;
+            if (trackQueueItem is TrackQueueItem) Debug.Assert(trackQueueItem is TrackQueueItem);
+
+            return (IEnlivenQueueItem?)trackQueueItem;
+        }
+    }
 
     public virtual ValueTask SetVolumeAsync(int volume, CancellationToken token = new())
     {

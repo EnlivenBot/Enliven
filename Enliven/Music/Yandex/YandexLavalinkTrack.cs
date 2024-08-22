@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Net.Http;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Common;
@@ -34,6 +36,12 @@ public record YandexLavalinkTrack : LavalinkTrack, ITrackHasArtwork, ITrackHasCu
         Identifier = "yam_" + relatedYandexTrack.Id;
         SourceName = "http";
         ProbeInfo = "mp3";
+        AdditionalInformation = new Dictionary<string, JsonElement>
+            {
+                { "EnlivenCorrelationId", JsonSerializer.SerializeToElement(Guid.NewGuid()) }
+            }
+            // ReSharper disable once UsageOfDefaultStructEquality
+            .ToImmutableDictionary();
     }
 
     public YandexMusicTrack RelatedYandexTrack { get; }
@@ -64,7 +72,8 @@ public record YandexLavalinkTrack : LavalinkTrack, ITrackHasArtwork, ITrackHasCu
             Title = Title,
             Identifier = directUrl,
             SourceName = "http",
-            ProbeInfo = "mp3"
+            ProbeInfo = "mp3",
+            AdditionalInformation = AdditionalInformation
         };
     }
 

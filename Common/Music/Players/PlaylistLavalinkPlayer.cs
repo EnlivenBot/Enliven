@@ -14,6 +14,7 @@ using Lavalink4NET.Players;
 using Lavalink4NET.Protocol.Payloads.Events;
 using Lavalink4NET.Rest;
 using Lavalink4NET.Rest.Entities.Tracks;
+using Lavalink4NET.Tracks;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Common.Music.Players;
@@ -31,8 +32,8 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
     private LoopingState _loopingState = LoopingState.Off;
 
 
-    public PlaylistLavalinkPlayer(
-        IPlayerProperties<PlaylistLavalinkPlayer, PlaylistLavalinkPlayerOptions> options) : base(options)
+    public PlaylistLavalinkPlayer(IPlayerProperties<PlaylistLavalinkPlayer, PlaylistLavalinkPlayerOptions> options)
+        : base(options)
     {
         _musicResolverService = ServiceScope.ServiceProvider.GetRequiredService<MusicResolverService>();
         Playlist.Changed.Subscribe(playlist => UpdateCurrentTrackIndex());
@@ -371,6 +372,33 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
     {
         WriteToQueueHistory(new EntryLocalized("Music.TrackStuck"));
         await SkipAsync(1, true);
+    }
+
+    protected override ITrackQueueItem? LookupTrackQueueItem(LavalinkTrack receivedTrack, ITrackQueueItem? currentTrack,
+        string? overridenTrackIdentifier)
+    {
+        var baseLookup = base.LookupTrackQueueItem(receivedTrack, currentTrack, overridenTrackIdentifier);
+        if (baseLookup is not null) return baseLookup;
+
+        if (receivedTrack.AdditionalInformation.TryGetValue("EnlivenCorrelationId", out var recId))
+        {
+            if (currentTrack?.Track?.AdditionalInformation.TryGetValue("EnlivenCorrelationId", out var curId) == true
+                && recId.ToString() == curId.ToString())
+                return currentTrack;
+
+            if (Playlist.TryGetValue(CurrentTrackIndex, out var track)
+                && track.Track.AdditionalInformation.TryGetValue("EnlivenCorrelationId", out var curIndexId)
+                && recId.ToString() == curIndexId.ToString())
+                return track;
+
+            var matchedPlaylistTrack = Playlist.FirstOrDefault(item =>
+                item.Track.AdditionalInformation.TryGetValue("EnlivenCorrelationId", out var eId)
+                && recId.ToString() == eId.ToString());
+
+            if (matchedPlaylistTrack != null) return matchedPlaylistTrack;
+        }
+
+        return Playlist.FirstOrDefault(item => item.Track.Identifier == receivedTrack.Identifier);
     }
 }
 

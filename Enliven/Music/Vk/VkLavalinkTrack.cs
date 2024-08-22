@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Common;
@@ -31,6 +34,12 @@ public record VkLavalinkTrack : LavalinkTrack, ITrackHasCustomSource, ITrackHasA
         Identifier = trackIdentifier;
         SourceName = "http";
         ProbeInfo = "mp3";
+        AdditionalInformation = new Dictionary<string, JsonElement>
+            {
+                { "EnlivenCorrelationId", JsonSerializer.SerializeToElement(Guid.NewGuid()) }
+            }
+            // ReSharper disable once UsageOfDefaultStructEquality
+            .ToImmutableDictionary();
     }
 
     public Audio Audio { get; }
@@ -69,7 +78,8 @@ public record VkLavalinkTrack : LavalinkTrack, ITrackHasCustomSource, ITrackHasA
             Title = Title,
             Identifier = directUrl.ToString(),
             SourceName = "http",
-            ProbeInfo = "mp3"
+            ProbeInfo = "mp3",
+            AdditionalInformation = AdditionalInformation
         };
     }
 }
