@@ -53,8 +53,7 @@ public class CustomInteractionService : InteractionService, IService
             .Where(type => typeof(IModuleBase).IsAssignableFrom(type) &&
                            typeof(IInteractionModuleBase).IsAssignableFrom(type))
             .Where(type => type.GetCustomAttribute<HiddenAttribute>() == null)
-            .Where(type => type.GetCustomAttribute<SlashCommandAdapterAttribute>()?.ProcessSlashCommand == true)
-            .Where(type => RegisterIf.ShouldRegisterType(type, _instanceConfig));
+            .Where(type => type.GetCustomAttribute<SlashCommandAdapterAttribute>()?.ProcessSlashCommand == true);
 
         var subcommandSets = textCommandGroups.SelectMany(type => type.GetMethods())
             .Where(info => info.GetCustomAttribute<HiddenAttribute>() == null)

@@ -10,7 +10,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Common.Config;
-using Common.Entities;
 using Common.Localization.Providers;
 using Common.Music.Tracks;
 using Common.Utils;
@@ -254,23 +253,6 @@ public static class ExtensionMethods
         }
 
         return source;
-    }
-
-    public static IEnumerable<EmbedFieldBuilder> AsFields(this IEnumerable<MessageSnapshot> snapshots,
-        ILocalizationProvider loc)
-    {
-        var embedFields = snapshots.Select(messageSnapshot => new EmbedFieldBuilder
-        {
-            Name = messageSnapshot.EditTimestamp.ToString(),
-            Value = messageSnapshot.CurrentContent.IsBlank()
-                ? loc.Get("MessageHistory.EmptyMessage")
-                : $">>> {messageSnapshot.CurrentContent.SafeSubstring(1900, "...")}"
-        }).ToList();
-
-        var lastContent = embedFields.Last();
-        lastContent.Name = loc.Get("MessageHistory.LastContent").Format(lastContent.Name);
-
-        return embedFields;
     }
 
     public static TOut Pipe<TIn, TOut>(this TIn input, Func<TIn, TOut> transform) => transform(input);

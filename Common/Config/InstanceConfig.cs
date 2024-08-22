@@ -36,11 +36,3 @@ public class InstanceConfig
     /// </example>
     public List<string> Modules { get; set; } = new();
 }
-
-public static class InstanceConfigExtensions
-{
-    public static bool IsLoggingEnabled(this InstanceConfig config)
-    {
-        return !config.Modules.Contains("!logging");
-    }
-}

@@ -6,18 +6,14 @@ using Bot.DiscordRelated;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Interactions;
 using Bot.DiscordRelated.MessageComponents;
-using Bot.DiscordRelated.MessageHistories;
 using Bot.DiscordRelated.Music;
 using Bot.Music.Deezer;
 using Bot.Music.Spotify;
 using Bot.Music.Vk;
 using Bot.Utilities.Collector;
 using Bot.Utilities.Logging;
-using ChatExporter;
-using ChatExporter.Exporter.MessageHistories;
 using Common;
 using Common.Config;
-using Common.Entities;
 using Common.Music.Cluster;
 using Common.Music.Effects;
 using Common.Music.Resolvers;
@@ -29,7 +25,6 @@ using Lavalink4NET.DiscordNet;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using NLog;
 using VkNet;
 using VkNet.AudioBypassService.Extensions;
 using YandexMusicResolver;
@@ -40,8 +35,6 @@ namespace Bot;
 
 internal static class DiHelpers
 {
-    private static readonly ILogger Logger = LogManager.GetCurrentClassLogger();
-
     public static ContainerBuilder AddEnlivenServices(this ContainerBuilder builder)
     {
         builder.RegisterType<MusicResolverService>().AsSelf().SingleInstance();
@@ -51,12 +44,7 @@ internal static class DiHelpers
             .AsSelf().AsImplementedInterfaces().As<DiscordShardedClient>().InstancePerBot();
 
         // Discord type readers
-        builder.RegisterType<ChannelFunctionTypeReader>().As<CustomTypeReader>().SingleInstance();
         builder.RegisterType<LoopingStateTypeReader>().As<CustomTypeReader>().SingleInstance();
-
-        // Database types
-        builder.Register(context => context.GetDatabase().GetCollection<MessageHistory>(@"MessageHistory"))
-            .SingleInstance();
 
         // Music resolvers
         builder.RegisterType<DeezerMusicResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
@@ -67,7 +55,6 @@ internal static class DiHelpers
         builder.RegisterType<Music.Yandex.YandexMusicResolver>().AsSelf().AsImplementedInterfaces().SingleInstance();
 
         // Providers
-        builder.RegisterType<MessageHistoryProvider>().SingleInstance();
         builder.RegisterType<EmbedPlayerDisplayProvider>().As<IService>().AsSelf().InstancePerBot();
         builder.RegisterType<EmbedPlayerQueueDisplayProvider>().InstancePerBot();
         builder.RegisterType<EmbedPlayerEffectsDisplayProvider>().InstancePerBot();
@@ -76,20 +63,13 @@ internal static class DiHelpers
         // Services
         builder.RegisterType<CustomCommandService>().As<IService>().AsSelf().InstancePerBot();
         builder.RegisterType<CustomInteractionService>().As<IService>().AsSelf().InstancePerBot();
-        builder.RegisterType<MessageHistoryService>().As<IService>().AsSelf().InstancePerBot();
         builder.RegisterType<GlobalBehaviorsService>().As<IService>().AsSelf().InstancePerBot();
         builder.RegisterType<ScopedReliabilityService>().As<IService>().AsSelf().InstancePerBot();
         builder.RegisterType<InteractionHandlerService>().As<IService>().AsSelf().InstancePerBot();
         builder.RegisterType<CommandHandlerService>().As<IService>().AsSelf().InstancePerBot();
         builder.RegisterType<StatisticsService>().As<IStatisticsService>().AsSelf().InstancePerBot();
         builder.RegisterType<MessageComponentService>().AsSelf().InstancePerBot();
-        builder.RegisterType<HtmlRendererService>().AsSelf().SingleInstance();
-        builder.RegisterType<MessageHistoryHtmlExporter>().InstancePerBot();
         builder.RegisterType<CollectorService>().InstancePerBot();
-
-        // MessageHistory Printers
-        builder.RegisterType<MessageHistoryPrinter>().InstancePerBot();
-        builder.RegisterType<MessageHistoryPackPrinter>().InstancePerBot();
 
         return builder;
     }

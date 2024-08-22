@@ -30,7 +30,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\ChatExporter\ChatExporter.csproj"/>
         <ProjectReference Include="..\Common\Common.csproj"/>
     </ItemGroup>
 
