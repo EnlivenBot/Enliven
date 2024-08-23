@@ -88,7 +88,7 @@ internal static class DiHelpers
             .AddSingleton<IAudioService>(provider => provider.GetRequiredService<IEnlivenClusterAudioService>())
             .AddLavalinkCluster<DiscordClientWrapper>()
             .ConfigureOptions<ClusterAudioServiceOptionsConfigurator>()
-            .AddSingleton<LavalinkMusicResolver>()
+            .AddSingleton<IMusicResolver, LavalinkMusicResolver>()
             .AddSingleton<MusicResolverService>();
 
         return builder;
