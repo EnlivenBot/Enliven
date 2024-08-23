@@ -7,9 +7,13 @@ using System.Reactive.Threading.Tasks;
 using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
+using Autofac.Extensions.DependencyInjection;
+using Bot.Utilities.Logging;
 using Common;
 using Common.Config;
 using Common.Utils;
+using Discord;
+using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -92,16 +96,19 @@ public class EnlivenBotWrapper
 
     private void ConfigureBotLifetime(ContainerBuilder builder)
     {
-        builder.Register(context => _instanceConfig)
-            .AsSelf()
-            .SingleInstance();
-        builder.Register(context => _instanceConfig)
-            .AsSelf()
-            .AsImplementedInterfaces()
-            .SingleInstance();
-        builder.RegisterType<ServiceScopeFactoryAdapter>()
-            .AsImplementedInterfaces()
-            .SingleInstance();
-        builder.AddLavalink(_instanceConfig);
+        builder.RegisterModule<BotInstanceNlogModule>();
+
+        var services = new ServiceCollection();
+        services.AddSingleton(_instanceConfig);
+        services.AddSingleton<IServiceScopeFactory, ServiceScopeFactoryAdapter>();
+        services.AddSingleton<EnlivenBot>();
+        services.ConfigureNamedOptions<DiscordSocketConfig>(_configuration);
+        services.AddSingleton<EnlivenShardedClient>();
+        services.AddSingleton<DiscordShardedClient>(s => s.GetRequiredService<EnlivenShardedClient>());
+        services.AddSingleton<IDiscordClient>(s => s.GetRequiredService<EnlivenShardedClient>());
+        services.AddLavalink();
+        services.AddPerBotServices();
+
+        builder.Populate(services);
     }
 }

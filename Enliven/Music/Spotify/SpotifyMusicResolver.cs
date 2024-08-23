@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Common;
 using Common.Config;
 using Common.Music.Resolvers;
-using Common.Music.Resolvers.Lavalink;
 using Lavalink4NET.Rest;
 using Lavalink4NET.Rest.Entities.Tracks;
 using Lavalink4NET.Tracks;
@@ -23,15 +22,12 @@ namespace Bot.Music.Spotify;
 
 public class SpotifyMusicResolver : IMusicResolver
 {
-    private readonly LavalinkMusicResolver _lavalinkMusicResolver;
     private readonly ILogger<SpotifyMusicResolver> _logger;
     private readonly SpotifyCredentials _spotifyCredentials;
     private SpotifyClient? _spotifyClient;
 
-    public SpotifyMusicResolver(LavalinkMusicResolver lavalinkMusicResolver,
-        IOptions<SpotifyCredentials> options, ILogger<SpotifyMusicResolver> logger)
+    public SpotifyMusicResolver(IOptions<SpotifyCredentials> options, ILogger<SpotifyMusicResolver> logger)
     {
-        _lavalinkMusicResolver = lavalinkMusicResolver;
         _logger = logger;
         _spotifyCredentials = options.Value;
 

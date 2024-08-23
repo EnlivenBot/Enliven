@@ -1,17 +1,26 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
+using Autofac.Extras.NLog;
 using Bot;
+using Bot.DiscordRelated.Commands;
+using Bot.Music.Deezer;
+using Bot.Music.Spotify;
 using Bot.Utilities;
 using Common;
+using Common.Config;
 using Common.Localization;
+using Common.Music.Resolvers;
+using Lavalink4NET.Artwork;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NLog;
+using NLog.Extensions.Logging;
 
 // Initializing localization
 Directory.CreateDirectory("Config");
@@ -34,17 +43,23 @@ builder.Host
     .UseServiceProviderFactory(new AutofacServiceProviderFactory())
     .ConfigureServices(services =>
     {
+        services.AddLogging(loggingBuilder => loggingBuilder.AddNLog());
         services.AddHostedService<Worker>();
         services.AddHttpClient();
+        services.AddSingleton<HttpClient>();
+        services.AddDatabase();
+
+        services.AddSingleton<IArtworkService, ArtworkService>();
+        services.AddSingleton<CustomTypeReader, LoopingStateTypeReader>();
+        services.AddSingleton<MusicResolverService, MusicResolverService>();
+
+        services.AddVk(builder.Configuration);
+        services.AddYandex(builder.Configuration);
+        services.AddSingleton<IMusicResolver, DeezerMusicResolver>();
+        services.ConfigureNamedOptions<SpotifyCredentials>(builder.Configuration);
+        services.AddSingleton<IMusicResolver, SpotifyMusicResolver>();
     })
-    .ConfigureContainer<ContainerBuilder>(container =>
-    {
-        container
-            .AddEnlivenServices()
-            .AddCommonServices()
-            .AddYandexResolver()
-            .AddVk();
-    });
+    .ConfigureContainer<ContainerBuilder>(b => b.RegisterModule<NLogModule>());
 
 var app = builder.Build();
 

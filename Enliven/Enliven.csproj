@@ -16,8 +16,10 @@
         <PackageReference Include="VkNet" Version="1.75.0"/>
         <PackageReference Include="VkNet.AudioBypassService" Version="1.7.6"/>
         <PackageReference Include="Xabe.FFmpeg.Downloader" Version="5.2.6"/>
-        <PackageReference Include="YandexMusicResolver" Version="6.0.0"/>
+        <PackageReference Include="YandexMusicResolver" Version="7.0.0"/>
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0"/>
+        <PackageReference Include="NLog.Extensions.Logging" Version="5.3.12"/>
+        <PackageReference Include="Autofac.Extras.NLog" Version="4.0.1"/>
     </ItemGroup>
 
     <ItemGroup>

@@ -4,6 +4,7 @@ using System.Reactive.Subjects;
 using System.Threading.Tasks;
 using Discord;
 using Discord.WebSocket;
+using Microsoft.Extensions.Options;
 
 namespace Common;
 
@@ -13,25 +14,7 @@ public class EnlivenShardedClient : DiscordShardedClient
     private readonly Subject<SocketMessage> _messageReceivedSubject = new();
     private readonly TaskCompletionSource<object> _readyTaskCompletionSource = new();
 
-    public EnlivenShardedClient() : base()
-    {
-        SubscribeToEvents();
-        SubscribeToMessageComponents();
-    }
-
-    public EnlivenShardedClient(DiscordSocketConfig config) : base(config)
-    {
-        SubscribeToEvents();
-        SubscribeToMessageComponents();
-    }
-
-    public EnlivenShardedClient(int[] ids) : base(ids)
-    {
-        SubscribeToEvents();
-        SubscribeToMessageComponents();
-    }
-
-    public EnlivenShardedClient(int[] ids, DiscordSocketConfig config) : base(ids, config)
+    public EnlivenShardedClient(IOptions<DiscordSocketConfig> config) : base(config.Value)
     {
         SubscribeToEvents();
         SubscribeToMessageComponents();

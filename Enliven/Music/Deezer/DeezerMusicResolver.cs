@@ -8,7 +8,6 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Common;
 using Common.Music.Resolvers;
-using Common.Music.Resolvers.Lavalink;
 using Lavalink4NET.Protocol.Models;
 using Lavalink4NET.Rest;
 using Lavalink4NET.Rest.Entities.Tracks;
@@ -27,13 +26,10 @@ public sealed class DeezerMusicResolver : IMusicResolver
 
     private static readonly HttpClient HttpClient = new();
 
-    private readonly LavalinkMusicResolver _lavalinkMusicResolver;
     private readonly ILogger<DeezerMusicResolver> _logger;
 
-    public DeezerMusicResolver(LavalinkMusicResolver lavalinkMusicResolver,
-        ILogger<DeezerMusicResolver> logger)
+    public DeezerMusicResolver(ILogger<DeezerMusicResolver> logger)
     {
-        _lavalinkMusicResolver = lavalinkMusicResolver;
         _logger = logger;
     }
 
@@ -60,7 +56,7 @@ public sealed class DeezerMusicResolver : IMusicResolver
                     Artist = token!.Value<string>("ART_NAME")
                 })
                 .Select(arg =>
-                    _lavalinkMusicResolver.Resolve(cluster, resolutionScope, $"{arg.Title} {arg.Artist}"))
+                    cluster.LoadTracksAsync($"{arg.Title} {arg.Artist}", TrackSearchMode.YouTube, resolutionScope))
                 .WhenAll();
 
             var lavalinkTracks = trackLoadResults
