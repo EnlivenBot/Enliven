@@ -19,41 +19,47 @@ namespace Bot.DiscordRelated;
 // Links to daemons:
 // [Powershell (Windows+Unix)] https://gitlab.com/snippets/21444
 // [Bash (Unix)] https://stackoverflow.com/a/697064
-public class ReliabilityService : IService {
+public class ReliabilityService : IService
+{
     // --- Begin Configuration Section ---
     // How long should we wait on the client to reconnect before resetting?
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(30);
 
     // Should we attempt to reset the client? Set this to false if your client is still locking up.
-    private static readonly bool _attemptReset = true;
+    private static readonly bool AttemptReset = true;
     // --- End Configuration Section ---
 
     private readonly Dictionary<IDiscordClient, CancellationTokenSource> _disconnectedClients = new();
     private readonly ILogger _logger;
 
-    public ReliabilityService(DiscordSocketClient mainDiscord, ILogger logger) {
+    public ReliabilityService(DiscordSocketClient mainDiscord, ILogger logger)
+    {
         _logger = logger;
 
         mainDiscord.Connected += () => ConnectedAsync(mainDiscord);
         mainDiscord.Disconnected += exception => DisconnectedAsync(exception, mainDiscord);
     }
 
-    public ReliabilityService(DiscordShardedClient mainDiscord, ILogger logger) {
+    public ReliabilityService(DiscordShardedClient mainDiscord, ILogger logger)
+    {
         _logger = logger;
 
         mainDiscord.ShardConnected += ConnectedAsync;
         mainDiscord.ShardDisconnected += DisconnectedAsync;
     }
 
-    public Task OnPostDiscordStart() {
+    public Task OnPostDiscordStart()
+    {
         return Task.CompletedTask;
     }
 
-    private Task DisconnectedAsync(Exception arg1, DiscordSocketClient arg2) {
+    private Task DisconnectedAsync(Exception arg1, DiscordSocketClient arg2)
+    {
         // Check the state after <timeout> to see if we reconnected
         _logger.Info("Client disconnected, starting timeout task...");
         _disconnectedClients[arg2] = new CancellationTokenSource();
-        _ = Task.Delay(Timeout, _disconnectedClients[arg2].Token).ContinueWith(async _ => {
+        _ = Task.Delay(Timeout, _disconnectedClients[arg2].Token).ContinueWith(async _ =>
+        {
             _logger.Debug("Timeout expired, continuing to check client state...");
             if (await CheckIsStateCorrectAsync(arg2))
                 _logger.Debug("State came back okay");
@@ -64,7 +70,8 @@ public class ReliabilityService : IService {
         return Task.CompletedTask;
     }
 
-    private Task ConnectedAsync(DiscordSocketClient arg) {
+    private Task ConnectedAsync(DiscordSocketClient arg)
+    {
         // Cancel all previous state checks and reset the CancelToken - client is back online
         _logger.Debug("Client reconnected, resetting cancel tokens...");
         if (_disconnectedClients.TryGetValue(arg, out var cts)) cts!.Cancel();
@@ -74,24 +81,30 @@ public class ReliabilityService : IService {
         return Task.CompletedTask;
     }
 
-    private async Task<bool> CheckIsStateCorrectAsync(IDiscordClient client) {
+    private async Task<bool> CheckIsStateCorrectAsync(IDiscordClient client)
+    {
         // Client reconnected, no need to reset
         if (client.ConnectionState == ConnectionState.Connected) return true;
-        if (_attemptReset) {
+        if (AttemptReset)
+        {
             _logger.Info("Attempting to reset the client");
 
             var timeout = Task.Delay(Timeout);
             var connect = client.StartAsync();
             var task = await Task.WhenAny(timeout, connect);
 
-            if (task == timeout) {
+            if (task == timeout)
+            {
                 _logger.Fatal((Exception?)null, "Client reset timed out (task deadlocked?), killing process");
                 return false;
             }
-            if (connect.IsFaulted) {
+
+            if (connect.IsFaulted)
+            {
                 _logger.Fatal(connect.Exception, "Client reset faulted, killing process");
                 return false;
             }
+
             if (connect.IsCompletedSuccessfully)
                 _logger.Info("Client reset successfully!");
 
@@ -102,20 +115,30 @@ public class ReliabilityService : IService {
         return false;
     }
 
-    protected virtual void FailFast() {
+    protected virtual void FailFast()
+    {
         Environment.Exit(1);
     }
 }
-public class ScopedReliabilityService : ReliabilityService {
+
+public class ScopedReliabilityService : ReliabilityService
+{
     private readonly ILifetimeScope _lifetimeScope;
-    public ScopedReliabilityService(DiscordSocketClient mainDiscord, ILogger logger, ILifetimeScope lifetimeScope) : base(mainDiscord, logger) {
-        _lifetimeScope = lifetimeScope;
-    }
-    public ScopedReliabilityService(DiscordShardedClient mainDiscord, ILogger logger, ILifetimeScope lifetimeScope) : base(mainDiscord, logger) {
+
+    public ScopedReliabilityService(DiscordSocketClient mainDiscord, ILogger logger, ILifetimeScope lifetimeScope) :
+        base(mainDiscord, logger)
+    {
         _lifetimeScope = lifetimeScope;
     }
 
-    protected override void FailFast() {
+    public ScopedReliabilityService(DiscordShardedClient mainDiscord, ILogger logger, ILifetimeScope lifetimeScope) :
+        base(mainDiscord, logger)
+    {
+        _lifetimeScope = lifetimeScope;
+    }
+
+    protected override void FailFast()
+    {
         _lifetimeScope.Dispose();
     }
 }

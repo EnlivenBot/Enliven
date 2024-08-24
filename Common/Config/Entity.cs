@@ -1,20 +1,26 @@
-namespace Common.Config {
-    public class Entity {
-        public Entity() { }
+namespace Common.Config;
 
-        public Entity(string value) {
-            Value = value;
-        }
+public class Entity
+{
+    public Entity()
+    {
+    }
 
-        public Entity(object value) {
-            Value = value.ToString();
-        }
+    public Entity(string value)
+    {
+        Value = value;
+    }
 
-        public object? Id { get; set; }
-        public string? Value { get; set; }
+    public Entity(object value)
+    {
+        Value = value.ToString();
+    }
 
-        public static implicit operator string?(Entity? v) {
-            return v?.Value;
-        }
+    public object? Id { get; set; }
+    public string? Value { get; set; }
+
+    public static implicit operator string?(Entity? v)
+    {
+        return v?.Value;
     }
 }

@@ -4,13 +4,15 @@ using System.Linq;
 
 namespace Bot.Utilities;
 
-public class FuzzySearch {
+public class FuzzySearch
+{
     #region Блок транслитерации
 
     /// <summary>
     /// Транслитерация Русский => ASCII (ISO 9-95)
     /// </summary>
-    private static Dictionary<char, string> Translit_Ru_En = new() {
+    private static Dictionary<char, string> _translitRuEn = new()
+    {
         { 'а', "a" },
         { 'б', "b" },
         { 'в', "v" },
@@ -48,23 +50,29 @@ public class FuzzySearch {
 
     #endregion
 
-    static FuzzySearch() {
-        SetPhoneticGroups(PhoneticGroupsRus, new List<string> { "ыий", "эе", "ая", "оёе", "ую", "шщ", "оа" });
-        SetPhoneticGroups(PhoneticGroupsEng, new List<string> { "aeiouy", "bp", "ckq", "dt", "lr", "mn", "gj", "fpv", "sxz", "csz" });
+    static FuzzySearch()
+    {
+        SetPhoneticGroups(_phoneticGroupsRus, new List<string> { "ыий", "эе", "ая", "оёе", "ую", "шщ", "оа" });
+        SetPhoneticGroups(_phoneticGroupsEng,
+            new List<string> { "aeiouy", "bp", "ckq", "dt", "lr", "mn", "gj", "fpv", "sxz", "csz" });
     }
 
     private List<AnalyzedObject> Samples { get; set; } = new();
 
-    public void AddData(IEnumerable<string> datas) {
+    public void AddData(IEnumerable<string> datas)
+    {
         foreach (var data in datas) AddData(data);
     }
 
-    public void AddData(string data) {
-        var codeKeys = CodeKeysRus.Concat(CodeKeysEng).ToList();
+    public void AddData(string data)
+    {
+        var codeKeys = _codeKeysRus.Concat(_codeKeysEng).ToList();
         var languageSet = new AnalyzedObject();
         languageSet.Original = data;
-        if (data.Length > 0) {
-            languageSet.Words = data.Split(' ').Select(w => new Word {
+        if (data.Length > 0)
+        {
+            languageSet.Words = data.Split(' ').Select(w => new Word
+            {
                 Text = w.ToLower(),
                 Codes = GetKeyCodes(codeKeys, w)
             }).ToList();
@@ -73,21 +81,27 @@ public class FuzzySearch {
         Samples.Add(languageSet);
     }
 
-    public SearchResult Search(string targetStr) {
-        var codeKeys = CodeKeysRus.Concat(CodeKeysEng).ToList();
+    public SearchResult Search(string targetStr)
+    {
+        var codeKeys = _codeKeysRus.Concat(_codeKeysEng).ToList();
         var originalSearchObj = new AnalyzedObject();
-        if (targetStr.Length > 0) {
-            originalSearchObj.Words = targetStr.Split(' ').Select(w => new Word {
+        if (targetStr.Length > 0)
+        {
+            originalSearchObj.Words = targetStr.Split(' ').Select(w => new Word
+            {
                 Text = w.ToLower(),
                 Codes = GetKeyCodes(codeKeys, w)
             }).ToList();
         }
 
         var translationSearchObj = new AnalyzedObject();
-        if (targetStr.Length > 0) {
-            translationSearchObj.Words = targetStr.Split(' ').Select(w => {
-                var translateStr = Transliterate(w.ToLower(), Translit_Ru_En);
-                return new Word {
+        if (targetStr.Length > 0)
+        {
+            translationSearchObj.Words = targetStr.Split(' ').Select(w =>
+            {
+                var translateStr = Transliterate(w.ToLower(), _translitRuEn);
+                return new Word
+                {
                     Text = translateStr,
                     Codes = GetKeyCodes(codeKeys, translateStr)
                 };
@@ -95,24 +109,29 @@ public class FuzzySearch {
         }
 
         var result = new List<SearchResult.SearchMatch>();
-        foreach (var sample in Samples) {
+        foreach (var sample in Samples)
+        {
             var languageType = 1;
             var cost = GetRangePhrase(sample, originalSearchObj, false);
             // Проверка транслетерационной строки
             var tempCost = GetRangePhrase(sample, translationSearchObj, true);
-            if (cost > tempCost) {
+            if (cost > tempCost)
+            {
                 cost = tempCost;
                 languageType = 2;
             }
 
-            result.Add(new SearchResult.SearchMatch { SimilarTo = sample.Original, Difficulty = cost, LanguageType = languageType });
+            result.Add(new SearchResult.SearchMatch
+                { SimilarTo = sample.Original, Difficulty = cost, LanguageType = languageType });
         }
 
         return new SearchResult(targetStr, result);
     }
 
-    private double GetRangePhrase(AnalyzedObject source, AnalyzedObject search, bool translation) {
-        if (!source.Words.Any()) {
+    private double GetRangePhrase(AnalyzedObject source, AnalyzedObject search, bool translation)
+    {
+        if (!source.Words.Any())
+        {
             if (!search.Words.Any())
                 return 0;
             return search.Words.Sum(w => w.Text.Length) * 2 * 100;
@@ -121,12 +140,15 @@ public class FuzzySearch {
         if (!search.Words.Any()) return source.Words.Sum(w => w.Text.Length) * 2 * 100;
 
         double result = 0;
-        for (var i = 0; i < search.Words.Count; i++) {
+        for (var i = 0; i < search.Words.Count; i++)
+        {
             var minRangeWord = double.MaxValue;
             var minIndex = 0;
-            for (var j = 0; j < source.Words.Count; j++) {
+            for (var j = 0; j < source.Words.Count; j++)
+            {
                 var currentRangeWord = GetRangeWord(source.Words[j], search.Words[i], translation);
-                if (currentRangeWord < minRangeWord) {
+                if (currentRangeWord < minRangeWord)
+                {
                     minRangeWord = currentRangeWord;
                     minIndex = j;
                 }
@@ -138,22 +160,27 @@ public class FuzzySearch {
         return result;
     }
 
-    private double GetRangeWord(Word source, Word target, bool translation) {
+    private double GetRangeWord(Word source, Word target, bool translation)
+    {
         var minDistance = double.MaxValue;
         var croppedSource = new Word();
         var length = Math.Min(source.Text.Length, target.Text.Length + 1);
-        for (var i = 0; i <= source.Text.Length - length; i++) {
+        for (var i = 0; i <= source.Text.Length - length; i++)
+        {
             croppedSource.Text = source.Text.Substring(i, length);
             croppedSource.Codes = source.Codes.Skip(i).Take(length).ToList();
             minDistance = Math.Min(minDistance,
-                LevenshteinDistance(croppedSource, target, croppedSource.Text.Length == source.Text.Length, translation) + i * 2 / 10.0);
+                LevenshteinDistance(croppedSource, target, croppedSource.Text.Length == source.Text.Length,
+                    translation) + i * 2 / 10.0);
         }
 
         return minDistance;
     }
 
-    private int LevenshteinDistance(Word source, Word target, bool fullWord, bool translation) {
-        if (string.IsNullOrEmpty(source.Text)) {
+    private int LevenshteinDistance(Word source, Word target, bool fullWord, bool translation)
+    {
+        if (string.IsNullOrEmpty(source.Text))
+        {
             if (string.IsNullOrEmpty(target.Text))
                 return 0;
             return target.Text.Length * 2;
@@ -169,18 +196,20 @@ public class FuzzySearch {
         for (var j = 1; j <= m; j++)
             distance[0, j] = j * 2;
         var currentRow = 0;
-        for (var i = 1; i <= n; ++i) {
+        for (var i = 1; i <= n; ++i)
+        {
             currentRow = i % 3;
             var previousRow = (i - 1) % 3;
             distance[currentRow, 0] = i * 2;
-            for (var j = 1; j <= m; j++) {
+            for (var j = 1; j <= m; j++)
+            {
                 distance[currentRow, j] = Math.Min(Math.Min(
                         distance[previousRow, j] + (!fullWord && i == n ? 2 - 1 : 2),
                         distance[currentRow, j - 1] + (!fullWord && i == n ? 2 - 1 : 2)),
                     distance[previousRow, j - 1] + CostDistanceSymbol(source, i - 1, target, j - 1, translation));
 
                 if (i > 1 && j > 1 && source.Text[i - 1] == target.Text[j - 2]
-                 && source.Text[i - 2] == target.Text[j - 1])
+                    && source.Text[i - 2] == target.Text[j - 1])
                     distance[currentRow, j] = Math.Min(distance[currentRow, j], distance[(i - 2) % 3, j - 2] + 2);
             }
         }
@@ -188,7 +217,8 @@ public class FuzzySearch {
         return distance[currentRow, m];
     }
 
-    private int CostDistanceSymbol(Word source, int sourcePosition, Word search, int searchPosition, bool translation) {
+    private int CostDistanceSymbol(Word source, int sourcePosition, Word search, int searchPosition, bool translation)
+    {
         if (source.Text[sourcePosition] == search.Text[searchPosition])
             return 0;
         if (translation)
@@ -196,46 +226,58 @@ public class FuzzySearch {
         if (source.Codes[sourcePosition] != 0 && source.Codes[sourcePosition] == search.Codes[searchPosition])
             return 0;
         var resultWeight = 0;
-        if (!DistanceCodeKey.TryGetValue(source.Codes[sourcePosition], out var nearKeys))
+        if (!_distanceCodeKey.TryGetValue(source.Codes[sourcePosition], out var nearKeys))
             resultWeight = 2;
         else
             resultWeight = nearKeys.Contains(search.Codes[searchPosition]) ? 1 : 2;
-        if (PhoneticGroupsRus.TryGetValue(search.Text[searchPosition], out var phoneticGroups))
+        if (_phoneticGroupsRus.TryGetValue(search.Text[searchPosition], out var phoneticGroups))
             resultWeight = Math.Min(resultWeight, phoneticGroups.Contains(source.Text[sourcePosition]) ? 1 : 2);
-        if (PhoneticGroupsEng.TryGetValue(search.Text[searchPosition], out phoneticGroups))
+        if (_phoneticGroupsEng.TryGetValue(search.Text[searchPosition], out phoneticGroups))
             resultWeight = Math.Min(resultWeight, phoneticGroups.Contains(source.Text[sourcePosition]) ? 1 : 2);
         return resultWeight;
     }
 
-    private List<int> GetKeyCodes(List<KeyValuePair<char, int>> codeKeys, string word) {
+    private List<int> GetKeyCodes(List<KeyValuePair<char, int>> codeKeys, string word)
+    {
         return word.ToLower().Select(ch => codeKeys.FirstOrDefault(ck => ck.Key == ch).Value).ToList();
     }
 
-    private string Transliterate(string text, Dictionary<char, string> cultureFrom) {
-        var translateText = text.SelectMany(t => cultureFrom.TryGetValue(t, out var translateChar) ? translateChar : t.ToString());
+    private string Transliterate(string text, Dictionary<char, string> cultureFrom)
+    {
+        var translateText = text.SelectMany(t =>
+            cultureFrom.TryGetValue(t, out var translateChar) ? translateChar : t.ToString());
         return string.Concat(translateText);
     }
 
-    private static void SetPhoneticGroups(Dictionary<char, List<char>> resultPhoneticGroups, List<string> phoneticGroups) {
+    private static void SetPhoneticGroups(Dictionary<char, List<char>> resultPhoneticGroups,
+        List<string> phoneticGroups)
+    {
         foreach (var group in phoneticGroups)
-            foreach (var symbol in group)
-                if (!resultPhoneticGroups.ContainsKey(symbol)) {
-                    resultPhoneticGroups.Add(symbol,
-                        phoneticGroups.Where(pg => pg.Contains(symbol)).SelectMany(pg => pg).Distinct().Where(ch => ch != symbol).ToList());
-                }
+        foreach (var symbol in group)
+            if (!resultPhoneticGroups.ContainsKey(symbol))
+            {
+                resultPhoneticGroups.Add(symbol,
+                    phoneticGroups.Where(pg => pg.Contains(symbol)).SelectMany(pg => pg).Distinct()
+                        .Where(ch => ch != symbol).ToList());
+            }
     }
-    private class Word {
+
+    private class Word
+    {
         public string Text { get; set; } = null!;
         public List<int> Codes { get; set; } = new();
     }
 
-    private class AnalyzedObject {
+    private class AnalyzedObject
+    {
         public string Original { get; set; } = null!;
         public List<Word> Words { get; set; } = new();
     }
 
-    public class SearchResult {
-        public SearchResult(string query, IEnumerable<SearchMatch> matches) {
+    public class SearchResult
+    {
+        public SearchResult(string query, IEnumerable<SearchMatch> matches)
+        {
             Query = query;
             Matches = matches.OrderBy(match => match.Difficulty).ToList();
         }
@@ -243,14 +285,18 @@ public class FuzzySearch {
         public List<SearchMatch> Matches { get; }
         public string Query { get; }
 
-        public IEnumerable<SearchMatch> GetBestMatches(int matchesCount) {
+        public IEnumerable<SearchMatch> GetBestMatches(int matchesCount)
+        {
             return Matches.Take(matchesCount);
         }
 
-        public SearchMatch? GetFullMatch() {
+        public SearchMatch? GetFullMatch()
+        {
             return Matches.FirstOrDefault(match => Math.Abs(match.Difficulty) < 10);
         }
-        public class SearchMatch {
+
+        public class SearchMatch
+        {
             public string SimilarTo { get; set; } = null!;
             public double Difficulty { get; set; }
             public int LanguageType { get; set; }
@@ -259,8 +305,8 @@ public class FuzzySearch {
 
     #region Блок Фонетических групп
 
-    private static Dictionary<char, List<char>> PhoneticGroupsRus = new();
-    private static Dictionary<char, List<char>> PhoneticGroupsEng = new();
+    private static Dictionary<char, List<char>> _phoneticGroupsRus = new();
+    private static Dictionary<char, List<char>> _phoneticGroupsEng = new();
 
     #endregion
 
@@ -269,7 +315,8 @@ public class FuzzySearch {
     /// <summary>
     /// Близость кнопок клавиатуры
     /// </summary>
-    private static Dictionary<int, List<int>> DistanceCodeKey = new() {
+    private static Dictionary<int, List<int>> _distanceCodeKey = new()
+    {
         /* '`' */ { 192, new List<int> { 49 } },
         /* '1' */ { 49, new List<int> { 50, 87, 81 } },
         /* '2' */ { 50, new List<int> { 49, 81, 87, 69, 51 } },
@@ -321,7 +368,8 @@ public class FuzzySearch {
     /// <summary>
     /// Коды клавиш русскоязычной клавиатуры
     /// </summary>
-    private static Dictionary<char, int> CodeKeysRus = new() {
+    private static Dictionary<char, int> _codeKeysRus = new()
+    {
         { 'ё', 192 },
         { '1', 49 },
         { '2', 50 },
@@ -387,7 +435,8 @@ public class FuzzySearch {
     /// <summary>
     /// Коды клавиш англиской клавиатуры
     /// </summary>
-    private static Dictionary<char, int> CodeKeysEng = new() {
+    private static Dictionary<char, int> _codeKeysEng = new()
+    {
         { '`', 192 },
         { '1', 49 },
         { '2', 50 },

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using System.Reactive.Threading.Tasks;
 using System.Threading.Tasks;
 using Bot.DiscordRelated.MessageComponents;
 using Bot.Utilities.Collector;
@@ -13,7 +12,8 @@ using Discord;
 
 namespace Bot.DiscordRelated.Music;
 
-public class EmbedPlayerQueueDisplay : PlayerDisplayBase {
+public class EmbedPlayerQueueDisplay : PlayerDisplayBase
+{
     private readonly CollectorService _collectorService;
     private readonly IDiscordClient _discordClient;
     private readonly ILocalizationProvider _loc;
@@ -23,7 +23,10 @@ public class EmbedPlayerQueueDisplay : PlayerDisplayBase {
     private PaginatedMessage _paginatedMessage = null!;
     private Disposables? _subscribers;
 
-    public EmbedPlayerQueueDisplay(IMessageChannel targetChannel, ILocalizationProvider loc, MessageComponentService messageComponentService, CollectorService collectorService, IDiscordClient discordClient) {
+    public EmbedPlayerQueueDisplay(IMessageChannel targetChannel, ILocalizationProvider loc,
+        MessageComponentService messageComponentService, CollectorService collectorService,
+        IDiscordClient discordClient)
+    {
         _loc = loc;
         _messageComponentService = messageComponentService;
         _collectorService = collectorService;
@@ -31,9 +34,12 @@ public class EmbedPlayerQueueDisplay : PlayerDisplayBase {
         _targetChannel = targetChannel;
     }
 
-    public override async Task Initialize(FinalLavalinkPlayer finalLavalinkPlayer) {
+    public override async Task Initialize(EnlivenLavalinkPlayer finalLavalinkPlayer)
+    {
         var paginatedAppearanceOptions = new PaginatedAppearanceOptions { Timeout = TimeSpan.FromMinutes(1) };
-        _paginatedMessage = new PaginatedMessage(paginatedAppearanceOptions, _targetChannel, _loc, _messageComponentService, _collectorService, _discordClient) {
+        _paginatedMessage = new PaginatedMessage(paginatedAppearanceOptions, _targetChannel, _loc,
+            _messageComponentService, _collectorService, _discordClient)
+        {
             Title = _loc.Get("MusicQueues.QueueTitle"), Color = Color.Gold
         };
         _paginatedMessage.Disposed.Subscribe(base2 => ExecuteShutdown(null, null));
@@ -41,34 +47,37 @@ public class EmbedPlayerQueueDisplay : PlayerDisplayBase {
         await _paginatedMessage.Resend();
     }
 
-    private void UpdatePages() {
+    private void UpdatePages()
+    {
         _paginatedMessage?.SetPages(string.Join("\n",
                 Player!.Playlist.Select((track, i) =>
                     (Player.CurrentTrackIndex == i ? "@" : " ")
-                  + $"{i + 1}: {Player.Playlist[i].Title.RemoveNonPrintableChars()}")),
+                    + $"{i + 1}: {Player.Playlist[i].Track.Title.RemoveNonPrintableChars()}")),
             "```py\n{0}```", 50);
     }
 
 
-    public override Task ChangePlayer(FinalLavalinkPlayer newPlayer) {
+    public override Task ChangePlayer(EnlivenLavalinkPlayer newPlayer)
+    {
         base.ChangePlayer(newPlayer);
         UpdatePages();
         _subscribers?.Dispose();
         _subscribers = new Disposables(
             Player.Playlist.Changed.Subscribe(playlist => UpdatePages()),
-            Player.CurrentTrackIndexChanged.Subscribe(i => UpdatePages()),
-            Player.ShutdownTask.ToObservable().SubscribeAsync(snapshot => ExecuteShutdown(null, null))
+            Player.CurrentTrackIndexChanged.Subscribe(i => UpdatePages())
         );
         return Task.CompletedTask;
     }
 
-    public override async Task ExecuteShutdown(IEntry? header, IEntry? body) {
+    public override async Task ExecuteShutdown(IEntry? header, IEntry? body)
+    {
         await base.ExecuteShutdown(header!, body!);
         _subscribers?.Dispose();
         _paginatedMessage.Dispose();
     }
 
-    public override Task LeaveNotification(IEntry? header, IEntry? body) {
+    public override Task LeaveNotification(IEntry? header, IEntry? body)
+    {
         return Task.CompletedTask;
     }
 }

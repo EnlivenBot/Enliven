@@ -1,66 +1,93 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using System.Threading;
 using System.Threading.Tasks;
-using Lavalink4NET.Events;
-using Lavalink4NET.Player;
+using Common.Music.Tracks;
+using Lavalink4NET.Players;
+using Lavalink4NET.Players.Queued;
+using Lavalink4NET.Protocol.Payloads.Events;
 
-namespace Common.Music.Players {
-    public class WrappedLavalinkPlayer : LavalinkPlayer {
-        private readonly Subject<int> _volumeChanged = new();
-        public IObservable<int> VolumeChanged => _volumeChanged.AsObservable();
-        private readonly Subject<EnlivenLavalinkClusterNode?> _socketChanged = new();
-        public IObservable<EnlivenLavalinkClusterNode?> SocketChanged => _socketChanged.AsObservable();
-        private readonly Subject<PlayerState> _stateChanged = new();
-        public IObservable<PlayerState> StateChanged => _stateChanged.AsObservable();
-        public virtual async Task SetVolumeAsync(int volume = 100, bool force = false) {
-            volume = volume.Normalize(0, 200);
-            // ReSharper disable once CompareOfFloatsByEqualityOperator
-            if (Volume != (float) volume / 200 || force) {
-                await base.SetVolumeAsync((float) volume / 200, false, force);
-                _volumeChanged.OnNext(volume);
-            }
-        }
-        
-        [Obsolete]
-        public override async Task SetVolumeAsync(float volume = 1, bool normalize = false, bool force = false) {
-            await SetVolumeAsync((int) (volume * 200), force);
-        }
-        
-        public override Task OnSocketChanged(SocketChangedEventArgs eventArgs)
+#pragma warning disable CS0809 // Obsolete member overrides non-obsolete member
+
+namespace Common.Music.Players;
+
+public class WrappedLavalinkPlayer : LavalinkPlayer
+{
+    private readonly Subject<PlayerState> _stateChanged = new();
+
+    private readonly Subject<int> _volumeChanged = new();
+
+    /// <inheritdoc />
+    public WrappedLavalinkPlayer(IPlayerProperties<LavalinkPlayer, LavalinkPlayerOptions> options) : base(options)
+    {
+    }
+
+    public IObservable<int> VolumeChanged => _volumeChanged.AsObservable();
+    public IObservable<PlayerState> StateChanged => _stateChanged.AsObservable();
+
+    public new IEnlivenQueueItem? CurrentItem
+    {
+        get
         {
-            _socketChanged.OnNext(eventArgs.NewSocket as EnlivenLavalinkClusterNode);
-            return base.OnSocketChanged(eventArgs);
-        }
-        
-        public override async Task OnTrackEndAsync(TrackEndEventArgs eventArgs) {
-            await base.OnTrackEndAsync(eventArgs);
-            _stateChanged.OnNext(State);
-        }
-        
-        public override async Task OnTrackExceptionAsync(TrackExceptionEventArgs eventArgs) {
-            await base.OnTrackExceptionAsync(eventArgs);
-            _stateChanged.OnNext(State);
-        }
-        
-        public override async Task OnTrackStartedAsync(TrackStartedEventArgs eventArgs) {
-            await base.OnTrackStartedAsync(eventArgs);
-            _stateChanged.OnNext(State);
-        }
-        
-        public override async Task OnTrackStuckAsync(TrackStuckEventArgs eventArgs) {
-            await base.OnTrackStuckAsync(eventArgs);
-            _stateChanged.OnNext(State);
-        }
-        
-        public override async Task PauseAsync() {
-            await base.PauseAsync();
-            _stateChanged.OnNext(State);
-        }
+            var trackQueueItem = base.CurrentItem;
+            if (trackQueueItem is TrackQueueItem) Debug.Assert(trackQueueItem is TrackQueueItem);
 
-        public override async Task ResumeAsync() {
-            await base.ResumeAsync();
-            _stateChanged.OnNext(State);
+            return (IEnlivenQueueItem?)trackQueueItem;
         }
+    }
+
+    public virtual ValueTask SetVolumeAsync(int volume, CancellationToken token = new())
+    {
+        volume = volume.Normalize(0, 200);
+        _volumeChanged.OnNext(volume);
+        return base.SetVolumeAsync((float)volume / 200, token);
+    }
+
+    /// <inheritdoc />
+    [Obsolete("Use SetVolumeAsync which accept int as a first parameter")]
+    public sealed override ValueTask SetVolumeAsync(float volume, CancellationToken cancellationToken = new())
+    {
+        return SetVolumeAsync((int)(volume * 200), cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override async ValueTask PauseAsync(CancellationToken cancellationToken = new())
+    {
+        await base.PauseAsync(cancellationToken);
+        _stateChanged.OnNext(State);
+    }
+
+    public override async ValueTask ResumeAsync(CancellationToken cancellationToken = new())
+    {
+        await base.ResumeAsync(cancellationToken);
+        _stateChanged.OnNext(State);
+    }
+
+    protected override ValueTask NotifyTrackStartedAsync(ITrackQueueItem track,
+        CancellationToken cancellationToken = new())
+    {
+        _stateChanged.OnNext(State);
+        return base.NotifyTrackStartedAsync(track, cancellationToken);
+    }
+
+    protected override ValueTask NotifyTrackEndedAsync(ITrackQueueItem track, TrackEndReason endReason,
+        CancellationToken cancellationToken = new())
+    {
+        _stateChanged.OnNext(State);
+        return base.NotifyTrackEndedAsync(track, endReason, cancellationToken);
+    }
+
+    public virtual ValueTask PlayAsync(IEnlivenQueueItem trackQueueItem, TrackPlayProperties properties = new(),
+        CancellationToken cancellationToken = new())
+    {
+        return base.PlayAsync(trackQueueItem, properties, cancellationToken);
+    }
+
+    public sealed override ValueTask PlayAsync(ITrackQueueItem trackQueueItem, TrackPlayProperties properties = new(),
+        CancellationToken cancellationToken = new())
+    {
+        return base.PlayAsync(trackQueueItem, properties, cancellationToken);
     }
 }

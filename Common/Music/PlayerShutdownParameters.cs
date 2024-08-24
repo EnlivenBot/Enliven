@@ -1,11 +1,10 @@
-namespace Common.Music {
-    public class PlayerSnapshotParameters {
-        public bool SavePlaylist { get; set; } = true;
-    }
+namespace Common.Music;
 
-    public class PlayerShutdownParameters : PlayerSnapshotParameters {
-        public static PlayerShutdownParameters Default => new();
+public class PlayerShutdownParameters
+{
+    public static PlayerShutdownParameters Default => new();
 
-        public bool ShutdownDisplays { get; set; } = true;
-    }
+    public bool SavePlaylist { get; set; } = true;
+    public bool ShutdownDisplays { get; set; } = true;
+    public bool RestartPlayer { get; set; }
 }

@@ -6,13 +6,15 @@ using Bot.DiscordRelated.Interactions;
 using Common;
 using Common.Localization.Entries;
 using Common.Music;
+using Common.Music.Tracks;
 using Discord.Commands;
 using LiteDB;
 
-namespace Bot.Commands; 
+namespace Bot.Commands;
 
 [SlashCommandAdapter]
-public sealed class PlaylistCommands : MusicModuleBase {
+public sealed class PlaylistCommands : MusicModuleBase
+{
     public IPlaylistProvider PlaylistProvider { get; set; } = null!;
 
     [Hidden]
@@ -20,9 +22,11 @@ public sealed class PlaylistCommands : MusicModuleBase {
     [Command("saveplaylist", RunMode = RunMode.Async)]
     [Alias("sp")]
     [Summary("saveplaylist0s")]
-    public async Task SavePlaylist() {
+    public async Task SavePlaylist()
+    {
         var playlist = await Player.ExportPlaylist(ExportPlaylistOptions.IgnoreTrackIndex);
-        var storedPlaylist = PlaylistProvider.StorePlaylist(playlist, "u" + ObjectId.NewObjectId(), Context.User.ToLink());
+        var storedPlaylist =
+            PlaylistProvider.StorePlaylist(playlist, "u" + ObjectId.NewObjectId(), Context.User.ToLink());
         await this.ReplySuccessFormattedAsync(new EntryLocalized("Music.PlaylistSaved", storedPlaylist.Id));
     }
 
@@ -30,7 +34,8 @@ public sealed class PlaylistCommands : MusicModuleBase {
     [Command("loadplaylist", RunMode = RunMode.Async)]
     [Alias("lp")]
     [Summary("loadplaylist0s")]
-    public async Task LoadPlaylist([Summary("playlistId")] [Remainder] string id) {
+    public async Task LoadPlaylist([Summary("playlistId")] [Remainder] string id)
+    {
         await ExecutePlaylist(id, ImportPlaylistOptions.Replace);
     }
 
@@ -38,7 +43,8 @@ public sealed class PlaylistCommands : MusicModuleBase {
     [Command("addplaylist", RunMode = RunMode.Async)]
     [Alias("ap")]
     [Summary("addplaylist0s")]
-    public async Task AddPlaylist([Summary("playlistId")] [Remainder] string id) {
+    public async Task AddPlaylist([Summary("playlistId")] [Remainder] string id)
+    {
         await ExecutePlaylist(id, ImportPlaylistOptions.JustAdd);
     }
 
@@ -46,20 +52,24 @@ public sealed class PlaylistCommands : MusicModuleBase {
     [Command("runplaylist", RunMode = RunMode.Async)]
     [Alias("rp")]
     [Summary("runplaylist0s")]
-    public async Task RunPlaylist([Summary("playlistId")] [Remainder] string id) {
+    public async Task RunPlaylist([Summary("playlistId")] [Remainder] string id)
+    {
         await ExecutePlaylist(id, ImportPlaylistOptions.AddAndPlay);
     }
 
-    private async Task ExecutePlaylist(string id, ImportPlaylistOptions options) {
+    private async Task ExecutePlaylist(string id, ImportPlaylistOptions options)
+    {
         var playlist = PlaylistProvider.Get(id);
-        if (playlist == null) {
-            await this.ReplyFailFormattedAsync(new EntryLocalized("Music.PlaylistNotFound", id.SafeSubstring(100, "...") ?? ""), true);
+        if (playlist == null)
+        {
+            await this.ReplyFailFormattedAsync(
+                new EntryLocalized("Music.PlaylistNotFound", id.SafeSubstring(100, "...") ?? ""), true);
             return;
         }
 
-        Player!.WriteToQueueHistory(Loc.Get("Music.LoadPlaylist", Context.User.Username,
-            id.SafeSubstring(100, "...") ?? ""));
-        await Player.ImportPlaylist(playlist, options, Context.User.Username);
+        Player.WriteToQueueHistory(Loc.Get("Music.LoadPlaylist", Context.User.Username,
+            id.SafeSubstring(100, "...")));
+        await Player.ImportPlaylist(playlist.Playlist, options, new TrackRequester(Context.User));
         // TODO: Make control message resending as command response
         var mainPlayerDisplay = await GetMainPlayerDisplay();
         _ = mainPlayerDisplay.ControlMessageResend();
