@@ -571,6 +571,7 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
         if (currentTrack is null && model.CurrentTrack is null)
         {
             CurrentItem = null;
+            _currentOverridenPlayableItemIdentifier = null;
         }
         else if (model.CurrentTrack?.Information.Identifier != currentTrack?.Identifier
                  && model.CurrentTrack?.Information.Identifier != _currentOverridenPlayableItemIdentifier

@@ -103,7 +103,7 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
             // else
             // {
             // LoadFailedId = CurrentTrack?.Identifier;
-            await PlayAsync(CurrentTrack!, new TrackPlayProperties(Position?.Position), cancellationToken);
+            await PlayAsync(CurrentItem!, new TrackPlayProperties(Position?.Position), cancellationToken);
             // }
             // }
             // else
