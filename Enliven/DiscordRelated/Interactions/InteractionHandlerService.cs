@@ -52,7 +52,7 @@ public class InteractionHandlerService : IService, IDisposable {
 
             try {
                 var restInteractionMessage = await context.Interaction.GetOriginalResponseAsync();
-                if ((restInteractionMessage.Flags & MessageFlags.Loading) != 0) await restInteractionMessage.DeleteAsync();
+                if (restInteractionMessage is not null && (restInteractionMessage.Flags & MessageFlags.Loading) != 0) await restInteractionMessage.DeleteAsync();
             }
             catch (Exception) {
                 // ignored
