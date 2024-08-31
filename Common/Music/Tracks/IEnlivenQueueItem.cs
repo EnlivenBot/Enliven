@@ -12,6 +12,8 @@ public interface IEnlivenQueueItem : ITrackQueueItem
     TrackPlaylist? Playlist { get; }
 
     new T? As<T>() where T : class, IEnlivenQueueItem => this as T;
+    
+    uint PlaybackExceptionCount { get; set; }
 
     IEnlivenQueueItem WithStartPosition(TimeSpan position);
 }

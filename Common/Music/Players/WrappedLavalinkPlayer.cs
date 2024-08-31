@@ -8,6 +8,7 @@ using Common.Music.Tracks;
 using Lavalink4NET.Players;
 using Lavalink4NET.Players.Queued;
 using Lavalink4NET.Protocol.Payloads.Events;
+using Lavalink4NET.Rest.Entities.Tracks;
 
 #pragma warning disable CS0809 // Obsolete member overrides non-obsolete member
 
@@ -65,18 +66,25 @@ public class WrappedLavalinkPlayer : LavalinkPlayer
         _stateChanged.OnNext(State);
     }
 
-    protected override ValueTask NotifyTrackStartedAsync(ITrackQueueItem track,
+    public virtual ValueTask NotifyStateChangedAsync(PlayerState playerState,
         CancellationToken cancellationToken = new())
     {
         _stateChanged.OnNext(State);
-        return base.NotifyTrackStartedAsync(track, cancellationToken);
+        return ValueTask.CompletedTask;
     }
 
-    protected override ValueTask NotifyTrackEndedAsync(ITrackQueueItem track, TrackEndReason endReason,
+    protected override async ValueTask NotifyTrackStartedAsync(ITrackQueueItem track,
         CancellationToken cancellationToken = new())
     {
+        await base.NotifyTrackStartedAsync(track, cancellationToken);
         _stateChanged.OnNext(State);
-        return base.NotifyTrackEndedAsync(track, endReason, cancellationToken);
+    }
+
+    protected override async ValueTask NotifyTrackEndedAsync(ITrackQueueItem track, TrackEndReason endReason,
+        CancellationToken cancellationToken = new())
+    {
+        await base.NotifyTrackEndedAsync(track, endReason, cancellationToken);
+        _stateChanged.OnNext(State);
     }
 
     public virtual ValueTask PlayAsync(IEnlivenQueueItem trackQueueItem, TrackPlayProperties properties = new(),
