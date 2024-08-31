@@ -425,4 +425,17 @@ public static class ExtensionMethods
             ? await trackHasArtwork.GetArtwork()
             : await artworkService.ResolveAsync(track);
     }
+    
+    public static string Format(this TrackException exception)
+    {
+        var text = "Unknown exception";
+        if (exception.Cause is not null)
+        {
+            text = exception.Message is not null
+                ? $"{exception.Message} ({exception.Cause})"
+                : exception.Cause;
+        }
+
+        return $"[{exception.Severity}] {text}";
+    }
 }

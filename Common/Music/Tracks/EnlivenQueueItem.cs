@@ -18,6 +18,8 @@ public class EnlivenQueueItem : IEnlivenQueueItem
     public LavalinkTrack Track => Reference.Track!;
     public TrackRequester Requester { get; }
 
+    public uint PlaybackExceptionCount { get; set; }
+
     public IEnlivenQueueItem WithStartPosition(TimeSpan position)
     {
         var newTrack = Track with { StartPosition = position };

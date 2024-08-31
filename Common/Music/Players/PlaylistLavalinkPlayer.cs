@@ -80,61 +80,44 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
     protected override async ValueTask NotifyTrackEndedAsync(ITrackQueueItem track, TrackEndReason endReason,
         CancellationToken cancellationToken = new())
     {
-        if (endReason == TrackEndReason.Replaced) return;
+        if (endReason is TrackEndReason.Replaced or TrackEndReason.LoadFailed) return;
 
-        // var oldTrackIndex = CurrentTrackIndex;
+        await SkipAsync();
+    }
 
-        if (endReason == TrackEndReason.LoadFailed)
+    protected override async ValueTask NotifyTrackExceptionAsync(ITrackQueueItem track, TrackException exception,
+        CancellationToken cancellationToken = new())
+    {
+        WriteToQueueHistory(new EntryLocalized("Music.TrackException", exception.Format()));
+        var enlivenItem = track.As<IEnlivenQueueItem>() ?? CurrentItem;
+        if (enlivenItem != null)
         {
-            // if (LoadFailedId == CurrentTrack?.Identifier)
-            // {
-            if (Playlist.Count - CurrentTrackIndex > 1)
+            enlivenItem.PlaybackExceptionCount++;
+            if (enlivenItem.PlaybackExceptionCount > 2)
             {
-                await PauseAsync(cancellationToken);
+                if (Playlist.Count - CurrentTrackIndex > 1)
+                {
+                    await SkipAsync(1, true);
+                }
             }
             else
             {
-                await SkipAsync();
+                var currentPosition = Position?.Position;
+                if (currentPosition is not null && currentPosition.Value.TotalSeconds < 10)
+                {
+                    currentPosition = null;
+                }
+
+                await PlayAsync(enlivenItem, new TrackPlayProperties(currentPosition), cancellationToken);
             }
-
-            // Playlist.RemoveAt(oldTrackIndex);
-            // LoadFailedRemoves++;
-            // }
-            // else
-            // {
-            // LoadFailedId = CurrentTrack?.Identifier;
-            await PlayAsync(CurrentItem!, new TrackPlayProperties(Position?.Position), cancellationToken);
-            // }
-            // }
-            // else
-            // {
-            // LoadFailedRemoves = 0;
         }
+    }
 
-        // if (LoadFailedRemoves > 2)
-        // {
-        //     try
-        //     {
-        //         var cluster = await MusicController.ClusterTask;
-        //         var currentNode = cluster.GetServingNode(GuildId);
-        //         var newNode = cluster.Nodes
-        //             .Where(node => node.IsConnected)
-        //             .Where(node => node != currentNode)
-        //             .RandomOrDefault();
-        //         if (newNode != null)
-        //         {
-        //             await currentNode.MovePlayerAsync(this, newNode);
-        //             WriteToQueueHistory(new HistoryEntry(new EntryLocalized("MusicQueues.NodeChanged", "SYSTEM",
-        //                 newNode.Label ?? "")));
-        //         }
-        //     }
-        //     finally
-        //     {
-        //         LoadFailedRemoves = 0;
-        //     }
-        // }
-
-        await SkipAsync();
+    protected override async ValueTask NotifyTrackStuckAsync(ITrackQueueItem track, TimeSpan threshold,
+        CancellationToken cancellationToken = new())
+    {
+        WriteToQueueHistory(new EntryLocalized("Music.TrackStuck"));
+        await SkipAsync(1, true);
     }
 
 
@@ -357,21 +340,6 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
         snapshot.LoopingState = LoopingState;
         snapshot.Playlist = Playlist.ToList();
         await base.FillPlayerSnapshot(snapshot);
-    }
-
-    protected override async ValueTask NotifyTrackExceptionAsync(ITrackQueueItem track, TrackException exception,
-        CancellationToken cancellationToken = new())
-    {
-        WriteToQueueHistory(new EntryLocalized("Music.TrackException",
-            exception.Message ?? exception.Cause ?? "UNKNOWN"));
-        await SkipAsync(1, true);
-    }
-
-    protected override async ValueTask NotifyTrackStuckAsync(ITrackQueueItem track, TimeSpan threshold,
-        CancellationToken cancellationToken = new())
-    {
-        WriteToQueueHistory(new EntryLocalized("Music.TrackStuck"));
-        await SkipAsync(1, true);
     }
 
     protected override ITrackQueueItem? LookupTrackQueueItem(LavalinkTrack receivedTrack, ITrackQueueItem? currentTrack,
