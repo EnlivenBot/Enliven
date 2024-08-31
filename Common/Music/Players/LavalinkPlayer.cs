@@ -311,19 +311,14 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
             TrackEndReason.Stopped => Interlocked.Exchange(ref _stoppedItem, null) ?? ResolveTrackQueueItem(track),
             _ => ResolveTrackQueueItem(track)
         };
+        
+        if (Volatile.Read(ref _trackVersion) == currentTrackVersion && endReason is not TrackEndReason.Replaced)
+        {
+            CurrentItem = null;
+            await UpdateStateAsync(PlayerState.NotPlaying, cancellationToken).ConfigureAwait(false);
+        }
 
-        try
-        {
-            await NotifyTrackEndedAsync(previousItem, endReason, cancellationToken).ConfigureAwait(false);
-        }
-        finally
-        {
-            if (Volatile.Read(ref _trackVersion) == currentTrackVersion && endReason is not TrackEndReason.Replaced)
-            {
-                CurrentItem = null;
-                await UpdateStateAsync(PlayerState.NotPlaying, cancellationToken).ConfigureAwait(false);
-            }
-        }
+        await NotifyTrackEndedAsync(previousItem, endReason, cancellationToken).ConfigureAwait(false);
     }
 
     ValueTask ILavalinkPlayerListener.NotifyTrackExceptionAsync(LavalinkTrack track, TrackException exception,
@@ -774,9 +769,6 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
             Debug.Assert(CurrentItem is null);
             return null;
         }
-
-        Debug.Assert(track.Identifier == CurrentItem?.Track?.Identifier
-                     || (track.Identifier == _currentOverridenPlayableItemIdentifier && CurrentItem is not null));
 
         if (track.Identifier == CurrentItem?.Track?.Identifier
             || (track.Identifier == _currentOverridenPlayableItemIdentifier && CurrentItem is not null))

@@ -180,7 +180,7 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
             {
                 _logger.Debug(e,
                     "Failed to update embed control message. Guild: {TargetGuildId}. Channel: {TargetChannelId}. Message id: {ControlMessageId}",
-                    _targetGuild?.Id, _targetChannel.Id, _controlMessage.Id);
+                    _targetGuild?.Id, _targetChannel.Id, _controlMessage?.Id);
                 if (_controlMessage != null)
                 {
                     _targetChannel.GetMessageAsync(_controlMessage.Id).SafeDelete();
@@ -264,25 +264,26 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
 
         _playerSubscriptions = new Disposables(
             updateControlMessageSubj,
-            Player.QueueHistory.HistoryChanged
+            newPlayer.QueueHistory.HistoryChanged
                 .Select(OnHistoryChanged)
                 .Where(isChanged => isChanged)
                 .Select(_ => Unit.Default)
                 .Subscribe(updateControlMessageSubj),
-            Player.Playlist.Changed.Subscribe(_ => UpdateQueue()),
-            Player.VolumeChanged.Subscribe(_ => UpdateParameters()),
-            Player.StateChanged
+            newPlayer.Playlist.Changed.Subscribe(_ => UpdateQueue()),
+            newPlayer.VolumeChanged.Subscribe(_ => UpdateParameters()),
+            newPlayer.StateChanged
                 .Do(OnStateChanged)
                 .Select(_ => Unit.Default)
                 .Subscribe(updateControlMessageSubj),
-            Player.FiltersChanged.Subscribe(_ => UpdateEffects()),
-            Player.CurrentTrackIndexChanged.Subscribe(_ => UpdateQueue()),
-            Player.LoopingStateChanged.Subscribe(OnLoopingStateChanged)
+            newPlayer.FiltersChanged.Subscribe(_ => UpdateEffects()),
+            newPlayer.CurrentTrackIndexChanged.Subscribe(_ => UpdateQueue()),
+            newPlayer.LoopingStateChanged.Subscribe(OnLoopingStateChanged)
         );
         UpdateNode();
         await ControlMessageResend();
+        return;
 
-        void OnStateChanged(PlayerState obj)
+        void OnStateChanged(PlayerState _)
         {
             UpdateProgress();
             UpdateTrackInfo();
@@ -457,7 +458,7 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
             _embedBuilder.Title = _loc.Get("Music.QueueEnd");
             _embedBuilder.Url = "";
         }
-        else if (track != null && (Player.State != PlayerState.NotPlaying || Player.State != PlayerState.Destroyed))
+        else if (track != null && Player.State is not (PlayerState.NotPlaying or PlayerState.Destroyed))
         {
             var artwork = await track.ResolveArtwork(_artworkService);
             _embedBuilder

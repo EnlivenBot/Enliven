@@ -80,6 +80,8 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
     protected override async ValueTask NotifyTrackEndedAsync(ITrackQueueItem track, TrackEndReason endReason,
         CancellationToken cancellationToken = new())
     {
+        await base.NotifyTrackEndedAsync(track, endReason, cancellationToken);
+        
         if (endReason is TrackEndReason.Replaced or TrackEndReason.LoadFailed) return;
 
         await SkipAsync();
@@ -88,6 +90,8 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
     protected override async ValueTask NotifyTrackExceptionAsync(ITrackQueueItem track, TrackException exception,
         CancellationToken cancellationToken = new())
     {
+        await base.NotifyTrackExceptionAsync(track, exception, cancellationToken);
+        
         WriteToQueueHistory(new EntryLocalized("Music.TrackException", exception.Format()));
         var enlivenItem = track.As<IEnlivenQueueItem>() ?? CurrentItem;
         if (enlivenItem != null)
@@ -116,6 +120,7 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
     protected override async ValueTask NotifyTrackStuckAsync(ITrackQueueItem track, TimeSpan threshold,
         CancellationToken cancellationToken = new())
     {
+        await base.NotifyTrackStuckAsync(track, threshold, cancellationToken);
         WriteToQueueHistory(new EntryLocalized("Music.TrackStuck"));
         await SkipAsync(1, true);
     }
