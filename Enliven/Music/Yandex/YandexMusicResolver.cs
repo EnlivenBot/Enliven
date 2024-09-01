@@ -2,6 +2,7 @@
 using System.Collections.Immutable;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Common;
 using Common.Music.Resolvers;
@@ -24,9 +25,9 @@ public class YandexMusicResolver : MusicResolverBase<YandexLavalinkTrack, Yandex
     public override bool IsAvailable => true;
     public override bool CanResolve(string query) => _musicMainResolver.CanResolveQuery(query, false);
 
-    public override async ValueTask<TrackLoadResult> Resolve(ITrackManager cluster,
+    public override async ValueTask<MusicResolveResult> Resolve(ITrackManager cluster,
         LavalinkApiResolutionScope resolutionScope,
-        string query)
+        string query, CancellationToken cancellationToken)
     {
         var yandexMusicSearchResult = await _musicMainResolver.ResolveQuery(query, true, false);
         if (yandexMusicSearchResult == null) return TrackLoadResult.CreateEmpty();

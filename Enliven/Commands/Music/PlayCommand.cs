@@ -29,7 +29,7 @@ public sealed class PlayCommand : MusicModuleBase
     [Command("play", RunMode = RunMode.Async)]
     [Alias("p")]
     [Summary("play0s")]
-    public async Task Play([Remainder] [SlashCommandOptional(false)] [Summary("play0_0s")] string? query = null)
+    public async Task Play([Remainder] [SlashCommandOptional] [Summary("play0_0s")] string? query = null)
     {
         await PlayInternal(query);
     }
@@ -38,19 +38,19 @@ public sealed class PlayCommand : MusicModuleBase
     [Command("playnext", RunMode = RunMode.Async)]
     [Alias("pn")]
     [Summary("playnext0s")]
-    public async Task PlayNext([Remainder] [SlashCommandOptional(false)] [Summary("play0_0s")] string? query = null)
+    public async Task PlayNext([Remainder] [SlashCommandOptional] [Summary("play0_0s")] string? query = null)
     {
-        await PlayInternal(query, Player.Playlist.Count == 0 ? -1 : Player.CurrentTrackIndex + 1);
+        await PlayInternal(query, Player.Playlist.Count == 0 ? null : Player.CurrentTrackIndex + 1);
     }
 
-    private async Task PlayInternal(string? query, int position = -1)
+    private async Task PlayInternal(string? query, int? position = null)
     {
         var messageInvoker = (Context as TextCommandsModuleContext)?.Message;
         var queries = await GetMusicQueries(messageInvoker, query.IsBlank(""));
         var mainPlayerDisplay = await GetMainPlayerDisplay();
         if (queries.Count != 0)
         {
-            await StartResolvingInternal(query, position, mainPlayerDisplay, queries);
+            await StartResolvingInternal(position, mainPlayerDisplay, queries);
             return;
         }
 
@@ -64,8 +64,7 @@ public sealed class PlayCommand : MusicModuleBase
         }
     }
 
-    private async Task StartResolvingInternal(string? query, int position, EmbedPlayerDisplay mainPlayerDisplay,
-        IEnumerable<string> queries)
+    private async Task StartResolvingInternal(int? position, EmbedPlayerDisplay mainPlayerDisplay, IEnumerable<string> queries)
     {
         if (Context.NeedResponse)
             await mainPlayerDisplay.ResendControlMessageWithOverride(OverrideSendingControlMessage, false);

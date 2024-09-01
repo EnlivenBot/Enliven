@@ -81,7 +81,7 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
         CancellationToken cancellationToken = new())
     {
         await base.NotifyTrackEndedAsync(track, endReason, cancellationToken);
-        
+
         if (endReason is TrackEndReason.Replaced or TrackEndReason.LoadFailed) return;
 
         await SkipAsync();
@@ -91,7 +91,7 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
         CancellationToken cancellationToken = new())
     {
         await base.NotifyTrackExceptionAsync(track, exception, cancellationToken);
-        
+
         WriteToQueueHistory(new EntryLocalized("Music.TrackException", exception.Format()));
         var enlivenItem = track.As<IEnlivenQueueItem>() ?? CurrentItem;
         if (enlivenItem != null)
@@ -249,16 +249,18 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
         CurrentTrackIndex = Playlist.IndexOfWithFallback(CurrentItem);
     }
 
-    public virtual async Task ResolveAndEnqueue(IEnumerable<string> queries, TrackRequester requester, int index = -1)
+    public virtual async Task ResolveAndEnqueue(IEnumerable<string> queries, TrackRequester requester, int? insertAt)
     {
         var queriesArray = queries.ToImmutableArray();
         var currentResolverIndex = 0;
         var addedTracks = new List<EnlivenQueueItem>();
         var historyEntry = new HistoryEntry(new EntryLocalized("Music.ResolvingTracks",
+            // ReSharper disable once AccessToModifiedClosure
             () => requester, () => queriesArray.Length, () => currentResolverIndex, () => addedTracks.Count));
         WriteToQueueHistory(historyEntry);
         await _enqueueLock.WaitAsync();
         var resolutionScope = new LavalinkApiResolutionScope(ApiClient);
+        using var cancellationTokenSource = new CancellationTokenSource();
 
         try
         {
@@ -266,32 +268,36 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
             foreach (var query in queriesArray)
             {
                 currentResolverIndex++;
-                var availableNumberOfTracks = Constants.MaxTracksCount - Playlist.Tracks.Count;
-                if (availableNumberOfTracks <= 0)
+                if (Constants.MaxTracksCount - Playlist.Tracks.Count <= 0)
                 {
                     isLimitHit = true;
+                    await cancellationTokenSource.CancelAsync();
                     break;
                 }
 
                 historyEntry.Update();
-                var resolveResult = await _musicResolverService.ResolveTracks(resolutionScope, query);
-                if (!resolveResult.HasMatches) continue;
+                var resolveResult =
+                    await _musicResolverService.ResolveTracks(resolutionScope, query, cancellationTokenSource.Token);
+                if (resolveResult.Exception is not null) continue;
 
                 var playlist = resolveResult.Playlist?.Name.Pipe(name => new TrackPlaylist(name, query));
-                var enlivenQueueItems = resolveResult.Tracks
-                    .Select(track => new EnlivenQueueItem(track, requester, playlist))
-                    .ToImmutableArray();
+                await foreach (var track in resolveResult.Tracks.WithCancellation(cancellationTokenSource.Token))
+                {
+                    var queueItem = new EnlivenQueueItem(track, requester, playlist);
+                    var position = Math.Min(Playlist.Count, insertAt ?? Playlist.Count + addedTracks.Count);
+                    Playlist.Insert(position, queueItem);
+                    addedTracks.Add(queueItem);
+                    if (State == PlayerState.NotPlaying && (resolveResult.Playlist?.SelectedTrack is null
+                                                            || track == resolveResult.Playlist?.SelectedTrack))
+                    {
+                        await PlayAsync(queueItem, cancellationToken: CancellationToken.None);
+                    }
 
-
-                var position = index == -1 ? index : Math.Min(Playlist.Count, index + addedTracks.Count);
-                var selectedTrackInPlaylist = resolveResult.GetSelectedTrackInPlaylist(enlivenQueueItems);
-
-                await Enqueue(enlivenQueueItems, position, selectedTrackInPlaylist);
-                addedTracks.AddRange(enlivenQueueItems);
-
-                if (resolveResult.Tracks.Length - resolveResult.Tracks.Length == 0) continue;
-                isLimitHit = true;
-                break;
+                    if (Constants.MaxTracksCount - Playlist.Tracks.Count > 0) continue;
+                    isLimitHit = true;
+                    await cancellationTokenSource.CancelAsync();
+                    break;
+                }
             }
 
             if (addedTracks.Count == 1)
@@ -312,7 +318,7 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
             }
             else if (addedTracks.Count == 0)
             {
-                throw new TrackNotFoundException();
+                WriteToQueueHistory(new EntryLocalized("Music.NothingFound"));
             }
         }
         finally

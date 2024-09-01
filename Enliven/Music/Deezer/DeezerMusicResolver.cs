@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using Common;
 using Common.Music.Resolvers;
@@ -36,8 +37,9 @@ public sealed class DeezerMusicResolver : IMusicResolver
     public bool IsAvailable => true;
     public bool CanResolve(string query) => DeezerLinkRegex.IsMatch(query);
 
-    public async ValueTask<TrackLoadResult> Resolve(ITrackManager cluster, LavalinkApiResolutionScope resolutionScope,
-        string query)
+    public async ValueTask<MusicResolveResult> Resolve(ITrackManager cluster,
+        LavalinkApiResolutionScope resolutionScope,
+        string query, CancellationToken cancellationToken)
     {
         try
         {
@@ -49,35 +51,25 @@ public sealed class DeezerMusicResolver : IMusicResolver
                 ? state["SONGS"]!["data"]!.ToArray()
                 : new[] { state["DATA"] };
 
-            var trackLoadResults = await trackDatas
+            string? playlistTitle = null;
+            if (state.TryGetValue("DATA", out var dataToken) && dataToken.Contains("TITLE"))
+            {
+                playlistTitle = dataToken.Value<string>("TITLE")!;
+            }
+
+            var trackLoadResults = trackDatas
                 .Select(token => new
                 {
                     Title = token!.Value<string>("SNG_TITLE"),
                     Artist = token!.Value<string>("ART_NAME")
                 })
-                .Select(arg =>
-                    cluster.LoadTracksAsync($"{arg.Title} {arg.Artist}", TrackSearchMode.YouTube, resolutionScope))
-                .WhenAll();
+                .ToAsyncEnumerable()
+                .SelectAwait(async arg => await cluster.LoadTrackAsync($"{arg.Title} {arg.Artist}", TrackSearchMode.YouTube,
+                    resolutionScope, cancellationToken))
+                .Where(track => track is not null)
+                .OfType<LavalinkTrack>();
 
-            var lavalinkTracks = trackLoadResults
-                .SelectMany(result => result.Tracks)
-                .ToArray();
-
-            if (lavalinkTracks.Length != 0)
-            {
-                PlaylistInformation? playlistInformation = null;
-                if (state.TryGetValue("DATA", out var dataToken) && dataToken.Contains("TITLE"))
-                {
-                    var playlistTitle = dataToken.Value<string>("TITLE")!;
-                    playlistInformation = new PlaylistInformation(playlistTitle, null,
-                        ImmutableDictionary<string, JsonElement>.Empty);
-                }
-
-                return new TrackLoadResult(lavalinkTracks, playlistInformation!);
-            }
-
-            return TrackLoadResult.CreateError(new TrackException(ExceptionSeverity.Suspicious,
-                "Fetched 0 Deezer tracks", null));
+            return new MusicResolveResult(trackLoadResults, playlistTitle);
         }
         catch (Exception e)
         {
