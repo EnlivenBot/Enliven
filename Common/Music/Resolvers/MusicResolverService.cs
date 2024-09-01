@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Common.Music.Tracks;
 using Lavalink4NET.Protocol.Models;
@@ -13,7 +14,7 @@ namespace Common.Music.Resolvers;
 
 public class MusicResolverService(IEnumerable<IMusicResolver> musicResolvers, ITrackManager cluster)
 {
-    public async Task<TrackLoadResult> ResolveTracks(LavalinkApiResolutionScope resolutionScope, string query)
+    public async Task<MusicResolveResult> ResolveTracks(LavalinkApiResolutionScope resolutionScope, string query, CancellationToken cancellationToken)
     {
         foreach (var resolver in musicResolvers)
         {
@@ -25,11 +26,11 @@ public class MusicResolverService(IEnumerable<IMusicResolver> musicResolvers, IT
 
             if (!resolver.IsAvailable)
             {
-                return TrackLoadResult.CreateError(new TrackException(ExceptionSeverity.Fault,
+                return new MusicResolveResult(new TrackException(ExceptionSeverity.Fault,
                     "Target resolving service unavailable", null));
             }
 
-            return await resolver.Resolve(cluster, resolutionScope, query);
+            return await resolver.Resolve(cluster, resolutionScope, query, cancellationToken);
         }
 
         throw new InvalidOperationException("No resolvers to fulfil request");

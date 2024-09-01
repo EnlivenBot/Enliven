@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Common;
 using Common.Config;
@@ -37,16 +39,19 @@ public class SpotifyMusicResolver : IMusicResolver
     public bool IsAvailable => _spotifyClient != null;
     public bool CanResolve(string query) => new SpotifyUrl(query).IsValid;
 
-    public async ValueTask<TrackLoadResult> Resolve(ITrackManager cluster, LavalinkApiResolutionScope resolutionScope,
-        string query)
+    public async ValueTask<MusicResolveResult> Resolve(ITrackManager cluster,
+        LavalinkApiResolutionScope resolutionScope,
+        string query, CancellationToken cancellationToken)
     {
-        var spotifyClient = _spotifyClient!;
+        Debug.Assert(_spotifyClient is not null);
         var spotifyUrl = new SpotifyUrl(query);
-        var spotifyTrackWrappers = await spotifyUrl.Resolve(spotifyClient);
-        var spotifyLavalinkTracks =
-            await ResolveInternal(cluster, resolutionScope, spotifyTrackWrappers, spotifyClient);
-
-        return TrackLoadResult.CreateSearch(spotifyLavalinkTracks);
+        var spotifyTrackWrappers = await spotifyUrl.Resolve(_spotifyClient);
+        var tracks = spotifyTrackWrappers.ToAsyncEnumerable()
+            .SelectAwait(async wrapper => (await cluster.LoadTrackAsync(await wrapper.GetTrackInfo(_spotifyClient),
+                TrackSearchMode.SoundCloud, resolutionScope, cancellationToken), wrapper))
+            .Where(tuple => tuple.Item1 is not null)
+            .Select(x => new SpotifyLavalinkTrack(x.wrapper, x.Item1!, _spotifyClient));
+        return new MusicResolveResult(tracks);
     }
 
     public bool CanEncodeTrack(LavalinkTrack track) => false;
@@ -57,25 +62,6 @@ public class SpotifyMusicResolver : IMusicResolver
 
     public ValueTask<IReadOnlyList<LavalinkTrack>> DecodeTracks(params IEncodedTrack[] tracks) =>
         throw new NotSupportedException();
-
-    private async Task<ImmutableArray<LavalinkTrack>> ResolveInternal(ITrackManager cluster,
-        LavalinkApiResolutionScope resolutionScope,
-        IReadOnlyCollection<SpotifyTrackWrapper> spotifyTrackWrappers, SpotifyClient spotifyClient)
-    {
-        var lavalinkTracks = await spotifyTrackWrappers
-            .Select(async wrapper => (
-                await cluster.LoadTrackAsync(await wrapper.GetTrackInfo(spotifyClient),
-                    TrackSearchMode.SoundCloud, resolutionScope), wrapper))
-            .PipeEveryAsync(x =>
-                x.Item1 is not null ? new SpotifyLavalinkTrack(x.wrapper, x.Item1, _spotifyClient) : null)
-            .WhenAll();
-
-        var spotifyLavalinkTracks = lavalinkTracks
-            .Where(track => track is not null)
-            .OfType<LavalinkTrack>()
-            .ToImmutableArray();
-        return spotifyLavalinkTracks;
-    }
 
     private async Task InitializeSpotifyInternal()
     {

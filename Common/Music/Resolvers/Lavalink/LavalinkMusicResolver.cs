@@ -18,15 +18,14 @@ public sealed class LavalinkMusicResolver : MusicResolverBase<LavalinkTrack, Lav
         return true;
     }
 
-    public override async ValueTask<TrackLoadResult> Resolve(ITrackManager cluster,
-        LavalinkApiResolutionScope resolutionScope, string query)
+    public override async ValueTask<MusicResolveResult> Resolve(ITrackManager cluster,
+        LavalinkApiResolutionScope resolutionScope, string query, CancellationToken cancellationToken)
     {
         TrackSearchMode trackSearchMode;
         if (Utilities.IsValidUrl(query))
-            return await cluster.LoadTracksAsync(query, TrackSearchMode.None, resolutionScope);
+            return await cluster.LoadTracksAsync(query, TrackSearchMode.None, resolutionScope, cancellationToken);
 
-        var track = await cluster.LoadTrackAsync(query, TrackSearchMode.YouTube, resolutionScope,
-            CancellationToken.None);
+        var track = await cluster.LoadTrackAsync(query, TrackSearchMode.YouTube, resolutionScope, cancellationToken);
         return track is not null
             ? TrackLoadResult.CreateTrack(track)
             : TrackLoadResult.CreateEmpty();

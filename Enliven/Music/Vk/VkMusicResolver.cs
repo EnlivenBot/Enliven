@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Common.Config;
 using Common.Music.Resolvers;
@@ -58,8 +59,8 @@ public class VkMusicResolver : MusicResolverBase<VkLavalinkTrack, VkTrackData>
 
     public override bool CanResolve(string query) => new VkUrl(query).IsValid;
 
-    public override async ValueTask<TrackLoadResult> Resolve(ITrackManager cluster,
-        LavalinkApiResolutionScope resolutionScope, string query)
+    public override async ValueTask<MusicResolveResult> Resolve(ITrackManager cluster,
+        LavalinkApiResolutionScope resolutionScope, string query, CancellationToken cancellationToken)
     {
         var vkUrl = new VkUrl(query);
         var audios = await vkUrl.Resolve(_vkApi);
