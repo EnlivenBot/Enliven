@@ -89,9 +89,6 @@ public class EnlivenClusterAudioService : ClusterAudioService, IEnlivenClusterAu
         {
             _ = Task.Run(async () =>
             {
-                _logger.LogInformation("Waiting 2 seconds and restarting player");
-                await Task.Delay(2000);
-
                 var playlistLavalinkPlayerOptions = ConvertSnapshotToOptions(snapshot);
                 var optionsWrapper = new OptionsWrapper<PlaylistLavalinkPlayerOptions>(playlistLavalinkPlayerOptions);
                 var playerRetrieveOptions = new PlayerRetrieveOptions {ChannelBehavior = PlayerChannelBehavior.Join};
@@ -157,19 +154,14 @@ public class EnlivenClusterAudioService : ClusterAudioService, IEnlivenClusterAu
 
     private static PlaylistLavalinkPlayerOptions ConvertSnapshotToOptions(PlayerSnapshot snapshot)
     {
-        var lastTrack = snapshot.LastTrack;
-        if (lastTrack is not null && snapshot.TrackPosition is not null)
-        {
-            lastTrack.WithStartPosition(snapshot.TrackPosition.Value);
-        }
-
         var playlistLavalinkPlayerOptions = new PlaylistLavalinkPlayerOptions()
         {
             Playlist = snapshot.Playlist,
-            InitialTrack = lastTrack,
+            InitialTrack = snapshot.LastTrack,
+            InitialPosition = snapshot.TrackPosition,
             LoopingState = snapshot.LoopingState,
             PlayerEffects = snapshot.Effects,
-            InitialVolume = snapshot.Volume
+            InitialVolume = snapshot.Volume,
         };
         return playlistLavalinkPlayerOptions;
     }
