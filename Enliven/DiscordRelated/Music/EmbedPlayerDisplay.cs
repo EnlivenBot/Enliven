@@ -282,6 +282,12 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
         );
 
         UpdateNode();
+        UpdateQueue();
+        UpdateEffects();
+        UpdateParameters();
+        UpdateMessageComponents();
+        UpdateTrackInfo();
+        UpdateProgress();
         await ControlMessageResend();
         return;
         
