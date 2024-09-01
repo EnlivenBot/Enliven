@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Reactive;
 using System.Reactive.Linq;
@@ -276,12 +277,19 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
                 .Select(_ => Unit.Default)
                 .Subscribe(updateControlMessageSubj),
             newPlayer.FiltersChanged.Subscribe(_ => UpdateEffects()),
-            newPlayer.CurrentTrackIndexChanged.Subscribe(_ => UpdateQueue()),
+            newPlayer.CurrentTrackIndexChanged.Subscribe(OnCurrentTrackIndex),
             newPlayer.LoopingStateChanged.Subscribe(OnLoopingStateChanged)
         );
+
         UpdateNode();
         await ControlMessageResend();
         return;
+        
+        void OnCurrentTrackIndex(int _)
+        {
+            UpdateTrackInfo();
+            UpdateQueue();
+        }
 
         void OnStateChanged(PlayerState _)
         {
@@ -401,6 +409,7 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
 
     public void UpdateProgress(bool background = false)
     {
+        Debug.Assert(Player is not null);
         if (Player.CurrentTrack != null)
         {
             _embedBuilder.Fields["State"].Name = _loc.Get("Music.RequestedBy")
@@ -451,6 +460,7 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
 
     private async Task UpdateTrackInfo()
     {
+        Debug.Assert(Player is not null);
         var track = Player.CurrentTrack;
         if (Player.CurrentTrackIndex >= Player.Playlist.Count && Player.Playlist.Count != 0)
         {
@@ -477,6 +487,7 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
 
     private void UpdateEffects()
     {
+        Debug.Assert(Player is not null);
         var effectsText = ProcessEffectsText(Player.Effects);
         _embedBuilder.Fields["Effects"].Value = effectsText.Or("Placeholder");
         _embedBuilder.Fields["Effects"].IsEnabled = !effectsText.IsNullOrWhiteSpace();
@@ -504,6 +515,7 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
 
     private void UpdateParameters()
     {
+        Debug.Assert(Player is not null);
         var volume = (int)(Player.Volume * 200);
         var volumeText = volume < 50 || volume > 150 ? $"🔉 ***{volume}%***\n" : $"🔉 {volume}%";
         _embedBuilder.Fields["Parameters"].Value = volumeText + _effectsInParameters;
@@ -511,6 +523,7 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
 
     private void UpdateQueue()
     {
+        Debug.Assert(Player is not null);
         if (Player.Playlist.Count == 0)
         {
             _embedBuilder.Fields["Queue"].Name = _loc.Get("Music.QueueEmptyTitle");
