@@ -94,12 +94,15 @@ public class EnlivenClusterAudioService : ClusterAudioService, IEnlivenClusterAu
 
                 var playlistLavalinkPlayerOptions = ConvertSnapshotToOptions(snapshot);
                 var optionsWrapper = new OptionsWrapper<PlaylistLavalinkPlayerOptions>(playlistLavalinkPlayerOptions);
+                var playerRetrieveOptions = new PlayerRetrieveOptions {ChannelBehavior = PlayerChannelBehavior.Join};
                 var retrieveResult = await Players.RetrieveAsync(snapshot.GuildId, snapshot.LastVoiceChannelId,
-                    EnlivenPlayerFactory, optionsWrapper);
+                    EnlivenPlayerFactory, optionsWrapper, playerRetrieveOptions);
                 if (!retrieveResult.IsSuccess)
                 {
                     _logger.LogError("Failed to retrieve player white restarting due to {Status}",
                         retrieveResult.Status);
+                    
+                    return;
                 }
 
                 var newPlayer = retrieveResult.Player!;
@@ -107,7 +110,10 @@ public class EnlivenClusterAudioService : ClusterAudioService, IEnlivenClusterAu
                     await playerDisplay.ChangePlayer(newPlayer);
 
                 newPlayer.WriteToQueueHistory(player.QueueHistory.AsEnumerable());
-                newPlayer.WriteToQueueHistory(ReconnectedAfterDisposeEntry.WithArg(storedPlaylist!.Id));
+                if (storedPlaylist is not null)
+                {
+                    newPlayer.WriteToQueueHistory(ReconnectedAfterDisposeEntry.WithArg(storedPlaylist.Id));
+                }
             });
         }
 
