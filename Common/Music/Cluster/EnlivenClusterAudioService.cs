@@ -45,7 +45,6 @@ public class EnlivenClusterAudioService : ClusterAudioService, IEnlivenClusterAu
         _playlistProvider = playlistProvider;
         _musicResolverService = musicResolverService;
         _logger = logger;
-        players.PlayerStateChanged += OnPlayerStateChanged;
     }
 
     public static PlayerFactory<EnlivenLavalinkPlayer, PlaylistLavalinkPlayerOptions> EnlivenPlayerFactory { get; } =
@@ -167,13 +166,5 @@ public class EnlivenClusterAudioService : ClusterAudioService, IEnlivenClusterAu
             InitialVolume = snapshot.Volume
         };
         return playlistLavalinkPlayerOptions;
-    }
-    
-    private async Task OnPlayerStateChanged(object sender, PlayerStateChangedEventArgs eventargs)
-    {
-        if (eventargs.Player is WrappedLavalinkPlayer wrappedLavalinkPlayer)
-        {
-            await wrappedLavalinkPlayer.NotifyStateChangedAsync(eventargs.State, CancellationToken.None);
-        }
     }
 }

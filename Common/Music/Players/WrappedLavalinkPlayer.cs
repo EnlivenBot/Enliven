@@ -66,13 +66,6 @@ public class WrappedLavalinkPlayer : LavalinkPlayer
         _stateChanged.OnNext(State);
     }
 
-    public virtual ValueTask NotifyStateChangedAsync(PlayerState playerState,
-        CancellationToken cancellationToken = new())
-    {
-        _stateChanged.OnNext(State);
-        return ValueTask.CompletedTask;
-    }
-
     protected override async ValueTask NotifyTrackStartedAsync(ITrackQueueItem track,
         CancellationToken cancellationToken = new())
     {
