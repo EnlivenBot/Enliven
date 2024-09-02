@@ -92,7 +92,7 @@
       "WarningCustomEmoji": "‼️No puedo añadir los emojis personalizados que necesito para el reproductor. Para hacerlo, necesito el permiso `USE_EXTERNAL_EMOJIS`.",
       "TrackNotSeekable": "{0}, lo siento, pero no puedo mover la posición de reproducción en esta pista",
       "TryReconnectAfterDispose": "Estoy intentando reconectar el reproductor automáticamente. Si no lo consigo, escribe `/loadplaylist {0}`",
-      "ReconnectedAfterDispose": "He reiniciado el reproductor, todo listo. Si aún falla algo, usa `/stop` y `/loadplaylist {0}`",
+      "ReconnectedAfterDispose": "El reproductor se ha reiniciado en el nodo {0}.",
       "ResolvingTracks": "**{0}** ha hecho `{1}` solicitudes. He procesado `{2}` de ellas y he añadido `{3}` pistas.",
       "CurrentTrackNonSpotify": "La pista actual no es recibida de Spotify. Cambia a una pista de Spotify o proporcióname el track ID como argumento a este comando",
       "TrackStuck": "La pista actual está bloqueada. La voy a saltar.",

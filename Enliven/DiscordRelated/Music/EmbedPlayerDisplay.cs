@@ -18,6 +18,7 @@ using Common.History;
 using Common.Localization.Entries;
 using Common.Localization.Providers;
 using Common.Music;
+using Common.Music.Cluster;
 using Common.Music.Players;
 using Common.Music.Tracks;
 using Common.Utils;
@@ -38,7 +39,7 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
     public const int TrackTitleMaxLength = 170;
     private readonly IArtworkService _artworkService;
 
-    private readonly IClusterAudioService _clusterAudioService;
+    private readonly IEnlivenClusterAudioService _audioService;
     private readonly CommandHandlerService _commandHandlerService;
     private readonly SingleTask _controlMessageSendTask;
     private readonly IDiscordClient _discordClient;
@@ -64,13 +65,13 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
 
     public EmbedPlayerDisplay(IMessageChannel targetChannel, IDiscordClient discordClient, ILocalizationProvider loc,
         CommandHandlerService commandHandlerService, MessageComponentService messageComponentService,
-        ILogger logger, IArtworkService artworkService, IClusterAudioService clusterAudioService)
+        ILogger logger, IArtworkService artworkService, IEnlivenClusterAudioService audioService)
     {
         _targetGuild = (targetChannel as ITextChannel)?.Guild;
         _messageComponentService = messageComponentService;
         _logger = logger;
         _artworkService = artworkService;
-        _clusterAudioService = clusterAudioService;
+        _audioService = audioService;
         _loc = loc;
         _commandHandlerService = commandHandlerService;
         _targetChannel = targetChannel;
@@ -567,11 +568,11 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
         }
     }
 
-    private Task UpdateNode()
+    private void UpdateNode()
     {
-        var node = _clusterAudioService.Nodes.FirstOrDefault(node => node.SessionId == Player.SessionId);
+        Debug.Assert(Player is not null);
+        var node = _audioService.GetPlayerNode(Player);
         _embedBuilder.WithFooter($"Powered by {_discordClient.CurrentUser.Username} | {node?.Label}");
-        return Task.CompletedTask;
     }
 
     public Task UpdateControlMessage(bool background = false)

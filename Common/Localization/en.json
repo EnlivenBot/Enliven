@@ -93,7 +93,7 @@
       "WarningCustomEmoji": "‼️Custom reactions for a beautiful display of the player are not available for the bot. To do this, it needs permission `USE_EXTERNAL_EMOJIS`.",
       "TrackNotSeekable": "{0}, Unfortunately, this track is not seek-able",
       "TryReconnectAfterDispose": "We are trying to revive the player automatically. If we didn't succeed, use `/loadplaylist {0}`",
-      "ReconnectedAfterDispose": "The player has been restarted. We fixed everything. If not, use `/stop` and `/loadplaylist {0}`",
+      "ReconnectedAfterDispose": "The player has been restarted on {0} node.",
       "ResolvingTracks": "**{0}** made `{1}` requests. Processed `{2}` of them, added `{3}` tracks.",
       "CurrentTrackNonSpotify": "The current track has not received from Spotify. Switch to a track from Spotify or provide the track ID as an argument to this command.",
       "TrackStuck": "The current track is stuck. Let's skip.",

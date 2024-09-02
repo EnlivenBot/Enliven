@@ -51,6 +51,12 @@ public class EnlivenClusterAudioService : ClusterAudioService, IEnlivenClusterAu
         PlayerFactory.Create<EnlivenLavalinkPlayer, PlaylistLavalinkPlayerOptions>(static properties =>
             new EnlivenLavalinkPlayer(properties));
 
+    public ILavalinkNode GetPlayerNode(ILavalinkPlayer player)
+    {
+        return Nodes.FirstOrDefault(node => node.SessionId == player.SessionId)
+            ?? throw new InvalidOperationException("No node serving this player");
+    }
+
     public async Task ShutdownPlayer(AdvancedLavalinkPlayer player, PlayerShutdownParameters shutdownParameters,
         IEntry shutdownReason)
     {
@@ -107,10 +113,8 @@ public class EnlivenClusterAudioService : ClusterAudioService, IEnlivenClusterAu
                     await playerDisplay.ChangePlayer(newPlayer);
 
                 newPlayer.WriteToQueueHistory(player.QueueHistory.AsEnumerable());
-                if (storedPlaylist is not null)
-                {
-                    newPlayer.WriteToQueueHistory(ReconnectedAfterDisposeEntry.WithArg(storedPlaylist.Id));
-                }
+                var playerNode = GetPlayerNode(newPlayer);
+                newPlayer.WriteToQueueHistory(ReconnectedAfterDisposeEntry.WithArg(playerNode.Label));
             });
         }
 

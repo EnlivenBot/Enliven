@@ -2,6 +2,8 @@
 using Common.Localization.Entries;
 using Common.Music.Players;
 using Lavalink4NET.Cluster;
+using Lavalink4NET.Cluster.Nodes;
+using Lavalink4NET.Players;
 
 namespace Common.Music.Cluster;
 
@@ -11,4 +13,5 @@ public interface IEnlivenClusterAudioService : IClusterAudioService
         IEntry shutdownReason);
 
     ValueTask WaitForAnyNodeAvailable();
+    ILavalinkNode GetPlayerNode(ILavalinkPlayer player);
 }
