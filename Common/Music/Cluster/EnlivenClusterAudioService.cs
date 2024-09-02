@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -108,7 +109,8 @@ public class EnlivenClusterAudioService : ClusterAudioService, IEnlivenClusterAu
                     return;
                 }
 
-                var newPlayer = retrieveResult.Player!;
+                Debug.Assert(retrieveResult.Player is not null);
+                var newPlayer = retrieveResult.Player;
                 foreach (var playerDisplay in playerDisplays)
                     await playerDisplay.ChangePlayer(newPlayer);
 
