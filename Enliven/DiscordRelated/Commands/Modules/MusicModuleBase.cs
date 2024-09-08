@@ -23,17 +23,9 @@ namespace Bot.DiscordRelated.Commands.Modules;
 
 public partial class MusicModuleBase : AdvancedModuleBase
 {
-    private static Dictionary<ulong, NonSpamMessageController> _errorsMessagesControllers = new();
+    private static readonly Dictionary<ulong, NonSpamMessageController> ErrorsMessagesControllers = new();
 
-    private static readonly IEntry MusicDisabledEntry = new EntryLocalized("Music.MusicDisabled");
     private static readonly IEntry ChannelNotAllowedEntry = new EntryLocalized("Music.ChannelNotAllowed");
-
-    private static readonly IEntry ClusterNotReadyCommandIgnoredEntry =
-        new EntryLocalized("Music.ClusterNotReadyCommandIgnored");
-
-    private static readonly IEntry AwaitingClusterInitializingEntry =
-        new EntryLocalized("Music.AwaitingClusterInitializing");
-
     private static readonly IEntry AwaitingNodeConnectionEntry = new EntryLocalized("Music.AwaitingNodeConnection");
     private static readonly IEntry NotInVoiceChannelEntry = new EntryLocalized("Music.NotInVoiceChannel");
     private static readonly IEntry OtherVoiceChannelEntry = new EntryLocalized("Music.OtherVoiceChannel");
@@ -42,9 +34,9 @@ public partial class MusicModuleBase : AdvancedModuleBase
     private static readonly IEntry PlaybackEntry = new EntryLocalized("Music.Playback");
     private static readonly IEntry PlaybackMovedEntry = new EntryLocalized("Music.PlaybackMoved");
 
-    public EmbedPlayerDisplayProvider EmbedPlayerDisplayProvider { get; set; } = null!;
-    public EmbedPlayerQueueDisplayProvider EmbedPlayerQueueDisplayProvider { get; set; } = null!;
-    public IEnlivenClusterAudioService AudioService { get; set; } = null!;
+    public EmbedPlayerDisplayProvider EmbedPlayerDisplayProvider { get; private set; } = null!;
+    public EmbedPlayerQueueDisplayProvider EmbedPlayerQueueDisplayProvider { get; private set; } = null!;
+    public IEnlivenClusterAudioService AudioService { get; private set; } = null!;
 
     public EnlivenLavalinkPlayer Player { get; private set; } = null!;
 
@@ -187,10 +179,10 @@ public partial class MusicModuleBase : AdvancedModuleBase
 
     protected NonSpamMessageController GetNonSpamMessageController()
     {
-        if (!_errorsMessagesControllers.TryGetValue(Context.Channel.Id, out var nonSpamMessageController))
+        if (!ErrorsMessagesControllers.TryGetValue(Context.Channel.Id, out var nonSpamMessageController))
         {
             nonSpamMessageController = new NonSpamMessageController(Loc, Context.Channel, Loc.Get("Music.Fail"));
-            _errorsMessagesControllers[Context.Channel.Id] = nonSpamMessageController;
+            ErrorsMessagesControllers[Context.Channel.Id] = nonSpamMessageController;
         }
 
         return nonSpamMessageController;
