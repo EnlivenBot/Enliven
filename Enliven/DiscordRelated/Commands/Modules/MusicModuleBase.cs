@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -23,7 +24,7 @@ namespace Bot.DiscordRelated.Commands.Modules;
 
 public partial class MusicModuleBase : AdvancedModuleBase
 {
-    private static readonly Dictionary<ulong, NonSpamMessageController> ErrorsMessagesControllers = new();
+    private static readonly ConcurrentDictionary<ulong, NonSpamMessageController> ErrorsMessagesControllers = new();
 
     private static readonly IEntry ChannelNotAllowedEntry = new EntryLocalized("Music.ChannelNotAllowed");
     private static readonly IEntry AwaitingNodeConnectionEntry = new EntryLocalized("Music.AwaitingNodeConnection");
@@ -168,24 +169,19 @@ public partial class MusicModuleBase : AdvancedModuleBase
 
     protected async Task<IRepliedEntry> ReplyEntryAsync(IEntry entry, TimeSpan? timeout = null)
     {
-        var nonSpamMessageController = GetNonSpamMessageController();
+        var nonSpamMessageController = ErrorsMessagesControllers
+            .GetOrAdd(Context.Channel.Id, CreateNonSpanMessageController);
         var repliedEntry = nonSpamMessageController.AddRepliedEntry(entry, timeout);
         if (Context.NeedResponse)
             await nonSpamMessageController.ResendWithOverride(OverrideSendingControlMessage);
         else
             await nonSpamMessageController.Update();
         return repliedEntry;
-    }
-
-    protected NonSpamMessageController GetNonSpamMessageController()
-    {
-        if (!ErrorsMessagesControllers.TryGetValue(Context.Channel.Id, out var nonSpamMessageController))
+        
+        NonSpamMessageController CreateNonSpanMessageController(ulong arg)
         {
-            nonSpamMessageController = new NonSpamMessageController(Loc, Context.Channel, Loc.Get("Music.Fail"));
-            ErrorsMessagesControllers[Context.Channel.Id] = nonSpamMessageController;
+            return new NonSpamMessageController(Loc, Context.Channel, Loc.Get("Music.Fail"));
         }
-
-        return nonSpamMessageController;
     }
 
     protected async Task<EmbedPlayerDisplay> GetMainPlayerDisplay()
@@ -218,4 +214,9 @@ public partial class MusicModuleBase : AdvancedModuleBase
                 .PipeAsync(channel => channel ?? (ITextChannel)Context.Channel);
         }
     }
+}
+
+public class PlayerCreationMusicModuleBase : MusicModuleBase
+{
+    
 }
