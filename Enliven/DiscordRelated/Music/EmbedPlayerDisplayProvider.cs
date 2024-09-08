@@ -7,6 +7,7 @@ using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.MessageComponents;
 using Common;
 using Common.Config;
+using Common.Music.Cluster;
 using Discord;
 using Lavalink4NET.Artwork;
 using Lavalink4NET.Cluster;
@@ -21,7 +22,7 @@ public class EmbedPlayerDisplayProvider : IService, IDisposable
     private readonly IArtworkService _artworkService;
     private readonly ConcurrentDictionary<string, EmbedPlayerDisplay> _cache = new();
     private readonly EnlivenShardedClient _client;
-    private readonly IClusterAudioService _clusterAudioService;
+    private readonly IEnlivenClusterAudioService _clusterAudioService;
     private readonly CommandHandlerService _commandHandlerService;
     private readonly IGuildConfigProvider _guildConfigProvider;
     private readonly ILogger _logger;
@@ -30,7 +31,7 @@ public class EmbedPlayerDisplayProvider : IService, IDisposable
 
     public EmbedPlayerDisplayProvider(EnlivenShardedClient client, IGuildConfigProvider guildConfigProvider,
         CommandHandlerService commandHandlerService, MessageComponentService messageComponentService,
-        ILogger logger, IArtworkService artworkService, IClusterAudioService clusterAudioService)
+        ILogger logger, IArtworkService artworkService, IEnlivenClusterAudioService clusterAudioService)
     {
         _messageComponentService = messageComponentService;
         _commandHandlerService = commandHandlerService;
