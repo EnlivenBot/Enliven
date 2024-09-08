@@ -35,11 +35,10 @@ public partial class MusicModuleBase : AdvancedModuleBase
     private static readonly IEntry PlaybackEntry = new EntryLocalized("Music.Playback");
     private static readonly IEntry PlaybackMovedEntry = new EntryLocalized("Music.PlaybackMoved");
 
-    public EmbedPlayerDisplayProvider EmbedPlayerDisplayProvider { get; private set; } = null!;
-    public EmbedPlayerQueueDisplayProvider EmbedPlayerQueueDisplayProvider { get; private set; } = null!;
-    public IEnlivenClusterAudioService AudioService { get; private set; } = null!;
-
-    public EnlivenLavalinkPlayer Player { get; private set; } = null!;
+    protected EmbedPlayerDisplayProvider EmbedPlayerDisplayProvider { get; private set; } = null!;
+    protected EmbedPlayerQueueDisplayProvider EmbedPlayerQueueDisplayProvider { get; private set; } = null!;
+    protected IEnlivenClusterAudioService AudioService { get; private set; } = null!;
+    protected EnlivenLavalinkPlayer Player { get; private set; } = null!;
 
     public override async Task BeforeExecuteAsync(CommandInfo command)
     {
