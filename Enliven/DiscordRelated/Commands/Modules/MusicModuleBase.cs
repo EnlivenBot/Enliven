@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Bot.DiscordRelated.Commands.Attributes;
 using Bot.DiscordRelated.Commands.Modules.Contexts;
@@ -15,6 +14,7 @@ using Common.Music.Players.Options;
 using Discord;
 using Discord.Commands;
 using Discord.Interactions;
+using Discord.Rest;
 using Lavalink4NET.Players;
 using Microsoft.Extensions.Options;
 
@@ -22,50 +22,63 @@ using Microsoft.Extensions.Options;
 
 namespace Bot.DiscordRelated.Commands.Modules;
 
-public partial class MusicModuleBase : AdvancedModuleBase
+public abstract class MusicModuleBase : AdvancedModuleBase
 {
     private static readonly ConcurrentDictionary<ulong, NonSpamMessageController> ErrorsMessagesControllers = new();
 
-    private static readonly IEntry ChannelNotAllowedEntry = new EntryLocalized("Music.ChannelNotAllowed");
-    private static readonly IEntry AwaitingNodeConnectionEntry = new EntryLocalized("Music.AwaitingNodeConnection");
-    private static readonly IEntry NotInVoiceChannelEntry = new EntryLocalized("Music.NotInVoiceChannel");
-    private static readonly IEntry OtherVoiceChannelEntry = new EntryLocalized("Music.OtherVoiceChannel");
-    private static readonly IEntry NothingPlayingEntry = new EntryLocalized("Music.NothingPlaying");
-    private static readonly IEntry CantConnectEntry = new EntryLocalized("Music.CantConnect");
-    private static readonly IEntry PlaybackEntry = new EntryLocalized("Music.Playback");
-    private static readonly IEntry PlaybackMovedEntry = new EntryLocalized("Music.PlaybackMoved");
+    protected static readonly IEntry ChannelNotAllowedEntry = new EntryLocalized("Music.ChannelNotAllowed");
+    protected static readonly IEntry AwaitingNodeConnectionEntry = new EntryLocalized("Music.AwaitingNodeConnection");
+    protected static readonly IEntry NotInVoiceChannelEntry = new EntryLocalized("Music.NotInVoiceChannel");
+    protected static readonly IEntry OtherVoiceChannelEntry = new EntryLocalized("Music.OtherVoiceChannel");
+    protected static readonly IEntry NothingPlayingEntry = new EntryLocalized("Music.NothingPlaying");
+    protected static readonly IEntry CantConnectEntry = new EntryLocalized("Music.CantConnect");
+    protected static readonly IEntry CantRetrievePlayerEntry = new EntryLocalized("Music.CantRetrievePlayer");
+    protected static readonly IEntry PlaybackEntry = new EntryLocalized("Music.Playback");
+    protected static readonly IEntry PlaybackMovedEntry = new EntryLocalized("Music.PlaybackMoved");
 
-    protected EmbedPlayerDisplayProvider EmbedPlayerDisplayProvider { get; private set; } = null!;
-    protected EmbedPlayerQueueDisplayProvider EmbedPlayerQueueDisplayProvider { get; private set; } = null!;
-    protected IEnlivenClusterAudioService AudioService { get; private set; } = null!;
-    protected EnlivenLavalinkPlayer Player { get; private set; } = null!;
+    public EmbedPlayerDisplayProvider EmbedPlayerDisplayProvider { get; set; } = null!;
+    public EmbedPlayerQueueDisplayProvider EmbedPlayerQueueDisplayProvider { get; set; } = null!;
+    public IEnlivenClusterAudioService AudioService { get; set; } = null!;
+    protected EnlivenLavalinkPlayer? Player { get; private set; }
 
-    public override async Task BeforeExecuteAsync(CommandInfo command)
+    public sealed override async Task BeforeExecuteAsync(CommandInfo command)
     {
         await base.BeforeExecuteAsync(command);
-        var shouldCreatePlayer = command.Attributes.Any(attribute => attribute is ShouldCreatePlayerAttribute);
-        var requireNonEmptyPlaylist =
-            command.Attributes.Any(attribute => attribute is RequireNonEmptyPlaylistAttribute);
-        var requirePlayingTrack = command.Attributes.Any(attribute =>
-            (attribute as RequireNonEmptyPlaylistAttribute)?.RequirePlayingTrack == true);
-        await BeforeExecuteAsync(shouldCreatePlayer, requireNonEmptyPlaylist, requirePlayingTrack);
+        await BeforeExecuteAsync(command.Attributes);
     }
 
-    public override async Task BeforeExecuteAsync(ICommandInfo command)
+    public sealed override async Task BeforeExecuteAsync(ICommandInfo command)
     {
         await base.BeforeExecuteAsync(command);
-        var shouldCreatePlayer = command.Attributes.Any(attribute => attribute is ShouldCreatePlayerAttribute);
-        var requireNonEmptyPlaylist =
-            command.Attributes.Any(attribute => attribute is RequireNonEmptyPlaylistAttribute);
-        var requirePlayingTrack = command.Attributes.Any(attribute =>
-            (attribute as RequireNonEmptyPlaylistAttribute)?.RequirePlayingTrack == true);
-        await BeforeExecuteAsync(shouldCreatePlayer, requireNonEmptyPlaylist, requirePlayingTrack);
+        await BeforeExecuteAsync(command.Attributes);
     }
 
-    protected virtual async Task BeforeExecuteAsync(bool shouldCreatePlayer, bool requireNonEmptyPlaylist,
-        bool requirePlayingTrack)
+    private async Task BeforeExecuteAsync(IReadOnlyCollection<Attribute> attributes)
     {
+        var userVoiceChannel = (Context.User as IVoiceState)?.VoiceChannel;
+        var userVoiceChannelId = userVoiceChannel?.Id;
+
         var channelInfo = GetChannelInfo();
+        Player = await ResolvePlayerBeforeExecuteAsync(attributes, channelInfo, userVoiceChannelId);
+
+        // Probably here we also need to check if player isn't null actually
+        if (!channelInfo.IsCurrentChannelSuitable)
+            await this.ReplyFormattedAsync(PlaybackEntry, PlaybackMovedEntry.WithArg(channelInfo.MusicChannel!), true);
+        
+        if (Context.NeedResponse && channelInfo.IsCurrentChannelSuitable && Context.Channel is ITextChannel textChannel && Player is not null)
+        {
+            var embedPlayerDisplay = EmbedPlayerDisplayProvider.Get(textChannel);
+            if (embedPlayerDisplay != null)
+            {
+                await embedPlayerDisplay.ResendControlMessageWithOverride(OverrideSendingControlMessage, false);
+            }
+        }
+    }
+
+    protected virtual async Task<EnlivenLavalinkPlayer?> ResolvePlayerBeforeExecuteAsync(
+        IReadOnlyCollection<Attribute> attributes,
+        MusicCommandChannelInfo channelInfo, ulong? userVoiceChannelId)
+    {
         await ReplyAndThrowIfAsync(!channelInfo.IsCommandAllowed,
             ChannelNotAllowedEntry.WithArg(Context.User.Mention, channelInfo.MusicChannel!));
 
@@ -77,70 +90,54 @@ public partial class MusicModuleBase : AdvancedModuleBase
             await loadingEntry.DeleteAsync();
         }
 
-        var userVoiceChannel = (Context.User as IVoiceState)?.VoiceChannel;
-        var userVoiceChannelId = userVoiceChannel?.Id;
         await ReplyAndThrowIfAsync(userVoiceChannelId == null, NotInVoiceChannelEntry.WithArg(Context.User.Mention));
 
         if (AudioService.Players.TryGetPlayer<EnlivenLavalinkPlayer>(Context.Guild.Id, out var player))
         {
-            await ReplyAndThrowIfAsync(requirePlayingTrack && player!.CurrentTrack == null, NothingPlayingEntry);
-            await ReplyAndThrowIfAsync(requireNonEmptyPlaylist && player!.Playlist.IsEmpty, NothingPlayingEntry);
             await ReplyAndThrowIfAsync(userVoiceChannelId != player!.VoiceChannelId,
                 OtherVoiceChannelEntry.WithArg(Context.User.Mention));
         }
-        else
-        {
-            await ReplyAndThrowIfAsync(!shouldCreatePlayer, NothingPlayingEntry);
-            await ReplyAndThrowIfAsync(requireNonEmptyPlaylist, NothingPlayingEntry);
 
-            var perms = (await Context.Guild.GetCurrentUserAsync()).GetPermissions(userVoiceChannel);
-            await ReplyAndThrowIfAsync(!perms.Connect, CantConnectEntry.WithArg($"<#{userVoiceChannelId}>"));
-
-            var optionsWrapper = new OptionsWrapper<PlaylistLavalinkPlayerOptions>(new PlaylistLavalinkPlayerOptions());
-            var playerRetrieveOptions = new PlayerRetrieveOptions
-            {
-                ChannelBehavior = PlayerChannelBehavior.Join
-            };
-            var retrieveResult = await AudioService.Players.RetrieveAsync(Context.Guild.Id, userVoiceChannelId!.Value,
-                EnlivenClusterAudioService.EnlivenPlayerFactory, optionsWrapper, playerRetrieveOptions);
-            if (!retrieveResult.IsSuccess)
-            {
-                // TODO: Implement error handling
-                return;
-            }
-
-            player = retrieveResult.Player;
-            var embedPlayerDisplay = EmbedPlayerDisplayProvider.Provide(await channelInfo.GetTargetChannelAsync());
-            if (channelInfo.IsCurrentChannelSuitable && Context.NeedResponse)
-                await embedPlayerDisplay.ResendControlMessageWithOverride(OverrideSendingControlMessage, false);
-            await embedPlayerDisplay.Initialize(player);
-        }
-
-        Player = player;
-
-        if (!channelInfo.IsCurrentChannelSuitable)
-            await this.ReplyFormattedAsync(PlaybackEntry, PlaybackMovedEntry.WithArg(channelInfo.MusicChannel!), true);
+        return player;
     }
 
-    public override async Task AfterExecuteAsync(ICommandInfo command)
+    protected async Task<EnlivenLavalinkPlayer> CheckUserAndCreatePlayerAsync(
+        PlayerRetrieveOptions playerRetrieveOptions, PlaylistLavalinkPlayerOptions? options = null,
+        MusicCommandChannelInfo? channelInfo = null)
     {
-        if (Context.NeedResponse)
+        var userVoiceChannel = (Context.User as IVoiceState)?.VoiceChannel;
+        var userVoiceChannelId = userVoiceChannel?.Id;
+        
+        var currentUser = await Context.Guild.GetCurrentUserAsync();
+        var perms = currentUser.GetPermissions((Context.User as IVoiceState)?.VoiceChannel);
+        await ReplyAndThrowIfAsync(!perms.Connect, CantConnectEntry.WithArg($"<#{userVoiceChannelId}>"));
+
+        return await CreatePlayerAsync(userVoiceChannelId!.Value, playerRetrieveOptions, options, channelInfo);        
+    }    
+    
+    protected async Task<EnlivenLavalinkPlayer> CreatePlayerAsync(ulong userVoiceChannelId,
+        PlayerRetrieveOptions playerRetrieveOptions, PlaylistLavalinkPlayerOptions? options = null,
+        MusicCommandChannelInfo? channelInfo = null)
+    {
+        var playlistLavalinkPlayerOptions = options ?? new PlaylistLavalinkPlayerOptions();
+        var optionsWrapper = new OptionsWrapper<PlaylistLavalinkPlayerOptions>(playlistLavalinkPlayerOptions);
+        var retrieveResult = await AudioService.Players.RetrieveAsync(Context.Guild.Id, userVoiceChannelId,
+            EnlivenClusterAudioService.EnlivenPlayerFactory, optionsWrapper, playerRetrieveOptions);
+
+        if (!retrieveResult.IsSuccess)
         {
-            var channelInfo = GetChannelInfo();
-            if (channelInfo.IsCurrentChannelSuitable && Context.Channel is ITextChannel textChannel)
-                EmbedPlayerDisplayProvider.Get(textChannel)
-                    ?.ResendControlMessageWithOverride(OverrideSendingControlMessage);
+            await ReplyEntryAsync(CantRetrievePlayerEntry);
+            throw new CommandInterruptionException(CantRetrievePlayerEntry);
         }
+        Player = retrieveResult.Player;
 
-        await base.AfterExecuteAsync(command);
-    }
+        channelInfo = GetChannelInfo();
+        var embedPlayerDisplay = EmbedPlayerDisplayProvider.Provide(await channelInfo.GetTargetChannelAsync());
+        if (channelInfo.IsCurrentChannelSuitable && Context.NeedResponse)
+            await embedPlayerDisplay.ResendControlMessageWithOverride(OverrideSendingControlMessage, false);
+        await embedPlayerDisplay.Initialize(Player);
 
-    public override async Task AfterExecuteAsync(CommandInfo command)
-    {
-        var shouldRemoveMessage =
-            command.Attributes.FirstOrDefault(attribute => attribute is ShouldCreatePlayerAttribute) == null;
-        if (shouldRemoveMessage) await this.RemoveMessageInvokerIfPossible();
-        await base.AfterExecuteAsync(command);
+        return Player;
     }
 
     protected async Task<IUserMessage> OverrideSendingControlMessage(Embed embed, MessageComponent component)
@@ -149,7 +146,7 @@ public partial class MusicModuleBase : AdvancedModuleBase
         return await sentMessage.GetMessageAsync();
     }
 
-    private async Task ReplyAndThrowIfAsync(bool condition, IEntry entry)
+    protected async Task ReplyAndThrowIfAsync(bool condition, IEntry entry)
     {
         if (!condition) return;
         _ = await ReplyEntryAsync(entry, Constants.ShortTimeSpan);
@@ -176,7 +173,7 @@ public partial class MusicModuleBase : AdvancedModuleBase
         else
             await nonSpamMessageController.Update();
         return repliedEntry;
-        
+
         NonSpamMessageController CreateNonSpanMessageController(ulong arg)
         {
             return new NonSpamMessageController(Loc, Context.Channel, Loc.Get("Music.Fail"));
@@ -213,9 +210,4 @@ public partial class MusicModuleBase : AdvancedModuleBase
                 .PipeAsync(channel => channel ?? (ITextChannel)Context.Channel);
         }
     }
-}
-
-public class PlayerCreationMusicModuleBase : MusicModuleBase
-{
-    
 }

@@ -15,7 +15,7 @@ namespace Bot.Commands.Music;
 [SlashCommandAdapter]
 [Grouping("music")]
 [RequireContext(ContextType.Guild)]
-public class EffectsAddCommand : MusicModuleBase {
+public class EffectsAddCommand : HavePlayerMusicModuleBase {
     public IUserDataProvider UserDataProvider { get; set; } = null!;
     public ILiteCollection<PlayerEffect> PlayerEffectCollection { get; set; } = null!;
 

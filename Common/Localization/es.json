@@ -109,7 +109,8 @@
       "AwaitingClusterInitializing": "{emoji:LoadingAnimated} Esperando la inicialización del clúster de música",
       "AwaitingNodeConnection": "{emoji:LoadingAnimated} Esperando a que un nodo de música esté disponible. Si tarda mucho tiempo, puede que sea buena idea contactar con el propietario del bot",
       "NoSnapshotFoundToResume": "Parece que el reproductor nunca se ha detenido - no hay nada que restaurar. {loc:Music.RequestTracks}",
-      "RestoreStoppedPlayerButton": "Restaurar reproductor"
+      "RestoreStoppedPlayerButton": "Restaurar reproductor",
+      "CantRetrievePlayer": "No se pudo crear el jugador. Informe al propietario del bot sobre esto"
     },
     "Effects": {
       "AddEffectTitle": "Cómo agregar un efecto",

@@ -1,6 +1,8 @@
-﻿using System.Threading.Tasks;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Threading.Tasks;
 using Common.Localization.Entries;
 using Common.Music.Players;
+using Common.Music.Players.Options;
 using Lavalink4NET.Cluster;
 using Lavalink4NET.Cluster.Nodes;
 using Lavalink4NET.Players;
@@ -14,4 +16,5 @@ public interface IEnlivenClusterAudioService : IClusterAudioService
 
     ValueTask WaitForAnyNodeAvailable();
     ILavalinkNode GetPlayerNode(ILavalinkPlayer player);
+    bool TryGetPlayerLaunchOptionsFromLastRun(ulong guildId, [NotNullWhen(true)] out PlaylistLavalinkPlayerOptions? options);
 }

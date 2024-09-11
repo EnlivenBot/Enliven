@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,8 +34,9 @@ public class EnlivenClusterAudioService : ClusterAudioService, IEnlivenClusterAu
     private static readonly IEntry ReconnectedAfterDisposeEntry = new EntryLocalized("Music.ReconnectedAfterDispose");
     private readonly ILogger<EnlivenClusterAudioService> _logger;
     private readonly MusicResolverService _musicResolverService;
-
     private readonly IPlaylistProvider _playlistProvider;
+    
+    private readonly Dictionary<ulong, PlayerSnapshot> _lastPlayerSnapshots = new();
 
     public EnlivenClusterAudioService(IPlaylistProvider playlistProvider, MusicResolverService musicResolverService,
         IDiscordClientWrapper discordClient, ILavalinkSocketFactory socketFactory,
@@ -62,6 +65,8 @@ public class EnlivenClusterAudioService : ClusterAudioService, IEnlivenClusterAu
         IEntry shutdownReason)
     {
         var snapshot = await (player as IPlayerShutdownInternally).ShutdownInternal();
+        _lastPlayerSnapshots[player.GuildId] = snapshot;
+        
         StoredPlaylist? storedPlaylist = null;
         if (shutdownParameters.SavePlaylist)
         {
@@ -156,6 +161,14 @@ public class EnlivenClusterAudioService : ClusterAudioService, IEnlivenClusterAu
             .WhenAll();
 
         await Task.WhenAny(Nodes.Select(node => node.WaitForReadyAsync().AsTask()));
+    }
+    
+    public bool TryGetPlayerLaunchOptionsFromLastRun(ulong guildId, [NotNullWhen(true)] out PlaylistLavalinkPlayerOptions? options)
+    {
+        options = null;
+        if (!_lastPlayerSnapshots.TryGetValue(guildId, out var snapshot)) return false;
+        options = ConvertSnapshotToOptions(snapshot);
+        return true;
     }
 
     private static PlaylistLavalinkPlayerOptions ConvertSnapshotToOptions(PlayerSnapshot snapshot)

@@ -1,14 +1,11 @@
 using System;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Bot.Commands.Chains;
 using Bot.DiscordRelated;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Attributes;
 using Bot.DiscordRelated.Commands.Modules;
 using Bot.DiscordRelated.Interactions;
-using Bot.DiscordRelated.MessageComponents;
-using Bot.Utilities.Collector;
 using Common;
 using Common.History;
 using Common.Localization.Entries;
@@ -16,7 +13,6 @@ using Common.Music;
 using Common.Music.Players;
 using Discord.Commands;
 using Lavalink4NET.Players;
-using Lavalink4NET.Rest.Entities.Tracks;
 
 // ReSharper disable ConditionIsAlwaysTrueOrFalse
 // ReSharper disable ConstantConditionalAccessQualifier
@@ -28,19 +24,14 @@ namespace Bot.Commands;
 [SlashCommandAdapter]
 [Grouping("music")]
 [RequireContext(ContextType.Guild)]
-public sealed class MusicCommands : MusicModuleBase
+public sealed class MusicCommands : HavePlayerMusicModuleBase
 {
-    private static Regex _lyricsRegex = new(@"([\p{L} ]+) - ([\p{L} ]+)");
-    public MessageComponentService ComponentService { get; set; } = null!;
-    public CollectorService CollectorService { get; set; } = null!;
-
-
     [Command("stop", RunMode = RunMode.Async)]
     [Alias("st")]
     [Summary("stop0s")]
     public async Task Stop()
     {
-        Player.Shutdown(new EntryLocalized("Music.UserStopPlayback").WithArg(Context.User.Username),
+        await Player.Shutdown(new EntryLocalized("Music.UserStopPlayback").WithArg(Context.User.Username),
             new PlayerShutdownParameters { SavePlaylist = false, ShutdownDisplays = true });
     }
 
@@ -108,8 +99,8 @@ public sealed class MusicCommands : MusicModuleBase
     {
         Player.LoopingState = state ?? Player.LoopingState.Next();
         // Player.UpdateProgress();
-        var entryLocalized =
-            new EntryLocalized("MusicQueues.RepeatSet", Context.User.Username, Player.LoopingState.ToString());
+        var entryLocalized = new EntryLocalized("MusicQueues.RepeatSet", 
+            Context.User.Username, Player.LoopingState.ToString());
         Player.WriteToQueueHistory(new HistoryEntry(entryLocalized, $"{Context.User.Id}repeat"));
     }
 
@@ -120,32 +111,8 @@ public sealed class MusicCommands : MusicModuleBase
     {
         if (Player.State != PlayerState.Playing) return;
 
-        Player.PauseAsync();
+        await Player.PauseAsync();
         Player.WriteToQueueHistory(Loc.Get("MusicQueues.Pause").Format(Context.User.Username));
-    }
-
-    [ShouldCreatePlayer]
-    [Command("resume", RunMode = RunMode.Async)]
-    [Alias("unpause")]
-    [Summary("resume0s")]
-    public async Task Resume()
-    {
-        // TODO: Implement resuming
-        // if (Player.Playlist.IsEmpty) {
-        //     var playerSnapshot = MusicController.GetPlayerLastSnapshot(Context.Guild.Id);
-        //     if (playerSnapshot == null) {
-        //         await this.ReplyFailFormattedAsync(new EntryLocalized("Music.NoSnapshotFoundToResume"), true);
-        //         return;
-        //     }
-        //     await Player.ApplyStateSnapshot(playerSnapshot);
-        //     Player.WriteToQueueHistory(new EntryLocalized("Music.PlayerRestored", Context.User.Username));
-        //     return;
-        // }
-
-        if (Player.State != PlayerState.Paused) return;
-
-        Player.ResumeAsync();
-        Player.WriteToQueueHistory(Loc.Get("MusicQueues.Resume").Format(Context.User.Username));
     }
 
     [RequireNonEmptyPlaylist]
@@ -165,26 +132,6 @@ public sealed class MusicCommands : MusicModuleBase
     public async Task List()
     {
         EmbedPlayerQueueDisplayProvider.CreateOrUpdateQueueDisplay(Context.Channel, Player);
-    }
-
-    [ShouldCreatePlayer]
-    [Command("youtube", RunMode = RunMode.Async)]
-    [Alias("y", "yt")]
-    [Summary("youtube0s")]
-    public async Task SearchYoutube([Summary("play0_0s")] [Remainder] string query)
-    {
-        new AdvancedMusicSearchChain(GuildConfig, Player!, Context.Channel, Context.User, TrackSearchMode.YouTube,
-            query, AudioService, ComponentService, CollectorService).Start();
-    }
-
-    [ShouldCreatePlayer]
-    [Command("soundcloud", RunMode = RunMode.Async)]
-    [Alias("sc")]
-    [Summary("soundcloud0s")]
-    public async Task SearchSoundCloud([Summary("play0_0s")] [Remainder] string query)
-    {
-        new AdvancedMusicSearchChain(GuildConfig, Player!, Context.Channel, Context.User, TrackSearchMode.SoundCloud,
-            query, AudioService, ComponentService, CollectorService).Start();
     }
 
     [RequireNonEmptyPlaylist(true)]

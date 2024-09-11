@@ -21,11 +21,10 @@ namespace Bot.Commands.Music;
 [LongRunningCommand]
 [Grouping("music")]
 [RequireContext(ContextType.Guild)]
-public sealed class PlayCommand : MusicModuleBase
+public sealed class PlayCommand : CreatePlayerMusicModuleBase
 {
     public MusicResolverService MusicResolverService { get; set; } = null!;
 
-    [ShouldCreatePlayer]
     [Command("play", RunMode = RunMode.Async)]
     [Alias("p")]
     [Summary("play0s")]
@@ -34,7 +33,6 @@ public sealed class PlayCommand : MusicModuleBase
         await PlayInternal(query);
     }
 
-    [ShouldCreatePlayer]
     [Command("playnext", RunMode = RunMode.Async)]
     [Alias("pn")]
     [Summary("playnext0s")]
