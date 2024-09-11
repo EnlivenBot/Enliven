@@ -10,9 +10,9 @@
         <PackageReference Include="Autofac" Version="7.1.0"/>
         <PackageReference Include="DiffMatchPatchCSharp" Version="1.0.0"/>
         <PackageReference Include="Discord.Net" Version="3.15.2"/>
-        <PackageReference Include="Lavalink4NET.Artwork" Version="4.0.26-preview.2"/>
-        <PackageReference Include="Lavalink4NET.Cluster" Version="4.0.26-preview.2"/>
-        <PackageReference Include="Lavalink4NET.Discord.NET" Version="4.0.26-preview.2"/>
+        <PackageReference Include="Lavalink4NET.Artwork" Version="4.0.26-preview.3"/>
+        <PackageReference Include="Lavalink4NET.Cluster" Version="4.0.26-preview.3"/>
+        <PackageReference Include="Lavalink4NET.Discord.NET" Version="4.0.26-preview.3"/>
         <PackageReference Include="LiteDB" Version="5.0.17"/>
         <PackageReference Include="MessagePack" Version="2.5.172"/>
         <PackageReference Include="MessagePackAnalyzer" Version="2.5.172">

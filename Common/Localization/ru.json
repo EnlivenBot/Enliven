@@ -109,7 +109,8 @@
       "AwaitingClusterInitializing": "{emoji:LoadingAnimated} Ожидание инициализации музыкального кластера",
       "AwaitingNodeConnection": "{emoji:LoadingAnimated} Ожидание появления в доступе любой музыкальной ноды. Если это продолжается много времени, свяжитесь с владельцем бота",
       "NoSnapshotFoundToResume": "Видимо, плеер еще ни разу не останавливался - мы не можем ничего восстановить. {loc:Music.RequestTracks}",
-      "RestoreStoppedPlayerButton": "Восстановить плеер"
+      "RestoreStoppedPlayerButton": "Восстановить плеер",
+      "CantRetrievePlayer": "Не удалось создать плеер. Сообщите владельцу бота об этом"
     },
     "Effects": {
       "AddEffectTitle": "Как добавить эффект",

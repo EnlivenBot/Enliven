@@ -10,7 +10,7 @@ namespace Bot.Commands.Music;
 [SlashCommandAdapter]
 [Grouping("music")]
 [RequireContext(ContextType.Guild)]
-public class EffectsCurrentCommand : MusicModuleBase {
+public class EffectsCurrentCommand : HavePlayerMusicModuleBase {
     public EmbedPlayerEffectsDisplayProvider EmbedPlayerEffectsDisplayProvider { get; set; } = null!;
 
     [RequireNonEmptyPlaylist]

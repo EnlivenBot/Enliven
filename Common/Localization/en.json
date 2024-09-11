@@ -110,7 +110,8 @@
       "AwaitingClusterInitializing": "{emoji:LoadingAnimated} Awaiting for music cluster initialization",
       "AwaitingNodeConnection": "{emoji:LoadingAnimated} Awaiting for any music node becomes available. If it takes a long time, it might be worth contacting the bot owner",
       "NoSnapshotFoundToResume": "Apparently the player has never stopped - there is nothing to restore. {loc:Music.RequestTracks}",
-      "RestoreStoppedPlayerButton": "Restore player"
+      "RestoreStoppedPlayerButton": "Restore player",
+      "CantRetrievePlayer": "Failed to create player. Notify the bot owner about this"
     },
     "Effects": {
       "AddEffectTitle": "How to add effect",
