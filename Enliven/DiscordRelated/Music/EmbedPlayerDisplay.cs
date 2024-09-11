@@ -50,7 +50,7 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
     private readonly IGuild? _targetGuild;
     private readonly SingleTask _updateControlMessageTask;
 
-    private CancellationTokenSource _cancellationTokenSource = new();
+    private CancellationTokenSource? _cancellationTokenSource;
     private IUserMessage? _controlMessage;
     private string? _effectsInParameters;
     private bool _isExternalEmojiAllowed;
@@ -107,8 +107,8 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
             {
                 _resendInsteadOfUpdate = false;
                 NextResendForced = false;
-                _cancellationTokenSource.Cancel();
-                _cancellationTokenSource = new CancellationTokenSource();
+                var oldCts = Interlocked.Exchange(ref _cancellationTokenSource, new CancellationTokenSource());
+                oldCts?.Cancel();
 
                 UpdateParameters();
                 UpdateProgress();
@@ -143,9 +143,9 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
 
     private async Task UpdateControlMessageInternal(SingleTaskExecutionData data)
     {
-        var internalCancellationTokenSource =
-            CancellationTokenSource.CreateLinkedTokenSource(_cancellationTokenSource.Token);
-        if (_cancellationTokenSource.IsCancellationRequested) data.OverrideDelay = TimeSpan.Zero;
+        var internalCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(
+            _cancellationTokenSource?.Token ?? CancellationToken.None);
+        if (internalCancellationTokenSource.Token.IsCancellationRequested) data.OverrideDelay = TimeSpan.Zero;
         if (_controlMessage != null)
         {
             try
@@ -224,12 +224,13 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
     public override async Task ExecuteShutdown(IEntry header, IEntry body)
     {
         base.ExecuteShutdown(header, body);
-        await _cancellationTokenSource.CancelAsync();
+        var oldCts = Interlocked.Exchange(ref _cancellationTokenSource, null);
+        oldCts?.Cancel();
         var message = _controlMessage;
         _controlMessage = null;
 
         _playerSubscriptions?.Dispose();
-        _cancellationTokenSource.Dispose();
+        oldCts?.Dispose();
         _controlMessageSendTask.Dispose();
         _updateControlMessageTask.Dispose();
 
@@ -385,9 +386,7 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
         _resendInsteadOfUpdate = true;
         if (!executeResend) return;
 
-        _cancellationTokenSource.Cancel();
         await _controlMessageSendTask.Execute(false, TimeSpan.Zero);
-        _cancellationTokenSource = new CancellationTokenSource();
     }
 
     public void UpdateMessageComponents()
