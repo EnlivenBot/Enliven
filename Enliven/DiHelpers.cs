@@ -9,12 +9,14 @@ using Bot.Utilities;
 using Bot.Utilities.Collector;
 using Common;
 using Common.Config;
+using Common.Music;
 using Common.Music.Cluster;
 using Common.Music.Resolvers;
 using Common.Music.Resolvers.Lavalink;
 using Lavalink4NET;
 using Lavalink4NET.Cluster;
 using Lavalink4NET.Cluster.Extensions;
+using Lavalink4NET.Cluster.LoadBalancing.Strategies;
 using Lavalink4NET.DiscordNet;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -83,6 +85,7 @@ internal static class DiHelpers
     public static IServiceCollection AddLavalink(this IServiceCollection builder)
     {
         builder
+            .AddSingleton<INodeBalancingStrategy, EnlivenLavalinkBalancingStrategy>()
             .AddSingleton<IEnlivenClusterAudioService, EnlivenClusterAudioService>()
             .AddSingleton<IClusterAudioService>(provider => provider.GetRequiredService<IEnlivenClusterAudioService>())
             .AddSingleton<IAudioService>(provider => provider.GetRequiredService<IEnlivenClusterAudioService>())
