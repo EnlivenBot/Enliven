@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
@@ -39,7 +40,7 @@ public class EnlivenLavalinkBalancingStrategy : INodeBalancingStrategy
         }
 
         var selectedNodeIndex = (Interlocked.Increment(ref _index) - 1) % nodes.Length;
-        var builder = ImmutableArray.CreateBuilder<ScoredLavalinkNode>(nodes.Length);
+        var nodeScores = new List<ScoredLavalinkNode>(nodes.Length);
         var step = 1.0D / nodes.Length;
 
         for (var index = 0; index < nodes.Length; index++)
@@ -57,11 +58,11 @@ public class EnlivenLavalinkBalancingStrategy : INodeBalancingStrategy
             // Only add available nodes at the moment
             if (node.Status == LavalinkNodeStatus.Available)
             {
-                builder.Add(new ScoredLavalinkNode(nodes[index], score));
+                nodeScores.Add(new ScoredLavalinkNode(nodes[index], score));
             }
         }
 
-        var result = new NodeBalanceResult(builder.MoveToImmutable(), _options.Duration);
+        var result = new NodeBalanceResult(nodeScores.ToImmutableArray(), _options.Duration);
         return new ValueTask<NodeBalanceResult>(result);
     }
 }
