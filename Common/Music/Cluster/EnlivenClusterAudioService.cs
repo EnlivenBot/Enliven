@@ -172,6 +172,11 @@ public class EnlivenClusterAudioService : ClusterAudioService, IEnlivenClusterAu
             return;
         }
 
+        await HandlePlayersOnDisconnectedNode(players);
+    }
+
+    private async Task HandlePlayersOnDisconnectedNode(ImmutableArray<EnlivenLavalinkPlayer> players)
+    {
         var anyNodeAvailable = Nodes.Any(node => node.Status == LavalinkNodeStatus.Available);
         var shutdownReason = anyNodeAvailable
             ? new EntryLocalized("Music.PlayerMoved")
