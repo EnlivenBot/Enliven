@@ -185,8 +185,18 @@ public class AdvancedLavalinkPlayer : WrappedLavalinkPlayer, IPlayerOnReady, IPl
         }
         finally
         {
+            try
+            {
+                await base.DisposeAsyncCore();
+            }
+            catch (Exception)
+            {
+                // Manually disconnects if node not available anymore
+                await DiscordClient
+                    .SendVoiceUpdateAsync(GuildId, null)
+                    .ConfigureAwait(false);
+            }
             ServiceScope.Dispose();
-            await base.DisposeAsyncCore();
         }
 
         return playerSnapshot;
