@@ -14,12 +14,14 @@ using Common.Music.Resolvers;
 using Lavalink4NET.Clients;
 using Lavalink4NET.Cluster;
 using Lavalink4NET.Cluster.Nodes;
+using Lavalink4NET.Events;
 using Lavalink4NET.Events.Players;
 using Lavalink4NET.Integrations;
 using Lavalink4NET.Players;
 using Lavalink4NET.Rest;
 using Lavalink4NET.Socket;
 using Lavalink4NET.Tracks;
+using MessagePack;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -35,7 +37,7 @@ public class EnlivenClusterAudioService : ClusterAudioService, IEnlivenClusterAu
     private readonly ILogger<EnlivenClusterAudioService> _logger;
     private readonly MusicResolverService _musicResolverService;
     private readonly IPlaylistProvider _playlistProvider;
-    
+
     private readonly Dictionary<ulong, PlayerSnapshot> _lastPlayerSnapshots = new();
 
     public EnlivenClusterAudioService(IPlaylistProvider playlistProvider, MusicResolverService musicResolverService,
@@ -58,7 +60,7 @@ public class EnlivenClusterAudioService : ClusterAudioService, IEnlivenClusterAu
     public ILavalinkNode GetPlayerNode(ILavalinkPlayer player)
     {
         return Nodes.FirstOrDefault(node => node.SessionId == player.SessionId)
-            ?? throw new InvalidOperationException("No node serving this player");
+               ?? throw new InvalidOperationException("No node serving this player");
     }
 
     public async Task ShutdownPlayer(AdvancedLavalinkPlayer player, PlayerShutdownParameters shutdownParameters,
@@ -66,7 +68,7 @@ public class EnlivenClusterAudioService : ClusterAudioService, IEnlivenClusterAu
     {
         var snapshot = await (player as IPlayerShutdownInternally).ShutdownInternal();
         _lastPlayerSnapshots[player.GuildId] = snapshot;
-        
+
         StoredPlaylist? storedPlaylist = null;
         if (shutdownParameters.SavePlaylist)
         {
@@ -104,14 +106,14 @@ public class EnlivenClusterAudioService : ClusterAudioService, IEnlivenClusterAu
             {
                 var playlistLavalinkPlayerOptions = ConvertSnapshotToOptions(snapshot);
                 var optionsWrapper = new OptionsWrapper<PlaylistLavalinkPlayerOptions>(playlistLavalinkPlayerOptions);
-                var playerRetrieveOptions = new PlayerRetrieveOptions {ChannelBehavior = PlayerChannelBehavior.Join};
+                var playerRetrieveOptions = new PlayerRetrieveOptions { ChannelBehavior = PlayerChannelBehavior.Join };
                 var retrieveResult = await Players.RetrieveAsync(snapshot.GuildId, snapshot.LastVoiceChannelId,
                     EnlivenPlayerFactory, optionsWrapper, playerRetrieveOptions);
                 if (!retrieveResult.IsSuccess)
                 {
                     _logger.LogError("Failed to retrieve player white restarting due to {Status}",
                         retrieveResult.Status);
-                    
+
                     return;
                 }
 
@@ -153,6 +155,36 @@ public class EnlivenClusterAudioService : ClusterAudioService, IEnlivenClusterAu
         }
     }
 
+    protected override async ValueTask OnConnectionClosedAsync(ConnectionClosedEventArgs eventArgs,
+        CancellationToken cancellationToken = new CancellationToken())
+    {
+        var lavalinkSocketLabel = eventArgs.LavalinkSocket.Label;
+        var disconnectedNode = Nodes.First(node => node.Label == lavalinkSocketLabel);
+        var disconnectedNodeSessionId = disconnectedNode.SessionId;
+        var players = Players.Players
+            .Where(player => player.SessionId == disconnectedNodeSessionId)
+            .Where(player => player.State != PlayerState.Destroyed)
+            .Cast<EnlivenLavalinkPlayer>()
+            .ToImmutableArray();
+
+        if (players.Length == 0)
+        {
+            return;
+        }
+
+        var anyNodeAvailable = Nodes.Any(node => node.Status == LavalinkNodeStatus.Available);
+        var shutdownReason = anyNodeAvailable
+            ? new EntryLocalized("Music.PlayerMoved")
+            : new EntryLocalized("Music.PlayerDropped");
+        var shutdownParameters = anyNodeAvailable
+            ? new PlayerShutdownParameters { RestartPlayer = true, SavePlaylist = false, ShutdownDisplays = false }
+            : new PlayerShutdownParameters { RestartPlayer = false, ShutdownDisplays = true, SavePlaylist = true };
+
+        await players
+            .Select(player => player.Shutdown(shutdownReason, shutdownParameters))
+            .WhenAll();
+    }
+
     public async ValueTask WaitForAnyNodeAvailable()
     {
         if (Nodes.Any(node => node.Status == LavalinkNodeStatus.Available)) return;
@@ -163,8 +195,9 @@ public class EnlivenClusterAudioService : ClusterAudioService, IEnlivenClusterAu
 
         await Task.WhenAny(Nodes.Select(node => node.WaitForReadyAsync().AsTask()));
     }
-    
-    public bool TryGetPlayerLaunchOptionsFromLastRun(ulong guildId, [NotNullWhen(true)] out PlaylistLavalinkPlayerOptions? options)
+
+    public bool TryGetPlayerLaunchOptionsFromLastRun(ulong guildId,
+        [NotNullWhen(true)] out PlaylistLavalinkPlayerOptions? options)
     {
         options = null;
         if (!_lastPlayerSnapshots.TryGetValue(guildId, out var snapshot)) return false;
