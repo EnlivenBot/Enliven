@@ -41,7 +41,7 @@ public class PlaylistProvider(ILiteCollection<StoredPlaylist> liteCollection) : 
 
 public class EnlivenPlaylist
 {
-    public IReadOnlyList<IEncodedTrack> Tracks { get; set; } = Array.Empty<IEncodedTrack>();
+    public byte[][] Tracks { get; set; } = [];
     public int TrackIndex { get; set; } = -1;
     public TimeSpan? TrackPosition { get; set; }
 }

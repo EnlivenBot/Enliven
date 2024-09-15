@@ -15,6 +15,7 @@ using Lavalink4NET.Protocol.Payloads.Events;
 using Lavalink4NET.Rest;
 using Lavalink4NET.Rest.Entities.Tracks;
 using Lavalink4NET.Tracks;
+using MessagePack;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Common.Music.Players;
@@ -167,7 +168,8 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
     public virtual async Task<EnlivenPlaylist> ExportPlaylist(ExportPlaylistOptions options)
     {
         var encodedTracks = await _musicResolverService.EncodeTracks(Playlist);
-        var exportPlaylist = new EnlivenPlaylist { Tracks = encodedTracks };
+        var byteTracks = encodedTracks.Select(track => MessagePackSerializer.Typeless.Serialize(track)).ToArray();
+        var exportPlaylist = new EnlivenPlaylist { Tracks = byteTracks };
         if (options != ExportPlaylistOptions.IgnoreTrackIndex)
         {
             exportPlaylist.TrackIndex = CurrentTrackIndex.Normalize(0, Playlist.Count - 1);
@@ -184,16 +186,19 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
     public virtual async Task ImportPlaylist(EnlivenPlaylist playlist, ImportPlaylistOptions options,
         TrackRequester requester)
     {
-        if (Playlist.Count + playlist.Tracks.Count > 10000)
+        if (Playlist.Count + playlist.Tracks.Length > 10000)
         {
-            WriteToQueueHistory(new HistoryEntry(new EntryLocalized("MusicQueues.PlaylistLoadingLimit", requester,
-                playlist.Tracks.Count,
-                Constants.MaxTracksCount)));
+            var historyEntry = new HistoryEntry(new EntryLocalized("MusicQueues.PlaylistLoadingLimit", 
+                requester, playlist.Tracks.Length, Constants.MaxTracksCount));
+            WriteToQueueHistory(historyEntry);
             return;
         }
 
         var trackPlaylist = new TrackPlaylist("Enliven's playlist", null);
-        var tracks = await _musicResolverService.DecodeTracks(playlist.Tracks)
+        var encodedTracks = playlist.Tracks
+            .Select(bytes => MessagePackSerializer.Typeless.Deserialize(bytes))
+            .Cast<IEncodedTrack>();
+        var tracks = await _musicResolverService.DecodeTracks(encodedTracks)
             .PipeAsync(list => list.Select(track => new EnlivenQueueItem(track, requester, trackPlaylist)))
             .PipeAsync(items => items.ToImmutableArray());
         if (options == ImportPlaylistOptions.Replace)
@@ -222,7 +227,7 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
         {
             var item = playlist.TrackIndex == -1
                 ? tracks.First()
-                : tracks[playlist.TrackIndex.Normalize(0, playlist.Tracks.Count - 1)];
+                : tracks[playlist.TrackIndex.Normalize(0, playlist.Tracks.Length - 1)];
             var position = playlist.TrackPosition;
             if (position != null && position.Value > item.Track.Duration)
             {

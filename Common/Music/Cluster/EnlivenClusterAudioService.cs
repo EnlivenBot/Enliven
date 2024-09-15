@@ -71,10 +71,11 @@ public class EnlivenClusterAudioService : ClusterAudioService, IEnlivenClusterAu
         if (shutdownParameters.SavePlaylist)
         {
             var encodedTracks = await _musicResolverService.EncodeTracks(snapshot.Playlist);
+            var byteTracks = encodedTracks.Select(track => MessagePackSerializer.Typeless.Serialize(track)).ToArray();
             var trackIndex = snapshot.LastTrack is not null ? snapshot.Playlist.IndexOf(snapshot.LastTrack) : -1;
             var enlivenPlaylist = new EnlivenPlaylist()
             {
-                Tracks = encodedTracks,
+                Tracks = byteTracks,
                 TrackPosition = snapshot.TrackPosition,
                 TrackIndex = trackIndex
             };
