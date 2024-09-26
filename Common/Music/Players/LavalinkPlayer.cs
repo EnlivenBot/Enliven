@@ -409,6 +409,7 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
         if (voiceChannelId is null)
         {
             _logger.PlayerDisconnected(Label);
+            await NotifyDisconnected(cancellationToken);
             await using var _ = this.ConfigureAwait(false);
             return;
         }
@@ -424,6 +425,11 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
         }
 
         await NotifyChannelUpdateAsync(voiceChannelId, cancellationToken).ConfigureAwait(false);
+    }
+
+    protected virtual ValueTask NotifyDisconnected(CancellationToken cancellationToken)
+    {
+        return ValueTask.CompletedTask;
     }
 
     protected virtual ITrackQueueItem? LookupTrackQueueItem(LavalinkTrack receivedTrack, ITrackQueueItem? currentTrack,
