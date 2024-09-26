@@ -98,8 +98,8 @@ internal static class DiHelpers
             .AddInactivityTracking()
             .ConfigureInactivityTracking(options =>
             {
-                options.DefaultPollInterval = TimeSpan.FromSeconds(10);
-                options.DefaultTimeout = TimeSpan.FromSeconds(30);
+                options.DefaultPollInterval = TimeSpan.FromSeconds(30);
+                options.DefaultTimeout = TimeSpan.FromSeconds(120);
 
                 options.UseDefaultTrackers = true;
                 options.TimeoutBehavior = InactivityTrackingTimeoutBehavior.Highest;
