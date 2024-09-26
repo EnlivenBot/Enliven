@@ -13,6 +13,8 @@ using Common.Music.Cluster;
 using Common.Music.Players.Options;
 using Discord;
 using Lavalink4NET.Filters;
+using Lavalink4NET.InactivityTracking.Players;
+using Lavalink4NET.InactivityTracking.Trackers;
 using Lavalink4NET.Players;
 using Microsoft.Extensions.DependencyInjection;
 using NLog;
@@ -20,7 +22,7 @@ using Tyrrrz.Extensions;
 
 namespace Common.Music.Players;
 
-public class AdvancedLavalinkPlayer : WrappedLavalinkPlayer, IPlayerOnReady, IPlayerShutdownInternally
+public class AdvancedLavalinkPlayer : WrappedLavalinkPlayer, IPlayerOnReady, IPlayerShutdownInternally, IInactivityPlayerListener
 {
     protected static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
@@ -154,6 +156,12 @@ public class AdvancedLavalinkPlayer : WrappedLavalinkPlayer, IPlayerOnReady, IPl
     }
 
     #region Disposing/Shutdowning
+    
+    public async ValueTask NotifyPlayerInactiveAsync(PlayerTrackingState trackingState, CancellationToken cancellationToken = default)
+    {
+        await Shutdown(new EntryLocalized("Music.NoListenersLeft"),
+            new PlayerShutdownParameters { RestartPlayer = false, ShutdownDisplays = true, SavePlaylist = true });
+    }
 
     /// <remarks>
     /// We don't call Dispose or DisposeAsync on our side of the player.
@@ -203,4 +211,14 @@ public class AdvancedLavalinkPlayer : WrappedLavalinkPlayer, IPlayerOnReady, IPl
     }
 
     #endregion
+
+    public ValueTask NotifyPlayerActiveAsync(PlayerTrackingState trackingState, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask NotifyPlayerTrackedAsync(PlayerTrackingState trackingState, CancellationToken cancellationToken = default)
+    {
+        return ValueTask.CompletedTask;
+    }
 }
