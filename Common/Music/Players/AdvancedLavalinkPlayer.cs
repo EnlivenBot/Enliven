@@ -163,6 +163,12 @@ public class AdvancedLavalinkPlayer : WrappedLavalinkPlayer, IPlayerOnReady, IPl
             new PlayerShutdownParameters { RestartPlayer = false, ShutdownDisplays = true, SavePlaylist = true });
     }
 
+    protected override async ValueTask NotifyDisconnected(CancellationToken cancellationToken)
+    {
+        await Shutdown(new EntryLocalized("Music.BotKicked"),
+            new PlayerShutdownParameters { RestartPlayer = false, ShutdownDisplays = true, SavePlaylist = true });
+    }
+
     /// <remarks>
     /// We don't call Dispose or DisposeAsync on our side of the player.
     /// If Dispose was called on the player, something happened in the Lavalink and our job is to try to restart the player
