@@ -18,6 +18,8 @@ using Lavalink4NET.Cluster;
 using Lavalink4NET.Cluster.Extensions;
 using Lavalink4NET.Cluster.LoadBalancing.Strategies;
 using Lavalink4NET.DiscordNet;
+using Lavalink4NET.InactivityTracking;
+using Lavalink4NET.InactivityTracking.Extensions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using VkNet;
@@ -92,7 +94,16 @@ internal static class DiHelpers
             .AddLavalinkCluster<DiscordClientWrapper>()
             .ConfigureOptions<ClusterAudioServiceOptionsConfigurator>()
             .AddSingleton<IMusicResolver, LavalinkMusicResolver>()
-            .AddSingleton<MusicResolverService>();
+            .AddSingleton<MusicResolverService>()
+            .AddInactivityTracking()
+            .ConfigureInactivityTracking(options =>
+            {
+                options.DefaultPollInterval = TimeSpan.FromSeconds(30);
+                options.DefaultTimeout = TimeSpan.FromSeconds(120);
+
+                options.UseDefaultTrackers = true;
+                options.TimeoutBehavior = InactivityTrackingTimeoutBehavior.Highest;
+            });
 
         return builder;
     }
