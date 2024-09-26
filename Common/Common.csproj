@@ -36,4 +36,8 @@
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
     </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Lavalink4NET.InactivityTracking\Lavalink4NET.InactivityTracking.csproj" />
+    </ItemGroup>
 </Project>

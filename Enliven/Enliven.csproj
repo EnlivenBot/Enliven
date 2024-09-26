@@ -6,7 +6,7 @@
         <AssemblyName>Enliven</AssemblyName>
         <Version>19.0</Version>
         <Nullable>enable</Nullable>
-        <LangVersion>11</LangVersion>
+        <LangVersion>12</LangVersion>
         <UserSecretsId>d6df00aa-ccf3-410e-92e6-723b9cd92b2f</UserSecretsId>
     </PropertyGroup>
 
@@ -20,7 +20,6 @@
         <PackageReference Include="Microsoft.Extensions.Hosting" />
         <PackageReference Include="NLog.Extensions.Logging" />
         <PackageReference Include="Autofac.Extras.NLog" />
-        <PackageReference Include="Lavalink4NET.InactivityTracking" />
     </ItemGroup>
 
     <ItemGroup>
@@ -34,6 +33,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Common\Common.csproj" />
+        <ProjectReference Include="..\Lavalink4NET.InactivityTracking\Lavalink4NET.InactivityTracking.csproj" />
     </ItemGroup>
 
     <PropertyGroup>
