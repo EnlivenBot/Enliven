@@ -10,8 +10,6 @@
         
         <EnableSdkContainerSupport>true</EnableSdkContainerSupport>
         <ContainerRuntimeIdentifier>linux-x64</ContainerRuntimeIdentifier>
-        <ContainerRegistry>ghcr.io</ContainerRegistry>
-        <ContainerRepository>skproch/enliven</ContainerRepository>
 
         <Version>$(MinVerMajor).$(MinVerMinor).$(MinVerPatch)</Version>
         <MinVerTagPrefix>v</MinVerTagPrefix>
