@@ -2,7 +2,6 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
-    
     <Lavalink4NETVersion>4.0.26-preview.4</Lavalink4NETVersion>
   </PropertyGroup>
   <ItemGroup>
@@ -27,6 +26,7 @@
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.5.0-preview-20221221-03" />
     <PackageVersion Include="MiniRazor.CodeGen" Version="2.2.2" />
+    <PackageVersion Include="MinVer" Version="6.0.0" />
     <PackageVersion Include="NLog" Version="5.2.3" />
     <PackageVersion Include="NLog.Extensions.Logging" Version="5.3.12" />
     <PackageVersion Include="PuppeteerSharp" Version="12.0.0" />
