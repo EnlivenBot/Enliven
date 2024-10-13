@@ -1,50 +1,43 @@
 ﻿using System;
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
-using System.Reactive.Threading.Tasks;
 using System.Threading.Tasks;
 
 namespace Common.Utils;
 
 public interface IDisposableBase : IDisposable
 {
-    Task DisposedTask { get; }
-    IObservable<IDisposableBase> Disposed { get; }
     bool IsDisposed { get; }
+    Task WaitForDisposeAsync();
 }
 
 public abstract class DisposableBase : IDisposableBase
 {
-    private readonly Subject<IDisposableBase> _disposed = new();
-    private Task? _disposedTask;
-    public Task DisposedTask => _disposedTask ??= Disposed.ToTask();
-    public IObservable<IDisposableBase> Disposed => _disposed.AsObservable();
+    private TaskCompletionSource _disposeTask = new();
+    public Task WaitForDisposeAsync() => _disposeTask.Task;
     public bool IsDisposed { get; private set; }
 
     public virtual void Dispose()
     {
         if (IsDisposed) return;
         IsDisposed = true;
+        GC.SuppressFinalize(this);
         try
         {
             DisposeInternal();
         }
         finally
         {
-            _disposed.OnNext(this);
-            _disposed.OnCompleted();
-            _disposed.Dispose();
+            _disposeTask.TrySetResult();
         }
     }
 
     protected void EnsureNotDisposed()
     {
-        if (IsDisposed) throw new ObjectDisposedException(GetType().Name);
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
     }
 
     protected T EnsureNotDisposedAndReturn<T>(Func<T> func)
     {
-        if (IsDisposed) throw new ObjectDisposedException(GetType().Name);
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
         return func();
     }
 
@@ -53,42 +46,40 @@ public abstract class DisposableBase : IDisposableBase
 
 public abstract class AsyncDisposableBase : IDisposableBase, IAsyncDisposable
 {
-    private readonly Subject<IDisposableBase> _disposed = new();
-    private Task? _disposedTask;
+    private TaskCompletionSource _disposeTask = new();
 
     public async ValueTask DisposeAsync()
     {
         if (IsDisposed) return;
         IsDisposed = true;
+        GC.SuppressFinalize(this);
         try
         {
             await DisposeInternalAsync();
         }
         finally
         {
-            _disposed.OnNext(this);
-            _disposed.OnCompleted();
-            _disposed.Dispose();
+            _disposeTask.TrySetResult();
         }
     }
 
-    public Task DisposedTask => _disposedTask ??= Disposed.ToTask();
-    public IObservable<IDisposableBase> Disposed => _disposed.AsObservable();
+    public Task WaitForDisposeAsync() => _disposeTask.Task;
     public bool IsDisposed { get; private set; }
 
     public virtual void Dispose()
     {
+        GC.SuppressFinalize(this);
         DisposeAsync().AsTask().Wait();
     }
 
     protected void EnsureNotDisposed()
     {
-        if (IsDisposed) throw new ObjectDisposedException(GetType().Name);
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
     }
 
     protected T EnsureNotDisposedAndReturn<T>(Func<T> func)
     {
-        if (IsDisposed) throw new ObjectDisposedException(GetType().Name);
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
         return func();
     }
 

@@ -61,10 +61,10 @@ public class EnlivenBotWrapper
         {
             try
             {
-                await using var lifetimeScope =
+                var lifetimeScope =
                     container.BeginLifetimeScope(Constants.BotLifetimeScopeTag, ConfigureBotLifetime);
                 var bot = lifetimeScope.Resolve<EnlivenBot>();
-                await bot.StartAsync();
+                await bot.StartAsync(cancellationToken);
                 var hostedServices = lifetimeScope
                     .Resolve<IReadOnlyCollection<IHostedService>>()
                     .Except(topLevelHostedServices)
@@ -75,7 +75,7 @@ public class EnlivenBotWrapper
 
                 try
                 {
-                    await bot.Disposed.ToTask(cancellationToken);
+                    await bot.WaitForDisposeAsync();
                     foreach (var hostedService in hostedServices) await hostedService.StopAsync(CancellationToken.None);
                 }
                 catch (Exception)

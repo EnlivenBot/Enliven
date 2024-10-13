@@ -14,7 +14,8 @@ using NLog;
 
 namespace Bot;
 
-public class EnlivenBot : AsyncDisposableBase, IService {
+public class EnlivenBot : AsyncDisposableBase, IService
+{
     private readonly EnlivenShardedClient _client;
     private readonly InstanceConfig _config;
     private readonly ILogger _logger;
@@ -22,7 +23,8 @@ public class EnlivenBot : AsyncDisposableBase, IService {
     private bool _isDiscordStarted;
 
     public EnlivenBot(ILogger logger, IEnumerable<IService> services,
-                      EnlivenShardedClient discordShardedClient, InstanceConfig config) {
+        EnlivenShardedClient discordShardedClient, InstanceConfig config)
+    {
         _config = config;
 
         _services = services;
@@ -30,32 +32,29 @@ public class EnlivenBot : AsyncDisposableBase, IService {
         _client = discordShardedClient;
     }
 
-    public async Task OnShutdown(bool isDiscordStarted) {
-        if (isDiscordStarted) {
+    public async Task OnShutdown(bool isDiscordStarted)
+    {
+        if (isDiscordStarted)
+        {
             await _client.SetStatusAsync(UserStatus.AFK);
             await _client.SetGameAsync("Reboot...");
         }
     }
 
-    public async Task OnPostDiscordStart() {
+    public async Task OnPostDiscordStart()
+    {
         await _client.SetGameAsync("mentions of itself to get started", null, ActivityType.Listening);
     }
 
-    public async Task RunAsync(CancellationToken cancellationToken = default) {
-        await StartAsync();
+    internal async Task StartAsync(CancellationToken cancellationToken)
+    {
         cancellationToken.Register(Dispose);
-        try { await Disposed.ToTask(CancellationToken.None); }
-        catch (Exception) {
-            // ignored
-        }
-    }
 
-    internal async Task StartAsync() {
         _logger.Info("Start Initialising");
         await IService.ProcessEventAsync(_services, ServiceEventType.PreDiscordLogin, _logger);
         _client.Log += message => LoggingUtilities.OnDiscordLog(_logger, message);
 
-        await LoginAsync();
+        await Task.Run(async () => await LoginAsync(cancellationToken).ObserveException(), cancellationToken);
         await IService.ProcessEventAsync(_services, ServiceEventType.PreDiscordStart, _logger);
 
         _logger.Info("Starting client");
@@ -63,33 +62,48 @@ public class EnlivenBot : AsyncDisposableBase, IService {
         _isDiscordStarted = true;
         await IService.ProcessEventAsync(_services, ServiceEventType.PostDiscordStart, _logger);
 
-        _ = _client.Ready.ContinueWith(async _ => await IService.ProcessEventAsync(_services, ServiceEventType.DiscordReady, _logger));
+        _ = _client.Ready.ContinueWith(
+            async _ => await IService.ProcessEventAsync(_services, ServiceEventType.DiscordReady, _logger),
+            cancellationToken);
     }
 
-    private async Task LoginAsync() {
+    private async Task LoginAsync(CancellationToken cancellationToken)
+    {
         _logger.Info("Start logining");
         for (var connectionTryNumber = 1; connectionTryNumber <= 5; connectionTryNumber++)
-            try {
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+
+            try
+            {
                 await _client.LoginAsync(TokenType.Bot, _config.BotToken);
                 _logger.Info("Successefully logged in");
                 return;
             }
-            catch (HttpException e) when (e.HttpCode == HttpStatusCode.Unauthorized) {
+            catch (HttpException e) when (e.HttpCode == HttpStatusCode.Unauthorized)
+            {
                 _logger.Fatal("Failed to login - unauthorized. Check token - {Token}", _config.BotToken);
                 throw;
             }
-            catch (Exception e) {
+            catch (Exception e)
+            {
                 _logger.Fatal(e, "Failed to login");
-                _logger.Info("Waiting before next attempt - {delay}s", connectionTryNumber * 10);
-                await Task.Delay(TimeSpan.FromSeconds(connectionTryNumber * 10));
+                _logger.Info("Waiting before next attempt - {Delay}s", connectionTryNumber * 10);
+                await Task.Delay(TimeSpan.FromSeconds(connectionTryNumber * 10), cancellationToken);
             }
+        }
 
         _logger.Fatal("Failed to login 5 times. Quiting");
         throw new Exception("Failed to login 5 times");
     }
 
-    protected override async Task DisposeInternalAsync() {
-        await IService.ProcessEventAsync(_services, _isDiscordStarted ? ServiceEventType.ShutdownStarted : ServiceEventType.ShutdownNotStarted, _logger);
+    protected override async Task DisposeInternalAsync()
+    {
+        await IService.ProcessEventAsync(_services,
+            _isDiscordStarted ? ServiceEventType.ShutdownStarted : ServiceEventType.ShutdownNotStarted, _logger);
         await _client.DisposeAsync();
     }
 }

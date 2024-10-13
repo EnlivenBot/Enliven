@@ -231,7 +231,7 @@ public static class ExtensionMethods
         }
         else
         {
-            disposableBase.Disposed.Subscribe(_ => disposable.Dispose());
+            _ = disposableBase.WaitForDisposeAsync().ContinueWith(_ => disposable.Dispose());
         }
     }
 
@@ -376,9 +376,16 @@ public static class ExtensionMethods
         while (enumerator.MoveNext()) action(enumerator.Current);
     }
 
-    public static Task ObserveException(this Task task)
+    public static async Task ObserveException(this Task task)
     {
-        return task.ContinueWith(_ => task.Exception?.Handle(_ => true), TaskContinuationOptions.OnlyOnFaulted);
+        try
+        {
+            await task;
+        }
+        catch (Exception)
+        {
+            // ignored
+        }
     }
 
     public static IEnumerator<T> GetEnumerator<T>(this IEnumerator<T> enumerator) => enumerator;

@@ -119,7 +119,7 @@ public class SingleTask<T> : DisposableBase
             EnsureNotDisposed();
             do
             {
-                await Task.WhenAny(_handyTimer.TimerElapsed, DisposedTask);
+                await Task.WhenAny(_handyTimer.TimerElapsed, WaitForDisposeAsync());
                 if (IsDisposed) return;
 
                 var singleTaskExecutionData = new SingleTaskExecutionData(BetweenExecutionsDelay);

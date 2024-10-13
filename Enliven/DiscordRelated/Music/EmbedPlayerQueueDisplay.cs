@@ -42,7 +42,7 @@ public class EmbedPlayerQueueDisplay : PlayerDisplayBase
         {
             Title = _loc.Get("MusicQueues.QueueTitle"), Color = Color.Gold
         };
-        _paginatedMessage.Disposed.Subscribe(base2 => ExecuteShutdown(null, null));
+        _ = _paginatedMessage.WaitForDisposeAsync().ContinueWith(_ => ExecuteShutdown(null, null));
         await base.Initialize(finalLavalinkPlayer);
         await _paginatedMessage.Resend();
     }
