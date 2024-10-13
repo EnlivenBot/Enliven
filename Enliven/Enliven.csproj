@@ -11,7 +11,6 @@
         <EnableSdkContainerSupport>true</EnableSdkContainerSupport>
         <ContainerRuntimeIdentifier>linux-x64</ContainerRuntimeIdentifier>
 
-        <Version>$(MinVerMajor).$(MinVerMinor).$(MinVerPatch)</Version>
         <MinVerTagPrefix>v</MinVerTagPrefix>
     </PropertyGroup>
 
