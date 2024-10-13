@@ -37,4 +37,4 @@ jobs:
           
       - name: Publish and push the container image
         run: |
-          dotnet publish --os linux --arch x64 -c Release /p:PublishProfile=github /p:ContainerRepository="enlivenbot/enliven" /p:ContainerRegistry="ghcr.io"
+          dotnet publish Enliven/Enliven.csproj --os linux --arch x64 -c Release /p:PublishProfile=DefaultContainer /p:ContainerRepository="enlivenbot/enliven" /p:ContainerRegistry="ghcr.io"
