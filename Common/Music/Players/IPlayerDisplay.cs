@@ -6,7 +6,7 @@ namespace Common.Music.Players;
 
 public interface IPlayerDisplay
 {
-    public EnlivenLavalinkPlayer Player { get; }
+    public EnlivenLavalinkPlayer? Player { get; }
 
     public bool IsShutdowned { get; }
     public IObservable<IPlayerDisplay> Shutdown { get; }

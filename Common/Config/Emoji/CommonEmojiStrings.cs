@@ -11,12 +11,10 @@ public class CommonEmojiStrings
         () =>
         {
             var emojiStrings = new CommonEmojiStrings();
-            if (File.Exists(Path.Combine("Config", "CommonEmoji.json")))
-                emojiStrings =
-                    JsonConvert.DeserializeObject<CommonEmojiStrings>(
-                        File.ReadAllText(Path.Combine("Config", "CommonEmoji.json")));
-            File.WriteAllText(Path.Combine("Config", "CommonEmoji.json"),
-                JsonConvert.SerializeObject(emojiStrings, Formatting.Indented));
+            var path = Path.Combine("Config", "CommonEmoji.json");
+            if (File.Exists(path))
+                emojiStrings = JsonConvert.DeserializeObject<CommonEmojiStrings>(File.ReadAllText(path))!;
+            File.WriteAllText(path, JsonConvert.SerializeObject(emojiStrings, Formatting.Indented));
             return emojiStrings;
         });
 

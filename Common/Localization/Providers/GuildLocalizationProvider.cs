@@ -21,5 +21,5 @@ public class GuildLocalizationProvider : ILocalizationProvider
         return LocalizationManager.Get(_guildConfig.GetLanguage(), id, formatArgs);
     }
 
-    public IObservable<ILocalizationProvider> LanguageChanged => _languageChanged.AsObservable();
+    public IObservable<ILocalizationProvider>? LanguageChanged => _languageChanged.AsObservable();
 }

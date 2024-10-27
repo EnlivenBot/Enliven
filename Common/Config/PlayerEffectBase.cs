@@ -27,6 +27,10 @@ public class PlayerEffectBase : IPlayerFilters
         {
             _filters = filterOptionsMap.ToDictionary(pair => pair.Key, pair => pair.Value);
         }
+        else
+        {
+            _filters = new Dictionary<string, IFilterOptions>();
+        }
     }
 
     [JsonProperty("Name")] public string DisplayName { get; set; }

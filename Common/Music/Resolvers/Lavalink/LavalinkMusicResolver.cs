@@ -21,7 +21,6 @@ public sealed class LavalinkMusicResolver : MusicResolverBase<LavalinkTrack, Lav
     public override async ValueTask<MusicResolveResult> Resolve(ITrackManager cluster,
         LavalinkApiResolutionScope resolutionScope, string query, CancellationToken cancellationToken)
     {
-        TrackSearchMode trackSearchMode;
         if (Utilities.IsValidUrl(query))
             return await cluster.LoadTracksAsync(query, TrackSearchMode.None, resolutionScope, cancellationToken);
 

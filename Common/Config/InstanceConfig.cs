@@ -7,7 +7,7 @@ public class InstanceConfig
     /// <summary>
     /// Instance bot name
     /// </summary>
-    public string Name { get; set; }
+    public string Name { get; set; } = "Enliven";
 
     /// <summary>
     /// Your Discord bot token

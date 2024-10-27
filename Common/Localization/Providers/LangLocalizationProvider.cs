@@ -18,5 +18,5 @@ public class LangLocalizationProvider : ILocalizationProvider
         return LocalizationManager.Get(_lang, id, formatArgs);
     }
 
-    public IObservable<ILocalizationProvider> LanguageChanged { get; } = null;
+    public IObservable<ILocalizationProvider>? LanguageChanged { get; } = null;
 }

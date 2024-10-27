@@ -32,5 +32,5 @@ public class LocalizationContainer : ILocalizationProvider
         return Provider.Get(id, formatArgs);
     }
 
-    public IObservable<ILocalizationProvider> LanguageChanged => _languageChanged.AsObservable();
+    public IObservable<ILocalizationProvider>? LanguageChanged => _languageChanged.AsObservable();
 }

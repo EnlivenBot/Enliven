@@ -24,8 +24,9 @@ public static class LocalizationManager
         _logger.Info("Start loading localizations packs...");
         try
         {
-            var indexes = Directory.GetFiles(Path.Combine(Directory.GetCurrentDirectory(), "Localization"))
-                .ToDictionary(Path.GetFileNameWithoutExtension);
+            var localizationDirs = Path.Combine(Directory.GetCurrentDirectory(), "Localization");
+            var indexes = Directory.GetFiles(localizationDirs)
+                .ToDictionary<string, string>(Path.GetFileNameWithoutExtension);
             var localizationPacks = FetchLocalizationPacks(indexes!);
 
             var englishLocalizationEntries = localizationPacks["en"].GetLocalizationEntries();
@@ -35,19 +36,19 @@ public static class LocalizationManager
             }
 
             Languages = localizationPacks!;
-            _logger.Info("Loaded languages: {lang}.",
+            _logger.Info("Loaded languages: {Lang}",
                 string.Join(", ", Languages.Select(pair => $"{pair.Key} - {pair.Value.TranslationCompleteness}%")));
         }
         catch (Exception e)
         {
             _logger.Error(e, "Error while downloading languages");
-            _logger.Info("Loading default (en) pack.");
+            _logger.Info("Loading default (en) pack");
+            var path = Path.Combine(Directory.GetCurrentDirectory(), "Localization/en.json");
             Languages = new Dictionary<string, LocalizationPack>
             {
                 {
                     "en",
-                    JsonConvert.DeserializeObject<LocalizationPack>(
-                        File.ReadAllText(Path.Combine(Directory.GetCurrentDirectory(), "Localization/en.json")))
+                    JsonConvert.DeserializeObject<LocalizationPack>(File.ReadAllText(path))!
                 }
             };
         }
@@ -61,9 +62,10 @@ public static class LocalizationManager
     {
         return indexes.Select(Loader)
             .Where(pair => pair.HasValue)
-            .ToDictionary(tuple => tuple!.Value.Key, tuple => tuple!.Value.Pack)!;
+            .Select(tuple => tuple!.Value)
+            .ToDictionary(tuple => tuple.Key, tuple => tuple.Pack);
 
-        static (string? Key, LocalizationPack? Pack)? Loader(KeyValuePair<string, string> variable)
+        static (string Key, LocalizationPack Pack)? Loader(KeyValuePair<string, string> variable)
         {
             var (packId, path) = variable;
             try
@@ -72,7 +74,7 @@ public static class LocalizationManager
             }
             catch (Exception e)
             {
-                _logger.Error(e, @"Error while loading {PackId} from {Path}", packId, path);
+                _logger.Error(e, "Error while loading {PackId} from {Path}", packId, path);
             }
 
             return null;
@@ -81,8 +83,8 @@ public static class LocalizationManager
 
     private static LocalizationPack LoadLocalizationPack(string path)
     {
-        using var webClient = new WebClient();
-        var pack = JsonConvert.DeserializeObject<LocalizationPack>(webClient.DownloadString(path));
+        var text = File.ReadAllText(path);
+        var pack = JsonConvert.DeserializeObject<LocalizationPack>(text)!;
         foreach (var (_, dictionary) in pack.Data)
         {
             foreach (var (key, value) in dictionary.ToImmutableDictionary())
@@ -95,7 +97,7 @@ public static class LocalizationManager
 
         static string ProcessLayouts(string text, LocalizationPack localizationPack)
         {
-            var startText = text;
+            string startText;
             do
             {
                 startText = text;
@@ -141,7 +143,6 @@ public static class LocalizationManager
         var split = id.Split(".");
 
         var s = Get(lang, split[0], split[1]);
-        if (s == null) return id;
         try
         {
             return args == null || args.Length == 0 ? s : string.Format(s, args);
