@@ -50,32 +50,19 @@ public partial class GuildConfig
     public string GuildLanguage { get; set; } = "en";
     public bool IsMusicLimited { get; set; }
 
-    public bool IsLoggingEnabled { get; set; } = false;
-    public bool IsCommandLoggingEnabled { get; set; } = false;
-    public bool HistoryMissingInLog { get; set; }
-    public bool HistoryMissingPacks { get; set; }
-    public List<ulong> LoggedChannels { get; set; } = new();
-    public MessageExportType MessageExportType { get; set; } = MessageExportType.Html;
-
     public ConcurrentDictionary<ChannelFunction, ulong> FunctionalChannels { get; set; } = new();
 }
 
 public enum ChannelFunction
 {
+    [Obsolete]
     Log,
     Music,
     DedicatedMusic
 }
 
-public enum MessageExportType
-{
-    Image,
-    Html
-}
-
 public partial class GuildConfig
 {
-    [BsonIgnore] private readonly Subject<ulong> _channelLoggingChanged = new();
 
     [BsonIgnore] private readonly Subject<ChannelFunction> _functionalChannelsChanged = new();
 
@@ -83,14 +70,11 @@ public partial class GuildConfig
     [BsonIgnore] private readonly Subject<GuildConfig> _saveRequest = new();
     [BsonIgnore] public IObservable<GuildConfig> SaveRequest => _saveRequest.AsObservable();
     [BsonIgnore] public IObservable<GuildConfig> LocalizationChanged => _localizationChanged.AsObservable();
-    [BsonIgnore] public IObservable<ulong> ChannelLoggingChanged => _channelLoggingChanged.AsObservable();
 
     [BsonIgnore]
     public IObservable<ChannelFunction> FunctionalChannelsChanged => _functionalChannelsChanged.AsObservable();
 
     [BsonIgnore] public ILocalizationProvider Loc => _loc ??= new GuildLocalizationProvider(this);
-
-    [BsonIgnore] public bool SendWithoutHistoryPacks => HistoryMissingInLog && HistoryMissingPacks;
 
     public void Save()
     {
@@ -103,11 +87,6 @@ public partial class GuildConfig
             FunctionalChannels.TryRemove(func, out _);
         else
             FunctionalChannels[func] = Convert.ToUInt64(channelId);
-
-        if (func == ChannelFunction.Log)
-        {
-            ToggleChannelLogging(Convert.ToUInt64(channelId));
-        }
 
         _functionalChannelsChanged.OnNext(func);
 
@@ -127,21 +106,5 @@ public partial class GuildConfig
         GuildLanguage = language;
         _localizationChanged.OnNext(this);
         return this;
-    }
-
-    public void ToggleChannelLogging(ulong channelId, bool? enable = null)
-    {
-        var contains = LoggedChannels.Contains(channelId);
-        if (enable == contains) return;
-        if (enable ?? !contains)
-        {
-            LoggedChannels.Add(channelId);
-        }
-        else
-        {
-            LoggedChannels.Remove(channelId);
-        }
-
-        _channelLoggingChanged.OnNext(channelId);
     }
 }

@@ -11,22 +11,6 @@ namespace Bot.Commands;
 [Hidden]
 [SlashCommandAdapter]
 public class PropertyCommands : AdvancedModuleBase {
-    [Command("enablelogging")]
-    public async Task EnableLogging(bool shouldEnableLogging) {
-        GuildConfig.IsLoggingEnabled = shouldEnableLogging;
-        GuildConfig.Save();
-        var description = new EntryLocalized(shouldEnableLogging ? "Commands.LoggingEnabled" : "Commands.LoggingDisabled");
-        await this.ReplySuccessFormattedAsync(description);
-    }
-
-    [Command("enablecommandslogging")]
-    public async Task EnableCommandsLogging(bool shouldEnableCommandsLogging) {
-        GuildConfig.IsCommandLoggingEnabled = shouldEnableCommandsLogging;
-        GuildConfig.Save();
-        var description = new EntryLocalized(shouldEnableCommandsLogging ? "Commands.CommandLoggingEnabled" : "Commands.CommandLoggingDisabled");
-        await this.ReplySuccessFormattedAsync(description);
-    }
-
     [Command("limitmusiccommands")]
     public async Task LimitMusicCommand(bool shouldLimitMusicCommands) {
         if (shouldLimitMusicCommands && !GuildConfig.GetChannel(ChannelFunction.Music, out _)) {
