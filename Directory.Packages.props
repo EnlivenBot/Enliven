@@ -39,7 +39,7 @@
     <PackageVersion Include="SpotifyAPI.Web" Version="7.2.1" />
     <PackageVersion Include="System.Reactive" Version="6.0.1" />
     <PackageVersion Include="Tyrrrz.Extensions" Version="1.6.5" />
-    <PackageVersion Include="VkNet" Version="1.78.0" />
+    <PackageVersion Include="VkNet" Version="1.75.0" />
     <PackageVersion Include="VkNet.AudioBypassService" Version="1.7.6" />
     <PackageVersion Include="Xabe.FFmpeg.Downloader" Version="5.2.6" />
     <PackageVersion Include="xunit" Version="2.9.2" />

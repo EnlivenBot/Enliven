@@ -38,7 +38,8 @@ TaskScheduler.UnobservedTaskException += (sender, args) =>
 
 // Creating and running host
 
-var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(args)
+    .AddServiceDefaults();
 builder.Host
     .UseServiceProviderFactory(new AutofacServiceProviderFactory())
     .ConfigureServices(services =>
