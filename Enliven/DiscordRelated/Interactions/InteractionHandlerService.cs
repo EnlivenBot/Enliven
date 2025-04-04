@@ -14,10 +14,11 @@ public class InteractionHandlerService : IService, IDisposable {
     private readonly CustomInteractionService _customInteractionService;
     private readonly EnlivenShardedClient _enlivenShardedClient;
     private readonly ILogger _logger;
-    private readonly ServiceProviderAdapter _serviceProvider;
+    private readonly IServiceProvider _serviceProvider;
     private IDisposable? _disposable;
-    public InteractionHandlerService(IComponentContext serviceContainer, CustomInteractionService customInteractionService, EnlivenShardedClient enlivenShardedClient, ILogger logger) {
-        _serviceProvider = new ServiceProviderAdapter(serviceContainer);
+    public InteractionHandlerService(IServiceProvider serviceProvider, CustomInteractionService customInteractionService, EnlivenShardedClient enlivenShardedClient, ILogger logger)
+    {
+        _serviceProvider = serviceProvider;
         _customInteractionService = customInteractionService;
         _enlivenShardedClient = enlivenShardedClient;
         _logger = logger;
@@ -25,6 +26,7 @@ public class InteractionHandlerService : IService, IDisposable {
 
     public void Dispose() {
         _disposable?.Dispose();
+        _logger.Info("Interactions disposed");
     }
 
     public async Task OnDiscordReady() {
