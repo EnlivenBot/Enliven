@@ -79,7 +79,7 @@ public class EnlivenBot : AsyncDisposableBase, IService
 
             try
             {
-                await _client.LoginAsync(TokenType.Bot, _config.BotToken);
+                await Task.Run(() => _client.LoginAsync(TokenType.Bot, _config.BotToken), cancellationToken);
                 _logger.Info("Successefully logged in");
                 return;
             }
