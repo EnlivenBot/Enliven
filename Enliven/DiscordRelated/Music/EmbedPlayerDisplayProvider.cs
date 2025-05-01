@@ -10,10 +10,9 @@ using Common.Config;
 using Common.Music.Cluster;
 using Discord;
 using Lavalink4NET.Artwork;
-using Lavalink4NET.Cluster;
 using Lavalink4NET.Players;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using NLog;
 
 namespace Bot.DiscordRelated.Music;
 
@@ -25,17 +24,20 @@ public class EmbedPlayerDisplayProvider : IService, IDisposable
     private readonly IEnlivenClusterAudioService _clusterAudioService;
     private readonly CommandHandlerService _commandHandlerService;
     private readonly IGuildConfigProvider _guildConfigProvider;
-    private readonly ILogger _logger;
+    private readonly ILogger<EmbedPlayerDisplayProvider> _logger;
+    private readonly ILoggerFactory _loggerFactory;
     private readonly MessageComponentService _messageComponentService;
     private IDisposable? _restoreStoppedHandled;
 
     public EmbedPlayerDisplayProvider(EnlivenShardedClient client, IGuildConfigProvider guildConfigProvider,
         CommandHandlerService commandHandlerService, MessageComponentService messageComponentService,
-        ILogger logger, IArtworkService artworkService, IEnlivenClusterAudioService clusterAudioService)
+        ILogger<EmbedPlayerDisplayProvider> logger, ILoggerFactory loggerFactory, IArtworkService artworkService,
+        IEnlivenClusterAudioService clusterAudioService)
     {
         _messageComponentService = messageComponentService;
         _commandHandlerService = commandHandlerService;
         _logger = logger;
+        _loggerFactory = loggerFactory;
         _artworkService = artworkService;
         _clusterAudioService = clusterAudioService;
         _client = client;
@@ -85,13 +87,13 @@ public class EmbedPlayerDisplayProvider : IService, IDisposable
             var guildConfig = _guildConfigProvider.Get(channel.GuildId);
             // TODO: Implement proper logger creation
             return new EmbedPlayerDisplay(channel, _client, guildConfig.Loc, _commandHandlerService,
-                _messageComponentService, _logger, _artworkService, _clusterAudioService);
+                _messageComponentService, _loggerFactory.CreateLogger<EmbedPlayerDisplay>(), _artworkService, _clusterAudioService);
         });
         if (!embedPlayerDisplay.IsShutdowned && embedPlayerDisplay.Player?.State != PlayerState.Destroyed)
             return embedPlayerDisplay;
         _cache.TryRemove(id, out _);
         if (recursiveCount <= 1) return ProvideInternal(id, channel, ++recursiveCount);
-        _logger.Fatal("Provider recursive call. Provider: {Data}",
+        _logger.LogCritical("Provider recursive call. Provider: {Data}",
             JsonConvert.SerializeObject(embedPlayerDisplay, Formatting.None,
                 new JsonSerializerSettings() { ReferenceLoopHandling = ReferenceLoopHandling.Ignore }));
         return embedPlayerDisplay;

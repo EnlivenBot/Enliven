@@ -3,48 +3,37 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Autofac;
 using Autofac.Extensions.DependencyInjection;
-using Autofac.Extras.NLog;
 using Bot;
 using Bot.DiscordRelated.Commands;
 using Bot.Music.Deezer;
 using Bot.Music.Spotify;
 using Bot.Utilities;
+using Bot.Utilities.Logging;
 using Common;
 using Common.Config;
 using Common.Localization;
 using Common.Music.Resolvers;
+using Common.Utils;
 using Lavalink4NET.Artwork;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using NLog;
-using NLog.Extensions.Logging;
-
-// Initializing localization
-Directory.CreateDirectory("Config");
-LocalizationManager.Initialize();
-
-// Setting up global handlers
-var logger = LogManager.GetLogger("Global");
-AppDomain.CurrentDomain.UnhandledException += (sender, args) =>
-    logger.Fatal(args.ExceptionObject as Exception, "Global uncaught exception");
-TaskScheduler.UnobservedTaskException += (sender, args) =>
-{
-    logger.Fatal(args.Exception?.Flatten(), "Global uncaught task exception");
-    args.SetObserved();
-};
-
-// Creating and running host
+using Microsoft.Extensions.Logging;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args)
     .AddServiceDefaults();
+
 builder.Host
     .UseServiceProviderFactory(new AutofacServiceProviderFactory())
     .ConfigureServices(services =>
     {
-        services.AddLogging(loggingBuilder => loggingBuilder.AddNLog());
+        services.AddSerilog((s, lc) => lc
+            .ReadFrom.Configuration(builder.Configuration)
+            .ReadFrom.CustomLogLevelFromConfiguration(builder.Configuration)
+            .ReadFrom.Services(s)
+            .Enrich.FromLogContext());
         services.AddHostedService<Worker>();
         services.AddHttpClient();
         services.AddSingleton<HttpClient>();
@@ -59,13 +48,28 @@ builder.Host
         services.AddSingleton<IMusicResolver, DeezerMusicResolver>();
         services.ConfigureNamedOptions<SpotifyCredentials>(builder.Configuration);
         services.AddSingleton<IMusicResolver, SpotifyMusicResolver>();
-    })
-    .ConfigureContainer<ContainerBuilder>(b => b.RegisterModule<NLogModule>());
+    });
 
 var app = builder.Build();
+app.UseSerilogRequestLogging();
+
+StaticLogger.Setup(app.Services.GetRequiredService<ILoggerFactory>());
+AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+    app.Logger.LogError(args.ExceptionObject as Exception, "Global uncaught exception");
+TaskScheduler.UnobservedTaskException += (_, args) =>
+{
+    app.Logger.LogError(args.Exception?.Flatten(), "Global uncaught task exception");
+    args.SetObserved();
+};
+
+// Initializing localization
+Directory.CreateDirectory("Config");
+LocalizationManager.Initialize();
 
 app.MapGet("/", () => "Enliven web host started");
 var endpointProviders = app.Services.GetServices<IEndpointProvider>();
 await Task.WhenAll(endpointProviders.Select(provider => provider.ConfigureEndpoints(app)));
 
 await app.RunAsync();
+
+await Log.CloseAndFlushAsync();

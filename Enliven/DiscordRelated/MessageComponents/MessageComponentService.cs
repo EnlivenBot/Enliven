@@ -3,14 +3,14 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using Common;
 using Discord.WebSocket;
-using NLog;
+using Microsoft.Extensions.Logging;
 
 namespace Bot.DiscordRelated.MessageComponents;
 
 public class MessageComponentService {
     private readonly Subject<SocketMessageComponent> _messageComponentUseSubject = new();
-    private ILogger _logger;
-    public MessageComponentService(EnlivenShardedClient enlivenShardedClient, ILogger logger) {
+    private ILogger<MessageComponentService> _logger;
+    public MessageComponentService(EnlivenShardedClient enlivenShardedClient, ILogger<MessageComponentService> logger) {
         _logger = logger;
         enlivenShardedClient.MessageComponentUse
             .Do(component => _ = component.DeferAsync())
@@ -31,7 +31,7 @@ public class MessageComponentService {
                     onComponentUse(component);
                 }
                 catch (Exception e) {
-                    _logger.Error(e, "Exception in handling message component callback. RegisterMessageComponent stacktrace:\n {RegistrationStacktrace}", registrationStacktrace);
+                    _logger.LogError(e, "Exception in handling message component callback. RegisterMessageComponent stacktrace:\n {RegistrationStacktrace}", registrationStacktrace);
                 }
             });
     }

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using NLog;
+using Microsoft.Extensions.Logging;
 
 namespace Common;
 
@@ -30,7 +30,7 @@ public interface IService
             }
             catch (Exception e)
             {
-                logger?.Error(e, "Exception in {ServiceType} while {EventType}", service, serviceEventType);
+                logger?.LogError(e, "Exception in {ServiceType} while {EventType}", service, serviceEventType);
             }
         });
         return Task.WhenAll(tasks).WhenEnd();

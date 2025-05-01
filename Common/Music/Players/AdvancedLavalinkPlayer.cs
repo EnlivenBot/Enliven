@@ -17,21 +17,20 @@ using Lavalink4NET.InactivityTracking.Players;
 using Lavalink4NET.InactivityTracking.Trackers;
 using Lavalink4NET.Players;
 using Microsoft.Extensions.DependencyInjection;
-using NLog;
+using Microsoft.Extensions.Logging;
 using Tyrrrz.Extensions;
 
 namespace Common.Music.Players;
 
 public class AdvancedLavalinkPlayer : WrappedLavalinkPlayer, IPlayerOnReady, IPlayerShutdownInternally, IInactivityPlayerListener
 {
-    protected static readonly Logger Logger = LogManager.GetCurrentClassLogger();
-
     private readonly List<PlayerEffectUse> _effectsList = new();
     private readonly IEnlivenClusterAudioService _enlivenClusterAudioService;
     private readonly Subject<IPlayerFilters> _filtersChanged = new();
     private readonly IGuildConfigProvider _guildConfigProvider;
     private readonly TaskCompletionSource<PlayerSnapshot> _shutdownTaskCompletionSource = new();
     private readonly IEnumerable<PlayerEffectUse>? _startupPlayerEffects;
+    private readonly ILogger<AdvancedLavalinkPlayer> _logger;
 
     protected readonly IServiceScope ServiceScope;
     private GuildConfig? _guildConfig;
@@ -42,6 +41,7 @@ public class AdvancedLavalinkPlayer : WrappedLavalinkPlayer, IPlayerOnReady, IPl
         base(options)
     {
         ServiceScope = options.ServiceProvider!.CreateScope();
+        _logger = ServiceScope.ServiceProvider.GetRequiredService<ILogger<AdvancedLavalinkPlayer>>();
         _guildConfigProvider = ServiceScope.ServiceProvider.GetRequiredService<IGuildConfigProvider>();
         _enlivenClusterAudioService = ServiceScope.ServiceProvider.GetRequiredService<IEnlivenClusterAudioService>();
 
@@ -176,7 +176,7 @@ public class AdvancedLavalinkPlayer : WrappedLavalinkPlayer, IPlayerOnReady, IPl
     protected override async ValueTask DisposeAsyncCore()
     {
         if (State == PlayerState.Destroyed || _isShutdownRequested) return;
-        Logger.Warn("Got player in {GuildId} dispose request\n{StackTrace}", GuildId, new StackTrace());
+        _logger.LogWarning("Got player in {GuildId} dispose request\n{StackTrace}", GuildId, new StackTrace());
         await Shutdown(new EntryLocalized("Music.PlaybackStopped"),
             new PlayerShutdownParameters() { RestartPlayer = true, SavePlaylist = true, ShutdownDisplays = false });
     }

@@ -24,9 +24,8 @@ using Common.Music.Tracks;
 using Common.Utils;
 using Discord;
 using Lavalink4NET.Artwork;
-using Lavalink4NET.Cluster;
 using Lavalink4NET.Players;
-using NLog;
+using Microsoft.Extensions.Logging;
 using Tyrrrz.Extensions;
 
 #pragma warning disable 4014
@@ -45,7 +44,7 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
     private readonly IDiscordClient _discordClient;
     private readonly EnlivenEmbedBuilder _embedBuilder;
     private readonly ILocalizationProvider _loc;
-    private readonly ILogger _logger;
+    private readonly ILogger<EmbedPlayerDisplay> _logger;
     private readonly MessageComponentService _messageComponentService;
     private readonly IGuild? _targetGuild;
     private readonly SingleTask _updateControlMessageTask;
@@ -65,7 +64,7 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
 
     public EmbedPlayerDisplay(IMessageChannel targetChannel, IDiscordClient discordClient, ILocalizationProvider loc,
         CommandHandlerService commandHandlerService, MessageComponentService messageComponentService,
-        ILogger logger, IArtworkService artworkService, IEnlivenClusterAudioService audioService)
+        ILogger<EmbedPlayerDisplay> logger, IArtworkService artworkService, IEnlivenClusterAudioService audioService)
     {
         _targetGuild = (targetChannel as ITextChannel)?.Guild;
         _messageComponentService = messageComponentService;
@@ -127,9 +126,8 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
 
                 var oldControlMessage = _controlMessage;
                 await SendControlMessage_WithMessageComponents();
-                _logger.Debug(
-                    "Sent player embed controll message. Guild: {TargetGuildId}. Channel: {TargetChannelId}. Message id: {ControlMessageId}",
-                    _targetGuild?.Id, _targetChannel.Id, _controlMessage.Id);
+                _logger.LogTrace("Sent player embed control message. Guild: {TargetGuildId}. Channel: {TargetChannelId}. Message id: {ControlMessageId}",
+                    _targetGuild?.Id, _targetChannel.Id, _controlMessage?.Id);
                 oldControlMessage.SafeDelete();
             }
             else
@@ -157,7 +155,7 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
                     return;
                 }
 
-                _logger.Trace(
+                _logger.LogTrace(
                     "Modifying embed control message. Guild: {TargetGuildId}. Channel: {TargetChannelId}. Message id: {ControlMessageId}",
                     _targetGuild?.Id, _targetChannel.Id, _controlMessage.Id);
                 await _controlMessage.ModifyAsync(properties =>
@@ -180,7 +178,7 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
             }
             catch (Exception e)
             {
-                _logger.Debug(e,
+                _logger.LogTrace(e,
                     "Failed to update embed control message. Guild: {TargetGuildId}. Channel: {TargetChannelId}. Message id: {ControlMessageId}",
                     _targetGuild?.Id, _targetChannel.Id, _controlMessage?.Id);
                 if (_controlMessage != null)

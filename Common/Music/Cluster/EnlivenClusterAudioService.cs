@@ -15,7 +15,6 @@ using Lavalink4NET.Clients;
 using Lavalink4NET.Cluster;
 using Lavalink4NET.Cluster.Nodes;
 using Lavalink4NET.Events;
-using Lavalink4NET.Events.Players;
 using Lavalink4NET.Integrations;
 using Lavalink4NET.Players;
 using Lavalink4NET.Rest;

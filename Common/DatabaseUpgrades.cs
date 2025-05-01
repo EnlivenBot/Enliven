@@ -1,6 +1,5 @@
 ﻿using Common.Config;
 using LiteDB;
-using NLog;
 
 #pragma warning disable 618
 
@@ -8,8 +7,6 @@ namespace Common;
 
 internal class DatabaseUpgrades
 {
-    private static readonly ILogger Logger = LogManager.GetCurrentClassLogger();
-
     // Changes to the playlist storage system
     [LiteDatabaseProvider.DbUpgrade(10, false)]
     public static void Upgrade10(LiteDatabase database)

@@ -8,7 +8,6 @@ using Autofac;
 using Bot.DiscordRelated.Commands;
 using Bot.Utilities.Logging;
 using Common;
-using Common.Config;
 using Common.Localization.Entries;
 using Common.Localization.Providers;
 using Common.Utils;
@@ -17,7 +16,7 @@ using Discord.Commands;
 using Discord.Interactions;
 using Discord.Interactions.Builders;
 using Discord.WebSocket;
-using NLog;
+using Microsoft.Extensions.Logging;
 using Tyrrrz.Extensions;
 using ExecuteResult = Discord.Interactions.ExecuteResult;
 using IResult = Discord.Interactions.IResult;
@@ -34,15 +33,13 @@ public class CustomInteractionService : InteractionService, IService
     private static PropertyInfo _typeInfoProperty = typeof(ModuleBuilder).GetDeclaredProperty("TypeInfo");
 
     private static PropertyInfo _callbackProperty = typeof(SlashCommandBuilder).GetProperty("Callback")!;
-    private readonly InstanceConfig _instanceConfig;
     private readonly IServiceProvider _serviceProvider;
 
     public CustomInteractionService(DiscordShardedClient discordClient, ILifetimeScope serviceContainer,
-        InstanceConfig instanceConfig, ILogger logger)
+        ILogger<CustomInteractionService> logger)
         : base(discordClient, new InteractionServiceConfig { UseCompiledLambda = true, LogLevel = LogSeverity.Debug })
     {
         _serviceProvider = new ServiceProviderAdapter(serviceContainer);
-        _instanceConfig = instanceConfig;
         Log += message => LoggingUtilities.OnDiscordLog(logger, message);
     }
 

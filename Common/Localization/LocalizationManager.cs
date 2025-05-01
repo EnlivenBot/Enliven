@@ -3,25 +3,25 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Text.RegularExpressions;
 using Common.Config.Emoji;
+using Common.Utils;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using NLog;
 
 namespace Common.Localization;
 
 public static class LocalizationManager
 {
-    private static Logger _logger = LogManager.GetCurrentClassLogger();
-    private static Regex _locLayoutRegex = new(@"{loc:(\w+)\.(\w+)}");
-    private static Regex _emojiLayoutRegex = new(@"{emoji:(\w+)}");
+    private static readonly ILogger Logger = StaticLogger.Create(nameof(LocalizationManager));
+    private static readonly Regex LocLayoutRegex = new(@"{loc:(\w+)\.(\w+)}");
+    private static readonly Regex EmojiLayoutRegex = new(@"{emoji:(\w+)}");
 
     public static readonly Dictionary<string, LocalizationPack> Languages;
 
     static LocalizationManager()
     {
-        _logger.Info("Start loading localizations packs...");
+        Logger.LogInformation("Start loading localizations packs...");
         try
         {
             var localizationDirs = Path.Combine(Directory.GetCurrentDirectory(), "Localization");
@@ -36,13 +36,13 @@ public static class LocalizationManager
             }
 
             Languages = localizationPacks!;
-            _logger.Info("Loaded languages: {Lang}",
+            Logger.LogInformation("Loaded languages: {Lang}",
                 string.Join(", ", Languages.Select(pair => $"{pair.Key} - {pair.Value.TranslationCompleteness}%")));
         }
         catch (Exception e)
         {
-            _logger.Error(e, "Error while downloading languages");
-            _logger.Info("Loading default (en) pack");
+            Logger.LogDebug(e, "Error while downloading languages");
+            Logger.LogInformation("Loading default (en) pack");
             var path = Path.Combine(Directory.GetCurrentDirectory(), "Localization/en.json");
             Languages = new Dictionary<string, LocalizationPack>
             {
@@ -54,7 +54,7 @@ public static class LocalizationManager
         }
         finally
         {
-            _logger.Info("End loading localization packs");
+            Logger.LogInformation("End loading localization packs");
         }
     }
 
@@ -74,7 +74,7 @@ public static class LocalizationManager
             }
             catch (Exception e)
             {
-                _logger.Error(e, "Error while loading {PackId} from {Path}", packId, path);
+                Logger.LogDebug(e, "Error while loading {PackId} from {Path}", packId, path);
             }
 
             return null;
@@ -101,11 +101,11 @@ public static class LocalizationManager
             do
             {
                 startText = text;
-                text = ProcessLayout(_locLayoutRegex, text,
+                text = ProcessLayout(LocLayoutRegex, text,
                     s => localizationPack.TryGetEntry(s[0], s[1], out var value)
                         ? value
                         : throw new ArgumentException($"Locale entry {s[0]}.{s[1]} does not exists"));
-                text = ProcessLayout(_emojiLayoutRegex, text,
+                text = ProcessLayout(EmojiLayoutRegex, text,
                     values => CommonEmojiStrings.Instance.GetEmoji(values[0]));
             } while (startText != text);
 
@@ -149,14 +149,14 @@ public static class LocalizationManager
         }
         catch (Exception e)
         {
-            _logger.Error(e, "Failed to format localization");
+            Logger.LogDebug(e, "Failed to format localization");
             return s;
         }
     }
 
     public static string Get(string lang, string group, string id)
     {
-        _logger.Trace("Requested {group}.{id} in {lang} localization", group, id, lang);
+        Logger.LogTrace("Requested {Group}.{Id} in {Lang} localization", group, id, lang);
         if (Languages.TryGetValue(lang, out var pack) && pack.TryGetEntry(group, id, out var reqText))
         {
             return reqText;
@@ -164,12 +164,12 @@ public static class LocalizationManager
 
         if (string.IsNullOrWhiteSpace(pack?.FallbackLanguage))
         {
-            _logger.Error(new Exception($"Failed to load {group}.{id} in en localization"),
-                "Failed to load {group}.{id} in {lang} localization", group, id, "en");
+            Logger.LogDebug(new Exception($"Failed to load {group}.{id} in en localization"),
+                "Failed to load {Group}.{Id} in {Lang} localization", group, id, "en");
             return $"{group}.{id}";
         }
 
-        _logger.Warn("Failed to load {group}.{id} in {lang} localization", group, id, lang);
+        Logger.LogWarning("Failed to load {Group}.{Id} in {Lang} localization", group, id, lang);
         // ReSharper disable once TailRecursiveCall
         return Get(pack.FallbackLanguage, group, id);
     }

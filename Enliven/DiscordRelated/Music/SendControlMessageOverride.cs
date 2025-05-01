@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Discord;
-using NLog;
+using Microsoft.Extensions.Logging;
 
 namespace Bot.DiscordRelated.Music;
 
@@ -13,7 +13,7 @@ public static class SendControlMessageOverrideExtensions {
                 return await controlMessageOverride(embed, messageComponent);
             }
             catch (Exception e) {
-                logger?.Warn(e, "Failed to send control message via override");
+                logger?.LogWarning(e, "Failed to send control message via override");
             }
         }
         return await fallback.SendMessageAsync(null, false, embed, components: messageComponent);

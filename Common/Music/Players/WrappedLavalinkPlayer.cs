@@ -8,7 +8,6 @@ using Common.Music.Tracks;
 using Lavalink4NET.Players;
 using Lavalink4NET.Players.Queued;
 using Lavalink4NET.Protocol.Payloads.Events;
-using Lavalink4NET.Rest.Entities.Tracks;
 
 #pragma warning disable CS0809 // Obsolete member overrides non-obsolete member
 

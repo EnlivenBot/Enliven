@@ -1,22 +1,23 @@
 using System;
 using System.IO;
 using System.Text;
+using Common.Utils;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using NLog;
 
 namespace Common.Config.Emoji;
 
 public static class ProgressEmoji
 {
-    private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+    private static readonly ILogger Logger = StaticLogger.Create(nameof(ProgressEmoji));
 
     private static readonly Lazy<ProgressEmojiList> Start = new(() =>
     {
-        Logger.Info("Start loading ProgressStartEmoji");
+        Logger.LogInformation("Start loading ProgressStartEmoji");
         var path = Path.Combine("Config", "ProgressStartEmoji.json");
         if (File.Exists(path))
             return JsonConvert.DeserializeObject<ProgressEmojiList>(File.ReadAllText(path))!;
-        Logger.Info("ProgressStartEmoji.json not found, generating");
+        Logger.LogInformation("ProgressStartEmoji.json not found, generating");
         var emoji = new ProgressEmojiList(
             "<:start0:667802061202522112>",
             "<:start2:667802134246457345>",
@@ -31,11 +32,11 @@ public static class ProgressEmoji
 
     private static readonly Lazy<ProgressEmojiList> Intermediate = new(() =>
     {
-        Logger.Info("Start loading ProgressIntermediateEmoji");
+        Logger.LogInformation("Start loading ProgressIntermediateEmoji");
         var path = Path.Combine("Config", "ProgressIntermediateEmoji.json");
         if (File.Exists(path))
             return JsonConvert.DeserializeObject<ProgressEmojiList>(File.ReadAllText(path))!;
-        Logger.Info("ProgressIntermediateEmoji.json not found, generating");
+        Logger.LogInformation("ProgressIntermediateEmoji.json not found, generating");
         var emoji = new ProgressEmojiList(
             "<:intermediate0:667802273987952663>",
             "<:intermediate2:667802286193377318>",
@@ -50,11 +51,11 @@ public static class ProgressEmoji
 
     private static readonly Lazy<ProgressEmojiList> End = new(() =>
     {
-        Logger.Info("Start loading ProgressEndEmoji");
+        Logger.LogInformation("Start loading ProgressEndEmoji");
         var path = Path.Combine("Config", "ProgressEndEmoji.json");
         if (File.Exists(path))
             return JsonConvert.DeserializeObject<ProgressEmojiList>(File.ReadAllText(path))!;
-        Logger.Info("ProgressEndEmoji.json not found, generating");
+        Logger.LogInformation("ProgressEndEmoji.json not found, generating");
         var emoji = new ProgressEmojiList(
             "<:end0:667802364027338756>",
             "<:end2:667802384063266838>",

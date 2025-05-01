@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Bot.DiscordRelated.Commands.Attributes;
 using Bot.DiscordRelated.Commands.Modules.Contexts;
 using Bot.DiscordRelated.Music;
 using Common;
@@ -14,7 +13,6 @@ using Common.Music.Players.Options;
 using Discord;
 using Discord.Commands;
 using Discord.Interactions;
-using Discord.Rest;
 using Lavalink4NET.Players;
 using Microsoft.Extensions.Options;
 

@@ -6,7 +6,7 @@ using Autofac;
 using Common;
 using Discord;
 using Discord.WebSocket;
-using NLog;
+using Microsoft.Extensions.Logging;
 
 namespace Bot.DiscordRelated;
 
@@ -30,9 +30,9 @@ public class ReliabilityService : IService
     // --- End Configuration Section ---
 
     private readonly Dictionary<IDiscordClient, CancellationTokenSource> _disconnectedClients = new();
-    private readonly ILogger _logger;
+    private readonly ILogger<ReliabilityService> _logger;
 
-    public ReliabilityService(DiscordSocketClient mainDiscord, ILogger logger)
+    public ReliabilityService(DiscordSocketClient mainDiscord, ILogger<ReliabilityService> logger)
     {
         _logger = logger;
 
@@ -40,7 +40,7 @@ public class ReliabilityService : IService
         mainDiscord.Disconnected += exception => DisconnectedAsync(exception, mainDiscord);
     }
 
-    public ReliabilityService(DiscordShardedClient mainDiscord, ILogger logger)
+    public ReliabilityService(DiscordShardedClient mainDiscord, ILogger<ReliabilityService> logger)
     {
         _logger = logger;
 
@@ -56,13 +56,13 @@ public class ReliabilityService : IService
     private Task DisconnectedAsync(Exception arg1, DiscordSocketClient arg2)
     {
         // Check the state after <timeout> to see if we reconnected
-        _logger.Info("Client disconnected, starting timeout task...");
+        _logger.LogInformation("Client disconnected, starting timeout task...");
         _disconnectedClients[arg2] = new CancellationTokenSource();
         _ = Task.Delay(Timeout, _disconnectedClients[arg2].Token).ContinueWith(async _ =>
         {
-            _logger.Debug("Timeout expired, continuing to check client state...");
+            _logger.LogDebug("Timeout expired, continuing to check client state...");
             if (await CheckIsStateCorrectAsync(arg2))
-                _logger.Debug("State came back okay");
+                _logger.LogDebug("State came back okay");
             else
                 FailFast();
         });
@@ -73,10 +73,10 @@ public class ReliabilityService : IService
     private Task ConnectedAsync(DiscordSocketClient arg)
     {
         // Cancel all previous state checks and reset the CancelToken - client is back online
-        _logger.Debug("Client reconnected, resetting cancel tokens...");
+        _logger.LogDebug("Client reconnected, resetting cancel tokens...");
         if (_disconnectedClients.TryGetValue(arg, out var cts)) cts!.Cancel();
 
-        _logger.Debug("Client reconnected, cancel tokens reset.");
+        _logger.LogDebug("Client reconnected, cancel tokens reset.");
 
         return Task.CompletedTask;
     }
@@ -87,7 +87,7 @@ public class ReliabilityService : IService
         if (client.ConnectionState == ConnectionState.Connected) return true;
         if (AttemptReset)
         {
-            _logger.Info("Attempting to reset the client");
+            _logger.LogInformation("Attempting to reset the client");
 
             var timeout = Task.Delay(Timeout);
             var connect = client.StartAsync();
@@ -95,23 +95,23 @@ public class ReliabilityService : IService
 
             if (task == timeout)
             {
-                _logger.Fatal((Exception?)null, "Client reset timed out (task deadlocked?), killing process");
+                _logger.LogCritical(null, "Client reset timed out (task deadlocked?), killing process");
                 return false;
             }
 
             if (connect.IsFaulted)
             {
-                _logger.Fatal(connect.Exception, "Client reset faulted, killing process");
+                _logger.LogCritical(connect.Exception, "Client reset faulted, killing process");
                 return false;
             }
 
             if (connect.IsCompletedSuccessfully)
-                _logger.Info("Client reset successfully!");
+                _logger.LogInformation("Client reset successfully!");
 
             return true;
         }
 
-        _logger.Fatal((Exception?)null, "Client did not reconnect in time, killing process");
+        _logger.LogCritical(null, "Client did not reconnect in time, killing process");
         return false;
     }
 
@@ -125,13 +125,13 @@ public class ScopedReliabilityService : ReliabilityService
 {
     private readonly ILifetimeScope _lifetimeScope;
 
-    public ScopedReliabilityService(DiscordSocketClient mainDiscord, ILogger logger, ILifetimeScope lifetimeScope) :
+    public ScopedReliabilityService(DiscordSocketClient mainDiscord, ILogger<ScopedReliabilityService> logger, ILifetimeScope lifetimeScope) :
         base(mainDiscord, logger)
     {
         _lifetimeScope = lifetimeScope;
     }
 
-    public ScopedReliabilityService(DiscordShardedClient mainDiscord, ILogger logger, ILifetimeScope lifetimeScope) :
+    public ScopedReliabilityService(DiscordShardedClient mainDiscord, ILogger<ScopedReliabilityService> logger, ILifetimeScope lifetimeScope) :
         base(mainDiscord, logger)
     {
         _lifetimeScope = lifetimeScope;

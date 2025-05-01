@@ -8,7 +8,7 @@ using Common.Config;
 using Common.Localization.Providers;
 using Discord;
 using Discord.Commands;
-using NLog;
+using Microsoft.Extensions.Logging;
 using Tyrrrz.Extensions;
 
 namespace Bot.DiscordRelated.Commands;
@@ -19,13 +19,13 @@ public class StatisticsService : IStatisticsService {
     private readonly CustomCommandService _customCommandService;
     private readonly EnlivenShardedClient _enlivenShardedClient;
 
-    private readonly ILogger _logger;
+    private readonly ILogger<StatisticsService> _logger;
     private readonly IStatisticsPartProvider _statisticPartProvider;
     private readonly Temporary<int> _textChannelsCount;
     private readonly Temporary<int> _usersCount;
     private readonly Temporary<int> _voiceChannelsCount;
 
-    public StatisticsService(ILogger logger, IStatisticsPartProvider statisticPartProvider, EnlivenShardedClient enlivenShardedClient, CustomCommandService customCommandService) {
+    public StatisticsService(ILogger<StatisticsService> logger, IStatisticsPartProvider statisticPartProvider, EnlivenShardedClient enlivenShardedClient, CustomCommandService customCommandService) {
         _statisticPartProvider = statisticPartProvider;
         _enlivenShardedClient = enlivenShardedClient;
         _customCommandService = customCommandService;
@@ -59,7 +59,7 @@ public class StatisticsService : IStatisticsService {
             }
             catch (InvalidOperationException e) {
                 if (valueTuples != null) {
-                    _logger.Error(e, "Exception while printing stats");
+                    _logger.LogError(e, "Exception while printing stats");
                     throw;
                 }
 

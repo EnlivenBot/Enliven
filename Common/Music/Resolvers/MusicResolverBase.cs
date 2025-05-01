@@ -3,7 +3,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Lavalink4NET.Rest;
-using Lavalink4NET.Rest.Entities.Tracks;
 using Lavalink4NET.Tracks;
 
 namespace Common.Music.Resolvers;

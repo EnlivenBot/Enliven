@@ -22,6 +22,10 @@ using Lavalink4NET.InactivityTracking;
 using Lavalink4NET.InactivityTracking.Extensions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Serilog;
 using VkNet;
 using VkNet.Abstractions;
 using VkNet.AudioBypassService.Extensions;
@@ -104,6 +108,10 @@ internal static class DiHelpers
                 options.UseDefaultTrackers = true;
                 options.TimeoutBehavior = InactivityTrackingTimeoutBehavior.Highest;
             });
+
+        builder.RemoveAll(typeof(ILoggerFactory));
+        builder.RemoveAll(typeof(ILogger<>));
+        builder.RemoveAll(typeof(IConfigureOptions<LoggerFilterOptions>));
 
         return builder;
     }

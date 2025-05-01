@@ -5,7 +5,6 @@ using System.Linq;
 using System.Text.Json;
 using Lavalink4NET.Rest.Entities.Tracks;
 using Lavalink4NET.Tracks;
-using Tyrrrz.Extensions;
 
 namespace Common.Music.Resolvers;
 

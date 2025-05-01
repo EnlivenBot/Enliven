@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
-using System.Reactive.Threading.Tasks;
 using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
@@ -17,13 +16,12 @@ using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using NLog;
+using Microsoft.Extensions.Logging;
 
 namespace Bot;
 
 public class EnlivenBotWrapper
 {
-    private static ILogger _logger = LogManager.GetCurrentClassLogger();
     private readonly IConfiguration _configuration;
     private readonly InstanceConfig _instanceConfig;
     private TaskCompletionSource<bool>? _firstStartResult;
@@ -35,7 +33,7 @@ public class EnlivenBotWrapper
     }
 
     /// <summary>
-    /// Attempts to start bot instance
+    /// Attempts to start a bot instance
     /// </summary>
     /// <returns>True if start successful, otherwise False</returns>
     public Task<bool> StartAsync(ILifetimeScope container, IServiceProvider serviceProvider,
@@ -59,10 +57,10 @@ public class EnlivenBotWrapper
 
         while (!cancellationToken.IsCancellationRequested)
         {
+            var lifetimeScope = container.BeginLifetimeScope(Constants.BotLifetimeScopeTag, ConfigureBotLifetime);
+            var logger = lifetimeScope.Resolve<ILogger<EnlivenBotWrapper>>();
             try
             {
-                var lifetimeScope =
-                    container.BeginLifetimeScope(Constants.BotLifetimeScopeTag, ConfigureBotLifetime);
                 var bot = lifetimeScope.Resolve<EnlivenBot>();
                 await bot.StartAsync(cancellationToken);
                 var hostedServices = lifetimeScope
@@ -85,7 +83,7 @@ public class EnlivenBotWrapper
             }
             catch (Exception e)
             {
-                _logger.Fatal(e, $"Failed to start bot instance with config {Path.GetFileName(_instanceConfig.Name)}");
+                logger.LogError(e, "Failed to start bot instance with config {FileName}", Path.GetFileName(_instanceConfig.Name));
                 _firstStartResult!.TrySetResult(false);
                 if (isFirst) return;
             }
@@ -96,8 +94,6 @@ public class EnlivenBotWrapper
 
     private void ConfigureBotLifetime(ContainerBuilder builder)
     {
-        builder.RegisterModule<BotInstanceNlogModule>();
-
         var services = new ServiceCollection();
         services.AddSingleton(_instanceConfig);
         services.AddSingleton<IServiceScopeFactory, ServiceScopeFactoryAdapter>();
@@ -108,7 +104,8 @@ public class EnlivenBotWrapper
         services.AddSingleton<IDiscordClient>(s => s.GetRequiredService<EnlivenShardedClient>());
         services.AddLavalink();
         services.AddPerBotServices();
-
+        
         builder.Populate(services);
+        builder.RegisterDecorator<ILoggerFactory>((context, parameters, factory) => new BotInstanceLoggerFactoryDecorator(factory, _instanceConfig));
     }
 }

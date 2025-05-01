@@ -2,7 +2,12 @@
 using System.Threading.Tasks;
 using Bot.DiscordRelated;
 using Discord;
-using NLog;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Serilog;
+using Serilog.Configuration;
+using Serilog.Settings.Configuration;
+using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace Bot.Utilities.Logging;
 
@@ -23,14 +28,21 @@ public static class LoggingUtilities {
 
     public static LogLevel ToLogLevel(this LogSeverity logSeverity) {
         var logLevel = logSeverity switch {
-            LogSeverity.Critical => LogLevel.Fatal,
+            LogSeverity.Critical => LogLevel.Error,
             LogSeverity.Error    => LogLevel.Error,
-            LogSeverity.Warning  => LogLevel.Warn,
-            LogSeverity.Info     => LogLevel.Info,
+            LogSeverity.Warning  => LogLevel.Warning,
+            LogSeverity.Info     => LogLevel.Information,
             LogSeverity.Verbose  => LogLevel.Debug,
             LogSeverity.Debug    => LogLevel.Trace,
             _                    => throw new ArgumentOutOfRangeException()
         };
         return logLevel;
+    }
+    
+    public static LoggerConfiguration CustomLogLevelFromConfiguration(
+        this LoggerSettingsConfiguration settingConfiguration,
+        IConfiguration configuration)
+    {
+        return settingConfiguration.Settings(new SerilogFilterConfigurationReader(configuration));
     }
 }

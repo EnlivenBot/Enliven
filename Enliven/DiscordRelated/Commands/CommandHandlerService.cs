@@ -14,7 +14,7 @@ using Common.Utils;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
-using NLog;
+using Microsoft.Extensions.Logging;
 using Tyrrrz.Extensions;
 
 namespace Bot.DiscordRelated.Commands;
@@ -29,13 +29,13 @@ public class CommandHandlerService : IService
     private readonly IGuildConfigProvider _guildConfigProvider;
     private readonly ILifetimeScope _serviceProvider;
     private readonly IStatisticsPartProvider _statisticsPartProvider;
-    private ILogger _logger;
+    private readonly ILogger<CommandHandlerService> _logger;
 
     public CommandHandlerService(DiscordShardedClient client, CustomCommandService commandService,
         IGuildConfigProvider guildConfigProvider,
         IStatisticsPartProvider statisticsPartProvider, ILifetimeScope serviceProvider,
-        CollectorService collectorService, InstanceConfig instanceConfig,
-        ILogger logger)
+        CollectorService collectorService,
+        ILogger<CommandHandlerService> logger)
     {
         _logger = logger;
         _serviceProvider = serviceProvider;
@@ -130,7 +130,7 @@ public class CommandHandlerService : IService
                 {
                     var exception = result is ExecuteResult executeResult ? executeResult.Exception : null;
                     if (exception is not CommandInterruptionException)
-                        _logger.Error(exception, "Interaction execution {Result}: {Reason}", result.Error!.Value,
+                        _logger.LogError(exception, "Interaction execution {Result}: {Reason}", result.Error!.Value,
                             result.ErrorReason);
                 }
             }

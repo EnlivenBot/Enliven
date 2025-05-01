@@ -24,14 +24,14 @@
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
+        <PackageReference Include="Serilog.AspNetCore" />
+        <PackageReference Include="Serilog.Expressions" />
         <PackageReference Include="SpotifyAPI.Web" />
         <PackageReference Include="VkNet" />
         <PackageReference Include="VkNet.AudioBypassService" />
         <PackageReference Include="Xabe.FFmpeg.Downloader" />
         <PackageReference Include="YandexMusicResolver" />
         <PackageReference Include="Microsoft.Extensions.Hosting" />
-        <PackageReference Include="NLog.Extensions.Logging" />
-        <PackageReference Include="Autofac.Extras.NLog" />
     </ItemGroup>
 
     <ItemGroup>

@@ -5,7 +5,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using LiteDB;
-using NLog;
+using Microsoft.Extensions.Logging;
 
 // ReSharper disable UnusedMember.Local
 
@@ -22,7 +22,7 @@ public class LiteDatabaseProvider
     // ReSharper disable once NotAccessedField.Local
     private static Timer _rebuildTimer = null!;
     private readonly Task<LiteDatabase> _databaseProvider;
-    private readonly ILogger logger;
+    private readonly ILogger<LiteDatabaseProvider> logger;
 
     static LiteDatabaseProvider()
     {
@@ -38,7 +38,7 @@ public class LiteDatabaseProvider
         BsonMapper.Global.EmptyStringToNull = false;
     }
 
-    public LiteDatabaseProvider(ILogger logger)
+    public LiteDatabaseProvider(ILogger<LiteDatabaseProvider> logger)
     {
         this.logger = logger;
         _databaseProvider = ProvideDatabaseInternal();
@@ -51,7 +51,7 @@ public class LiteDatabaseProvider
 
     private async Task<LiteDatabase> ProvideDatabaseInternal()
     {
-        logger.Info("Loading database");
+        logger.LogInformation("Loading database");
 
         var db = LoadDatabase();
         db.CheckpointSize = 10000;
@@ -61,7 +61,7 @@ public class LiteDatabaseProvider
 
         _checkpointTimer = new Timer(state => db.Checkpoint(), null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(30));
         _rebuildTimer = new Timer(state => db.Rebuild(), null, TimeSpan.FromMinutes(30), TimeSpan.FromMinutes(180));
-        logger.Info("LiteDatabase loaded");
+        logger.LogInformation("LiteDatabase loaded");
 
         return db;
     }
@@ -78,7 +78,7 @@ public class LiteDatabaseProvider
 
     private async Task<LiteDatabase> PerformUpgrades(LiteDatabase db)
     {
-        logger.Info("Looking for database upgrades");
+        logger.LogInformation("Looking for database upgrades");
         var liteDatabaseCheckpointSize = db.CheckpointSize;
         db.CheckpointSize = 0;
         var upgrades = Assembly.GetExecutingAssembly()
@@ -91,7 +91,7 @@ public class LiteDatabaseProvider
         foreach (var (dbUpgradeAttribute, method) in upgrades.SkipWhile((tuple, i) =>
                      tuple.Item1!.Version <= db.UserVersion))
         {
-            logger.Info("Upgrading database to version {version}", dbUpgradeAttribute!.Version);
+            logger.LogInformation("Upgrading database to version {version}", dbUpgradeAttribute!.Version);
 
             if (dbUpgradeAttribute.TransactionsFriendly)
             {
@@ -99,11 +99,11 @@ public class LiteDatabaseProvider
             }
             else
             {
-                logger.Info("Upgrade does not support transactions. We make a backup.");
+                logger.LogInformation("Upgrade does not support transactions. We make a backup.");
                 db.Checkpoint();
                 db.Dispose();
                 File.Copy(GetDatabasePath(), Path.ChangeExtension(GetDatabasePath(), ".bak"), true);
-                logger.Info("Backup maked");
+                logger.LogInformation("Backup maked");
                 db = LoadDatabase();
             }
 
@@ -119,8 +119,8 @@ public class LiteDatabaseProvider
             }
             catch (Exception e)
             {
-                logger.Fatal(e, "Error while upgrading database");
-                logger.Fatal("Rollbacking changes");
+                logger.LogCritical(e, "Error while upgrading database");
+                logger.LogCritical("Rollbacking changes");
                 if (dbUpgradeAttribute.TransactionsFriendly)
                 {
                     db.Rollback();
@@ -149,7 +149,7 @@ public class LiteDatabaseProvider
                 }
             }
 
-            logger.Info("Making a checkpoint");
+            logger.LogInformation("Making a checkpoint");
             try
             {
                 db.Checkpoint();
@@ -159,13 +159,13 @@ public class LiteDatabaseProvider
             {
                 // This is very bad
                 // We broke the database
-                logger.Fatal(e, "LiteDatabase file broken");
-                logger.Fatal("Doing backup");
+                logger.LogCritical(e, "LiteDatabase file broken");
+                logger.LogCritical("Doing backup");
                 File.Copy(GetDatabasePath(),
                     Path.Combine(Path.GetDirectoryName(GetDatabasePath())!,
                         DateTime.Now.ToString("yyyy-dd-M--HH-mm-ss") + ".bak"),
                     true);
-                logger.Fatal("Trying to copy intact information");
+                logger.LogCritical("Trying to copy intact information");
                 using (LiteDatabase newDb = new LiteDatabase("newDb.db"))
                 {
                     foreach (var collectionName in db.GetCollectionNames())
@@ -181,14 +181,14 @@ public class LiteDatabaseProvider
                                 }
                                 catch (Exception exception)
                                 {
-                                    logger.Error(exception,
+                                    logger.LogError(exception,
                                         "LiteDatabase recreation error. Collection - {collectionName}", collectionName);
                                 }
                             }
                         }
                         catch (Exception exception)
                         {
-                            logger.Error(exception, "LiteDatabase recreation error. Collection - {collectionName}",
+                            logger.LogError(exception, "LiteDatabase recreation error. Collection - {collectionName}",
                                 collectionName);
                         }
                     }
@@ -199,8 +199,8 @@ public class LiteDatabaseProvider
                 db = LoadDatabase();
             }
 
-            logger.Info("Checkpoint done");
-            logger.Info("LiteDatabase upgraded to version {version}", dbUpgradeAttribute.Version);
+            logger.LogInformation("Checkpoint done");
+            logger.LogInformation("LiteDatabase upgraded to version {version}", dbUpgradeAttribute.Version);
             db.UserVersion = dbUpgradeAttribute.Version;
         }
 

@@ -20,7 +20,6 @@
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
         <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
-        <PackageReference Include="NLog" />
         <PackageReference Include="System.Reactive" />
         <PackageReference Include="Tyrrrz.Extensions" />
     </ItemGroup>

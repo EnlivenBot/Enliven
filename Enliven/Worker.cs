@@ -7,27 +7,28 @@ using Autofac;
 using Common.Config;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
-using NLog;
+using Microsoft.Extensions.Logging;
 using Tyrrrz.Extensions;
 
 namespace Bot;
 
 public class Worker : BackgroundService
 {
-    private static readonly ILogger Logger = LogManager.GetCurrentClassLogger();
     private readonly IConfiguration _configuration;
+    private readonly ILogger<Worker> _logger;
 
     private readonly IHostApplicationLifetime _hostApplicationLifetime;
     private readonly ILifetimeScope _lifetimeScope;
     private readonly IServiceProvider _serviceProvider;
 
     public Worker(IHostApplicationLifetime hostApplicationLifetime, ILifetimeScope lifetimeScope,
-        IServiceProvider serviceProvider, IConfiguration configuration)
+        IServiceProvider serviceProvider, IConfiguration configuration, ILogger<Worker> logger)
     {
         _hostApplicationLifetime = hostApplicationLifetime;
         _lifetimeScope = lifetimeScope;
         _serviceProvider = serviceProvider;
         _configuration = configuration;
+        _logger = logger;
         _lifetimeScope.Disposer.AddInstanceForDisposal(this);
     }
 
@@ -50,7 +51,7 @@ public class Worker : BackgroundService
         if (whenAll.All(b => !b))
         {
             // If all failed - exit
-            Logger.Fatal("All bot instances failed to start. Check configs, logs and try again");
+            _logger.LogError("All bot instances failed to start. Check configs, logs and try again");
             Environment.Exit(-1);
         }
 
@@ -59,7 +60,7 @@ public class Worker : BackgroundService
 
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
-        Logger.Fatal("Recieved application stop request. Stopping");
+        _logger.LogError("Received application stop request. Stopping");
         await _lifetimeScope.DisposeAsync();
         await base.StopAsync(cancellationToken);
     }

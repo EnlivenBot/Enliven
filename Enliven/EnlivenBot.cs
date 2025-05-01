@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
-using System.Reactive.Threading.Tasks;
 using System.Threading;
 using System.Threading.Tasks;
 using Bot.Utilities.Logging;
@@ -10,7 +9,7 @@ using Common.Config;
 using Common.Utils;
 using Discord;
 using Discord.Net;
-using NLog;
+using Microsoft.Extensions.Logging;
 
 namespace Bot;
 
@@ -18,11 +17,11 @@ public class EnlivenBot : AsyncDisposableBase, IService
 {
     private readonly EnlivenShardedClient _client;
     private readonly InstanceConfig _config;
-    private readonly ILogger _logger;
+    private readonly ILogger<EnlivenBot> _logger;
     private readonly IEnumerable<IService> _services;
     private bool _isDiscordStarted;
 
-    public EnlivenBot(ILogger logger, IEnumerable<IService> services,
+    public EnlivenBot(ILogger<EnlivenBot> logger, IEnumerable<IService> services,
         EnlivenShardedClient discordShardedClient, InstanceConfig config)
     {
         _config = config;
@@ -50,14 +49,14 @@ public class EnlivenBot : AsyncDisposableBase, IService
     {
         cancellationToken.Register(Dispose);
 
-        _logger.Info("Start Initialising");
+        _logger.LogInformation("Start Initialising");
         await IService.ProcessEventAsync(_services, ServiceEventType.PreDiscordLogin, _logger);
         _client.Log += message => LoggingUtilities.OnDiscordLog(_logger, message);
 
         await Task.Run(async () => await LoginAsync(cancellationToken).ObserveException(), cancellationToken);
         await IService.ProcessEventAsync(_services, ServiceEventType.PreDiscordStart, _logger);
 
-        _logger.Info("Starting client");
+        _logger.LogInformation("Starting client");
         await _client.StartAsync();
         _isDiscordStarted = true;
         await IService.ProcessEventAsync(_services, ServiceEventType.PostDiscordStart, _logger);
@@ -69,7 +68,7 @@ public class EnlivenBot : AsyncDisposableBase, IService
 
     private async Task LoginAsync(CancellationToken cancellationToken)
     {
-        _logger.Info("Start logining");
+        _logger.LogInformation("Start logining");
         for (var connectionTryNumber = 1; connectionTryNumber <= 5; connectionTryNumber++)
         {
             if (cancellationToken.IsCancellationRequested)
@@ -80,23 +79,23 @@ public class EnlivenBot : AsyncDisposableBase, IService
             try
             {
                 await Task.Run(() => _client.LoginAsync(TokenType.Bot, _config.BotToken), cancellationToken);
-                _logger.Info("Successefully logged in");
+                _logger.LogInformation("Successefully logged in");
                 return;
             }
             catch (HttpException e) when (e.HttpCode == HttpStatusCode.Unauthorized)
             {
-                _logger.Fatal("Failed to login - unauthorized. Check token - {Token}", _config.BotToken);
+                _logger.LogError("Failed to login - unauthorized. Check token - {Token}", _config.BotToken);
                 throw;
             }
             catch (Exception e)
             {
-                _logger.Fatal(e, "Failed to login");
-                _logger.Info("Waiting before next attempt - {Delay}s", connectionTryNumber * 10);
+                _logger.LogError(e, "Failed to login");
+                _logger.LogInformation("Waiting before next attempt - {Delay}s", connectionTryNumber * 10);
                 await Task.Delay(TimeSpan.FromSeconds(connectionTryNumber * 10), cancellationToken);
             }
         }
 
-        _logger.Fatal("Failed to login 5 times. Quiting");
+        _logger.LogError("Failed to login 5 times. Quiting");
         throw new Exception("Failed to login 5 times");
     }
 

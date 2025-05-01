@@ -6,22 +6,23 @@ using System.Threading.Tasks;
 using Common;
 using Discord;
 using Discord.WebSocket;
-using NLog;
+using Microsoft.Extensions.Logging;
 
 namespace Bot.Utilities.Collector;
 
 public class CollectorService
 {
     private readonly EnlivenShardedClient _discordClient;
-    private readonly Logger _logger = LogManager.GetCurrentClassLogger();
+    private readonly ILogger<CollectorService> _logger;
     private Subject<SocketMessage> _messageReceived = new();
 
     private Subject<(Cacheable<IUserMessage, ulong> cacheable, IMessageChannel, SocketReaction arg3)> _reactionAdded =
         new();
 
-    public CollectorService(EnlivenShardedClient discordClient)
+    public CollectorService(EnlivenShardedClient discordClient, ILogger<CollectorService> logger)
     {
         _discordClient = discordClient;
+        _logger = logger;
         discordClient.ReactionAdded += async (cacheable, channel, arg3) =>
         {
             _reactionAdded.OnNext((cacheable, await channel.GetOrDownloadAsync(), arg3));
@@ -36,16 +37,19 @@ public class CollectorService
     public CollectorController CollectReaction(Predicate<SocketReaction> predicate,
         Action<EmoteCollectorEventArgs> action, CollectorFilter filter = CollectorFilter.Off)
     {
-        var logger = _logger.WithProperty("Collector registered\n", new StackTrace());
         var collectorController = new CollectorController();
 
         predicate = ApplyFilters(predicate, filter);
         var disposable = _reactionAdded.Subscribe(tuple =>
         {
-            logger.Swallow(() =>
+            try
             {
                 if (predicate(tuple.Item3)) action(new EmoteCollectorEventArgs(collectorController, tuple.Item3));
-            });
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Error while processing reaction interaction callback");
+            }
         });
         collectorController.ShouldDispose(disposable);
 
@@ -55,16 +59,19 @@ public class CollectorService
     public CollectorController CollectMessage(Predicate<IMessage> predicate,
         Action<MessageCollectorEventArgs> action, CollectorFilter filter = CollectorFilter.Off)
     {
-        var logger = _logger.WithProperty("Collector registered\n", new StackTrace());
         var collectorController = new CollectorController();
 
         predicate = ApplyFilters(predicate, filter);
         var disposable = _messageReceived.Subscribe(message =>
         {
-            logger.Swallow(() =>
+            try
             {
                 if (predicate(message)) action(new MessageCollectorEventArgs(collectorController, message));
-            });
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Error while processing message interaction callback");
+            }
         });
         collectorController.ShouldDispose(disposable);
 
@@ -74,42 +81,42 @@ public class CollectorService
     public CollectorController CollectReaction(IChannel channel, Predicate<SocketReaction> predicate,
         Action<EmoteCollectorEventArgs> action, CollectorFilter filter = CollectorFilter.Off)
     {
-        Assert.NotNull(channel);
+        ArgumentNullException.ThrowIfNull(channel);
         return CollectReaction(reaction => channel.Id == reaction.Channel.Id && predicate(reaction), action, filter);
     }
 
     public CollectorController CollectReaction(IEmote emote, Predicate<SocketReaction> predicate,
         Action<EmoteCollectorEventArgs> action, CollectorFilter filter = CollectorFilter.Off)
     {
-        Assert.NotNull(emote);
+        ArgumentNullException.ThrowIfNull(emote);
         return CollectReaction(reaction => emote.Equals(reaction.Emote) && predicate(reaction), action, filter);
     }
 
     public CollectorController CollectReaction(IMessage message, Predicate<SocketReaction> predicate,
         Action<EmoteCollectorEventArgs> action, CollectorFilter filter = CollectorFilter.Off)
     {
-        Assert.NotNull(message);
+        ArgumentNullException.ThrowIfNull(message);
         return CollectReaction(reaction => message.Id == reaction.MessageId && predicate(reaction), action, filter);
     }
 
     public CollectorController CollectReaction(IUser user, Predicate<SocketReaction> predicate,
         Action<EmoteCollectorEventArgs> action, CollectorFilter filter = CollectorFilter.Off)
     {
-        Assert.NotNull(user);
+        ArgumentNullException.ThrowIfNull(user);
         return CollectReaction(reaction => user.Id == reaction.UserId && predicate(reaction), action, filter);
     }
 
     public CollectorController CollectMessage(IUser user, Predicate<IMessage> predicate,
         Action<MessageCollectorEventArgs> action, CollectorFilter filter = CollectorFilter.Off)
     {
-        Assert.NotNull(user);
+        ArgumentNullException.ThrowIfNull(user);
         return CollectMessage(message => user.Id == message.Author.Id && predicate(message), action, filter);
     }
 
     public CollectorController CollectMessage(IChannel channel, Predicate<IMessage> predicate,
         Action<MessageCollectorEventArgs> action, CollectorFilter filter = CollectorFilter.Off)
     {
-        Assert.NotNull(channel);
+        ArgumentNullException.ThrowIfNull(channel);
         return CollectMessage(message => channel.Id == message.Channel.Id && predicate(message), action, filter);
     }
 
@@ -125,8 +132,6 @@ public class CollectorService
         Action<EmoteMultiCollectorEventArgs, T> action,
         params (IEmote, Func<T>)[] selectors)
     {
-        var logger = _logger.WithProperty("collectorRegistrationStacktrace",
-            $"\nCollector registration\n{new StackTrace(true)}");
         var collectorsGroup = new CollectorsGroup();
         foreach (var selector in selectors.ToList())
         {
@@ -136,12 +141,16 @@ public class CollectorService
                 new Predicate<SocketReaction>(reaction => reaction.Emote.Equals(selector.Item1) && predicate(reaction));
             var disposable = _reactionAdded.Subscribe(tuple =>
             {
-                logger.Swallow(() =>
+                try
                 {
                     if (localPredicate(tuple.Item3))
                         action(new EmoteMultiCollectorEventArgs(collectorController, collectorsGroup, tuple.Item3),
                             selector.Item2());
-                });
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e, "Error while processing reaction interaction callback");
+                }
             });
             collectorController.ShouldDispose(disposable);
 

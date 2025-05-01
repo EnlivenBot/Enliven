@@ -14,7 +14,7 @@ using Common.Localization.Providers;
 using Common.Utils;
 using Discord;
 using Discord.Commands;
-using NLog;
+using Microsoft.Extensions.Logging;
 
 namespace Bot.DiscordRelated.Commands;
 
@@ -27,7 +27,7 @@ public class CustomCommandService : CommandService, IService
     public Lazy<Dictionary<string, CommandGroup>> CommandsGroups = null!;
 
     public CustomCommandService(IEnumerable<CustomTypeReader> typeReaders, ILifetimeScope serviceContainer,
-        InstanceConfig instanceConfig, ILogger logger)
+        InstanceConfig instanceConfig, ILogger<CustomCommandService> logger)
         : base(new CommandServiceConfig { LogLevel = LogSeverity.Debug })
     {
         _serviceContainer = serviceContainer;
