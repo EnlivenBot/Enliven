@@ -53,7 +53,7 @@ public class EnlivenBot : AsyncDisposableBase, IService
         await IService.ProcessEventAsync(_services, ServiceEventType.PreDiscordLogin, _logger);
         _client.Log += message => LoggingUtilities.OnDiscordLog(_logger, message);
 
-        await Task.Run(async () => await LoginAsync(cancellationToken).ObserveException(), cancellationToken);
+        await LoginAsync(cancellationToken);
         await IService.ProcessEventAsync(_services, ServiceEventType.PreDiscordStart, _logger);
 
         _logger.LogInformation("Starting client");

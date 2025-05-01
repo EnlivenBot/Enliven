@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
+using Common;
 using Common.Config;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
@@ -32,37 +33,35 @@ public class Worker : BackgroundService
         _lifetimeScope.Disposer.AddInstanceForDisposal(this);
     }
 
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        return Task.CompletedTask;
-    }
-
-    public override async Task StartAsync(CancellationToken cancellationToken)
-    {
-        var configs = _configuration.GetSection("Instances").Get<IEnumerable<InstanceConfig>>()
+        var configs = _configuration.GetSection("Instances")
+            .Get<IEnumerable<InstanceConfig>>()
             ?.ToList();
         if (configs!.IsNullOrEmpty())
             throw new InvalidOperationException("No bot instances configured. Check your appsettings");
-        var enlivenBotWrappers = configs!.Select(config => new EnlivenBotWrapper(config, _configuration));
-        var startTasks = enlivenBotWrappers
-            .Select(wrapper => wrapper.StartAsync(_lifetimeScope, _serviceProvider, CancellationToken.None)).ToList();
+        var enlivenBotWrappers = configs!.Select(config => 
+            new EnlivenBotWrapper(config, _configuration));
+        
+        var startResults = await enlivenBotWrappers
+            .Select(wrapper => wrapper.StartAsync(_lifetimeScope, _serviceProvider, CancellationToken.None))
+            .WhenAll()
+            .WaitAsync(stoppingToken);
 
-        var whenAll = await Task.WhenAll(startTasks);
-        if (whenAll.All(b => !b))
+        if (startResults.All(b => !b))
         {
             // If all failed - exit
-            _logger.LogError("All bot instances failed to start. Check configs, logs and try again");
-            Environment.Exit(-1);
+            _logger.LogCritical("All bot instances failed to start. Check configs, logs and try again");
+            _hostApplicationLifetime.StopApplication();
         }
-
-        await base.StartAsync(cancellationToken);
     }
 
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
         _logger.LogError("Received application stop request. Stopping");
-        await _lifetimeScope.DisposeAsync();
+        var lifetimeDisposeTask = _lifetimeScope.DisposeAsync();
         await base.StopAsync(cancellationToken);
+        await lifetimeDisposeTask;
     }
 
     public override void Dispose()

@@ -63,18 +63,21 @@ public class EnlivenBotWrapper
             {
                 var bot = lifetimeScope.Resolve<EnlivenBot>();
                 await bot.StartAsync(cancellationToken);
+                
                 var hostedServices = lifetimeScope
                     .Resolve<IReadOnlyCollection<IHostedService>>()
                     .Except(topLevelHostedServices)
                     .ToImmutableArray();
-                foreach (var hostedService in hostedServices) await hostedService.StartAsync(cancellationToken);
+                foreach (var hostedService in hostedServices) 
+                    await hostedService.StartAsync(cancellationToken);
 
                 _firstStartResult!.TrySetResult(true);
 
                 try
                 {
                     await bot.WaitForDisposeAsync();
-                    foreach (var hostedService in hostedServices) await hostedService.StopAsync(CancellationToken.None);
+                    foreach (var hostedService in hostedServices)
+                        await hostedService.StopAsync(CancellationToken.None);
                 }
                 catch (Exception)
                 {
@@ -83,7 +86,8 @@ public class EnlivenBotWrapper
             }
             catch (Exception e)
             {
-                logger.LogError(e, "Failed to start bot instance with config {FileName}", Path.GetFileName(_instanceConfig.Name));
+                logger.LogError(e, "Failed to start bot instance with config {FileName}",
+                    Path.GetFileName(_instanceConfig.Name));
                 _firstStartResult!.TrySetResult(false);
                 if (isFirst) return;
             }
@@ -104,8 +108,9 @@ public class EnlivenBotWrapper
         services.AddSingleton<IDiscordClient>(s => s.GetRequiredService<EnlivenShardedClient>());
         services.AddLavalink();
         services.AddPerBotServices();
-        
+
         builder.Populate(services);
-        builder.RegisterDecorator<ILoggerFactory>((context, parameters, factory) => new BotInstanceLoggerFactoryDecorator(factory, _instanceConfig));
+        builder.RegisterDecorator<ILoggerFactory>((_, _, factory) =>
+            new BotInstanceLoggerFactoryDecorator(factory, _instanceConfig));
     }
 }
