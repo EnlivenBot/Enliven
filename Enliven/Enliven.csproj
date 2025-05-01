@@ -26,6 +26,7 @@
         </PackageReference>
         <PackageReference Include="Serilog.AspNetCore" />
         <PackageReference Include="Serilog.Expressions" />
+        <PackageReference Include="Serilog.Sinks.Seq" />
         <PackageReference Include="SpotifyAPI.Web" />
         <PackageReference Include="VkNet" />
         <PackageReference Include="VkNet.AudioBypassService" />
