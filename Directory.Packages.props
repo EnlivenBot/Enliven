@@ -2,7 +2,7 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
-    <Lavalink4NETVersion>4.0.26-preview.4</Lavalink4NETVersion>
+    <Lavalink4NETVersion>4.0.27</Lavalink4NETVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="Autofac" Version="8.1.1" />
