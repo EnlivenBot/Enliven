@@ -68,7 +68,7 @@ public class EnlivenBot : AsyncDisposableBase, IService
 
     private async Task LoginAsync(CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Start logining");
+        _logger.LogInformation("Start logging into discord");
         for (var connectionTryNumber = 1; connectionTryNumber <= 5; connectionTryNumber++)
         {
             if (cancellationToken.IsCancellationRequested)
