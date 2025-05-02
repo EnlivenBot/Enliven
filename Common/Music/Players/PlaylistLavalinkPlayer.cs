@@ -146,9 +146,11 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
     public virtual async Task<bool> SkipAsync(int count = 1, bool force = false)
     {
         EnsureNotDestroyed();
-        if (!force && LoopingState == LoopingState.One && CurrentTrack != null)
+        if (!force && LoopingState == LoopingState.One)
         {
-            await PlayAsync(CurrentTrack);
+            // TODO Log warning if current played track index doesn't exists to repeat track with LoopingState.One
+            if (!Playlist.TryGetValue(CurrentTrackIndex, out var currentTrack)) return false;
+            await PlayAsync(currentTrack);
             return true;
         }
 
