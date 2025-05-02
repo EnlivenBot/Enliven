@@ -32,9 +32,9 @@ public class InteractionsModuleContext : ICommonModuleContext, IInteractionConte
     public ValueTask BeforeExecuteAsync() {
         var delayBeforeLoading = DateTime.Now - (Interaction.CreatedAt + TimeSpan.FromSeconds(2));
         if (delayBeforeLoading <= TimeSpan.Zero)
-            DeferIfNeeded();
+            _ = DeferIfNeeded();
         else
-            _deferSendTimer = new Timer(_ => DeferIfNeeded(), null, delayBeforeLoading, TimeSpan.MaxValue);
+            _deferSendTimer = new Timer(s => _ = DeferIfNeeded(), null, delayBeforeLoading, Timeout.InfiniteTimeSpan);
 
         return ValueTask.CompletedTask;
     }
@@ -71,12 +71,19 @@ public class InteractionsModuleContext : ICommonModuleContext, IInteractionConte
     }
     public IDiscordInteraction Interaction => OriginalContext.Interaction;
 
-    private Task DeferIfNeeded() {
-        _deferSendTimer?.Dispose();
-        if (Interaction.CreatedAt + TimeSpan.FromSeconds(3) >= DateTimeOffset.Now) return Task.CompletedTask;
-        if (HasLoadingSent || HasMeaningResponseSent) return Task.CompletedTask;
-        HasLoadingSent = true;
-        return Interaction.DeferAsync();
+    private async Task DeferIfNeeded() {
+        if (_deferSendTimer != null) await _deferSendTimer.DisposeAsync();
+        if (Interaction.CreatedAt + TimeSpan.FromSeconds(2.5) >= DateTimeOffset.Now) return;
+        if (HasLoadingSent || HasMeaningResponseSent) return;
+        try
+        {
+            await Interaction.DeferAsync();
+            HasLoadingSent = true;
+        }
+        catch (Exception)
+        {
+            // TODO Logging
+        }
     }
 
     private static bool NeedLoadingSend(ICommandInfo commandInfo) {
