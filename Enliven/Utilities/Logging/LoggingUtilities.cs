@@ -6,7 +6,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Configuration;
-using Serilog.Settings.Configuration;
 using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace Bot.Utilities.Logging;
