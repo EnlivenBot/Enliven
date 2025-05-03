@@ -32,7 +32,6 @@
         <PackageReference Include="VkNet.AudioBypassService" />
         <PackageReference Include="Xabe.FFmpeg.Downloader" />
         <PackageReference Include="YandexMusicResolver" />
-        <PackageReference Include="Microsoft.Extensions.Hosting" />
     </ItemGroup>
 
     <ItemGroup>
