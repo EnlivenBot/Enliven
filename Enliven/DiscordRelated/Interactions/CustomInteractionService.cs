@@ -227,7 +227,7 @@ public class CustomInteractionService : InteractionService, IService
             paramsExp[i] = Expression.Convert(accessExp, parameter.ParameterType);
         }
 
-        var callExp = Expression.Call(Expression.Convert(instanceExp, methodInfo.ReflectedType), methodInfo, paramsExp);
+        var callExp = Expression.Call(Expression.Convert(instanceExp, methodInfo.ReflectedType!), methodInfo, paramsExp);
         var finalExp = Expression.Convert(callExp, typeof(Task));
         var lambda = Expression.Lambda<Func<T, object[], Task>>(finalExp, instanceExp, argsExp).Compile();
 

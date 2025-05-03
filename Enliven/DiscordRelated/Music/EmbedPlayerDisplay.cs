@@ -393,8 +393,10 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
         var entries = _messageComponentManager.Entries;
         var updated = false;
 
-        var targetPlayPauseEmoji =
-            Player.State == PlayerState.Paused ? CommonEmoji.LegacyPlay : CommonEmoji.LegacyPause;
+        Debug.Assert(Player is not null);
+        var targetPlayPauseEmoji = Player.State == PlayerState.Paused 
+            ? CommonEmoji.LegacyPlay 
+            : CommonEmoji.LegacyPause;
         updated = updated || Equals(entries["PlayPause"].Emote, targetPlayPauseEmoji);
         entries["PlayPause"].Emote = targetPlayPauseEmoji;
 

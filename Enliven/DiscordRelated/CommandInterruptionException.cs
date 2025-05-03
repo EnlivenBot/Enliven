@@ -11,7 +11,4 @@ public class CommandInterruptionException : Exception {
     public CommandInterruptionException(IEntry entry) : base(entry.Get(LangLocalizationProvider.EnglishLocalizationProvider)) { }
     public CommandInterruptionException(string message) : base(message) { }
     public CommandInterruptionException(string message, Exception inner) : base(message, inner) { }
-    protected CommandInterruptionException(
-        SerializationInfo info,
-        StreamingContext context) : base(info, context) { }
 }

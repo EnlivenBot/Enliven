@@ -63,8 +63,8 @@ public class EmbedPlayerQueueDisplay : PlayerDisplayBase
         UpdatePages();
         _subscribers?.Dispose();
         _subscribers = new Disposables(
-            Player.Playlist.Changed.Subscribe(playlist => UpdatePages()),
-            Player.CurrentTrackIndexChanged.Subscribe(i => UpdatePages())
+            newPlayer.Playlist.Changed.Subscribe(_ => UpdatePages()),
+            newPlayer.CurrentTrackIndexChanged.Subscribe(_ => UpdatePages())
         );
         return Task.CompletedTask;
     }

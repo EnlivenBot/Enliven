@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Bot.DiscordRelated.Commands.Modules.Contexts;
 using Bot.DiscordRelated.Music;
@@ -138,7 +139,7 @@ public abstract class MusicModuleBase : AdvancedModuleBase
         return Player;
     }
 
-    protected async Task<IUserMessage> OverrideSendingControlMessage(Embed embed, MessageComponent component)
+    protected async Task<IUserMessage> OverrideSendingControlMessage(Embed embed, MessageComponent? component)
     {
         var sentMessage = await Context.SendMessageAsync(null, embed, false, component);
         return await sentMessage.GetMessageAsync();
@@ -180,6 +181,7 @@ public abstract class MusicModuleBase : AdvancedModuleBase
 
     protected async Task<EmbedPlayerDisplay> GetMainPlayerDisplay()
     {
+        Debug.Assert(Player is not null);
         var channelInfo = GetChannelInfo();
         var embedPlayerDisplay = EmbedPlayerDisplayProvider.Provide(await channelInfo.GetTargetChannelAsync());
         if (!embedPlayerDisplay.IsInitialized) await embedPlayerDisplay.Initialize(Player);

@@ -23,7 +23,7 @@ public sealed class AdvancedSearchCommands : MusicModuleBase
     [Summary("youtube0s")]
     public async Task SearchYoutube([Summary("play0_0s")] [Remainder] string query)
     {
-        new AdvancedMusicSearchChain(GuildConfig, Player!, Context.Channel, Context.User, TrackSearchMode.YouTube,
+        await new AdvancedMusicSearchChain(GuildConfig, Player!, Context.Channel, Context.User, TrackSearchMode.YouTube,
             query, AudioService, ComponentService, CollectorService).Start();
     }
 
@@ -32,7 +32,7 @@ public sealed class AdvancedSearchCommands : MusicModuleBase
     [Summary("soundcloud0s")]
     public async Task SearchSoundCloud([Summary("play0_0s")] [Remainder] string query)
     {
-        new AdvancedMusicSearchChain(GuildConfig, Player!, Context.Channel, Context.User, TrackSearchMode.SoundCloud,
+        await new AdvancedMusicSearchChain(GuildConfig, Player!, Context.Channel, Context.User, TrackSearchMode.SoundCloud,
             query, AudioService, ComponentService, CollectorService).Start();
     }
 }

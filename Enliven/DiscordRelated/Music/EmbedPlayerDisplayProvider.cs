@@ -109,7 +109,7 @@ public class EmbedPlayerDisplayProvider : IService, IDisposable
             {
                 try
                 {
-                    if (display.Player.State != PlayerState.Playing) continue;
+                    if (display.Player?.State != PlayerState.Playing) continue;
                     display.UpdateProgress();
                     display.UpdateMessageComponents();
                     await display.UpdateControlMessage(true);

@@ -5,9 +5,9 @@ using Microsoft.Extensions.Logging;
 
 namespace Bot.DiscordRelated.Music;
 
-public delegate Task<IUserMessage> SendControlMessageOverride(Embed embed, MessageComponent messageComponent);
+public delegate Task<IUserMessage> SendControlMessageOverride(Embed embed, MessageComponent? messageComponent);
 public static class SendControlMessageOverrideExtensions {
-    public static async Task<IUserMessage> ExecuteAndFallbackWith(this SendControlMessageOverride? controlMessageOverride, Embed embed, MessageComponent messageComponent, IMessageChannel fallback, ILogger? logger = null) {
+    public static async Task<IUserMessage> ExecuteAndFallbackWith(this SendControlMessageOverride? controlMessageOverride, Embed embed, MessageComponent? messageComponent, IMessageChannel fallback, ILogger? logger = null) {
         if (controlMessageOverride != null) {
             try {
                 return await controlMessageOverride(embed, messageComponent);

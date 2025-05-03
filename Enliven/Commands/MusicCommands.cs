@@ -94,10 +94,9 @@ public sealed class MusicCommands : HavePlayerMusicModuleBase
     [Command("repeat", RunMode = RunMode.Async)]
     [Alias("r", "loop", "l")]
     [Summary("repeat0s")]
-    public async Task Repeat(LoopingState? state = null)
+    public void Repeat(LoopingState? state = null)
     {
         Player.LoopingState = state ?? Player.LoopingState.Next();
-        // Player.UpdateProgress();
         var entryLocalized = new EntryLocalized("MusicQueues.RepeatSet", 
             Context.User.Username, Player.LoopingState.ToString());
         Player.WriteToQueueHistory(new HistoryEntry(entryLocalized, $"{Context.User.Id}repeat"));
@@ -118,7 +117,7 @@ public sealed class MusicCommands : HavePlayerMusicModuleBase
     [Command("shuffle", RunMode = RunMode.Async)]
     [Alias("random", "shuf", "shuff", "randomize", "randomise")]
     [Summary("shuffle0s")]
-    public async Task Shuffle()
+    public void Shuffle()
     {
         Player.Playlist.Shuffle();
         Player.WriteToQueueHistory(Loc.Get("MusicQueues.Shuffle").Format(Context.User.Username));
@@ -128,7 +127,7 @@ public sealed class MusicCommands : HavePlayerMusicModuleBase
     [Command("list", RunMode = RunMode.Async)]
     [Alias("l", "q", "queue")]
     [Summary("list0s")]
-    public async Task List()
+    public void List()
     {
         EmbedPlayerQueueDisplayProvider.CreateOrUpdateQueueDisplay(Context.Channel, Player);
     }
