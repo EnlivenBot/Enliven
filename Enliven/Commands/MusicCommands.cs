@@ -94,12 +94,14 @@ public sealed class MusicCommands : HavePlayerMusicModuleBase
     [Command("repeat", RunMode = RunMode.Async)]
     [Alias("r", "loop", "l")]
     [Summary("repeat0s")]
-    public void Repeat(LoopingState? state = null)
+    public Task Repeat(LoopingState? state = null)
     {
         Player.LoopingState = state ?? Player.LoopingState.Next();
         var entryLocalized = new EntryLocalized("MusicQueues.RepeatSet", 
             Context.User.Username, Player.LoopingState.ToString());
         Player.WriteToQueueHistory(new HistoryEntry(entryLocalized, $"{Context.User.Id}repeat"));
+        
+        return Task.CompletedTask;
     }
 
     [RequireNonEmptyPlaylist]
@@ -117,19 +119,21 @@ public sealed class MusicCommands : HavePlayerMusicModuleBase
     [Command("shuffle", RunMode = RunMode.Async)]
     [Alias("random", "shuf", "shuff", "randomize", "randomise")]
     [Summary("shuffle0s")]
-    public void Shuffle()
+    public Task Shuffle()
     {
         Player.Playlist.Shuffle();
         Player.WriteToQueueHistory(Loc.Get("MusicQueues.Shuffle").Format(Context.User.Username));
+        return Task.CompletedTask;
     }
 
     [RequireNonEmptyPlaylist]
     [Command("list", RunMode = RunMode.Async)]
     [Alias("l", "q", "queue")]
     [Summary("list0s")]
-    public void List()
+    public Task List()
     {
         EmbedPlayerQueueDisplayProvider.CreateOrUpdateQueueDisplay(Context.Channel, Player);
+        return Task.CompletedTask;
     }
 
     [RequireNonEmptyPlaylist(true)]
