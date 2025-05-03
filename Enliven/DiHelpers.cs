@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Immutable;
 using Bot.DiscordRelated;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Interactions;
@@ -20,6 +21,9 @@ using Lavalink4NET.Cluster.LoadBalancing.Strategies;
 using Lavalink4NET.DiscordNet;
 using Lavalink4NET.InactivityTracking;
 using Lavalink4NET.InactivityTracking.Extensions;
+using Lavalink4NET.InactivityTracking.Trackers.Idle;
+using Lavalink4NET.InactivityTracking.Trackers.Users;
+using Lavalink4NET.Players;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -99,13 +103,18 @@ internal static class DiHelpers
             .AddSingleton<IMusicResolver, LavalinkMusicResolver>()
             .AddSingleton<MusicResolverService>()
             .AddInactivityTracking()
-            .ConfigureInactivityTracking(options =>
+            .AddSingleton<IInactivityTracker, UsersInactivityTracker>()
+            .AddSingleton<IInactivityTracker, IdleInactivityTracker>()
+            .PostConfigure<IdleInactivityTrackerOptions>(options => options.IdleStates = [PlayerState.NotPlaying])
+            .ConfigureInactivityTracking((provider, options) => 
             {
                 options.DefaultPollInterval = TimeSpan.FromSeconds(30);
                 options.DefaultTimeout = TimeSpan.FromSeconds(120);
-
-                options.UseDefaultTrackers = true;
                 options.TimeoutBehavior = InactivityTrackingTimeoutBehavior.Highest;
+
+                options.UseDefaultTrackers = false;
+                options.Trackers = provider.GetServices<IInactivityTracker>()
+                    .ToImmutableArray();
             });
 
         builder.RemoveAll(typeof(ILoggerFactory));
