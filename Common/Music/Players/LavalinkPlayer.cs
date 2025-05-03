@@ -687,6 +687,8 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
 
         if (playerState == State) return;
 
+        // TODO: Remove
+        _logger.LogInformation("Player in {GuildId} ({Label}) entered {State} due to \n{StackTrack}", GuildId, Label, playerState, new StackTrace());
         State = playerState;
 
         await _playerLifecycle
