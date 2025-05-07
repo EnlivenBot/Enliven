@@ -5,7 +5,7 @@
         <RootNamespace>Bot</RootNamespace>
         <AssemblyName>Enliven</AssemblyName>
         <Nullable>enable</Nullable>
-        <LangVersion>12</LangVersion>
+        <LangVersion>13</LangVersion>
         <UserSecretsId>d6df00aa-ccf3-410e-92e6-723b9cd92b2f</UserSecretsId>
         
         <EnableSdkContainerSupport>true</EnableSdkContainerSupport>
@@ -20,6 +20,7 @@
 
     <ItemGroup>
         <PackageReference Include="Autofac.Extensions.DependencyInjection" />
+        <PackageReference Include="JetBrains.Annotations" />
         <PackageReference Include="MinVer">
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -27,6 +28,7 @@
         <PackageReference Include="Serilog.AspNetCore" />
         <PackageReference Include="Serilog.Expressions" />
         <PackageReference Include="Serilog.Sinks.Seq" />
+        <PackageReference Include="SerilogTracing" />
         <PackageReference Include="SpotifyAPI.Web" />
         <PackageReference Include="VkNet" />
         <PackageReference Include="VkNet.AudioBypassService" />
