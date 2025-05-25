@@ -2,8 +2,8 @@
 using System.Diagnostics;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
-using Bot.Infrastructure.Tracing;
 using Common;
+using Common.Infrastructure.Tracing;
 using Discord;
 using Discord.Interactions;
 using Microsoft.Extensions.Logging;
@@ -54,7 +54,8 @@ public sealed class InteractionHandlerService(
                 return;
             }
             
-            logger.LogDebug("Interaction successfully resolved to {Command}", interactionSearchResult.Command.Name);
+            logger.LogDebug("Interaction resolved to {Command}", interactionSearchResult.Command.Name);
+            activity?.SetTag("InteractionCommand", interactionSearchResult.Command.Name);
 
             var result = await interactionSearchResult.Command
                 .ExecuteAsync(context, serviceProvider)
