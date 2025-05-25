@@ -9,6 +9,8 @@ using System.Net.WebSockets;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Common.Infrastructure.Tracing;
+using JetBrains.Annotations;
 using Lavalink4NET.Clients;
 using Lavalink4NET.Filters;
 using Lavalink4NET.Players;
@@ -29,6 +31,8 @@ namespace Common.Music.Players;
 #pragma warning disable CS0809
 public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
 {
+    private static readonly ActivitySource ActivitySource = new("Enliven.LavalinkPlayer");
+    
     private readonly bool _disconnectOnStop;
     private readonly ILogger<LavalinkPlayer> _logger;
     private readonly IPlayerLifecycle _playerLifecycle;
@@ -157,6 +161,8 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
     {
         EnsureNotDestroyed();
         cancellationToken.ThrowIfCancellationRequested();
+        
+        using var a = CreateActivity(nameof(PauseAsync), "LavalinkPlayer pausing");
 
         var properties = new PlayerUpdateProperties { IsPaused = true };
         await PerformUpdateAsync(properties, cancellationToken).ConfigureAwait(false);
@@ -212,6 +218,8 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
     public async ValueTask RefreshAsync(CancellationToken cancellationToken = default)
     {
         EnsureNotDestroyed();
+        
+        using var a = CreateActivity(nameof(PauseAsync), "LavalinkPlayer refreshing");
 
         var model = await ApiClient
             .GetPlayerAsync(SessionId, GuildId, cancellationToken)
@@ -223,6 +231,8 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
     public virtual async ValueTask ResumeAsync(CancellationToken cancellationToken = default)
     {
         EnsureNotDestroyed();
+        
+        using var a = CreateActivity(nameof(PauseAsync), "LavalinkPlayer resuming");
 
         var properties = new PlayerUpdateProperties { IsPaused = false };
         await PerformUpdateAsync(properties, cancellationToken).ConfigureAwait(false);
@@ -242,6 +252,9 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
     {
         EnsureNotDestroyed();
         cancellationToken.ThrowIfCancellationRequested();
+        
+        using var a = CreateActivity(nameof(SeekAsync), "LavalinkPlayer seeking to {SeekPosition} from {SeekOrigin} (currently at {CurrentPosition})", 
+            position, seekOrigin, Position!.Value.Position);
 
         var targetPosition = seekOrigin switch
         {
@@ -262,6 +275,8 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
     {
         EnsureNotDestroyed();
         cancellationToken.ThrowIfCancellationRequested();
+        
+        using var a = CreateActivity(nameof(StopAsync), "LavalinkPlayer stopping");
 
         // Store stopped track to restore state information in TrackEnd dispatch
         _stoppedItem = Interlocked.Exchange(ref _currentItem, null);
@@ -287,6 +302,8 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
     public async ValueTask DisconnectAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        
+        using var a = CreateActivity(nameof(DisconnectAsync), "LavalinkPlayer disconnecting and disposing");
 
         await using var _ = this.ConfigureAwait(false);
 
@@ -302,6 +319,9 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
     {
         cancellationToken.ThrowIfCancellationRequested();
         ArgumentNullException.ThrowIfNull(track);
+        
+        using var a = CreateActivity(nameof(NotifyTrackEndedAsync), "LavalinkPlayer track {TrackName} ended due to {EndReason}", track.Title, endReason);
+        a?.AddTag("TrackUrl", track.Uri);
 
         var currentTrackVersion = _trackVersion;
 
@@ -326,6 +346,12 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
     {
         cancellationToken.ThrowIfCancellationRequested();
         ArgumentNullException.ThrowIfNull(track);
+        
+        using var a = CreateActivity(nameof(NotifyTrackExceptionAsync), "LavalinkPlayer track {TrackName} got an {ExceptionSeverity} exception - {ExceptionMessage}", 
+            track.Title, exception.Severity, exception.Message);
+        a?.AddTag("TrackUrl", track.Uri);
+        a?.AddTag("ExceptionCause", exception.Cause);
+        
         return NotifyTrackExceptionAsync(ResolveTrackQueueItem(track), exception, cancellationToken);
     }
 
@@ -333,6 +359,9 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
     {
         cancellationToken.ThrowIfCancellationRequested();
         ArgumentNullException.ThrowIfNull(track);
+        
+        using var a = CreateActivity(nameof(NotifyTrackStartedAsync), "LavalinkPlayer track {TrackName} started", track.Title);
+        a?.AddTag("TrackUrl", track.Uri);
 
         var nextTrack = Interlocked.Exchange(ref _nextItem, null) ?? CurrentItem;
         var nextTrackIdentifier = Interlocked.Exchange(ref _nextOverridenPlayableItemIdentifier, null) ??
@@ -356,6 +385,11 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
     {
         cancellationToken.ThrowIfCancellationRequested();
         ArgumentNullException.ThrowIfNull(track);
+        
+        using var a = CreateActivity(nameof(NotifyTrackStartedAsync), "LavalinkPlayer track {TrackName} stuck", track.Title);
+        a?.AddTag("TrackUrl", track.Uri);
+        a?.AddTag("Threshold", threshold);
+        
         return NotifyTrackStuckAsync(ResolveTrackQueueItem(track), threshold, cancellationToken);
     }
 
@@ -443,6 +477,8 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
     {
         EnsureNotDestroyed();
         cancellationToken.ThrowIfCancellationRequested();
+        using var a = CreateActivity(nameof(PlayAsync), "LavalinkPlayer starting playing {TrackName}", 
+            trackQueueItem.Track?.Title ?? "Unknown");
 
         _replacedItem = CurrentItem;
         CurrentItem = _nextItem = trackQueueItem;
@@ -459,6 +495,7 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
 
             _nextOverridenPlayableItemIdentifier = playableTrack.Identifier;
             updateProperties.TrackData = playableTrack.ToString();
+            a?.AddTag("TrackUrl", playableTrack.Uri);
         }
         else
         {
@@ -543,6 +580,9 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
         EnsureNotDestroyed();
         cancellationToken.ThrowIfCancellationRequested();
         ArgumentNullException.ThrowIfNull(properties);
+        
+        using var a = CreateActivity(nameof(PerformUpdateAsync), "LavalinkPlayer performing update");
+        a?.SetTag("LavalinkPlayerUpdateProperties", properties);
 
         var model = await ApiClient
             .UpdatePlayerAsync(SessionId, GuildId, properties, cancellationToken)
@@ -645,6 +685,7 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
     protected virtual async ValueTask DisposeAsyncCore()
     {
         if (Interlocked.CompareExchange(ref _disposed, 1, 0) is not 0) return;
+        using var a = CreateActivity(nameof(DisposeAsyncCore), "LavalinkPlayer disposing");
 
         if (_previousVoiceServer is not null)
         {
@@ -686,9 +727,6 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
 #endif
 
         if (playerState == State) return;
-
-        // TODO: Remove
-        _logger.LogInformation("Player in {GuildId} ({Label}) entered {State} due to \n{StackTrack}", GuildId, Label, playerState, new StackTrace());
         State = playerState;
 
         await _playerLifecycle
@@ -788,6 +826,22 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
     private static string? GetVoiceServerName(VoiceServer voiceServer)
     {
         return voiceServer.Endpoint.Split('.', StringSplitOptions.TrimEntries).FirstOrDefault();
+    }
+    
+    protected Activity? CreateActivity(string method, [StructuredMessageTemplate] string message, params Span<object?> args)
+    {
+        if (Activity.Current?.GetTagItem("LavalinkPlayerMethod") as string == method)
+        {
+            return null;
+        }
+        
+#pragma warning disable CA2254
+        var activity = ActivitySource.StartActivityStructured(ActivityKind.Client, message, args);
+        activity?.AddTag("LavalinkPlayerMethod", method);
+        activity?.AddBaggage("LavalinkSessionId", SessionId);
+#pragma warning restore CA2254
+
+        return activity;
     }
 }
 

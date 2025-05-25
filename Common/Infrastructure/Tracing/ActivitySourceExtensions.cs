@@ -7,7 +7,7 @@ using Serilog.Parsing;
 
 #pragma warning disable CA2254
 
-namespace Bot.Infrastructure.Tracing;
+namespace Common.Infrastructure.Tracing;
 
 public static class ActivitySourceExtensions
 {
@@ -17,11 +17,11 @@ public static class ActivitySourceExtensions
     public static Activity? StartActivityStructured(this ActivitySource source, ActivityKind activityKind,
         [StructuredMessageTemplate] string message, params Span<object?> args)
     {
-        return StartActivityStructured(source, activityKind, default, message, args);
+        return StartActivityStructured(source, activityKind, null, message, args);
     }
 
     public static Activity? StartActivityStructured(this ActivitySource source, ActivityKind activityKind,
-        ActivityContext activityContext, [StructuredMessageTemplate] string message, params Span<object?> args)
+        IEnumerable<ActivityLink>? links, [StructuredMessageTemplate] string message, params Span<object?> args)
     {
         if (!ParsedCache.TryGetValue(message, out var parsedArgs))
         {
@@ -39,7 +39,7 @@ public static class ActivitySourceExtensions
             throw new Exception("Invalid number of arguments");
         }
 
-        var activity = source.StartActivity(message, activityKind, activityContext);
+        var activity = source.StartActivity(message, activityKind, (ActivityContext)default, links: links);
         if (activity is null || args.Length <= 0) return activity;
 
         for (var i = 0; i < parsedArgs.Length; i++)

@@ -1,13 +1,18 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Common.Infrastructure.Tracing;
 using Common.Music.Tracks;
+using JetBrains.Annotations;
 using Lavalink4NET.Players;
 using Lavalink4NET.Players.Queued;
 using Lavalink4NET.Protocol.Payloads.Events;
+using Microsoft.Extensions.Logging;
 
 #pragma warning disable CS0809 // Obsolete member overrides non-obsolete member
 
@@ -22,6 +27,8 @@ public class WrappedLavalinkPlayer : LavalinkPlayer
     /// <inheritdoc />
     public WrappedLavalinkPlayer(IPlayerProperties<LavalinkPlayer, LavalinkPlayerOptions> options) : base(options)
     {
+        options.Logger.LogInformation("Lavalink player created for {ChannelId} with {@InitialOptions}",
+            options.VoiceChannelId, options.InitialState);
     }
 
     public IObservable<int> VolumeChanged => _volumeChanged.AsObservable();
@@ -40,13 +47,14 @@ public class WrappedLavalinkPlayer : LavalinkPlayer
 
     public virtual ValueTask SetVolumeAsync(int volume, CancellationToken token = new())
     {
+        using var _ = CreateActivity(nameof(SetVolumeAsync), "LavalinkPlayer changing volume to {volume}", volume);
         volume = volume.Normalize(0, 200);
         _volumeChanged.OnNext(volume);
         return base.SetVolumeAsync((float)volume / 200, token);
     }
 
     /// <inheritdoc />
-    [Obsolete("Use SetVolumeAsync which accept int as a first parameter")]
+    [Obsolete("Use SetVolumeAsync which accept int as a first parameter", true)]
     public sealed override ValueTask SetVolumeAsync(float volume, CancellationToken cancellationToken = new())
     {
         return SetVolumeAsync((int)(volume * 200), cancellationToken);
@@ -55,12 +63,16 @@ public class WrappedLavalinkPlayer : LavalinkPlayer
     /// <inheritdoc />
     public override async ValueTask PauseAsync(CancellationToken cancellationToken = new())
     {
+        using var _ = CreateActivity(nameof(PauseAsync), "LavalinkPlayer pausing");
+
         await base.PauseAsync(cancellationToken);
         _stateChanged.OnNext(State);
     }
 
     public override async ValueTask ResumeAsync(CancellationToken cancellationToken = new())
     {
+        using var _ = CreateActivity(nameof(ResumeAsync), "LavalinkPlayer resuming");
+
         await base.ResumeAsync(cancellationToken);
         _stateChanged.OnNext(State);
     }
