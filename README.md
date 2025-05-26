@@ -8,10 +8,9 @@
 <br>
 [Click to invite][invite]
 
-> Powerful music and logging bot for Discord  
+> Powerful music bot for Discord  
 
-**Fully free** [Discord](https://discord.com/) bot with Embed music playback, buttons control, various music sources (including livestreams/radio), postprocessing effects and more.  
-The best opportunities for logging messages.
+**Fully free** [Discord](https://discord.com/) bot with Embed music playback, buttons control, various music sources (including livestreams/radio), postprocessing effects and more. 
 </td></tr>
 <tr><td align="center" width="9999">
 
