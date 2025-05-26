@@ -21,9 +21,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
+using SerilogTracing;
 
 var builder = WebApplication.CreateBuilder(args)
     .AddServiceDefaults();
+
+// using var listener = new ActivityListenerConfiguration().TraceToSharedLogger();
 
 builder.Host
     .UseServiceProviderFactory(new AutofacServiceProviderFactory())
@@ -66,6 +69,7 @@ TaskScheduler.UnobservedTaskException += (_, args) =>
 Directory.CreateDirectory("Config");
 LocalizationManager.Initialize();
 
+Log.Logger.Information("My awesome log from {Date}, {Time}", DateTime.Now, DateTime.Now);
 app.MapGet("/", () => "Enliven web host started");
 var endpointProviders = app.Services.GetServices<IEndpointProvider>();
 await Task.WhenAll(endpointProviders.Select(provider => provider.ConfigureEndpoints(app)));
