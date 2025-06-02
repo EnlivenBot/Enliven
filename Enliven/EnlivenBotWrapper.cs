@@ -59,6 +59,10 @@ public class EnlivenBotWrapper
         {
             var lifetimeScope = container.BeginLifetimeScope(Constants.BotLifetimeScopeTag, ConfigureBotLifetime);
             var logger = lifetimeScope.Resolve<ILogger<EnlivenBotWrapper>>();
+            lifetimeScope.CurrentScopeEnding += (sender, eventArgs) =>
+            {
+                logger.LogCritical(new Exception(), "SOMEONE {Sender} DISPOSED BOT ILifetimeScope", sender);
+            };
             try
             {
                 var bot = lifetimeScope.Resolve<EnlivenBot>();
