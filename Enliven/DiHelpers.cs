@@ -3,6 +3,7 @@ using System.Collections.Immutable;
 using Bot.DiscordRelated;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Interactions;
+using Bot.DiscordRelated.Interactions.Handlers;
 using Bot.DiscordRelated.MessageComponents;
 using Bot.DiscordRelated.Music;
 using Bot.Music.Vk;
@@ -56,13 +57,17 @@ internal static class DiHelpers
         services.AddSingleton<IService>(s => s.GetRequiredService<GlobalBehaviorsService>());
         services.AddSingleton<ScopedReliabilityService>();
         services.AddSingleton<IService>(s => s.GetRequiredService<ScopedReliabilityService>());
-        services.AddSingleton<InteractionHandlerService>();
-        services.AddSingleton<IService>(s => s.GetRequiredService<InteractionHandlerService>());
+        services.AddSingleton<InteractionsHandlerService>();
+        services.AddSingleton<IService>(s => s.GetRequiredService<InteractionsHandlerService>());
         services.AddSingleton<CommandHandlerService>();
         services.AddSingleton<IService>(s => s.GetRequiredService<CommandHandlerService>());
         services.AddSingleton<IStatisticsService, StatisticsService>();
-        services.AddSingleton<MessageComponentService>();
+        services.AddSingleton<MessageComponentInteractionsHandler>();
         services.AddSingleton<CollectorService>();
+        
+        services.AddSingleton<IInteractionsHandler, DiscordNetInteractionsHandler>();
+        services.AddSingleton<IInteractionsHandler, EmbedPlayerDisplayRestoreInteractionsHandler>();
+        services.AddSingleton<IInteractionsHandler>(s => s.GetRequiredService<MessageComponentInteractionsHandler>());
 
         return services;
     }

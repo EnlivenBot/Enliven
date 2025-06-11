@@ -3,6 +3,7 @@ using Bot.Commands.Chains;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
 using Bot.DiscordRelated.Interactions;
+using Bot.DiscordRelated.Interactions.Handlers;
 using Bot.DiscordRelated.MessageComponents;
 using Bot.Utilities.Collector;
 using Discord.Commands;
@@ -15,7 +16,7 @@ namespace Bot.Commands;
 [RequireContext(ContextType.Guild)]
 public sealed class AdvancedSearchCommands : MusicModuleBase
 {
-    public MessageComponentService ComponentService { get; set; } = null!;
+    public MessageComponentInteractionsHandler ComponentInteractionsHandler { get; set; } = null!;
     public CollectorService CollectorService { get; set; } = null!;
     
     [Command("youtube", RunMode = RunMode.Async)]
@@ -24,7 +25,7 @@ public sealed class AdvancedSearchCommands : MusicModuleBase
     public async Task SearchYoutube([Summary("play0_0s")] [Remainder] string query)
     {
         await new AdvancedMusicSearchChain(GuildConfig, Player!, Context.Channel, Context.User, TrackSearchMode.YouTube,
-            query, AudioService, ComponentService, CollectorService).Start();
+            query, AudioService, ComponentInteractionsHandler, CollectorService).Start();
     }
 
     [Command("soundcloud", RunMode = RunMode.Async)]
@@ -33,6 +34,6 @@ public sealed class AdvancedSearchCommands : MusicModuleBase
     public async Task SearchSoundCloud([Summary("play0_0s")] [Remainder] string query)
     {
         await new AdvancedMusicSearchChain(GuildConfig, Player!, Context.Channel, Context.User, TrackSearchMode.SoundCloud,
-            query, AudioService, ComponentService, CollectorService).Start();
+            query, AudioService, ComponentInteractionsHandler, CollectorService).Start();
     }
 }

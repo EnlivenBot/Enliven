@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Criteria;
+using Bot.DiscordRelated.Interactions.Handlers;
 using Bot.DiscordRelated.MessageComponents;
 using Common;
 using Common.Config.Emoji;
@@ -45,7 +46,7 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
     private readonly EnlivenEmbedBuilder _embedBuilder;
     private readonly ILocalizationProvider _loc;
     private readonly ILogger<EmbedPlayerDisplay> _logger;
-    private readonly MessageComponentService _messageComponentService;
+    private readonly MessageComponentInteractionsHandler _messageComponentInteractionsHandler;
     private readonly IGuild? _targetGuild;
     private readonly SingleTask _updateControlMessageTask;
 
@@ -63,11 +64,11 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
     public bool NextResendForced;
 
     public EmbedPlayerDisplay(IMessageChannel targetChannel, IDiscordClient discordClient, ILocalizationProvider loc,
-        CommandHandlerService commandHandlerService, MessageComponentService messageComponentService,
+        CommandHandlerService commandHandlerService, MessageComponentInteractionsHandler messageComponentInteractionsHandler,
         ILogger<EmbedPlayerDisplay> logger, IArtworkService artworkService, IEnlivenClusterAudioService audioService)
     {
         _targetGuild = (targetChannel as ITextChannel)?.Guild;
-        _messageComponentService = messageComponentService;
+        _messageComponentInteractionsHandler = messageComponentInteractionsHandler;
         _logger = logger;
         _artworkService = artworkService;
         _audioService = audioService;
@@ -321,7 +322,7 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
     private async Task SendControlMessage_WithMessageComponents()
     {
         _messageComponentManager?.Dispose();
-        _messageComponentManager = _messageComponentService.GetBuilder();
+        _messageComponentManager = _messageComponentInteractionsHandler.GetBuilder();
         var btnTemplate = new EnlivenButtonBuilder().WithTargetRow(0).WithStyle(ButtonStyle.Secondary);
         _messageComponentManager.WithButton(btnTemplate.Clone().WithEmote(CommonEmoji.LegacyTrackPrevious)
             .WithCustomId("TrackPrevious"));
@@ -342,9 +343,9 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
             .WithStyle(ButtonStyle.Danger));
         _messageComponentManager.WithButton(btnTemplate.Clone().WithCustomId("Repeat"));
         _messageComponentManager.WithButton(btnTemplate.Clone().WithEmote(CommonEmoji.E).WithCustomId("Effects"));
-        _messageComponentManager.SetCallback(async (s, component, arg3) =>
+        _messageComponentManager.SetCallback(async callback =>
         {
-            var command = s switch
+            var command = callback.CustomId switch
             {
                 "TrackPrevious" => (Player.Position?.Position.TotalSeconds ?? 0) > 15 ? "seek 0s" : "skip -1",
                 "FastReverse" => "rw 20s",
@@ -362,8 +363,8 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
             if (!string.IsNullOrEmpty(command))
             {
                 await _commandHandlerService.ExecuteCommand(command,
-                    new ComponentCommandContext(_discordClient, component),
-                    component.User.Id.ToString());
+                    new ComponentCommandContext(_discordClient, callback.Interaction),
+                    callback.Interaction.User.Id.ToString());
             }
         });
 
@@ -373,7 +374,6 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
         _controlMessage = await _sendControlMessageOverride.ExecuteAndFallbackWith(_embedBuilder.Build(),
             _messageComponent, _targetChannel, _logger);
         _sendControlMessageOverride = null;
-        _messageComponentManager.AssociateWithMessage(_controlMessage);
     }
 
     public async Task ResendControlMessageWithOverride(SendControlMessageOverride sendControlMessageOverride,

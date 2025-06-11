@@ -17,18 +17,17 @@ public class EnlivenShardedClient : DiscordShardedClient
     public EnlivenShardedClient(IOptions<DiscordSocketConfig> config) : base(config.Value)
     {
         SubscribeToEvents();
-        SubscribeToMessageComponents();
     }
 
     public bool IsReady => Ready.IsCompleted;
     public Task Ready => _readyTaskCompletionSource.Task;
-    public IObservable<SocketMessageComponent> MessageComponentUse { get; private set; } = null!;
     public IObservable<SocketInteraction> InteractionCreate { get; private set; } = null!;
 
     private void SubscribeToEvents()
     {
         ShardReady += OnShardReady;
         InteractionCreated += OnInteractionCreated;
+        InteractionCreate = _interactionCreatedSubject.AsObservable();
         MessageReceived += OnMessageReceived;
     }
 
@@ -48,15 +47,6 @@ public class EnlivenShardedClient : DiscordShardedClient
     {
         _messageReceivedSubject.OnNext(message);
         return Task.CompletedTask;
-    }
-
-    private void SubscribeToMessageComponents()
-    {
-        InteractionCreate = _interactionCreatedSubject.AsObservable();
-        MessageComponentUse = _interactionCreatedSubject
-            .Where(interaction => interaction.Type == InteractionType.MessageComponent)
-            .Select(interaction => (SocketMessageComponent)interaction)
-            .AsObservable();
     }
 
     public async Task<IUser?> GetUserAsync(ulong id)

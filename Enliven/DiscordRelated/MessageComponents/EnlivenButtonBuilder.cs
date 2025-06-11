@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Discord;
 using Discord.WebSocket;
 
@@ -25,7 +26,7 @@ public class EnlivenButtonBuilder : ButtonBuilder {
     /// <summary>
     /// This delegate would be called if user press this button
     /// </summary>
-    public Action<SocketMessageComponent>? Callback { get; set; }
+    public Func<SocketMessageComponent, ValueTask>? Callback { get; set; }
 
     public EnlivenButtonBuilder WithIsVisible(bool isVisible) {
         IsVisible = isVisible;
@@ -41,7 +42,7 @@ public class EnlivenButtonBuilder : ButtonBuilder {
         return this;
     }
 
-    public EnlivenButtonBuilder WithCallback(Action<SocketMessageComponent>? callback) {
+    public EnlivenButtonBuilder WithCallback(Func<SocketMessageComponent, ValueTask>? callback) {
         Callback = callback;
         return this;
     }

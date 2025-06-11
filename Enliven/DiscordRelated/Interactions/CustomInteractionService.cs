@@ -66,6 +66,11 @@ public class CustomInteractionService : InteractionService, IService
                 moduleBuilder => BuildTopLevelModules(moduleBuilder, subcommandSet));
     }
 
+    public async Task OnDiscordReady()
+    {
+        await RegisterCommandsGloballyAsync();
+    }
+
     private void BuildTopLevelModules(ModuleBuilder moduleBuilder,
         IGrouping<string?, (MethodInfo info, CommandAttribute?)> subcommandSet)
     {

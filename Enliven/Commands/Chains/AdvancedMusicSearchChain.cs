@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Bot.DiscordRelated.Commands;
+using Bot.DiscordRelated.Interactions.Handlers;
 using Bot.DiscordRelated.MessageComponents;
 using Bot.Utilities.Collector;
 using Common;
@@ -56,7 +57,7 @@ public class AdvancedMusicSearchChain : ChainBase
         TrackSearchMode searchMode,
         string query,
         IAudioService audioService,
-        MessageComponentService messageComponentService,
+        MessageComponentInteractionsHandler messageComponentInteractionsHandler,
         CollectorService collectorService)
         : base($"{nameof(AdvancedMusicSearchChain)}_{guildConfig.GuildId}_{requester.Id}", guildConfig.Loc)
     {
@@ -67,7 +68,7 @@ public class AdvancedMusicSearchChain : ChainBase
         _query = query;
         _audioService = audioService;
         _collectorService = collectorService;
-        _componentBuilder = messageComponentService.GetBuilder();
+        _componentBuilder = messageComponentInteractionsHandler.GetBuilder();
         MainBuilder
             .WithColor(Color.Gold)
             .WithTitle(guildConfig.Loc.Get("Music.SearchResultsTitle"));
@@ -116,24 +117,23 @@ public class AdvancedMusicSearchChain : ChainBase
 
         var msg = await _targetChannel.SendMessageAsync(null, false, MainBuilder.Build(),
             components: _componentBuilder.Build());
-        _componentBuilder.AssociateWithMessage(msg);
         if (!tracks.HasMatches)
             return;
 
-        _componentBuilder.SetCallback(async (s, component, arg3) =>
+        _componentBuilder.SetCallback(async callback =>
         {
-            if (component.User.Id != _requester.Id)
+            if (callback.Interaction.User.Id != _requester.Id)
             {
                 var embed = CommandHandlerService
-                    .GetErrorEmbed(component.User, Loc, Loc.Get("Common.OnlyRequester", component.User.Mention))
+                    .GetErrorEmbed(callback.Interaction.User, Loc, Loc.Get("Common.OnlyRequester", callback.Interaction.User.Mention))
                     .Build();
-                _ = component.FollowupAsync(embed: embed, ephemeral: true).DelayedDelete(TimeSpan.FromSeconds(15));
+                _ = callback.Interaction.FollowupAsync(embed: embed, ephemeral: true).DelayedDelete(TimeSpan.FromSeconds(15));
                 return;
             }
 
-            switch (s)
+            switch (callback.CustomId)
             {
-                case var _ when int.TryParse(s, out var index):
+                case var _ when int.TryParse(callback.CustomId, out var index):
                     await ProcessAdd(new[] { tracks.Tracks[index] }, msg);
                     break;
                 case "All":
@@ -146,7 +146,8 @@ public class AdvancedMusicSearchChain : ChainBase
         });
 
         _collectorGroup = new CollectorsGroup(
-            _collectorService.CollectMessage(_requester, message => message.Channel.Id == _targetChannel.Id,
+            _collectorService.CollectMessage(_requester, 
+                message => message.Channel.Id == _targetChannel.Id,
                 async args =>
                 {
                     if (!int.TryParse(args.Message.Content, out var result)) return;
@@ -159,7 +160,7 @@ public class AdvancedMusicSearchChain : ChainBase
         {
             _collectorGroup.DisposeAll();
             _componentBuilder.Dispose();
-            _cancellationTokenSource.Cancel();
+            await _cancellationTokenSource.CancelAsync();
             msg.DelayedDelete(Constants.StandardTimeSpan);
             await msg.ModifyAsync(properties =>
             {

@@ -2,8 +2,10 @@
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Reactive.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Bot.DiscordRelated.Commands;
+using Bot.DiscordRelated.Interactions.Handlers;
 using Bot.DiscordRelated.MessageComponents;
 using Common;
 using Common.Config;
@@ -16,7 +18,7 @@ using Newtonsoft.Json;
 
 namespace Bot.DiscordRelated.Music;
 
-public class EmbedPlayerDisplayProvider : IService, IDisposable
+public sealed class EmbedPlayerDisplayProvider : IService, IDisposable
 {
     private readonly IArtworkService _artworkService;
     private readonly ConcurrentDictionary<string, EmbedPlayerDisplay> _cache = new();
@@ -26,15 +28,16 @@ public class EmbedPlayerDisplayProvider : IService, IDisposable
     private readonly IGuildConfigProvider _guildConfigProvider;
     private readonly ILogger<EmbedPlayerDisplayProvider> _logger;
     private readonly ILoggerFactory _loggerFactory;
-    private readonly MessageComponentService _messageComponentService;
-    private IDisposable? _restoreStoppedHandled;
+    private readonly MessageComponentInteractionsHandler _messageComponentInteractionsHandler;
+    private readonly CancellationTokenSource _updateCycleCancellationTokenSource = new();
 
     public EmbedPlayerDisplayProvider(EnlivenShardedClient client, IGuildConfigProvider guildConfigProvider,
-        CommandHandlerService commandHandlerService, MessageComponentService messageComponentService,
+        CommandHandlerService commandHandlerService,
+        MessageComponentInteractionsHandler messageComponentInteractionsHandler,
         ILogger<EmbedPlayerDisplayProvider> logger, ILoggerFactory loggerFactory, IArtworkService artworkService,
         IEnlivenClusterAudioService clusterAudioService)
     {
-        _messageComponentService = messageComponentService;
+        _messageComponentInteractionsHandler = messageComponentInteractionsHandler;
         _commandHandlerService = commandHandlerService;
         _logger = logger;
         _loggerFactory = loggerFactory;
@@ -44,23 +47,8 @@ public class EmbedPlayerDisplayProvider : IService, IDisposable
         _guildConfigProvider = guildConfigProvider;
     }
 
-    public void Dispose()
-    {
-        _restoreStoppedHandled?.Dispose();
-    }
-
     public Task OnPreDiscordStart()
     {
-        _restoreStoppedHandled = _messageComponentService.MessageComponentUse
-            .Where(component => component.Data.CustomId == "restoreStoppedPlayer")
-            .SubscribeAsync(component =>
-            {
-                var guild = (component.Channel as IGuildChannel)?.Guild;
-                if (guild == null) return Task.CompletedTask;
-                var context = new ControllableCommandContext(_client)
-                    { Guild = guild, Channel = component.Channel, User = component.User };
-                return _commandHandlerService.ExecuteCommand("resume", context, component.User.Id.ToString());
-            });
         new Task(UpdateCycle, TaskCreationOptions.LongRunning).Start();
         return Task.CompletedTask;
     }
@@ -87,7 +75,8 @@ public class EmbedPlayerDisplayProvider : IService, IDisposable
             var guildConfig = _guildConfigProvider.Get(channel.GuildId);
             // TODO: Implement proper logger creation
             return new EmbedPlayerDisplay(channel, _client, guildConfig.Loc, _commandHandlerService,
-                _messageComponentService, _loggerFactory.CreateLogger<EmbedPlayerDisplay>(), _artworkService, _clusterAudioService);
+                _messageComponentInteractionsHandler, _loggerFactory.CreateLogger<EmbedPlayerDisplay>(),
+                _artworkService, _clusterAudioService);
         });
         if (!embedPlayerDisplay.IsShutdowned && embedPlayerDisplay.Player?.State != PlayerState.Destroyed)
             return embedPlayerDisplay;
@@ -101,9 +90,9 @@ public class EmbedPlayerDisplayProvider : IService, IDisposable
 
     private async void UpdateCycle()
     {
-        while (true)
+        while (!_updateCycleCancellationTokenSource.IsCancellationRequested)
         {
-            var waitCycle = Task.Delay(Constants.PlayerEmbedUpdateDelay);
+            var waitCycle = Task.Delay(Constants.PlayerEmbedUpdateDelay, _updateCycleCancellationTokenSource.Token);
             var displays = _cache.Values.ToList();
             foreach (var display in displays)
             {
@@ -123,5 +112,11 @@ public class EmbedPlayerDisplayProvider : IService, IDisposable
             await waitCycle;
         }
         // ReSharper disable once FunctionNeverReturns
+    }
+    
+    public void Dispose()
+    {
+        _updateCycleCancellationTokenSource.Cancel();
+        _updateCycleCancellationTokenSource.Dispose();
     }
 }

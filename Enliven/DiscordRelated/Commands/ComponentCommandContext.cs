@@ -7,9 +7,12 @@ public class ComponentCommandContext : ControllableCommandContext {
     public ComponentCommandContext(IDiscordClient client, SocketMessageComponent component) : base(client) {
         Component = component;
         User = component.User;
-        Channel = component.Channel;
-        if (component.Channel is SocketTextChannel channel)
-            Guild = channel.Guild;
+        if (component is SocketMessageComponent socketMessageComponent)
+        {
+            Channel = socketMessageComponent.Channel;
+            if (socketMessageComponent.Channel is SocketTextChannel channel)
+                Guild = channel.Guild;
+        }
     }
     public SocketMessageComponent Component { get; }
 }

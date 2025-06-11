@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
+using Bot.DiscordRelated.Interactions.Handlers;
 using Discord;
 using Discord.WebSocket;
 
@@ -14,19 +15,12 @@ namespace Bot.DiscordRelated.MessageComponents;
 /// <remarks>
 /// Should be used one per message!
 /// </remarks>
-public class EnlivenComponentBuilder : IDisposable
+public class EnlivenComponentBuilder(MessageComponentInteractionsHandler messageComponentInteractionsHandler)
+    : IDisposable
 {
     private readonly Dictionary<string, (DateTime, EnlivenButtonBuilder)> _entries = new();
-    private readonly MessageComponentService _messageComponentService;
     private CompositeDisposable? _buttonCallbackDisposables;
-    private Action<string, SocketMessageComponent, EnlivenButtonBuilder>? _callback;
-    private IDisposable? _callbackDisposable;
-    private IUserMessage? _message;
-
-    public EnlivenComponentBuilder(MessageComponentService messageComponentService)
-    {
-        _messageComponentService = messageComponentService;
-    }
+    private Func<ComponentBuilderCallback, ValueTask>? _commonCallback;
 
     public IReadOnlyDictionary<string, EnlivenButtonBuilder> Entries =>
         _entries.ToImmutableDictionary(pair => pair.Key, pair => pair.Value.Item2);
@@ -80,45 +74,19 @@ public class EnlivenComponentBuilder : IDisposable
         return this;
     }
 
-    public void AssociateWithMessage(IUserMessage? message)
+    public EnlivenComponentBuilder SetCallback(Func<ComponentBuilderCallback, ValueTask>? callback)
     {
-        _message = message;
-        TrySetMessageCallback();
+        _commonCallback = callback;
+        return this;
     }
 
-    public void AssociateWithMessage(Task<IUserMessage> message)
+    private async ValueTask OnCurrentMessageCallbackTriggered(SocketMessageComponent component)
     {
-        message.ContinueWith(async task => AssociateWithMessage(await task), TaskContinuationOptions.NotOnFaulted);
-    }
-
-    public void SetCallback(Action<string, SocketMessageComponent, EnlivenButtonBuilder>? callback)
-    {
-        _callback = callback;
-        TrySetMessageCallback();
-    }
-
-    private void TrySetMessageCallback()
-    {
-        _callbackDisposable?.Dispose();
-        if (_callback != null && _message != null)
-        {
-            _callbackDisposable = _messageComponentService.MessageComponentUse
-                .Where(component =>
-                    (component.Message.Id == _message.Id) & (component.Channel.Id == _message.Channel.Id))
-                .Subscribe(OnCurrentMessageCallbackTriggered);
-        }
-    }
-
-    private void OnCurrentMessageCallbackTriggered(SocketMessageComponent component)
-    {
-        if (!component.Data.CustomId.EndsWith("|")) return;
+        if (_commonCallback is null) return;
+        if (!component.Data.CustomId.EndsWith('|')) return;
         var actualId = component.Data.CustomId[..^37];
-        if (_entries.TryGetValue(actualId, out var tuple)) Task.Run(() => _callback!(actualId, component, tuple.Item2));
-    }
-
-    private Task UpdateAssociatedMessageComponents()
-    {
-        return _message?.ModifyAsync(properties => properties.Components = Build()) ?? Task.CompletedTask;
+        if (_entries.TryGetValue(actualId, out var tuple))
+            await _commonCallback(new ComponentBuilderCallback(actualId, component, tuple.Item2));
     }
 
     /// <remarks>
@@ -146,14 +114,24 @@ public class EnlivenComponentBuilder : IDisposable
                 var systemCustomId = $"{userCustomId}{buttonBuilder.Guid}|";
                 builder.WithButton(buttonBuilder.WithCustomId(systemCustomId), pairs.Row);
                 buttonBuilder.CustomId = userCustomId;
-
-                //Register callback
+                
+                _buttonCallbackDisposables.Add(messageComponentInteractionsHandler.RegisterMessageComponent(systemCustomId, 
+                    OnCurrentMessageCallbackTriggered));
                 if (buttonBuilder.Callback != null)
-                    _buttonCallbackDisposables.Add(
-                        _messageComponentService.RegisterMessageComponent(systemCustomId, buttonBuilder.Callback));
+                    _buttonCallbackDisposables.Add(messageComponentInteractionsHandler.RegisterMessageComponent(systemCustomId, buttonBuilder.Callback));
             }
         }
 
         return builder.Build();
+    }
+    
+    public readonly struct ComponentBuilderCallback(
+        string customId,
+        SocketMessageComponent interaction,
+        EnlivenButtonBuilder builder)
+    {
+        public string CustomId { get; } = customId;
+        public SocketMessageComponent Interaction { get; } = interaction;
+        public EnlivenButtonBuilder Builder { get; } = builder;
     }
 }

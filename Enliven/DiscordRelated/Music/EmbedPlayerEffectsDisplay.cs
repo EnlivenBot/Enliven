@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Reactive.Disposables;
 using System.Threading.Tasks;
+using Bot.DiscordRelated.Interactions.Handlers;
 using Bot.DiscordRelated.MessageComponents;
 using Common;
 using Common.Config.Emoji;
@@ -27,12 +29,12 @@ public class EmbedPlayerEffectsDisplay : PlayerDisplayBase
     private IUserMessage? _controlMessage;
 
     public EmbedPlayerEffectsDisplay(IMessageChannel targetChannel, ILocalizationProvider loc,
-        MessageComponentService messageComponentService)
+        MessageComponentInteractionsHandler messageComponentInteractionsHandler)
     {
         _loc = loc;
         _targetChannel = targetChannel;
 
-        _enlivenComponentBuilder = messageComponentService.GetBuilder();
+        _enlivenComponentBuilder = messageComponentInteractionsHandler.GetBuilder();
         _enlivenEmbedBuilder.Title = _loc.Get("Music.Effects");
 
         var applyEffectTitle = _loc.Get("Effects.ApplyEffectTitle");
@@ -91,19 +93,17 @@ public class EmbedPlayerEffectsDisplay : PlayerDisplayBase
         _disposable.Add(_updateControlMessageTask);
     }
 
-    private void AddEffect(SocketInteraction interaction, IPlayerEffectSource playerEffectSource)
+    private async ValueTask AddEffect(SocketMessageComponent interaction, IPlayerEffectSource playerEffectSource)
     {
-        Task.Run(async () =>
+        Debug.Assert(Player is not null);
+        var effects = Player.Effects;
+        if (effects.Count >= PlayerConstants.MaxEffectsCount) return;
+        var sourceName = playerEffectSource.GetSourceName();
+        if (effects.All(use => use.Effect.SourceName != sourceName))
         {
-            var effects = Player.Effects;
-            if (effects.Count >= PlayerConstants.MaxEffectsCount) return;
-            var sourceName = playerEffectSource.GetSourceName();
-            if (effects.All(use => use.Effect.SourceName != sourceName))
-            {
-                var effect = await playerEffectSource.CreateEffect(null);
-                await Player.ApplyEffect(effect, interaction.User);
-            }
-        });
+            var effect = await playerEffectSource.CreateEffect(null);
+            await Player.ApplyEffect(effect, interaction.User);
+        }
     }
 
     public async Task<bool> EnsureCorrectnessAsync()
@@ -127,6 +127,7 @@ public class EmbedPlayerEffectsDisplay : PlayerDisplayBase
 
     private void UpdateMessageDescription()
     {
+        Debug.Assert(Player is not null);
         var effects = Player.Effects;
         if (effects.Count == 0)
         {
@@ -154,11 +155,11 @@ public class EmbedPlayerEffectsDisplay : PlayerDisplayBase
         _enlivenComponentBuilder.Entries["add"].IsVisible = addButtons.Any(builder => builder.IsVisible);
 
         _updateControlMessageTask.Execute();
+        return;
 
-        Action<SocketMessageComponent> GetRemoveButtonCallback(int i)
+        Func<SocketMessageComponent, ValueTask> GetRemoveButtonCallback(int i)
         {
             var playerEffectUse = effects[i];
-            // ReSharper disable once AsyncVoidLambda
             return async component => { await Player.RemoveEffect(playerEffectUse, component.User); };
         }
     }
@@ -166,7 +167,7 @@ public class EmbedPlayerEffectsDisplay : PlayerDisplayBase
     public override async Task ExecuteShutdown(IEntry header, IEntry body)
     {
         await base.ExecuteShutdown(header, body);
-        _controlMessage.SafeDelete();
+        await _controlMessage.SafeDeleteAsync();
         _disposable?.Dispose();
     }
 

@@ -277,6 +277,68 @@ public static class ExtensionMethods
 
     public static IEnumerable<Task<TOut>> PipeEveryAsync<TIn, TOut>(this IEnumerable<Task<TIn>> tasks,
         Func<TIn, Task<TOut>> transform) => tasks.Select(async task => await transform(await task));
+    
+    	/// <summary>
+	/// Фильтрует элементы, у которых указанное поле !=null
+	/// </summary>
+	/// <remarks> Заменяет вызов типа
+	/// entities.Where(x => x.SampleProperty is not null).Select(x => x.SampleProperty!)
+	/// на entities.WhereNotNull(x => x.SampleProperty)
+	/// </remarks>
+	/// <param name="enumerable"> Перечисление </param>
+	/// <param name="selector"> Селектор поля </param>
+	/// <typeparam name="TSource"> Тип элемента </typeparam>
+	/// <typeparam name="TField"> Тип поля </typeparam>
+	/// <returns> Коллекцию элементов, у которых поле <typeparamref name="TField"/> != null </returns>
+	public static IEnumerable<TField> WhereNotNull<TSource, TField>(
+		this IEnumerable<TSource> enumerable,
+		Func<TSource, TField?> selector)
+		where TSource : class
+		where TField : class => enumerable
+		.Select(selector)
+		.Where(x => x is not null)!;
+
+	/// <summary>
+	/// Фильтрует элементы, у которых указанное поле !=null
+	/// </summary>
+	/// <remarks> Заменяет вызов типа
+	/// entities.Where(x => x.ExternalId.HasValue).Select(x => x.ExternalId!.Value)
+	/// на entities.WhereNotNull(x => x.ExternalId)
+	/// </remarks>
+	/// <param name="enumerable"> Перечисление </param>
+	/// <param name="selector"> Селектор поля </param>
+	/// <typeparam name="TSource"> Тип элемента </typeparam>
+	/// <typeparam name="TField"> Тип поля </typeparam>
+	/// <returns> Коллекцию элементов, у которых поле <typeparamref name="TField"/> != null </returns>
+	public static IEnumerable<TField> WhereNotNull<TSource, TField>(
+		this IEnumerable<TSource> enumerable,
+		Func<TSource, TField?> selector)
+		where TSource : class
+		where TField : struct => enumerable
+		.Select(selector)
+		.WhereNotNull();
+
+	/// <summary>
+	/// Фильтрует элементы, которые != null
+	/// </summary>
+	/// <param name="enumerable">Перечисление</param>
+	/// <typeparam name="T">Тип элемента</typeparam>
+	/// <returns>Коллекцию элементов, которые != null</returns>
+	public static IEnumerable<T> WhereNotNull<T>(this IEnumerable<T?> enumerable)
+		where T : class => enumerable
+		.Where(arg => arg is not null)
+		.Select(arg => arg!);
+
+	/// <summary>
+	/// Фильтрует элементы, которые != null
+	/// </summary>
+	/// <param name="enumerable">Перечисление</param>
+	/// <typeparam name="T">Тип элемента</typeparam>
+	/// <returns>Коллекцию элементов, которые != null</returns>
+	public static IEnumerable<T> WhereNotNull<T>(this IEnumerable<T?> enumerable)
+		where T : struct => enumerable
+		.Where(arg => arg.HasValue)
+		.Select(arg => arg!.Value);
 
     public static Task WhenAll(this IEnumerable<Task> tasks) => Task.WhenAll(tasks);
     public static Task<T[]> WhenAll<T>(this IEnumerable<Task<T>> tasks) => Task.WhenAll(tasks);

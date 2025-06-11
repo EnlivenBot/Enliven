@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Bot.DiscordRelated.Interactions.Handlers;
 using Bot.DiscordRelated.MessageComponents;
 using Bot.Utilities.Collector;
 using Common;
@@ -28,20 +29,20 @@ public partial class PaginatedMessage : DisposableBase {
     private EnlivenComponentBuilder _enlivenComponentBuilder = null!;
     private bool _isCollectionUpdating;
     private bool _jumpEnabled;
-    private MessageComponentService _messageComponentService;
+    private MessageComponentInteractionsHandler _messageComponentInteractionsHandler;
     public ILocalizationProvider Loc;
 
     public IUserMessage? Message;
 
-    public PaginatedMessage(PaginatedAppearanceOptions options, IUserMessage message, ILocalizationProvider loc, MessageComponentService messageComponentService, CollectorService collectorService, IDiscordClient discordClient, MessagePage? errorPage = null)
-        : this(options, message.Channel, loc, messageComponentService, collectorService, discordClient, errorPage) {
+    public PaginatedMessage(PaginatedAppearanceOptions options, IUserMessage message, ILocalizationProvider loc, MessageComponentInteractionsHandler messageComponentInteractionsHandler, CollectorService collectorService, IDiscordClient discordClient, MessagePage? errorPage = null)
+        : this(options, message.Channel, loc, messageComponentInteractionsHandler, collectorService, discordClient, errorPage) {
         Channel = message.Channel;
         Message = message;
         if (Message.Author.Id != _discordClient.CurrentUser.Id) throw new ArgumentException($"{nameof(message)} must be from the current user");
     }
 
-    public PaginatedMessage(PaginatedAppearanceOptions options, IMessageChannel channel, ILocalizationProvider loc, MessageComponentService messageComponentService, CollectorService collectorService, IDiscordClient discordClient, MessagePage? errorPage = null) {
-        _messageComponentService = messageComponentService;
+    public PaginatedMessage(PaginatedAppearanceOptions options, IMessageChannel channel, ILocalizationProvider loc, MessageComponentInteractionsHandler messageComponentInteractionsHandler, CollectorService collectorService, IDiscordClient discordClient, MessagePage? errorPage = null) {
+        _messageComponentInteractionsHandler = messageComponentInteractionsHandler;
         _collectorService = collectorService;
         _discordClient = discordClient;
         Loc = loc;
@@ -105,7 +106,7 @@ public partial class PaginatedMessage : DisposableBase {
     public EmbedFooterBuilder? Footer { get; set; }
 
     private async Task InitializeComponentManager() {
-        _enlivenComponentBuilder = new EnlivenComponentBuilder(_messageComponentService);
+        _enlivenComponentBuilder = new EnlivenComponentBuilder(_messageComponentInteractionsHandler);
         _enlivenComponentBuilder.SetCallback(OnButtonPress);
 
         var builder = new EnlivenButtonBuilder().WithStyle(ButtonStyle.Secondary).WithTargetRow(0);
@@ -124,8 +125,8 @@ public partial class PaginatedMessage : DisposableBase {
         if (_jumpEnabled) _enlivenComponentBuilder.WithButton(builder.Clone().WithEmote(Options.Jump).WithCustomId("Jump").WithPriority(0));
     }
 
-    private void OnButtonPress(string s, SocketMessageComponent component, EnlivenButtonBuilder arg3) {
-        switch (s) {
+    private async ValueTask OnButtonPress(EnlivenComponentBuilder.ComponentBuilderCallback callback) {
+        switch (callback.CustomId) {
             case "Back":
                 PageNumber--;
                 break;
@@ -142,10 +143,12 @@ public partial class PaginatedMessage : DisposableBase {
                 Dispose();
                 return;
             case "Info":
-                _ = component.FollowupAsync(Options.InformationText).DelayedDelete(Options.InfoTimeout);
+                _ = callback.Interaction.FollowupAsync(Options.InformationText).DelayedDelete(Options.InfoTimeout);
                 break;
             case "Jump":
-                _collectorService.CollectMessage(component.Channel, message => message.Author.Id == component.User.Id, async eventArgs => {
+                _collectorService.CollectMessage(callback.Interaction.Channel, 
+                    message => message.Author.Id == callback.Interaction.User.Id, 
+                    async eventArgs => {
                     eventArgs.StopCollect();
                     if (!int.TryParse(eventArgs.Message.Content, out var result)) return;
                     await eventArgs.RemoveReason();
@@ -159,7 +162,7 @@ public partial class PaginatedMessage : DisposableBase {
         }
 
         CoercePageNumber();
-        _updateTask.Execute(true, TimeSpan.FromSeconds(1));
+        await _updateTask.Execute(true, TimeSpan.FromSeconds(1));
     }
 
     private async Task UpdateTaskAction() {
@@ -174,7 +177,6 @@ public partial class PaginatedMessage : DisposableBase {
                     properties.Embed = GenerateEmbed();
                     properties.Content = null;
                 });
-                _enlivenComponentBuilder.AssociateWithMessage(Message);
             }
         }
         catch {
@@ -190,8 +192,8 @@ public partial class PaginatedMessage : DisposableBase {
         try {
             Message?.SafeDelete();
             Message = null;
-            Message = await Channel.SendMessageAsync(null, false, GenerateEmbed(), components: _enlivenComponentBuilder.Build());
-            _enlivenComponentBuilder.AssociateWithMessage(Message);
+            Message = await Channel.SendMessageAsync(null, false, GenerateEmbed(), 
+                components: _enlivenComponentBuilder.Build());
             return Message;
         }
         catch {

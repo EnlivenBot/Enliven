@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Bot.DiscordRelated.Interactions.Handlers;
 using Bot.DiscordRelated.MessageComponents;
 using Bot.Utilities.Collector;
 using Common;
@@ -17,18 +18,18 @@ public class EmbedPlayerQueueDisplay : PlayerDisplayBase
     private readonly CollectorService _collectorService;
     private readonly IDiscordClient _discordClient;
     private readonly ILocalizationProvider _loc;
-    private readonly MessageComponentService _messageComponentService;
+    private readonly MessageComponentInteractionsHandler _messageComponentInteractionsHandler;
     private readonly IMessageChannel _targetChannel;
 
     private PaginatedMessage _paginatedMessage = null!;
     private Disposables? _subscribers;
 
     public EmbedPlayerQueueDisplay(IMessageChannel targetChannel, ILocalizationProvider loc,
-        MessageComponentService messageComponentService, CollectorService collectorService,
+        MessageComponentInteractionsHandler messageComponentInteractionsHandler, CollectorService collectorService,
         IDiscordClient discordClient)
     {
         _loc = loc;
-        _messageComponentService = messageComponentService;
+        _messageComponentInteractionsHandler = messageComponentInteractionsHandler;
         _collectorService = collectorService;
         _discordClient = discordClient;
         _targetChannel = targetChannel;
@@ -38,7 +39,7 @@ public class EmbedPlayerQueueDisplay : PlayerDisplayBase
     {
         var paginatedAppearanceOptions = new PaginatedAppearanceOptions { Timeout = TimeSpan.FromMinutes(1) };
         _paginatedMessage = new PaginatedMessage(paginatedAppearanceOptions, _targetChannel, _loc,
-            _messageComponentService, _collectorService, _discordClient)
+            _messageComponentInteractionsHandler, _collectorService, _discordClient)
         {
             Title = _loc.Get("MusicQueues.QueueTitle"), Color = Color.Gold
         };

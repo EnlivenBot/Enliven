@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using Bot.DiscordRelated.Interactions.Handlers;
 using Bot.DiscordRelated.MessageComponents;
 using Bot.Utilities.Collector;
 using Common.Config;
@@ -17,13 +18,13 @@ public class EmbedPlayerQueueDisplayProvider
     private readonly CollectorService _collectorService;
     private readonly IDiscordClient _discordClient;
     private readonly IGuildConfigProvider _guildConfigProvider;
-    private readonly MessageComponentService _messageComponentService;
+    private readonly MessageComponentInteractionsHandler _messageComponentInteractionsHandler;
 
     public EmbedPlayerQueueDisplayProvider(IGuildConfigProvider guildConfigProvider,
-        MessageComponentService messageComponentService, CollectorService collectorService,
+        MessageComponentInteractionsHandler messageComponentInteractionsHandler, CollectorService collectorService,
         IDiscordClient discordClient)
     {
-        _messageComponentService = messageComponentService;
+        _messageComponentInteractionsHandler = messageComponentInteractionsHandler;
         _collectorService = collectorService;
         _discordClient = discordClient;
         _guildConfigProvider = guildConfigProvider;
@@ -55,7 +56,7 @@ public class EmbedPlayerQueueDisplayProvider
             else
                 loc = LangLocalizationProvider.EnglishLocalizationProvider;
 
-            var embedPlayerQueueDisplay = new EmbedPlayerQueueDisplay(channel, loc, _messageComponentService,
+            var embedPlayerQueueDisplay = new EmbedPlayerQueueDisplay(channel, loc, _messageComponentInteractionsHandler,
                 _collectorService, _discordClient);
             _ = embedPlayerQueueDisplay.Initialize(finalLavalinkPlayer);
             return embedPlayerQueueDisplay;

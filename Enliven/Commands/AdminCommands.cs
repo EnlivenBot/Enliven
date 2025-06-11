@@ -5,6 +5,7 @@ using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Commands.Modules;
 using Bot.DiscordRelated.Commands.Modules.Contexts;
 using Bot.DiscordRelated.Interactions;
+using Bot.DiscordRelated.Interactions.Handlers;
 using Bot.DiscordRelated.MessageComponents;
 using Bot.Utilities;
 using Common;
@@ -23,7 +24,7 @@ namespace Bot.Commands;
 public class AdminCommands : AdvancedModuleBase {
     public GlobalBehaviorsService GlobalBehaviorsService { get; set; } = null!;
     public CommandHandlerService CommandHandlerService { get; set; } = null!;
-    public MessageComponentService MessageComponentService { get; set; } = null!;
+    public MessageComponentInteractionsHandler MessageComponentInteractionsHandler { get; set; } = null!;
 
     [Hidden]
     [Command("printwelcome")]
@@ -46,7 +47,7 @@ public class AdminCommands : AdvancedModuleBase {
     private async Task ListLanguages() {
         // TODO: Rework language selection with popups
         var embedBuilder = this.GetAuthorEmbedBuilder().WithColor(Color.Gold).WithTitle(Loc.Get("Localization.LanguagesList"));
-        var componentBuilder = MessageComponentService.GetBuilder();
+        var componentBuilder = MessageComponentInteractionsHandler.GetBuilder();
         var i = 0;
         foreach (var (key, pack) in LocalizationManager.Languages) {
             embedBuilder.AddField($"{pack.LocalizationFlagEmojiText} **{pack.LocalizedName}** ({pack.LanguageName})",
@@ -58,11 +59,12 @@ public class AdminCommands : AdvancedModuleBase {
         }
 
         var sentMessage = await Context.SendMessageAsync(null, embedBuilder.Build(), components: componentBuilder.Build());
-        componentBuilder.AssociateWithMessage(sentMessage.GetMessageAsync());
-        componentBuilder.SetCallback(async (s, component, arg3) => {
-            var t = await CommandHandlerService.ExecuteCommand($"language {s}", new ComponentCommandContext(Context.Client, component),
-                component.User.Id.ToString());
-            if (t.IsSuccess) await sentMessage.GetMessageAsync().PipeAsync(userMessage => userMessage.SafeDeleteAsync());
+        componentBuilder.SetCallback(async args =>
+        {
+            var commandExecutionResult = await CommandHandlerService.ExecuteCommand($"language {args.CustomId}",
+                new ComponentCommandContext(Context.Client, args.Interaction), args.Interaction.User.Id.ToString());
+            if (commandExecutionResult.IsSuccess)
+                await sentMessage.GetMessageAsync().PipeAsync(userMessage => userMessage.SafeDeleteAsync());
             componentBuilder.Dispose();
         });
         _ = sentMessage.CleanupAfterAsync(Constants.StandardTimeSpan).ContinueWith(task => componentBuilder.Dispose());

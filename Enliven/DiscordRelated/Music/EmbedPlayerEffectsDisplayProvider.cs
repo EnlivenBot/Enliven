@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Bot.DiscordRelated.Interactions.Handlers;
 using Bot.DiscordRelated.MessageComponents;
 using Common.Config;
 using Common.Localization.Providers;
@@ -15,12 +16,12 @@ public class EmbedPlayerEffectsDisplayProvider
 {
     private ConcurrentDictionary<IMessageChannel, EmbedPlayerEffectsDisplay> _cache = new();
     private IGuildConfigProvider _guildConfigProvider;
-    private MessageComponentService _messageComponentService;
+    private MessageComponentInteractionsHandler _messageComponentInteractionsHandler;
 
     public EmbedPlayerEffectsDisplayProvider(IGuildConfigProvider guildConfigProvider,
-        MessageComponentService messageComponentService)
+        MessageComponentInteractionsHandler messageComponentInteractionsHandler)
     {
-        _messageComponentService = messageComponentService;
+        _messageComponentInteractionsHandler = messageComponentInteractionsHandler;
         _guildConfigProvider = guildConfigProvider;
     }
 
@@ -51,7 +52,7 @@ public class EmbedPlayerEffectsDisplayProvider
             else
                 loc = LangLocalizationProvider.EnglishLocalizationProvider;
 
-            var embedPlayerQueueDisplay = new EmbedPlayerEffectsDisplay(channel, loc, _messageComponentService);
+            var embedPlayerQueueDisplay = new EmbedPlayerEffectsDisplay(channel, loc, _messageComponentInteractionsHandler);
             _ = embedPlayerQueueDisplay.Initialize(finalLavalinkPlayer);
             return embedPlayerQueueDisplay;
         });
