@@ -440,6 +440,10 @@ public static class ExtensionMethods
 
     public static async Task ObserveException(this Task task)
     {
+        if (task.IsCompleted) {
+            return;
+        }
+        
         try
         {
             await task;

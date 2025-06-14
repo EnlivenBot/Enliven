@@ -363,8 +363,8 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
             if (!string.IsNullOrEmpty(command))
             {
                 await _commandHandlerService.ExecuteCommand(command,
-                    new ComponentCommandContext(_discordClient, callback.Interaction),
-                    callback.Interaction.User.Id.ToString());
+                    new ComponentCommandContext(_discordClient, callback.Context),
+                    callback.Context.User.Id.ToString());
             }
         });
 

@@ -13,28 +13,25 @@ namespace Bot.DiscordRelated.Interactions.Handlers;
 
 public class EmbedPlayerDisplayRestoreInteractionsHandler(
     EnlivenShardedClient client,
-    CommandHandlerService commandHandlerService) : IInteractionsHandler
-{
-    public async ValueTask<IResult?> Handle(ShardedInteractionContext context)
-    {
-        if (context.Interaction is not SocketMessageComponent socketInteraction)
+    CommandHandlerService commandHandlerService) : IInteractionsHandler {
+    public async ValueTask<IResult?> Handle(IInteractionContext context) {
+        if (context.Interaction is not IComponentInteraction socketInteraction)
             return null;
 
         if (socketInteraction.Data.CustomId != "restoreStoppedPlayer")
             return null;
 
-        var guild = (socketInteraction.Channel as IGuildChannel)?.Guild;
+        var guild = (context.Channel as IGuildChannel)?.Guild;
         if (guild == null)
             return null;
         var commandContext = new ControllableCommandContext(client)
-            { Guild = guild, Channel = socketInteraction.Channel, User = socketInteraction.User };
+            { Guild = guild, Channel = context.Channel, User = socketInteraction.User };
         var result = await commandHandlerService.ExecuteCommand("resume", commandContext, context.User.Id.ToString());
 
         if (result.IsSuccess)
             return ExecuteResult.FromSuccess();
 
-        var error = result.Error switch
-        {
+        var error = result.Error switch {
             CommandError.UnknownCommand => InteractionCommandError.UnknownCommand,
             CommandError.ParseFailed => InteractionCommandError.ParseFailed,
             CommandError.BadArgCount => InteractionCommandError.BadArgs,

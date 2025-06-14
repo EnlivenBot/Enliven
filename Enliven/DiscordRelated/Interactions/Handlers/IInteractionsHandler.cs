@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Discord;
 using Discord.Interactions;
 
 namespace Bot.DiscordRelated.Interactions.Handlers;
@@ -13,5 +14,5 @@ public interface IInteractionsHandler
     /// </summary>
     /// <param name="context">The interaction context containing the relevant information for the current operation.</param>
     /// <returns>The task result contains a result indicating the outcome of the interaction handling or null of not applicable.</returns>
-    ValueTask<IResult?> Handle(ShardedInteractionContext context);
+    ValueTask<IResult?> Handle(IInteractionContext context);
 }

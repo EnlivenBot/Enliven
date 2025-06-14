@@ -122,10 +122,10 @@ public class AdvancedMusicSearchChain : ChainBase
 
         _componentBuilder.SetCallback(async callback =>
         {
-            if (callback.Interaction.User.Id != _requester.Id)
+            if (callback.Context.User.Id != _requester.Id)
             {
                 var embed = CommandHandlerService
-                    .GetErrorEmbed(callback.Interaction.User, Loc, Loc.Get("Common.OnlyRequester", callback.Interaction.User.Mention))
+                    .GetErrorEmbed(callback.Context.User, Loc, Loc.Get("Common.OnlyRequester", callback.Context.User.Mention))
                     .Build();
                 _ = callback.Interaction.FollowupAsync(embed: embed, ephemeral: true).DelayedDelete(TimeSpan.FromSeconds(15));
                 return;

@@ -62,7 +62,7 @@ public class AdminCommands : AdvancedModuleBase {
         componentBuilder.SetCallback(async args =>
         {
             var commandExecutionResult = await CommandHandlerService.ExecuteCommand($"language {args.CustomId}",
-                new ComponentCommandContext(Context.Client, args.Interaction), args.Interaction.User.Id.ToString());
+                new ComponentCommandContext(Context.Client, args.Context), args.Context.User.Id.ToString());
             if (commandExecutionResult.IsSuccess)
                 await sentMessage.GetMessageAsync().PipeAsync(userMessage => userMessage.SafeDeleteAsync());
             componentBuilder.Dispose();

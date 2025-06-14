@@ -1,6 +1,8 @@
+using System;
 using System.Threading.Tasks;
 using Autofac;
 using Bot.DiscordRelated.Commands.Modules.Contexts;
+using Bot.DiscordRelated.Interactions.Wrappers;
 using Common.Config;
 using Common.Localization.Providers;
 using Discord;
@@ -21,14 +23,14 @@ public class AdvancedModuleBase : IModuleBase, IInteractionModuleBase, IGenericM
     public ICommonModuleContext Context { get; private set; } = null!;
 
     #region Interactions
-
-    private ICommandInfo _interactionCommandInfo = null!;
     public void SetContext(IInteractionContext context) {
-        Context = new InteractionsModuleContext(context, () => _interactionCommandInfo);
+        if (context is not EnlivenInteractionContextWrapper enlivenInteractionContextWrapper) {
+            throw new ArgumentException("Invalid interaction context type");
+        }
+        Context = new InteractionsModuleContext(enlivenInteractionContextWrapper);
     }
     /// <inheritdoc />
     public virtual async Task BeforeExecuteAsync(ICommandInfo command) {
-        _interactionCommandInfo = command;
         await Context.BeforeExecuteAsync();
     }
     /// <inheritdoc />

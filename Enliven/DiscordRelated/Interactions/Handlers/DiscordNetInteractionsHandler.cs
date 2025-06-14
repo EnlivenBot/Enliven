@@ -13,7 +13,7 @@ public class DiscordNetInteractionsHandler(
     IServiceProvider serviceProvider,
     ILogger<DiscordNetInteractionsHandler> logger) : IInteractionsHandler
 {
-    public async ValueTask<IResult?> Handle(ShardedInteractionContext context)
+    public async ValueTask<IResult?> Handle(IInteractionContext context)
     {
         var interactionSearchResult = SearchInteraction(context);
         if (!interactionSearchResult.IsSuccess)
@@ -32,13 +32,13 @@ public class DiscordNetInteractionsHandler(
             .ConfigureAwait(false);
     }
 
-    private SearchResult<ICommandInfo> SearchInteraction(ShardedInteractionContext context)
+    private SearchResult<ICommandInfo> SearchInteraction(IInteractionContext context)
     {
         return context.Interaction switch
         {
             ISlashCommandInteraction slashCommandInteraction => ParseSearchResultToCommon(
                 customInteractionService.SearchSlashCommand(slashCommandInteraction)),
-            SocketMessageComponent messageComponent => ParseSearchResultToCommon(
+            IComponentInteraction messageComponent => ParseSearchResultToCommon(
                 customInteractionService.SearchComponentCommand(messageComponent)),
             IUserCommandInteraction userCommand => ParseSearchResultToCommon(
                 customInteractionService.SearchUserCommand(userCommand)),

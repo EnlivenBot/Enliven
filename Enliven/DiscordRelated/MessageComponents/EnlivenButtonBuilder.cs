@@ -26,7 +26,7 @@ public class EnlivenButtonBuilder : ButtonBuilder {
     /// <summary>
     /// This delegate would be called if user press this button
     /// </summary>
-    public Func<SocketMessageComponent, ValueTask>? Callback { get; set; }
+    public Func<IInteractionContext, ValueTask>? Callback { get; set; }
 
     public EnlivenButtonBuilder WithIsVisible(bool isVisible) {
         IsVisible = isVisible;
@@ -42,7 +42,7 @@ public class EnlivenButtonBuilder : ButtonBuilder {
         return this;
     }
 
-    public EnlivenButtonBuilder WithCallback(Func<SocketMessageComponent, ValueTask>? callback) {
+    public EnlivenButtonBuilder WithCallback(Func<IInteractionContext, ValueTask>? callback) {
         Callback = callback;
         return this;
     }

@@ -4,15 +4,12 @@ using Discord.WebSocket;
 namespace Bot.DiscordRelated.Commands;
 
 public class ComponentCommandContext : ControllableCommandContext {
-    public ComponentCommandContext(IDiscordClient client, SocketMessageComponent component) : base(client) {
+    public ComponentCommandContext(IDiscordClient client, IInteractionContext component) : base(client) {
         Component = component;
         User = component.User;
-        if (component is SocketMessageComponent socketMessageComponent)
-        {
-            Channel = socketMessageComponent.Channel;
-            if (socketMessageComponent.Channel is SocketTextChannel channel)
-                Guild = channel.Guild;
-        }
+        Channel = component.Channel;
+        Guild = component.Guild;
     }
-    public SocketMessageComponent Component { get; }
+
+    public IInteractionContext Component { get; }
 }

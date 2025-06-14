@@ -146,8 +146,8 @@ public partial class PaginatedMessage : DisposableBase {
                 _ = callback.Interaction.FollowupAsync(Options.InformationText).DelayedDelete(Options.InfoTimeout);
                 break;
             case "Jump":
-                _collectorService.CollectMessage(callback.Interaction.Channel, 
-                    message => message.Author.Id == callback.Interaction.User.Id, 
+                _collectorService.CollectMessage(callback.Context.Channel, 
+                    message => message.Author.Id == callback.Context.User.Id, 
                     async eventArgs => {
                     eventArgs.StopCollect();
                     if (!int.TryParse(eventArgs.Message.Content, out var result)) return;

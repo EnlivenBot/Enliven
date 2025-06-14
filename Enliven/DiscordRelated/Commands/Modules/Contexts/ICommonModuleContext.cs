@@ -25,7 +25,6 @@ public interface ICommonModuleContext {
     IUser User { get; }
 
     bool NeedResponse { get; }
-    bool HasMeaningResponseSent { get; }
     bool CanSendEphemeral { get; }
 
     public ValueTask BeforeExecuteAsync();

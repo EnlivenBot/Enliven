@@ -93,7 +93,7 @@ public class EmbedPlayerEffectsDisplay : PlayerDisplayBase
         _disposable.Add(_updateControlMessageTask);
     }
 
-    private async ValueTask AddEffect(SocketMessageComponent interaction, IPlayerEffectSource playerEffectSource)
+    private async ValueTask AddEffect(IInteractionContext interaction, IPlayerEffectSource playerEffectSource)
     {
         Debug.Assert(Player is not null);
         var effects = Player.Effects;
@@ -157,7 +157,7 @@ public class EmbedPlayerEffectsDisplay : PlayerDisplayBase
         _updateControlMessageTask.Execute();
         return;
 
-        Func<SocketMessageComponent, ValueTask> GetRemoveButtonCallback(int i)
+        Func<IInteractionContext, ValueTask> GetRemoveButtonCallback(int i)
         {
             var playerEffectUse = effects[i];
             return async component => { await Player.RemoveEffect(playerEffectUse, component.User); };

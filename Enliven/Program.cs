@@ -75,7 +75,6 @@ TaskScheduler.UnobservedTaskException += (_, args) =>
 Directory.CreateDirectory("Config");
 LocalizationManager.Initialize();
 
-Log.Logger.Information("My awesome log from {Date}, {Time}", DateTime.Now, DateTime.Now);
 app.MapGet("/", () => "Enliven web host started");
 var endpointProviders = app.Services.GetServices<IEndpointProvider>();
 await Task.WhenAll(endpointProviders.Select(provider => provider.ConfigureEndpoints(app)));

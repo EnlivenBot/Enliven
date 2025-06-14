@@ -14,18 +14,15 @@ using Microsoft.Extensions.Logging;
 
 namespace Bot.DiscordRelated.Interactions.Handlers;
 
-public class MessageComponentInteractionsHandler : IInteractionsHandler {
+public class MessageComponentInteractionsHandler(ILogger<MessageComponentInteractionsHandler> logger)
+    : IInteractionsHandler {
     private readonly ConcurrentDictionary<string, List<MessageComponentInteractionsRegistration>> _messageComponentHandlers = new();
-    private readonly ILogger<MessageComponentInteractionsHandler> _logger;
-    public MessageComponentInteractionsHandler(ILogger<MessageComponentInteractionsHandler> logger) {
-        _logger = logger;
-    }
-    
+
     public EnlivenComponentBuilder GetBuilder() {
         return new EnlivenComponentBuilder(this);
     }
 
-    public IDisposable RegisterMessageComponent(string id, Func<SocketMessageComponent, ValueTask> onComponentUse)
+    public IDisposable RegisterMessageComponent(string id, Func<IInteractionContext, ValueTask> onComponentUse)
     {
         var registration = _messageComponentHandlers.GetOrAdd(id, _ => []);
         var componentInteractionsRegistration = new MessageComponentInteractionsRegistration(onComponentUse);
@@ -41,9 +38,9 @@ public class MessageComponentInteractionsHandler : IInteractionsHandler {
         });
     }
 
-    public async ValueTask<IResult?> Handle(ShardedInteractionContext context)
+    public async ValueTask<IResult?> Handle(IInteractionContext context)
     {
-        if (context.Interaction is not SocketMessageComponent messageComponent)
+        if (context.Interaction is not IComponentInteraction messageComponent)
         {
             return null;
         }
@@ -56,7 +53,7 @@ public class MessageComponentInteractionsHandler : IInteractionsHandler {
         try
         {
             await handlersList
-                .Select(registration => registration.HandleAsync(messageComponent, _logger))
+                .Select(registration => registration.HandleAsync(context, logger))
                 .WhenAll();
 
             return ExecuteResult.FromSuccess();
@@ -67,11 +64,11 @@ public class MessageComponentInteractionsHandler : IInteractionsHandler {
         }
     }
     
-    private class MessageComponentInteractionsRegistration(Func<SocketMessageComponent, ValueTask> action)
+    private class MessageComponentInteractionsRegistration(Func<IInteractionContext, ValueTask> action)
     {
         private readonly string _stackTrace = new StackTrace(1).ToString();
 
-        public async Task HandleAsync(SocketMessageComponent interaction, ILogger logger)
+        public async Task HandleAsync(IInteractionContext interaction, ILogger logger)
         {
             try {
                 await action(interaction);

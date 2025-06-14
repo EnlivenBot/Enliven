@@ -5,11 +5,8 @@ using Discord.Commands;
 
 namespace Bot.DiscordRelated.Commands.Modules.Contexts;
 
-public class TextCommandsModuleContext : ICommonModuleContext, ICommandContext {
-    public TextCommandsModuleContext(ICommandContext originalContext) {
-        OriginalContext = originalContext;
-    }
-    public ICommandContext OriginalContext { get; }
+public class TextCommandsModuleContext(ICommandContext originalContext) : ICommonModuleContext, ICommandContext {
+    public ICommandContext OriginalContext { get; } = originalContext;
     public IUserMessage Message => OriginalContext.Message;
 
     public IDiscordClient Client => OriginalContext.Client;
@@ -17,7 +14,6 @@ public class TextCommandsModuleContext : ICommonModuleContext, ICommandContext {
     public IMessageChannel Channel => OriginalContext.Channel;
     public IUser User => OriginalContext.User;
     public bool NeedResponse => false;
-    public bool HasMeaningResponseSent { get; private set; }
     public bool CanSendEphemeral => false;
 
     public ValueTask BeforeExecuteAsync() {
@@ -30,7 +26,6 @@ public class TextCommandsModuleContext : ICommonModuleContext, ICommandContext {
     }
 
     public Task<SentMessage> SendMessageAsync(string? text, Embed[]? embeds, bool ephemeral = false, MessageComponent? components = null) {
-        HasMeaningResponseSent = true;
         return Channel.SendMessageAsync(text, embeds: embeds, components: components)
             .PipeAsync(message => new SentMessage(message, false));
     }
