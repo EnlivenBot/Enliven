@@ -94,7 +94,7 @@ public sealed class InteractionsHandlerService(
     }
 
     private void SetupAutoDefer(EnlivenInteractionContextWrapper context, Activity? activity) {
-        var delayBeforeLoading = DateTime.Now - (context.Interaction.CreatedAt + TimeSpan.FromSeconds(2));
+        var delayBeforeLoading = context.Interaction.CreatedAt + TimeSpan.FromSeconds(2) - DateTimeOffset.Now;
         if (delayBeforeLoading <= TimeSpan.Zero) {
             _ = DeferIfNeeded();
             return;
@@ -104,7 +104,7 @@ public sealed class InteractionsHandlerService(
 
         async Task DeferIfNeeded() {
             if (context.Interaction.HasResponded) return;
-            if (DateTimeOffset.Now > context.Interaction.CreatedAt + TimeSpan.FromSeconds(2.7)) return;
+            if (DateTimeOffset.Now > context.Interaction.CreatedAt + TimeSpan.FromSeconds(2.9)) return;
             var previousActivity = Activity.Current;
             Activity.Current = activity;
             try {

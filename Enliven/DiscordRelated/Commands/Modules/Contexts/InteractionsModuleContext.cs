@@ -4,15 +4,13 @@ using Discord;
 
 namespace Bot.DiscordRelated.Commands.Modules.Contexts;
 
-public class InteractionsModuleContext(IEnlivenInteractionContext context)
-    : ICommonModuleContext {
+public record InteractionsModuleContext(IEnlivenInteractionContext Context) : ICommonModuleContext {
+    public IDiscordClient Client => Context.Client;
+    public IGuild Guild => Context.Guild;
+    public IMessageChannel Channel => Context.Channel;
+    public IUser User => Context.User;
 
-    public IDiscordClient Client => context.Client;
-    public IGuild Guild => context.Guild;
-    public IMessageChannel Channel => context.Channel;
-    public IUser User => context.User;
-
-    public bool NeedResponse => context.Interaction.NeedResponse;
+    public bool NeedResponse => Context.Interaction.NeedResponse;
     public bool CanSendEphemeral => true;
 
     public ValueTask BeforeExecuteAsync() {
@@ -25,20 +23,20 @@ public class InteractionsModuleContext(IEnlivenInteractionContext context)
 
     public async Task<SentMessage> SendMessageAsync(string? text, Embed[]? embeds, bool ephemeral = false, MessageComponent? components = null) {
         // No loading and no responded
-        if (context.Interaction.NeedResponse) {
-            await context.Interaction.RespondAsync(text, embeds, ephemeral: ephemeral, components: components);
-            return new SentMessage(() => context.Interaction.GetOriginalResponseAsync(), ephemeral);
+        if (Context.Interaction.NeedResponse) {
+            await Context.Interaction.RespondAsync(text, embeds, ephemeral: ephemeral, components: components);
+            return new SentMessage(() => Context.Interaction.GetOriginalResponseAsync(), ephemeral);
         }
         // Only loading sent
-        if (context.Interaction.CurrentResponseDeferred) {
-            var message0 = await context.Interaction.ModifyOriginalResponseAsync(properties => {
+        if (Context.Interaction.CurrentResponseDeferred) {
+            var message0 = await Context.Interaction.ModifyOriginalResponseAsync(properties => {
                 properties.Content = text ?? Optional<string>.Unspecified;
                 properties.Components = components ?? Optional<MessageComponent>.Unspecified;
                 properties.Embeds = embeds ?? Optional<Embed[]>.Unspecified;
             });
             return new SentMessage(message0, false);
         }
-        var message1 = await context.Interaction.FollowupAsync(text, embeds, ephemeral: ephemeral, components: components);
+        var message1 = await Context.Interaction.FollowupAsync(text, embeds, ephemeral: ephemeral, components: components);
         return new SentMessage(message1, ephemeral);
     }
 }
