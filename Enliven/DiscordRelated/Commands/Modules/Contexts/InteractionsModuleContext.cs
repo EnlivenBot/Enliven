@@ -4,7 +4,7 @@ using Discord;
 
 namespace Bot.DiscordRelated.Commands.Modules.Contexts;
 
-public class InteractionsModuleContext(EnlivenInteractionContextWrapper context)
+public class InteractionsModuleContext(IEnlivenInteractionContext context)
     : ICommonModuleContext {
 
     public IDiscordClient Client => context.Client;

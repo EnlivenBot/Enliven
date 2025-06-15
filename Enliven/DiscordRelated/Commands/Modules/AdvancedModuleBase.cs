@@ -24,7 +24,7 @@ public class AdvancedModuleBase : IModuleBase, IInteractionModuleBase, IGenericM
 
     #region Interactions
     public void SetContext(IInteractionContext context) {
-        if (context is not EnlivenInteractionContextWrapper enlivenInteractionContextWrapper) {
+        if (context is not IEnlivenInteractionContext enlivenInteractionContextWrapper) {
             throw new ArgumentException("Invalid interaction context type");
         }
         Context = new InteractionsModuleContext(enlivenInteractionContextWrapper);
@@ -52,6 +52,11 @@ public class AdvancedModuleBase : IModuleBase, IInteractionModuleBase, IGenericM
 
     /// <inheritdoc />
     public void SetContext(ICommandContext context) {
+        // If there is an interactions context, use it
+        if (context is IInteractionContext interactionContext) {
+            SetContext(interactionContext);
+            return;
+        }
         Context = new TextCommandsModuleContext(context);
     }
     public virtual async Task BeforeExecuteAsync(CommandInfo command) {
@@ -60,7 +65,7 @@ public class AdvancedModuleBase : IModuleBase, IInteractionModuleBase, IGenericM
     /// <inheritdoc />
     public void BeforeExecute(CommandInfo command) { }
     public virtual async Task AfterExecuteAsync(CommandInfo command) {
-        await Context.BeforeExecuteAsync();
+        await Context.AfterExecuteAsync();
     }
     /// <inheritdoc />
     public void AfterExecute(CommandInfo command) { }

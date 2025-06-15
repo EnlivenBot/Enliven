@@ -3,7 +3,7 @@
 namespace Bot.DiscordRelated.Interactions.Wrappers;
 
 public class EnlivenInteractionContextWrapper(IInteractionContext context, IEnlivenInteraction interaction)
-    : IInteractionContext {
+    : IInteractionContext, IEnlivenInteractionContext {
     public IDiscordClient Client => context.Client;
 
     public IGuild Guild => context.Guild;
