@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
@@ -59,9 +60,10 @@ public class EnlivenBotWrapper
         {
             var lifetimeScope = container.BeginLifetimeScope(Constants.BotLifetimeScopeTag, ConfigureBotLifetime);
             var logger = lifetimeScope.Resolve<ILogger<EnlivenBotWrapper>>();
-            lifetimeScope.CurrentScopeEnding += (sender, eventArgs) =>
-            {
-                logger.LogCritical(new Exception(), "SOMEONE {Sender} DISPOSED BOT ILifetimeScope", sender);
+            lifetimeScope.CurrentScopeEnding += (sender, eventArgs) => {
+                var exception = new Exception();
+                exception = ExceptionDispatchInfo.SetCurrentStackTrace(exception);
+                logger.LogCritical(exception, "SOMEONE {Sender} DISPOSED BOT ILifetimeScope", sender);
             };
             try
             {

@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
@@ -59,7 +60,9 @@ app.UseSerilogRequestLogging();
 var requiredService = app.Services.GetRequiredService<ILifetimeScope>();
 requiredService.CurrentScopeEnding += (sender, eventArgs) =>
 {
-    app.Logger.LogCritical(new Exception(), "SOMEONE {Sender} DISPOSED ROOT ILifetimeScope", sender);
+    var exception = new Exception();
+    exception = ExceptionDispatchInfo.SetCurrentStackTrace(exception);
+    app.Logger.LogCritical(exception, "SOMEONE {Sender} DISPOSED ROOT ILifetimeScope", sender);
 };
 
 StaticLogger.Setup(app.Services.GetRequiredService<ILoggerFactory>());
