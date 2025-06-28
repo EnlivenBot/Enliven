@@ -83,7 +83,34 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
     {
         await base.NotifyTrackEndedAsync(track, endReason, cancellationToken);
 
-        if (endReason is TrackEndReason.Replaced or TrackEndReason.LoadFailed) return;
+        if (endReason is TrackEndReason.Replaced) return;
+
+        if (endReason is TrackEndReason.LoadFailed) {
+            var enlivenItem = track.As<IEnlivenQueueItem>() ?? CurrentItem;
+            if (enlivenItem != null)
+            {
+                enlivenItem.PlaybackExceptionCount++;
+                if (enlivenItem.PlaybackExceptionCount > 2)
+                {
+                    if (Playlist.Count - CurrentTrackIndex > 1)
+                    {
+                        await SkipAsync(1, true);
+                    }
+                }
+                else
+                {
+                    var currentPosition = Position?.Position;
+                    if (currentPosition is not null && currentPosition.Value.TotalSeconds < 10)
+                    {
+                        currentPosition = null;
+                    }
+
+                    await PlayAsync(enlivenItem, new TrackPlayProperties(currentPosition), cancellationToken);
+                }
+                
+                return;
+            }
+        }
 
         await SkipAsync();
     }
@@ -94,28 +121,6 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
         await base.NotifyTrackExceptionAsync(track, exception, cancellationToken);
 
         WriteToQueueHistory(new EntryLocalized("Music.TrackException", exception.Format()));
-        var enlivenItem = track.As<IEnlivenQueueItem>() ?? CurrentItem;
-        if (enlivenItem != null)
-        {
-            enlivenItem.PlaybackExceptionCount++;
-            if (enlivenItem.PlaybackExceptionCount > 2)
-            {
-                if (Playlist.Count - CurrentTrackIndex > 1)
-                {
-                    await SkipAsync(1, true);
-                }
-            }
-            else
-            {
-                var currentPosition = Position?.Position;
-                if (currentPosition is not null && currentPosition.Value.TotalSeconds < 10)
-                {
-                    currentPosition = null;
-                }
-
-                await PlayAsync(enlivenItem, new TrackPlayProperties(currentPosition), cancellationToken);
-            }
-        }
     }
 
     protected override async ValueTask NotifyTrackStuckAsync(ITrackQueueItem track, TimeSpan threshold,
