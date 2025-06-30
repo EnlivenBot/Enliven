@@ -345,6 +345,7 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
         _messageComponentManager.WithButton(btnTemplate.Clone().WithEmote(CommonEmoji.E).WithCustomId("Effects"));
         _messageComponentManager.SetCallback(async callback =>
         {
+            Debug.Assert(Player is not null);
             var command = callback.CustomId switch
             {
                 "TrackPrevious" => (Player.Position?.Position.TotalSeconds ?? 0) > 15 ? "seek 0s" : "skip -1",

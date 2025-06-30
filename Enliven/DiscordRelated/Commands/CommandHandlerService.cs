@@ -68,10 +68,8 @@ public class CommandHandlerService : IService
         var hasMentionPrefix = HasMentionPrefix(msg, _client.CurrentUser, ref argPos);
         var isDedicatedMusicChannel = IsDedicatedMusicChannel(msg, guildConfig);
 
-        var isCommand = false;
         if (hasStringPrefix || hasMentionPrefix || isDedicatedMusicChannel)
         {
-            isCommand = true;
             var query = msg.Content.Try(s1 => s1.Substring(argPos), "");
             if (string.IsNullOrEmpty(query)) query = " ";
             if (string.IsNullOrWhiteSpace(query) && hasMentionPrefix) query = "help";
