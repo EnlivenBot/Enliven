@@ -28,7 +28,6 @@ public class HelpCommand : AdvancedModuleBase {
                     Name = pair.Value.GroupNameTemplate.Format(Loc.Get($"Groups.{pair.Key}")),
                     Value = pair.Value.GroupTextTemplate
                 }));
-        eb.AddField(Loc.Get("Common.Vote"), Loc.Get("Common.VoteDescription"));
         await Context.SendMessageAsync(null, eb.Build()).CleanupAfter(Constants.LongTimeSpan);
     }
 

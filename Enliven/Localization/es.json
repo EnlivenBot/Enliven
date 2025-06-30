@@ -53,10 +53,10 @@
       "NothingPlaying": "Nada en reproducción. {loc:Music.RequestTracks}",
       "Fail": "Error",
       "Playback": "Reproducción",
-      "UserStopPlayback": "**{0}** ha detenido la reproducción {loc:Common.HelpByVote}",
+      "UserStopPlayback": "**{0}** ha detenido la reproducción",
       "PlaybackStopped": "Reproducción detenida",
-      "NoListenersLeft": "Reproducción detenida - no quedan oyentes o canciones {loc:Common.HelpByVote}",
-      "BotKicked": "Reproducción detenida - el bot fue desconectado del canal por alguien {loc:Common.HelpByVote}",
+      "NoListenersLeft": "Reproducción detenida - no quedan oyentes o canciones",
+      "BotKicked": "Reproducción detenida - el bot fue desconectado del canal por alguien",
       "NotFound": "No hay resultados de: `{0}`",
       "Loading": "Cargando",
       "Queue": "Cola - `{0}` de `{1}`  (Total: `{2}`)",
@@ -274,16 +274,13 @@
     "Common": {
       "Invite": "Invitación",
       "InviteDescription": "Abre este perfil de bot y usa el botón \"Añadir al servidor\" para invitar al bot a otro servidor. ¡Espero verte allí! 😀\nTambién puedes encontrar un enlace de invitación en [nuestro GitLab](https://gitlab.com/enlivenbot/enlivenven)",
-      "Vote": "**Ayúdanos**",
-      "VoteDescription": "Puedes ayudarnos **gratis** en:\n[top.gg](https://top.gg/bot/606760964183949314) (vota [1 voto cada 12 horas] o escribe un comentario)\n[discordbotlist.com](https://discordbotlist.com/bots/enliven) (vota [1 voto cada 12 horas])\n[bots.ondiscord.xyz](https://bots.ondiscord.xyz/bots/606760964183949314) (escribe un comentario)\n O visítanos en [discord.bots.gg](https://discord.bots.gg/bots/606760964183949314)\n\nNo te olvides de [nuestro GitLab](https://gitlab.com/enlivenbot/enliven), donde puedes enviar errores y sugerencias (en inglés/ruso)\nPuedes unirte también a nuestro [Discord de soporte](https://discord.gg/zfBffbBbCp)",
       "All": "Todo",
       "Stop": "Detener",
-      "OnlyRequester": "Sólo el solicitante ({0}) puede interactuar con este componente",
-      "HelpByVote": "\n\nAyúdanos votando (`/vote`)"
+      "OnlyRequester": "Sólo el solicitante ({0}) puede interactuar con este componente"
     },
     "ChainsCommon": {
       "Ended": "Completado",
-      "Thanks": "La cadena de comandos actual se ha completado.\nGracias por usar este bot. {loc:Common.HelpByVote}",
+      "Thanks": "La cadena de comandos actual se ha completado.\nGracias por usar este bot.",
       "ReasonStartedNew": "La cadena de comandos actual ha sido completada, lanzando una nueva.",
       "ReasonTimeout": "La cadena de comandos actual ha sido detenida debido a un timeout",
       "CantSend": "No puedo completar la acción en {0} porque no tengo los permisos necesarios"

@@ -53,10 +53,10 @@
       "NothingPlaying": "Nothing playing. {loc:Music.RequestTracks}",
       "Fail": "Error",
       "Playback": "Playback",
-      "UserStopPlayback": "**{0}** stopped playback {loc:Common.HelpByVote}",
+      "UserStopPlayback": "**{0}** stopped playback",
       "PlaybackStopped": "Playback stopped",
-      "NoListenersLeft": "Playback stopped - no listeners or tracks left {loc:Common.HelpByVote}",
-      "BotKicked": "Playback stopped - the bot was disconnected from the channel by someone {loc:Common.HelpByVote}",
+      "NoListenersLeft": "Playback stopped - no listeners or tracks left",
+      "BotKicked": "Playback stopped - the bot was disconnected from the channel by someone",
       "NotFound": "No results for `{0}`",
       "Loading": "Loading",
       "Queue": "Queue - `{0}` of `{1}`  (`{2}` total)",
@@ -275,16 +275,13 @@
     "Common": {
       "Invite": "Invite",
       "InviteDescription": "Open this bot profile and use \"Add to server\" button for inviting the bot to another server. Hope to see you there! 😀\nOr you can find invite link on [out GitLab](https://gitlab.com/enlivenbot/enliven)",
-      "Vote": "**Support Us**",
-      "VoteDescription": "You can **freely** support us on:\n[top.gg](https://top.gg/bot/606760964183949314) (voting every 12 hours, write a review)\n[discordbotlist.com](https://discordbotlist.com/bots/enliven) (vote every 12 hours)\n[bots.ondiscord.xyz](https://bots.ondiscord.xyz/bots/606760964183949314) (write a review)\n Or you can just look at [discord.bots.gg](https://discord.bots.gg/bots/606760964183949314)\n\nDo not forget about [our GitLab](https://gitlab.com/enlivenbot/enliven), where you can write errors and suggestions\nAlso, you can join our [Discord support server](https://discord.gg/zfBffbBbCp)",
       "All": "All",
       "Stop": "Stop",
-      "OnlyRequester": "Only the requester ({0}) can interact with this component",
-      "HelpByVote": "\n\nHelp us by voting (`/vote`)"
+      "OnlyRequester": "Only the requester ({0}) can interact with this component"
     },
     "ChainsCommon": {
       "Ended": "Completed",
-      "Thanks": "The current command chain has been completed.\nThanks for using this bot. {loc:Common.HelpByVote}",
+      "Thanks": "The current command chain has been completed.\nThanks for using this bot.",
       "ReasonStartedNew": "The current chain of commands has been terminated, as a new one has been launched.",
       "ReasonTimeout": "The current command chain ended because the timeout limit was reached",
       "CantSend": "We cannot complete this action in {0} because we do not have the necessary permissions"
