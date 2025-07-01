@@ -51,6 +51,7 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
     private DateTimeOffset _syncedAt;
     private ulong _trackVersion;
     private TimeSpan _unstretchedRelativePosition;
+    private PlayerState _state;
 
     public LavalinkPlayer(IPlayerProperties<LavalinkPlayer, LavalinkPlayerOptions> properties)
     {
@@ -137,7 +138,16 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
         }
     }
 
-    public PlayerState State { get; private set; }
+    public PlayerState State {
+        get => _state;
+        private set {
+            if (_state == value)
+                return;
+            var oldState = _state;
+            _state = value;
+            NotifyStateChanged(oldState, value);
+        }
+    }
 
     public ulong VoiceChannelId { get; private set; }
 
@@ -531,6 +541,8 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
         }
 #endif
     }
+
+    protected virtual void NotifyStateChanged(PlayerState oldState, PlayerState newState) { }
 
     protected virtual ValueTask NotifyWebSocketClosedAsync(WebSocketCloseStatus closeStatus, string reason,
         bool byRemote = false, CancellationToken cancellationToken = default)

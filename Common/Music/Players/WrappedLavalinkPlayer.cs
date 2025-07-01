@@ -66,7 +66,6 @@ public class WrappedLavalinkPlayer : LavalinkPlayer
         using var _ = CreateActivity(nameof(PauseAsync), "LavalinkPlayer pausing");
 
         await base.PauseAsync(cancellationToken);
-        _stateChanged.OnNext(State);
     }
 
     public override async ValueTask ResumeAsync(CancellationToken cancellationToken = new())
@@ -74,21 +73,18 @@ public class WrappedLavalinkPlayer : LavalinkPlayer
         using var _ = CreateActivity(nameof(ResumeAsync), "LavalinkPlayer resuming");
 
         await base.ResumeAsync(cancellationToken);
-        _stateChanged.OnNext(State);
     }
 
     protected override async ValueTask NotifyTrackStartedAsync(ITrackQueueItem track,
         CancellationToken cancellationToken = new())
     {
         await base.NotifyTrackStartedAsync(track, cancellationToken);
-        _stateChanged.OnNext(State);
     }
 
     protected override async ValueTask NotifyTrackEndedAsync(ITrackQueueItem track, TrackEndReason endReason,
         CancellationToken cancellationToken = new())
     {
         await base.NotifyTrackEndedAsync(track, endReason, cancellationToken);
-        _stateChanged.OnNext(State);
     }
 
     public virtual ValueTask PlayAsync(IEnlivenQueueItem trackQueueItem, TrackPlayProperties properties = new(),
@@ -101,5 +97,10 @@ public class WrappedLavalinkPlayer : LavalinkPlayer
         CancellationToken cancellationToken = new())
     {
         return base.PlayAsync(trackQueueItem, properties, cancellationToken);
+    }
+
+    protected override void NotifyStateChanged(PlayerState oldState, PlayerState newState) {
+        base.NotifyStateChanged(oldState, newState);
+        _stateChanged.OnNext(newState);
     }
 }
