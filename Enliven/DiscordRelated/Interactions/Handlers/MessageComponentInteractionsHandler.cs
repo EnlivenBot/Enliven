@@ -53,6 +53,7 @@ public class MessageComponentInteractionsHandler(ILogger<MessageComponentInterac
         try
         {
             await handlersList
+                .ToList()
                 .Select(registration => registration.HandleAsync(context, logger))
                 .WhenAll();
 
