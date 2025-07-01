@@ -224,6 +224,7 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
     {
         base.ExecuteShutdown(header, body);
         var oldCts = Interlocked.Exchange(ref _cancellationTokenSource, null);
+        // ReSharper disable once MethodHasAsyncOverload
         oldCts?.Cancel();
         var message = _controlMessage;
         _controlMessage = null;
@@ -278,7 +279,7 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
                 .Select(_ => Unit.Default)
                 .Subscribe(updateControlMessageSubj),
             newPlayer.FiltersChanged.Subscribe(_ => UpdateEffects()),
-            newPlayer.CurrentTrackIndexChanged.Subscribe(OnCurrentTrackIndex),
+            newPlayer.CurrentTrackIndexChanged.Subscribe(OnCurrentTrackIndexChanged),
             newPlayer.LoopingStateChanged.Subscribe(OnLoopingStateChanged)
         );
 
@@ -292,8 +293,9 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
         await ControlMessageResend();
         return;
         
-        void OnCurrentTrackIndex(int _)
+        void OnCurrentTrackIndexChanged(int _)
         {
+            UpdateProgress();
             UpdateTrackInfo();
             UpdateQueue();
         }
@@ -417,13 +419,13 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
     public void UpdateProgress(bool background = false)
     {
         Debug.Assert(Player is not null);
-        if (Player.CurrentTrack != null)
-        {
+        if (Player.CurrentItem != null) {
+            var track = Player.CurrentItem.Track;
             _embedBuilder.Fields["State"].Name = _loc.Get("Music.RequestedBy")
                 .Format(Player.CurrentItem?.Requester.ToString(false));
 
             var progressPercentage = Convert.ToInt32(Player.Position?.Position.TotalSeconds /
-                Player.CurrentTrack.Duration.TotalSeconds * 100);
+                track.Duration.TotalSeconds * 100);
             var emojiPack = _isExternalEmojiAllowed ? ProgressEmoji.CustomEmojiPack : ProgressEmoji.TextEmojiPack;
             var progressBar = emojiPack.GetProgress(progressPercentage);
 
@@ -440,19 +442,19 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
                 LoopingState.Off => _isExternalEmojiAllowed ? CommonEmojiStrings.Instance.RepeatOff : "❌",
                 _ => throw new InvalidEnumArgumentException()
             };
-            var needCustomSourceEmoji = Player.CurrentTrack is ITrackHasCustomSource && _isExternalEmojiAllowed;
+            var needCustomSourceEmoji = track is ITrackHasCustomSource && _isExternalEmojiAllowed;
             var sb = new StringBuilder(Player.Position?.Position.FormattedToString());
-            if (Player.CurrentTrack.IsSeekable)
+            if (track.IsSeekable)
             {
                 sb.Append(" / ");
-                sb.Append(Player.CurrentTrack.Duration.FormattedToString());
+                sb.Append(track.Duration.FormattedToString());
             }
 
             var space = new string(' ', Math.Max(0, ((needCustomSourceEmoji ? 18 : 22) - sb.Length) / 2));
             var detailsBar = stateString + '`' + space + sb + space + '`' + loopingStateString;
             if (needCustomSourceEmoji)
             {
-                var customSourceTrack = (ITrackHasCustomSource)Player.CurrentTrack;
+                var customSourceTrack = (ITrackHasCustomSource)track;
                 detailsBar += $"[{customSourceTrack.CustomSourceEmote}]({customSourceTrack.CustomSourceUrl})";
             }
 
@@ -468,28 +470,28 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
     private async Task UpdateTrackInfo()
     {
         Debug.Assert(Player is not null);
-        var track = Player.CurrentTrack;
+        var track = Player.CurrentItem?.Track;
         if (Player.CurrentTrackIndex >= Player.Playlist.Count && Player.Playlist.Count != 0)
         {
             _embedBuilder.Author = new EmbedAuthorBuilder();
             _embedBuilder.Title = _loc.Get("Music.QueueEnd");
             _embedBuilder.Url = "";
+            return;
         }
-        else if (track != null && Player.State is not (PlayerState.NotPlaying or PlayerState.Destroyed))
-        {
-            var artwork = await track.ResolveArtwork(_artworkService);
-            _embedBuilder
-                .WithAuthor(track!.Author.SafeSubstring(TrackAuthorMaxLength, "...").IsBlank("Unknown"),
-                    artwork?.ToString())
-                .WithTitle(track.Title.RemoveNonPrintableChars().SafeSubstring(TrackTitleMaxLength, "...")!)
-                .WithUrl(track.Uri?.ToString()!);
-        }
-        else
-        {
+
+        if (track == null || Player.State is PlayerState.NotPlaying or PlayerState.Destroyed) {
             _embedBuilder.Author = new EmbedAuthorBuilder();
             _embedBuilder.Title = _loc.Get("Music.Waiting");
             _embedBuilder.Url = "";
+            return;
         }
+
+        var artwork = await track.ResolveArtwork(_artworkService);
+        _embedBuilder
+            .WithAuthor(track!.Author.SafeSubstring(TrackAuthorMaxLength, "...").IsBlank("Unknown"),
+                artwork?.ToString())
+            .WithTitle(track.Title.RemoveNonPrintableChars().SafeSubstring(TrackTitleMaxLength, "...")!)
+            .WithUrl(track.Uri?.ToString()!);
     }
 
     private void UpdateEffects()
@@ -498,6 +500,7 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
         var effectsText = ProcessEffectsText(Player.Effects);
         _embedBuilder.Fields["Effects"].Value = effectsText.Or("Placeholder");
         _embedBuilder.Fields["Effects"].IsEnabled = !effectsText.IsNullOrWhiteSpace();
+        return;
 
         string ProcessEffectsText(IReadOnlyList<PlayerEffectUse> effects)
         {
@@ -524,7 +527,7 @@ public class EmbedPlayerDisplay : PlayerDisplayBase
     {
         Debug.Assert(Player is not null);
         var volume = (int)(Player.Volume * 200);
-        var volumeText = volume < 50 || volume > 150 ? $"🔉 ***{volume}%***\n" : $"🔉 {volume}%";
+        var volumeText = volume is < 50 or > 150 ? $"🔉 ***{volume}%***\n" : $"🔉 {volume}%";
         _embedBuilder.Fields["Parameters"].Value = volumeText + _effectsInParameters;
     }
 
