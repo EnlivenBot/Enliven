@@ -79,15 +79,24 @@ public record YandexLavalinkTrack : LavalinkTrack, ITrackHasArtwork, ITrackHasCu
 
     private async Task<string> GetDirectUrl(long id)
     {
-        if (UrlCache.TryGetValue(id, out var url))
-        {
-            var isUrlAccessibleResponse = await HttpClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, url));
-            if (isUrlAccessibleResponse.IsSuccessStatusCode)
-                return url;
+        if (UrlCache.TryGetValue(id, out var url)) {
+            var returnedUrl = await CheckUrl(url);
+            if (returnedUrl != null) {
+                return returnedUrl;
+            }
         }
 
         var directUrl = await _directUrlLoader.GetDirectUrl(id);
         UrlCache[id] = directUrl;
-        return directUrl;
+        return await CheckUrl(directUrl) ?? "YM INVALID LINK";
+    }
+
+    private async Task<string?> CheckUrl(string urlToCheck) {
+        var isUrlAccessibleResponse = await HttpClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, urlToCheck));
+        if (isUrlAccessibleResponse.IsSuccessStatusCode)
+            return isUrlAccessibleResponse.RequestMessage?.RequestUri?.ToString()
+                   ?? urlToCheck;
+
+        return null;
     }
 }
