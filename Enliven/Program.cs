@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
 using System.Net.Http;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
@@ -10,7 +9,7 @@ using Bot;
 using Bot.DiscordRelated.Commands;
 using Bot.Music.Deezer;
 using Bot.Music.Spotify;
-using Bot.Utilities;
+using Bot.Music.Vk;
 using Bot.Utilities.Logging;
 using Common;
 using Common.Config;
@@ -23,7 +22,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
-using SerilogTracing;
 
 var builder = WebApplication.CreateBuilder(args)
     .AddServiceDefaults();
@@ -32,8 +30,7 @@ var builder = WebApplication.CreateBuilder(args)
 
 builder.Host
     .UseServiceProviderFactory(new AutofacServiceProviderFactory())
-    .ConfigureServices(services =>
-    {
+    .ConfigureServices(services => {
         services.AddSerilog((s, lc) => lc
             .ReadFrom.Configuration(builder.Configuration)
             .ReadFrom.CustomLogLevelFromConfiguration(builder.Configuration)
@@ -58,8 +55,7 @@ builder.Host
 var app = builder.Build();
 app.UseSerilogRequestLogging();
 var requiredService = app.Services.GetRequiredService<ILifetimeScope>();
-requiredService.CurrentScopeEnding += (sender, eventArgs) =>
-{
+requiredService.CurrentScopeEnding += (sender, eventArgs) => {
     var exception = new Exception();
     exception = ExceptionDispatchInfo.SetCurrentStackTrace(exception);
     app.Logger.LogCritical(exception, "SOMEONE {Sender} DISPOSED ROOT ILifetimeScope", sender);
@@ -68,8 +64,7 @@ requiredService.CurrentScopeEnding += (sender, eventArgs) =>
 StaticLogger.Setup(app.Services.GetRequiredService<ILoggerFactory>());
 AppDomain.CurrentDomain.UnhandledException += (_, args) =>
     app.Logger.LogError(args.ExceptionObject as Exception, "Global uncaught exception");
-TaskScheduler.UnobservedTaskException += (_, args) =>
-{
+TaskScheduler.UnobservedTaskException += (_, args) => {
     app.Logger.LogError(args.Exception?.Flatten(), "Global uncaught task exception");
     args.SetObserved();
 };
@@ -79,8 +74,7 @@ Directory.CreateDirectory("Config");
 LocalizationManager.Initialize();
 
 app.MapGet("/", () => "Enliven web host started");
-var endpointProviders = app.Services.GetServices<IEndpointProvider>();
-await Task.WhenAll(endpointProviders.Select(provider => provider.ConfigureEndpoints(app)));
+app.MapVk();
 
 await app.RunAsync();
 

@@ -4,10 +4,7 @@ using Bot.DiscordRelated;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Interactions;
 using Bot.DiscordRelated.Interactions.Handlers;
-using Bot.DiscordRelated.MessageComponents;
 using Bot.DiscordRelated.Music;
-using Bot.Music.Vk;
-using Bot.Utilities;
 using Bot.Utilities.Collector;
 using Common;
 using Common.Config;
@@ -30,18 +27,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using VkNet;
-using VkNet.Abstractions;
-using VkNet.AudioBypassService.Extensions;
 using YandexMusicResolver;
 using YandexMusicResolver.Config;
 
 namespace Bot;
 
-internal static class DiHelpers
-{
-    public static IServiceCollection AddPerBotServices(this IServiceCollection services)
-    {
+internal static class DiHelpers {
+    public static IServiceCollection AddPerBotServices(this IServiceCollection services) {
         // Providers
         services.AddSingleton<EmbedPlayerDisplayProvider>();
         services.AddSingleton<IService>(s => s.GetRequiredService<EmbedPlayerDisplayProvider>());
@@ -64,7 +56,7 @@ internal static class DiHelpers
         services.AddSingleton<IStatisticsService, StatisticsService>();
         services.AddSingleton<MessageComponentInteractionsHandler>();
         services.AddSingleton<CollectorService>();
-        
+
         services.AddSingleton<IInteractionsHandler, DiscordNetInteractionsHandler>();
         services.AddSingleton<IInteractionsHandler, EmbedPlayerDisplayRestoreInteractionsHandler>();
         services.AddSingleton<IInteractionsHandler>(s => s.GetRequiredService<MessageComponentInteractionsHandler>());
@@ -72,8 +64,7 @@ internal static class DiHelpers
         return services;
     }
 
-    public static IServiceCollection AddYandex(this IServiceCollection services, IConfiguration configuration)
-    {
+    public static IServiceCollection AddYandex(this IServiceCollection services, IConfiguration configuration) {
         services.ConfigureNamedOptions<YandexCredentials>(configuration);
         services.AddYandexMusicResolver();
         services.AddSingleton<IMusicResolver, Music.Yandex.YandexMusicResolver>();
@@ -81,23 +72,7 @@ internal static class DiHelpers
         return services;
     }
 
-    public static IServiceCollection AddVk(this IServiceCollection services, IConfiguration configuration)
-    {
-        services.ConfigureNamedOptions<VkCredentials>(configuration);
-        services.AddSingleton<IVkApi>(_ =>
-            new VkApi(new ServiceCollection().AddAudioBypass()));
-        services.AddSingleton<VkMusicCacheService>(_ =>
-            new VkMusicCacheService(TimeSpan.FromDays(1), ".cache/vkmusic/", "mp3"));
-        services.AddSingleton<VkMusicSeederService, VkMusicSeederService>();
-        services.AddSingleton<IEndpointProvider, VkMusicSeederService>(
-            s => s.GetRequiredService<VkMusicSeederService>());
-        services.AddSingleton<IMusicResolver, VkMusicResolver>();
-
-        return services;
-    }
-
-    public static IServiceCollection AddLavalink(this IServiceCollection builder)
-    {
+    public static IServiceCollection AddLavalink(this IServiceCollection builder) {
         builder
             .AddSingleton<INodeBalancingStrategy, EnlivenLavalinkBalancingStrategy>()
             .AddSingleton<IEnlivenClusterAudioService, EnlivenClusterAudioService>()
@@ -111,8 +86,7 @@ internal static class DiHelpers
             .AddSingleton<IInactivityTracker, UsersInactivityTracker>()
             .AddSingleton<IInactivityTracker, IdleInactivityTracker>()
             .PostConfigure<IdleInactivityTrackerOptions>(options => options.IdleStates = [PlayerState.NotPlaying])
-            .ConfigureInactivityTracking((provider, options) => 
-            {
+            .ConfigureInactivityTracking((provider, options) => {
                 options.DefaultPollInterval = TimeSpan.FromSeconds(30);
                 options.DefaultTimeout = TimeSpan.FromSeconds(120);
                 options.TimeoutBehavior = InactivityTrackingTimeoutBehavior.Highest;
@@ -130,8 +104,7 @@ internal static class DiHelpers
     }
 
     public static IServiceCollection ConfigureNamedOptions<T>(this IServiceCollection services,
-        IConfiguration configuration) where T : class
-    {
+        IConfiguration configuration) where T : class {
         return services.Configure<T>(configuration.GetSection(typeof(T).Name));
     }
 }
