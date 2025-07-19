@@ -493,42 +493,59 @@ public class EmbedPlayerDisplay : PlayerDisplayBase {
             _embedBuilder.Fields["Queue"].Name =
                 _loc.Get("Music.Queue").Format(Player.CurrentTrackIndex + 1, Player.Playlist.Count,
                     Player.Playlist.TotalPlaylistLength.FormattedToString());
-            _embedBuilder.Fields["Queue"].Value = $"```py\n{GetPlaylistString()}```";
+            _embedBuilder.Fields["Queue"].Value = $"```ansi\n{GetPlaylistString()}```";
+        }
+    }
+
+    // desktop max length in code embed:
+    // ├aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    // mobile:
+    // 183 ├AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+    private string GetPlaylistString() {
+        var builder = new StringBuilder();
+        var helper = new PlaylistQueueHelper(Player.Playlist, Player.CurrentTrackIndex - 1, 6);
+        foreach (var group in helper) {
+            var maxNumberLength = (int)Math.Floor(Math.Log10(group.CurrentNumber + group.Count) + 1);
+
+            builder.Append('─', maxNumberLength);
+            builder.AppendLine($"─┬────{group.Requester.ToString(false)}");
+            foreach (var queueItem in group) {
+                var isCurrent = group.CurrentIndex == Player.CurrentTrackIndex;
+
+                FormatTrackString(builder, queueItem.Track.Title,
+                    group.CurrentNumber, isCurrent, group.CurrentIsLast,
+                    maxNumberLength);
+            }
         }
 
-        // desktop max length in code embed:
-        // ├aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-        // mobile:
-        // 183 ├AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-        string GetPlaylistString() {
-            var builder = new StringBuilder();
-            var helper = new PlaylistQueueHelper(Player.Playlist, Player.CurrentTrackIndex - 1, 6);
-            foreach (var group in helper) {
-                var maxNumberLength = (int)Math.Floor(Math.Log10(group.CurrentNumber + group.Count) + 1);
+        return builder.ToString();
 
-                builder.Append('─');
-                builder.Append('─', maxNumberLength);
-                builder.AppendLine($"─┬────{group.Requester.ToString(false)}");
-                foreach (var queueItem in group) {
-                    var isCurrent = group.CurrentIndex == Player.CurrentTrackIndex;
-
-                    FormatTrackString(builder, queueItem.Track.Title,
-                        group.CurrentNumber, isCurrent, group.CurrentIsLast,
-                        maxNumberLength);
-                }
+        static void FormatTrackString(StringBuilder builder, string title, int trackNumber, bool isCurrent,
+            bool isLastInGroup,
+            int maxNumberLength) {
+            if (isCurrent) {
+                builder.Append("[1;33m");
             }
 
-            return builder.ToString();
+            FormatInternal();
+            if (isCurrent) {
+                builder.Append("[0m");
+            }
 
-            static void FormatTrackString(StringBuilder builder, string title, int trackNumber, bool isCurrent,
-                bool isLastInGroup,
-                int maxNumberLength) {
-                builder.Append(isCurrent ? '@' : ' ');
+            return;
+
+            void FormatInternal() {
                 builder.Append(trackNumber.ToString().PadRight(maxNumberLength));
                 builder.Append(' ');
-                builder.Append(isLastInGroup ? '└' : '├');
+                var groupChar = isLastInGroup switch {
+                    true when isCurrent => '┗',
+                    true => '└',
+                    false when isCurrent => '┣',
+                    false => '├'
+                };
+                builder.Append(groupChar);
 
-                var leftCharsCount = 1 + maxNumberLength + 1 + 1;
+                var leftCharsCount = maxNumberLength + 1 + 1;
                 var remainingSpace = MobileTextChopLimit - leftCharsCount;
 
                 title = title.RemoveNonPrintableChars();
@@ -547,9 +564,13 @@ public class EmbedPlayerDisplay : PlayerDisplayBase {
                 builder.Append(potentialFirstLine);
                 builder.AppendLine();
 
-                builder.Append(isCurrent ? '@' : ' ');
                 builder.Append(' ', maxNumberLength + 1);
-                builder.Append(!isLastInGroup ? '│' : ' ');
+                var groupCharSecond = isLastInGroup switch {
+                    true => ' ',
+                    false when isCurrent => '┃',
+                    _ => '│'
+                };
+                builder.Append(groupCharSecond);
 
                 builder.AppendLine(title.AsSpan(potentialFirstLine.Length).SafeSubstring(remainingSpace, "..."));
             }
