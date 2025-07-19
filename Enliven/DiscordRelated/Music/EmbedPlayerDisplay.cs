@@ -521,8 +521,7 @@ public class EmbedPlayerDisplay : PlayerDisplayBase {
         return builder.ToString();
 
         static void FormatTrackString(StringBuilder builder, string title, int trackNumber, bool isCurrent,
-            bool isLastInGroup,
-            int maxNumberLength) {
+            bool isLastInGroup, int numberMaxLength) {
             if (isCurrent) {
                 builder.Append("[1;33m");
             }
@@ -535,7 +534,9 @@ public class EmbedPlayerDisplay : PlayerDisplayBase {
             return;
 
             void FormatInternal() {
-                builder.Append(trackNumber.ToString().PadRight(maxNumberLength));
+                var trackNumberString = trackNumber.ToString();
+                builder.Append(trackNumberString);
+                builder.Append(' ', numberMaxLength - trackNumberString.Length);
                 builder.Append(' ');
                 var groupChar = isLastInGroup switch {
                     true when isCurrent => '┗',
@@ -545,7 +546,7 @@ public class EmbedPlayerDisplay : PlayerDisplayBase {
                 };
                 builder.Append(groupChar);
 
-                var leftCharsCount = maxNumberLength + 1 + 1;
+                var leftCharsCount = numberMaxLength + 1 + 1;
                 var remainingSpace = MobileTextChopLimit - leftCharsCount;
 
                 title = title.RemoveNonPrintableChars();
@@ -564,7 +565,7 @@ public class EmbedPlayerDisplay : PlayerDisplayBase {
                 builder.Append(potentialFirstLine);
                 builder.AppendLine();
 
-                builder.Append(' ', maxNumberLength + 1);
+                builder.Append(' ', numberMaxLength + 1);
                 var groupCharSecond = isLastInGroup switch {
                     true => ' ',
                     false when isCurrent => '┃',
