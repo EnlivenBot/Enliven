@@ -16,16 +16,14 @@ using YandexMusicResolver.Loaders;
 
 namespace Bot.Music.Yandex;
 
-public record YandexLavalinkTrack : LavalinkTrack, ITrackHasArtwork, ITrackHasCustomSource
-{
+public record YandexLavalinkTrack : LavalinkTrack, ITrackHasArtwork, ITrackHasCustomSource, ITrackHasCustomQueueTitle {
     private static readonly HttpClient HttpClient = new();
 
     private static readonly Dictionary<long, string> UrlCache = new();
     private IYandexMusicDirectUrlLoader _directUrlLoader;
 
     [SetsRequiredMembers]
-    public YandexLavalinkTrack(YandexMusicTrack relatedYandexTrack, IYandexMusicDirectUrlLoader directUrlLoader)
-    {
+    public YandexLavalinkTrack(YandexMusicTrack relatedYandexTrack, IYandexMusicDirectUrlLoader directUrlLoader) {
         RelatedYandexTrack = relatedYandexTrack;
         _directUrlLoader = directUrlLoader;
         Uri = relatedYandexTrack.Uri!.Pipe(s => new Uri(s));
@@ -36,8 +34,7 @@ public record YandexLavalinkTrack : LavalinkTrack, ITrackHasArtwork, ITrackHasCu
         Identifier = "yam_" + relatedYandexTrack.Id;
         SourceName = "http";
         ProbeInfo = "mp3";
-        AdditionalInformation = new Dictionary<string, JsonElement>
-            {
+        AdditionalInformation = new Dictionary<string, JsonElement> {
                 { "EnlivenCorrelationId", JsonSerializer.SerializeToElement(Guid.NewGuid()) }
             }
             // ReSharper disable once UsageOfDefaultStructEquality
@@ -46,8 +43,7 @@ public record YandexLavalinkTrack : LavalinkTrack, ITrackHasArtwork, ITrackHasCu
 
     public YandexMusicTrack RelatedYandexTrack { get; }
 
-    public ValueTask<Uri?> GetArtwork()
-    {
+    public ValueTask<Uri?> GetArtwork() {
         var artworkUri = RelatedYandexTrack.ArtworkUrl?.Pipe(s => new Uri(s));
         return ValueTask.FromResult(artworkUri);
     }
@@ -58,11 +54,9 @@ public record YandexLavalinkTrack : LavalinkTrack, ITrackHasArtwork, ITrackHasCu
     public Uri CustomSourceUrl => Uri!;
 
     public override async ValueTask<LavalinkTrack> GetPlayableTrackAsync(
-        CancellationToken cancellationToken = new CancellationToken())
-    {
+        CancellationToken cancellationToken = new CancellationToken()) {
         var directUrl = await GetDirectUrl(RelatedYandexTrack.Id);
-        return new LavalinkTrack
-        {
+        return new LavalinkTrack {
             Author = Author,
             Duration = Duration,
             IsLiveStream = IsLiveStream,
@@ -77,8 +71,7 @@ public record YandexLavalinkTrack : LavalinkTrack, ITrackHasArtwork, ITrackHasCu
         };
     }
 
-    private async Task<string> GetDirectUrl(long id)
-    {
+    private async Task<string> GetDirectUrl(long id) {
         if (UrlCache.TryGetValue(id, out var url)) {
             var returnedUrl = await CheckUrl(url);
             if (returnedUrl != null) {
@@ -98,5 +91,9 @@ public record YandexLavalinkTrack : LavalinkTrack, ITrackHasArtwork, ITrackHasCu
                    ?? urlToCheck;
 
         return null;
+    }
+
+    public string GetQueueTitle() {
+        return $"{RelatedYandexTrack.Author} - {RelatedYandexTrack.Title}";
     }
 }

@@ -14,13 +14,12 @@ using VkNet.Model;
 
 namespace Bot.Music.Vk;
 
-public record VkLavalinkTrack : LavalinkTrack, ITrackHasCustomSource, ITrackHasArtwork, ITrackNeedPrefetch
-{
+public record VkLavalinkTrack : LavalinkTrack, ITrackHasCustomSource, ITrackHasArtwork, ITrackNeedPrefetch,
+    ITrackHasCustomQueueTitle {
     private readonly VkMusicSeederService _vkMusicSeederService;
 
     [SetsRequiredMembers]
-    public VkLavalinkTrack(Audio audio, VkMusicSeederService vkMusicSeederService)
-    {
+    public VkLavalinkTrack(Audio audio, VkMusicSeederService vkMusicSeederService) {
         Audio = audio;
         _vkMusicSeederService = vkMusicSeederService;
 
@@ -34,8 +33,7 @@ public record VkLavalinkTrack : LavalinkTrack, ITrackHasCustomSource, ITrackHasA
         Identifier = trackIdentifier;
         SourceName = "http";
         ProbeInfo = "mp3";
-        AdditionalInformation = new Dictionary<string, JsonElement>
-            {
+        AdditionalInformation = new Dictionary<string, JsonElement> {
                 { "EnlivenCorrelationId", JsonSerializer.SerializeToElement(Guid.NewGuid()) }
             }
             // ReSharper disable once UsageOfDefaultStructEquality
@@ -45,8 +43,7 @@ public record VkLavalinkTrack : LavalinkTrack, ITrackHasCustomSource, ITrackHasA
     public Audio Audio { get; }
 
     /// <inheritdoc />
-    public ValueTask<Uri?> GetArtwork()
-    {
+    public ValueTask<Uri?> GetArtwork() {
         var thumbUri = Audio.Album?.Thumb?.Photo68
             ?.Pipe(s => new Uri(s));
         return new ValueTask<Uri?>(thumbUri);
@@ -58,17 +55,14 @@ public record VkLavalinkTrack : LavalinkTrack, ITrackHasCustomSource, ITrackHasA
     public Uri CustomSourceUrl => Uri!;
 
     /// <inheritdoc />
-    public Task PrefetchTrack()
-    {
+    public Task PrefetchTrack() {
         return _vkMusicSeederService.PrepareTrackAndGetUrl(Audio);
     }
 
     public override async ValueTask<LavalinkTrack> GetPlayableTrackAsync(
-        CancellationToken cancellationToken = new CancellationToken())
-    {
+        CancellationToken cancellationToken = new CancellationToken()) {
         var directUrl = await _vkMusicSeederService.PrepareTrackAndGetUrl(Audio);
-        return new LavalinkTrack
-        {
+        return new LavalinkTrack {
             Author = Author,
             Duration = Duration,
             IsLiveStream = IsLiveStream,
@@ -81,5 +75,9 @@ public record VkLavalinkTrack : LavalinkTrack, ITrackHasCustomSource, ITrackHasA
             ProbeInfo = "mp3",
             AdditionalInformation = AdditionalInformation
         };
+    }
+
+    public string GetQueueTitle() {
+        return $"{Audio.Artist} - {Audio.Title}";
     }
 }

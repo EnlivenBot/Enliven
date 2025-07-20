@@ -514,7 +514,11 @@ public class EmbedPlayerDisplay : PlayerDisplayBase {
             foreach (var queueItem in group) {
                 var isCurrent = group.CurrentIndex == Player.CurrentTrackIndex;
 
-                FormatTrackString(builder, queueItem.Track.Title,
+                var title = queueItem.Track is ITrackHasCustomQueueTitle customQueueTitle
+                    ? customQueueTitle.GetQueueTitle()
+                    : queueItem.Track.Title;
+
+                FormatTrackString(builder, title,
                     group.CurrentNumber, isCurrent, group.CurrentIsLastButGroupContinues,
                     numberMaxLength);
             }
