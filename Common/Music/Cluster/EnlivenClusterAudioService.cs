@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Common.Config;
+using Common.Infrastructure.Serializing;
 using Common.Localization.Entries;
 using Common.Music.Players;
 using Common.Music.Players.Options;
@@ -26,8 +27,7 @@ using Microsoft.Extensions.Options;
 
 namespace Common.Music.Cluster;
 
-public class EnlivenClusterAudioService : ClusterAudioService, IEnlivenClusterAudioService
-{
+public class EnlivenClusterAudioService : ClusterAudioService, IEnlivenClusterAudioService {
     private static readonly IEntry ConcatLines = new EntryString("{0}\n{1}");
     private static readonly IEntry ResumeViaPlaylists = new EntryLocalized("Music.ResumeViaPlaylists");
     private static readonly IEntry PlaybackStopped = new EntryLocalized("Music.PlaybackStopped");
@@ -45,8 +45,7 @@ public class EnlivenClusterAudioService : ClusterAudioService, IEnlivenClusterAu
         IIntegrationManager integrations, IPlayerManager players, ITrackManager tracks,
         IOptions<ClusterAudioServiceOptions> options, ILoggerFactory loggerFactory,
         ILogger<EnlivenClusterAudioService> logger) : base(discordClient, socketFactory,
-        lavalinkApiClientProvider, lavalinkApiClientFactory, integrations, players, tracks, options, loggerFactory)
-    {
+        lavalinkApiClientProvider, lavalinkApiClientFactory, integrations, players, tracks, options, loggerFactory) {
         _playlistProvider = playlistProvider;
         _musicResolverService = musicResolverService;
         _logger = logger;
@@ -56,26 +55,23 @@ public class EnlivenClusterAudioService : ClusterAudioService, IEnlivenClusterAu
         PlayerFactory.Create<EnlivenLavalinkPlayer, PlaylistLavalinkPlayerOptions>(static properties =>
             new EnlivenLavalinkPlayer(properties));
 
-    public ILavalinkNode GetPlayerNode(ILavalinkPlayer player)
-    {
+    public ILavalinkNode GetPlayerNode(ILavalinkPlayer player) {
         return Nodes.FirstOrDefault(node => node.SessionId == player.SessionId)
                ?? throw new InvalidOperationException("No node serving this player");
     }
 
     public async Task ShutdownPlayer(AdvancedLavalinkPlayer player, PlayerShutdownParameters shutdownParameters,
-        IEntry shutdownReason)
-    {
+        IEntry shutdownReason) {
         var snapshot = await (player as IPlayerShutdownInternally).ShutdownInternal();
         _lastPlayerSnapshots[player.GuildId] = snapshot;
 
         StoredPlaylist? storedPlaylist = null;
-        if (shutdownParameters.SavePlaylist)
-        {
+        if (shutdownParameters.SavePlaylist) {
             var encodedTracks = await _musicResolverService.EncodeTracks(snapshot.Playlist);
-            var byteTracks = encodedTracks.Select(track => MessagePackSerializer.Typeless.Serialize(track)).ToArray();
+            var byteTracks = encodedTracks
+                .Select(track => MessagePackSerializer.Typeless.Serialize(track, EnlivenMessagePack.Options)).ToArray();
             var trackIndex = snapshot.LastTrack is not null ? snapshot.Playlist.IndexOf(snapshot.LastTrack) : -1;
-            var enlivenPlaylist = new EnlivenPlaylist()
-            {
+            var enlivenPlaylist = new EnlivenPlaylist() {
                 Tracks = byteTracks,
                 TrackPosition = snapshot.TrackPosition,
                 TrackIndex = trackIndex
@@ -86,30 +82,25 @@ public class EnlivenClusterAudioService : ClusterAudioService, IEnlivenClusterAu
 
         var playerDisplays = player.Displays.ToImmutableArray();
         player.Displays.Clear();
-        if (shutdownParameters.ShutdownDisplays)
-        {
+        if (shutdownParameters.ShutdownDisplays) {
             await playerDisplays
                 .Select(ShutdownDisplay)
                 .WhenAll();
         }
-        else if (shutdownParameters.SavePlaylist)
-        {
+        else if (shutdownParameters.SavePlaylist) {
             await playerDisplays
                 .Select(LeaveNotificationToDisplay)
                 .WhenAll();
         }
 
-        if (shutdownParameters.RestartPlayer)
-        {
-            _ = Task.Run(async () =>
-            {
+        if (shutdownParameters.RestartPlayer) {
+            _ = Task.Run(async () => {
                 var playlistLavalinkPlayerOptions = ConvertSnapshotToOptions(snapshot);
                 var optionsWrapper = new OptionsWrapper<PlaylistLavalinkPlayerOptions>(playlistLavalinkPlayerOptions);
                 var playerRetrieveOptions = new PlayerRetrieveOptions { ChannelBehavior = PlayerChannelBehavior.Join };
                 var retrieveResult = await Players.RetrieveAsync(snapshot.GuildId, snapshot.LastVoiceChannelId,
                     EnlivenPlayerFactory, optionsWrapper, playerRetrieveOptions);
-                if (!retrieveResult.IsSuccess)
-                {
+                if (!retrieveResult.IsSuccess) {
                     _logger.LogError("Failed to retrieve player white restarting due to {Status}",
                         retrieveResult.Status);
 
@@ -129,34 +120,27 @@ public class EnlivenClusterAudioService : ClusterAudioService, IEnlivenClusterAu
 
         return;
 
-        async Task ShutdownDisplay(IPlayerDisplay display)
-        {
-            try
-            {
+        async Task ShutdownDisplay(IPlayerDisplay display) {
+            try {
                 await display.ExecuteShutdown(PlaybackStopped, shutdownReason);
             }
-            catch (Exception e)
-            {
+            catch (Exception e) {
                 _logger.LogError(e, "Error while shutdowning {DisplayType}", display.GetType().Name);
             }
         }
 
-        async Task LeaveNotificationToDisplay(IPlayerDisplay display)
-        {
-            try
-            {
+        async Task LeaveNotificationToDisplay(IPlayerDisplay display) {
+            try {
                 await display.ExecuteShutdown(PlaybackStopped, TryReconnectAfterDispose.WithArg(storedPlaylist!.Id));
             }
-            catch (Exception e)
-            {
+            catch (Exception e) {
                 _logger.LogError(e, "Error while shutdowning {DisplayType}", display.GetType().Name);
             }
         }
     }
 
     protected override async ValueTask OnConnectionClosedAsync(ConnectionClosedEventArgs eventArgs,
-        CancellationToken cancellationToken = new CancellationToken())
-    {
+        CancellationToken cancellationToken = new CancellationToken()) {
         var lavalinkSocketLabel = eventArgs.LavalinkSocket.Label;
         var disconnectedNode = Nodes.First(node => node.Label == lavalinkSocketLabel);
         var disconnectedNodeSessionId = disconnectedNode.SessionId;
@@ -166,16 +150,14 @@ public class EnlivenClusterAudioService : ClusterAudioService, IEnlivenClusterAu
             .Cast<EnlivenLavalinkPlayer>()
             .ToImmutableArray();
 
-        if (players.Length == 0)
-        {
+        if (players.Length == 0) {
             return;
         }
 
         await HandlePlayersOnDisconnectedNode(players);
     }
 
-    private async Task HandlePlayersOnDisconnectedNode(ImmutableArray<EnlivenLavalinkPlayer> players)
-    {
+    private async Task HandlePlayersOnDisconnectedNode(ImmutableArray<EnlivenLavalinkPlayer> players) {
         var anyNodeAvailable = Nodes.Any(node => node.Status == LavalinkNodeStatus.Available);
         var shutdownReason = anyNodeAvailable
             ? new EntryLocalized("Music.PlayerMoved")
@@ -189,8 +171,7 @@ public class EnlivenClusterAudioService : ClusterAudioService, IEnlivenClusterAu
             .WhenAll();
     }
 
-    public async ValueTask WaitForAnyNodeAvailable()
-    {
+    public async ValueTask WaitForAnyNodeAvailable() {
         if (Nodes.Any(node => node.Status == LavalinkNodeStatus.Available)) return;
 
         await Nodes
@@ -201,18 +182,15 @@ public class EnlivenClusterAudioService : ClusterAudioService, IEnlivenClusterAu
     }
 
     public bool TryGetPlayerLaunchOptionsFromLastRun(ulong guildId,
-        [NotNullWhen(true)] out PlaylistLavalinkPlayerOptions? options)
-    {
+        [NotNullWhen(true)] out PlaylistLavalinkPlayerOptions? options) {
         options = null;
         if (!_lastPlayerSnapshots.TryGetValue(guildId, out var snapshot)) return false;
         options = ConvertSnapshotToOptions(snapshot);
         return true;
     }
 
-    private static PlaylistLavalinkPlayerOptions ConvertSnapshotToOptions(PlayerSnapshot snapshot)
-    {
-        var playlistLavalinkPlayerOptions = new PlaylistLavalinkPlayerOptions()
-        {
+    private static PlaylistLavalinkPlayerOptions ConvertSnapshotToOptions(PlayerSnapshot snapshot) {
+        var playlistLavalinkPlayerOptions = new PlaylistLavalinkPlayerOptions() {
             Playlist = snapshot.Playlist,
             InitialTrack = snapshot.LastTrack,
             InitialPosition = snapshot.TrackPosition,

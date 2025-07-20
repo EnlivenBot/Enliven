@@ -24,6 +24,7 @@
         <PackageReference Include="Serilog" />
         <PackageReference Include="System.Reactive" />
         <PackageReference Include="Tyrrrz.Extensions" />
+      <PackageReference Include="YandexMusicResolver"/>
     </ItemGroup>
 
     <ItemGroup>

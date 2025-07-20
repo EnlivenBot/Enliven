@@ -6,6 +6,7 @@ using System.Reactive.Subjects;
 using System.Threading;
 using System.Threading.Tasks;
 using Common.History;
+using Common.Infrastructure.Serializing;
 using Common.Localization.Entries;
 using Common.Music.Players.Options;
 using Common.Music.Resolvers;
@@ -154,7 +155,8 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer {
 
     public virtual async Task<EnlivenPlaylist> ExportPlaylist(ExportPlaylistOptions options) {
         var encodedTracks = await _musicResolverService.EncodeTracks(Playlist);
-        var byteTracks = encodedTracks.Select(track => MessagePackSerializer.Typeless.Serialize(track)).ToArray();
+        var byteTracks = encodedTracks
+            .Select(track => MessagePackSerializer.Typeless.Serialize(track, EnlivenMessagePack.Options)).ToArray();
         var exportPlaylist = new EnlivenPlaylist { Tracks = byteTracks };
         if (options != ExportPlaylistOptions.IgnoreTrackIndex) {
             exportPlaylist.TrackIndex = CurrentTrackIndex.Normalize(0, Playlist.Count - 1);
@@ -178,7 +180,7 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer {
 
         var trackPlaylist = new TrackPlaylist("Enliven's playlist", null);
         var encodedTracks = playlist.Tracks
-            .Select(bytes => MessagePackSerializer.Typeless.Deserialize(bytes))
+            .Select(bytes => MessagePackSerializer.Typeless.Deserialize(bytes, EnlivenMessagePack.Options))
             .Cast<IEncodedTrack>();
         var tracks = await _musicResolverService.DecodeTracks(encodedTracks)
             .PipeAsync(list => list.Select(track => new EnlivenQueueItem(track, requester, trackPlaylist)))
