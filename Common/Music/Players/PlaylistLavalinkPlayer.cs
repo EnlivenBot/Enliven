@@ -20,8 +20,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Common.Music.Players;
 
-public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
-{
+public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer {
     private static readonly IEntry StartPlayingFailedEntry = new EntryLocalized("Music.StartPlayingFailed");
     private readonly ISubject<int> _currentTrackIndexChanged = new Subject<int>();
 
@@ -34,29 +33,24 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
 
 
     public PlaylistLavalinkPlayer(IPlayerProperties<PlaylistLavalinkPlayer, PlaylistLavalinkPlayerOptions> options)
-        : base(options)
-    {
+        : base(options) {
         _musicResolverService = ServiceScope.ServiceProvider.GetRequiredService<MusicResolverService>();
         Playlist.Changed.Subscribe(playlist => UpdateCurrentTrackIndex());
 
         var properties = options.Options.Value;
-        if (properties.LoopingState is not null)
-        {
+        if (properties.LoopingState is not null) {
             _loopingState = properties.LoopingState.Value;
         }
 
-        if (properties.Playlist is not null)
-        {
+        if (properties.Playlist is not null) {
             Playlist.AddRange(properties.Playlist);
             UpdateCurrentTrackIndex();
         }
     }
 
-    public LoopingState LoopingState
-    {
+    public LoopingState LoopingState {
         get => _loopingState;
-        set
-        {
+        set {
             _loopingState = value;
             _loopingStateChanged.OnNext(value);
         }
@@ -67,11 +61,9 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
     public LavalinkPlaylist Playlist { get; } = new();
     public IObservable<int> CurrentTrackIndexChanged => _currentTrackIndexChanged;
 
-    public int CurrentTrackIndex
-    {
+    public int CurrentTrackIndex {
         get => _currentTrackIndex;
-        private set
-        {
+        private set {
             if (_currentTrackIndex == value) return;
             _currentTrackIndex = value;
             _currentTrackIndexChanged.OnNext(value);
@@ -79,35 +71,29 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
     }
 
     protected override async ValueTask NotifyTrackEndedAsync(ITrackQueueItem track, TrackEndReason endReason,
-        CancellationToken cancellationToken = new())
-    {
+        CancellationToken cancellationToken = new()) {
         await base.NotifyTrackEndedAsync(track, endReason, cancellationToken);
 
         if (endReason is TrackEndReason.Replaced) return;
 
         if (endReason is TrackEndReason.LoadFailed) {
             var enlivenItem = track.As<IEnlivenQueueItem>() ?? CurrentItem;
-            if (enlivenItem != null)
-            {
+            if (enlivenItem != null) {
                 enlivenItem.PlaybackExceptionCount++;
-                if (enlivenItem.PlaybackExceptionCount > 2)
-                {
-                    if (Playlist.Count - CurrentTrackIndex > 1)
-                    {
+                if (enlivenItem.PlaybackExceptionCount > 2) {
+                    if (Playlist.Count - CurrentTrackIndex > 1) {
                         await SkipAsync(1, true);
                     }
                 }
-                else
-                {
+                else {
                     var currentPosition = Position?.Position;
-                    if (currentPosition is not null && currentPosition.Value.TotalSeconds < 10)
-                    {
+                    if (currentPosition is not null && currentPosition.Value.TotalSeconds < 10) {
                         currentPosition = null;
                     }
 
                     await PlayAsync(enlivenItem, new TrackPlayProperties(currentPosition), cancellationToken);
                 }
-                
+
                 return;
             }
         }
@@ -116,16 +102,14 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
     }
 
     protected override async ValueTask NotifyTrackExceptionAsync(ITrackQueueItem track, TrackException exception,
-        CancellationToken cancellationToken = new())
-    {
+        CancellationToken cancellationToken = new()) {
         await base.NotifyTrackExceptionAsync(track, exception, cancellationToken);
 
         WriteToQueueHistory(new EntryLocalized("Music.TrackException", exception.Format()));
     }
 
     protected override async ValueTask NotifyTrackStuckAsync(ITrackQueueItem track, TimeSpan threshold,
-        CancellationToken cancellationToken = new())
-    {
+        CancellationToken cancellationToken = new()) {
         await base.NotifyTrackStuckAsync(track, threshold, cancellationToken);
         WriteToQueueHistory(new EntryLocalized("Music.TrackStuck"));
         await SkipAsync(1, true);
@@ -133,11 +117,9 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
 
 
     public override async ValueTask PlayAsync(IEnlivenQueueItem trackQueueItem,
-        TrackPlayProperties trackPlayProperties = default, CancellationToken token = default)
-    {
+        TrackPlayProperties trackPlayProperties = default, CancellationToken token = default) {
         EnsureNotDestroyed();
-        if (!Playlist.Contains(trackQueueItem))
-        {
+        if (!Playlist.Contains(trackQueueItem)) {
             Playlist.Add(trackQueueItem);
         }
 
@@ -148,11 +130,9 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
             nextTrack.Track is ITrackNeedPrefetch needPrefetchTrack) _ = needPrefetchTrack.PrefetchTrack();
     }
 
-    public virtual async Task<bool> SkipAsync(int count = 1, bool force = false)
-    {
+    public virtual async Task<bool> SkipAsync(int count = 1, bool force = false) {
         EnsureNotDestroyed();
-        if (!force && LoopingState == LoopingState.One)
-        {
+        if (!force && LoopingState == LoopingState.One) {
             // TODO Log warning if current played track index doesn't exists to repeat track with LoopingState.One
             if (!Playlist.TryGetValue(CurrentTrackIndex, out var currentTrack)) return false;
             await PlayAsync(currentTrack);
@@ -172,18 +152,15 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
         return true;
     }
 
-    public virtual async Task<EnlivenPlaylist> ExportPlaylist(ExportPlaylistOptions options)
-    {
+    public virtual async Task<EnlivenPlaylist> ExportPlaylist(ExportPlaylistOptions options) {
         var encodedTracks = await _musicResolverService.EncodeTracks(Playlist);
         var byteTracks = encodedTracks.Select(track => MessagePackSerializer.Typeless.Serialize(track)).ToArray();
         var exportPlaylist = new EnlivenPlaylist { Tracks = byteTracks };
-        if (options != ExportPlaylistOptions.IgnoreTrackIndex)
-        {
+        if (options != ExportPlaylistOptions.IgnoreTrackIndex) {
             exportPlaylist.TrackIndex = CurrentTrackIndex.Normalize(0, Playlist.Count - 1);
         }
 
-        if (options == ExportPlaylistOptions.AllData)
-        {
+        if (options == ExportPlaylistOptions.AllData) {
             exportPlaylist.TrackPosition = Position?.Position;
         }
 
@@ -191,11 +168,9 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
     }
 
     public virtual async Task ImportPlaylist(EnlivenPlaylist playlist, ImportPlaylistOptions options,
-        TrackRequester requester)
-    {
-        if (Playlist.Count + playlist.Tracks.Length > 10000)
-        {
-            var historyEntry = new HistoryEntry(new EntryLocalized("MusicQueues.PlaylistLoadingLimit", 
+        TrackRequester requester) {
+        if (Playlist.Count + playlist.Tracks.Length > 10000) {
+            var historyEntry = new HistoryEntry(new EntryLocalized("MusicQueues.PlaylistLoadingLimit",
                 requester, playlist.Tracks.Length, Constants.MaxTracksCount));
             WriteToQueueHistory(historyEntry);
             return;
@@ -208,20 +183,16 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
         var tracks = await _musicResolverService.DecodeTracks(encodedTracks)
             .PipeAsync(list => list.Select(track => new EnlivenQueueItem(track, requester, trackPlaylist)))
             .PipeAsync(items => items.ToImmutableArray());
-        if (options == ImportPlaylistOptions.Replace)
-        {
-            try
-            {
+        if (options == ImportPlaylistOptions.Replace) {
+            try {
                 await StopAsync();
                 WriteToQueueHistory(new HistoryEntry(new EntryLocalized("Music.ImportPlayerStop")));
             }
-            catch (Exception)
-            {
+            catch (Exception) {
                 // ignored
             }
 
-            if (!Playlist.IsEmpty)
-            {
+            if (!Playlist.IsEmpty) {
                 Playlist.Clear();
                 WriteToQueueHistory(new HistoryEntry(new EntryLocalized("Music.ClearPlaylist", requester)));
             }
@@ -230,14 +201,12 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
         Playlist.AddRange(tracks);
         WriteToQueueHistory(new HistoryEntry(new EntryLocalized("Music.AddTracks", requester, tracks.Length)));
 
-        if (options != ImportPlaylistOptions.JustAdd)
-        {
+        if (options != ImportPlaylistOptions.JustAdd) {
             var item = playlist.TrackIndex == -1
                 ? tracks.First()
                 : tracks[playlist.TrackIndex.Normalize(0, playlist.Tracks.Length - 1)];
             var position = playlist.TrackPosition;
-            if (position != null && position.Value > item.Track.Duration)
-            {
+            if (position != null && position.Value > item.Track.Duration) {
                 position = TimeSpan.Zero;
             }
 
@@ -245,14 +214,12 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
             WriteToQueueHistory(new EntryLocalized("MusicQueues.Jumped", requester, CurrentTrackIndex + 1,
                 CurrentTrack!.Title.RemoveNonPrintableChars().SafeSubstring(100, "...")!));
         }
-        else if (State == PlayerState.NotPlaying)
-        {
+        else if (State == PlayerState.NotPlaying) {
             await PlayAsync(Playlist[0]);
         }
     }
 
-    protected void UpdateCurrentTrackIndex()
-    {
+    protected void UpdateCurrentTrackIndex() {
         if (CurrentItem == null)
             return;
         if (Playlist.TryGetValue(CurrentTrackIndex, out var currentPlaylistItem)
@@ -261,8 +228,7 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
         CurrentTrackIndex = Playlist.IndexOfWithFallback(CurrentItem);
     }
 
-    public virtual async Task ResolveAndEnqueue(IEnumerable<string> queries, TrackRequester requester, int? insertAt)
-    {
+    public virtual async Task ResolveAndEnqueue(IEnumerable<string> queries, TrackRequester requester, int? insertAt) {
         var queriesArray = queries.ToImmutableArray();
         var currentResolverIndex = 0;
         var addedTracks = new List<EnlivenQueueItem>();
@@ -274,14 +240,11 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
         var resolutionScope = new LavalinkApiResolutionScope(ApiClient);
         using var cancellationTokenSource = new CancellationTokenSource();
 
-        try
-        {
+        try {
             var isLimitHit = false;
-            foreach (var query in queriesArray)
-            {
+            foreach (var query in queriesArray) {
                 currentResolverIndex++;
-                if (Constants.MaxTracksCount - Playlist.Tracks.Count <= 0)
-                {
+                if (Constants.MaxTracksCount - Playlist.Tracks.Count <= 0) {
                     isLimitHit = true;
                     await cancellationTokenSource.CancelAsync();
                     break;
@@ -290,18 +253,17 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
                 historyEntry.Update();
                 var resolveResult =
                     await _musicResolverService.ResolveTracks(resolutionScope, query, cancellationTokenSource.Token);
+                // TODO[#15]: More graceful handling of search exceptions, probably tell the user
                 if (resolveResult.Exception is not null) continue;
 
                 var playlist = resolveResult.Playlist?.Name.Pipe(name => new TrackPlaylist(name, query));
-                await foreach (var track in resolveResult.Tracks.WithCancellation(cancellationTokenSource.Token))
-                {
+                await foreach (var track in resolveResult.Tracks.WithCancellation(cancellationTokenSource.Token)) {
                     var queueItem = new EnlivenQueueItem(track, requester, playlist);
                     var position = Math.Min(Playlist.Count, insertAt ?? Playlist.Count + addedTracks.Count);
                     Playlist.Insert(position, queueItem);
                     addedTracks.Add(queueItem);
                     if (State == PlayerState.NotPlaying && (resolveResult.Playlist?.SelectedTrack is null
-                                                            || track == resolveResult.Playlist?.SelectedTrack))
-                    {
+                                                            || track == resolveResult.Playlist?.SelectedTrack)) {
                         await PlayAsync(queueItem, cancellationToken: CancellationToken.None);
                     }
 
@@ -312,37 +274,31 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
                 }
             }
 
-            if (addedTracks.Count == 1)
-            {
+            if (addedTracks.Count == 1) {
                 WriteToQueueHistory(new HistoryEntry(new EntryLocalized("MusicQueues.Enqueued", requester,
                     addedTracks[0].Track.Title.RemoveNonPrintableChars())));
             }
-            else if (addedTracks.Count > 1)
-            {
+            else if (addedTracks.Count > 1) {
                 WriteToQueueHistory(new HistoryEntry(new EntryLocalized("MusicQueues.EnqueuedMany", requester,
                     addedTracks.Count)));
             }
 
-            if (isLimitHit)
-            {
+            if (isLimitHit) {
                 WriteToQueueHistory(new HistoryEntry(new EntryLocalized("MusicQueues.LimitExceed", requester,
                     queriesArray.Length - currentResolverIndex, Constants.MaxTracksCount)));
             }
-            else if (addedTracks.Count == 0)
-            {
+            else if (addedTracks.Count == 0) {
                 WriteToQueueHistory(new EntryLocalized("Music.NothingFound"));
             }
         }
-        finally
-        {
+        finally {
             _enqueueLock.Release();
             historyEntry.Remove();
         }
     }
 
     public virtual async Task Enqueue(IReadOnlyCollection<IEnlivenQueueItem> tracks, int position = -1,
-        IEnlivenQueueItem? selectedTrackInPlaylist = null)
-    {
+        IEnlivenQueueItem? selectedTrackInPlaylist = null) {
         if (tracks.Count == 0)
             return;
 
@@ -351,14 +307,12 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
         else
             Playlist.InsertRange(position, tracks);
 
-        if (State == PlayerState.NotPlaying)
-        {
+        if (State == PlayerState.NotPlaying) {
             await PlayAsync(selectedTrackInPlaylist ?? tracks.First());
         }
     }
 
-    protected override async ValueTask FillPlayerSnapshot(PlayerSnapshot snapshot)
-    {
+    protected override async ValueTask FillPlayerSnapshot(PlayerSnapshot snapshot) {
         snapshot.LastTrack = CurrentItem;
         snapshot.LoopingState = LoopingState;
         snapshot.Playlist = Playlist.ToList();
@@ -366,13 +320,11 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
     }
 
     protected override ITrackQueueItem? LookupTrackQueueItem(LavalinkTrack receivedTrack, ITrackQueueItem? currentTrack,
-        string? overridenTrackIdentifier)
-    {
+        string? overridenTrackIdentifier) {
         var baseLookup = base.LookupTrackQueueItem(receivedTrack, currentTrack, overridenTrackIdentifier);
         if (baseLookup is not null) return baseLookup;
 
-        if (receivedTrack.AdditionalInformation.TryGetValue("EnlivenCorrelationId", out var recId))
-        {
+        if (receivedTrack.AdditionalInformation.TryGetValue("EnlivenCorrelationId", out var recId)) {
             if (currentTrack?.Track?.AdditionalInformation.TryGetValue("EnlivenCorrelationId", out var curId) == true
                 && recId.ToString() == curId.ToString())
                 return currentTrack;
@@ -393,8 +345,7 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer
     }
 }
 
-public enum LoopingState
-{
+public enum LoopingState {
     One,
     All,
     Off
