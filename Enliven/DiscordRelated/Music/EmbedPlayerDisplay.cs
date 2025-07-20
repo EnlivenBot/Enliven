@@ -493,7 +493,7 @@ public class EmbedPlayerDisplay : PlayerDisplayBase {
             _embedBuilder.Fields["Queue"].Name =
                 _loc.Get("Music.Queue").Format(Player.CurrentTrackIndex + 1, Player.Playlist.Count,
                     Player.Playlist.TotalPlaylistLength.FormattedToString());
-            _embedBuilder.Fields["Queue"].Value = $"```ansi\n{GetPlaylistString()}```";
+            _embedBuilder.Fields["Queue"].Value = $"```glsl\n{GetPlaylistString()}```";
         }
     }
 
@@ -502,19 +502,21 @@ public class EmbedPlayerDisplay : PlayerDisplayBase {
     // mobile:
     // 183 ├AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
     private string GetPlaylistString() {
+        Debug.Assert(Player is not null);
+
         var builder = new StringBuilder();
         var helper = new PlaylistQueueHelper(Player.Playlist, Player.CurrentTrackIndex - 1, 6);
         foreach (var group in helper) {
-            var maxNumberLength = (int)Math.Floor(Math.Log10(group.CurrentNumber + group.Count) + 1);
+            var numberMaxLength = (int)Math.Floor(Math.Log10(group.CurrentNumber + group.Count) + 1);
 
-            builder.Append('─', maxNumberLength);
+            builder.Append('─', numberMaxLength);
             builder.AppendLine($"─┬────{group.Requester.ToString(false)}");
             foreach (var queueItem in group) {
                 var isCurrent = group.CurrentIndex == Player.CurrentTrackIndex;
 
                 FormatTrackString(builder, queueItem.Track.Title,
-                    group.CurrentNumber, isCurrent, group.CurrentIsLast,
-                    maxNumberLength);
+                    group.CurrentNumber, isCurrent, group.CurrentIsLastButGroupContinues,
+                    numberMaxLength);
             }
         }
 
@@ -522,59 +524,45 @@ public class EmbedPlayerDisplay : PlayerDisplayBase {
 
         static void FormatTrackString(StringBuilder builder, string title, int trackNumber, bool isCurrent,
             bool isLastInGroup, int numberMaxLength) {
-            if (isCurrent) {
-                builder.Append("[1;33m");
+            var trackNumberString = trackNumber.ToString();
+            builder.Append(trackNumberString);
+            builder.Append(' ', numberMaxLength - trackNumberString.Length);
+            builder.Append(' ');
+            var groupChar = isLastInGroup switch {
+                _ when isCurrent => '#',
+                true => '└',
+                false => '├'
+            };
+            builder.Append(groupChar);
+
+            var leftCharsCount = numberMaxLength + 1 + 1;
+            var remainingSpace = MobileTextChopLimit - leftCharsCount;
+
+            title = title.RemoveNonPrintableChars();
+            if (title.Length <= remainingSpace) {
+                builder.AppendLine(title);
+                return;
             }
 
-            FormatInternal();
-            if (isCurrent) {
-                builder.Append("[0m");
+            var potentialFirstLine = title.AsSpan(0, remainingSpace);
+            var lastSpaceInFirstLine = potentialFirstLine.LastIndexOf(' ');
+            // If space close to the end - lets not force chop text
+            if (lastSpaceInFirstLine >= remainingSpace - 8) {
+                potentialFirstLine = title.AsSpan(0, lastSpaceInFirstLine + 1);
             }
 
-            return;
+            builder.Append(potentialFirstLine);
+            builder.AppendLine();
 
-            void FormatInternal() {
-                var trackNumberString = trackNumber.ToString();
-                builder.Append(trackNumberString);
-                builder.Append(' ', numberMaxLength - trackNumberString.Length);
-                builder.Append(' ');
-                var groupChar = isLastInGroup switch {
-                    true when isCurrent => '┗',
-                    true => '└',
-                    false when isCurrent => '┣',
-                    false => '├'
-                };
-                builder.Append(groupChar);
+            builder.Append(' ', numberMaxLength + 1);
+            var groupCharSecond = isLastInGroup switch {
+                _ when isCurrent => '#',
+                true => ' ',
+                _ => '│'
+            };
+            builder.Append(groupCharSecond);
 
-                var leftCharsCount = numberMaxLength + 1 + 1;
-                var remainingSpace = MobileTextChopLimit - leftCharsCount;
-
-                title = title.RemoveNonPrintableChars();
-                if (title.Length <= remainingSpace) {
-                    builder.AppendLine(title);
-                    return;
-                }
-
-                var potentialFirstLine = title.AsSpan(0, remainingSpace);
-                var lastSpaceInFirstLine = potentialFirstLine.LastIndexOf(' ');
-                // If space close to the end - lets not force chop text
-                if (lastSpaceInFirstLine >= remainingSpace - 8) {
-                    potentialFirstLine = title.AsSpan(0, lastSpaceInFirstLine + 1);
-                }
-
-                builder.Append(potentialFirstLine);
-                builder.AppendLine();
-
-                builder.Append(' ', numberMaxLength + 1);
-                var groupCharSecond = isLastInGroup switch {
-                    true => ' ',
-                    false when isCurrent => '┃',
-                    _ => '│'
-                };
-                builder.Append(groupCharSecond);
-
-                builder.AppendLine(title.AsSpan(potentialFirstLine.Length).SafeSubstring(remainingSpace, "..."));
-            }
+            builder.AppendLine(title.AsSpan(potentialFirstLine.Length).SafeSubstring(remainingSpace, "..."));
         }
     }
 

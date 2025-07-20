@@ -63,9 +63,11 @@ public sealed class PlaylistQueueHelper : IEnumerator<PlaylistQueueHelper.Groupe
         public int CurrentIndex => _currentIndex;
         public int CurrentNumber => _currentIndex + 1;
 
-        public bool CurrentIsLast => _currentIndex == startIndex + count - 1
-                                     && (!playlist.TryGetValue(_currentIndex + 1, out var nextTrack)
-                                         || nextTrack.Requester != Requester);
+        public bool CurrentIsLast => _currentIndex == startIndex + count - 1;
+
+        public bool CurrentIsLastButGroupContinues =>
+            CurrentIsLast && (!playlist.TryGetValue(_currentIndex + 1, out var nextTrack)
+                              || nextTrack.Requester != Requester);
 
         public IEnlivenQueueItem Current { get; private set; } = null!;
 
