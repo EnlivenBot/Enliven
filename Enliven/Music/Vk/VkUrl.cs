@@ -9,36 +9,33 @@ using VkNet.Utils;
 
 namespace Bot.Music.Vk;
 
-public class VkUrl
-{
-    private static readonly Regex VkTrackRegex = new(@"https://vk\.com/audio(-?\d*_\d*)", RegexOptions.Compiled);
+public partial class VkUrl {
+    [GeneratedRegex(@"https://vk\.com/music/album/(-?\d*)_(\d*)_(\S*)", RegexOptions.Compiled)]
+    private static partial Regex AlbumRegex { get; }
 
-    private static readonly Regex VkAlbumRegex =
-        new(@"https://vk\.com/music/album/(-?\d*)_(\d*)_(\S*)", RegexOptions.Compiled);
+    [GeneratedRegex(@"https://vk\.com/audios(-?\d*)", RegexOptions.Compiled)]
+    private static partial Regex UserRegex { get; }
 
-    private static readonly Regex VkUserRegex = new(@"https://vk\.com/audios(-?\d*)", RegexOptions.Compiled);
+    [GeneratedRegex(@"https://vk\.com/audio(-?\d*_\d*)", RegexOptions.Compiled)]
+    private static partial Regex TrackRegex { get; }
 
-    public VkUrl(string request)
-    {
+    public VkUrl(string request) {
         Request = request;
-        if (!request.StartsWith("https://vk.com"))
-        {
+        if (!request.StartsWith("https://vk.com")) {
             Type = AudioUrlType.Unknown;
             Id = request;
             return;
         }
 
-        var trackMatch = VkTrackRegex.Match(request);
-        if (trackMatch.Success)
-        {
+        var trackMatch = TrackRegex.Match(request);
+        if (trackMatch.Success) {
             Id = trackMatch.Groups[1].Value;
             Type = AudioUrlType.Track;
             return;
         }
 
-        var albumMatch = VkAlbumRegex.Match(request);
-        if (albumMatch.Success)
-        {
+        var albumMatch = AlbumRegex.Match(request);
+        if (albumMatch.Success) {
             Id = albumMatch.Groups[1].Value;
             PlaylistId = albumMatch.Groups[2].Value;
             AccessKey = albumMatch.Groups[3].Value;
@@ -46,10 +43,9 @@ public class VkUrl
             return;
         }
 
-        var userMatch = VkUserRegex.Match(request);
-        if (userMatch.Success)
-        {
-            Id = albumMatch.Groups[1].Value;
+        var userMatch = UserRegex.Match(request);
+        if (userMatch.Success) {
+            Id = userMatch.Groups[1].Value;
             Type = AudioUrlType.User;
             return;
         }
@@ -58,8 +54,7 @@ public class VkUrl
         Type = AudioUrlType.Unknown;
     }
 
-    public VkUrl(string id, AudioUrlType type, string? playlistId, string? accessKey)
-    {
+    public VkUrl(string id, AudioUrlType type, string? playlistId, string? accessKey) {
         Id = id;
         Request = id;
         Type = type;
@@ -74,10 +69,8 @@ public class VkUrl
     public AudioUrlType Type { get; private set; }
     public bool IsValid => Type != AudioUrlType.Unknown;
 
-    public async Task<IReadOnlyList<Audio>> Resolve(IVkApi vkApi)
-    {
-        return (Type switch
-        {
+    public async Task<IReadOnlyList<Audio>> Resolve(IVkApi vkApi) {
+        return (Type switch {
             AudioUrlType.Album => await ResolveAlbum(vkApi),
             AudioUrlType.Playlist => throw new NotSupportedException(),
             AudioUrlType.Track => await ResolveTrack(vkApi),
@@ -88,34 +81,27 @@ public class VkUrl
         }).ToImmutableArray();
     }
 
-    private async Task<IEnumerable<Audio>> ResolveUser(IVkApi vkApi)
-    {
-        return await vkApi.CallAsync<VkCollection<Audio>>("audio.get", new VkParameters()
-        {
+    private async Task<IEnumerable<Audio>> ResolveUser(IVkApi vkApi) {
+        return await vkApi.CallAsync<VkCollection<Audio>>("audio.get", new VkParameters() {
             {
                 "owner_id", long.Parse(Id)
             }
         });
     }
 
-    private async Task<IEnumerable<Audio>> ResolveAlbum(IVkApi vkApi)
-    {
-        return await vkApi.CallAsync<VkCollection<Audio>>("audio.get", new VkParameters()
-        {
+    private async Task<IEnumerable<Audio>> ResolveAlbum(IVkApi vkApi) {
+        return await vkApi.CallAsync<VkCollection<Audio>>("audio.get", new VkParameters() {
             {
                 "owner_id", long.Parse(Id)
-            },
-            {
+            }, {
                 "playlist_id", long.Parse(PlaylistId!)
-            },
-            {
+            }, {
                 "access_key", AccessKey
             }
         });
     }
 
-    private async Task<IEnumerable<Audio>> ResolveTrack(IVkApi vkApi)
-    {
+    private async Task<IEnumerable<Audio>> ResolveTrack(IVkApi vkApi) {
         return await vkApi.Audio.GetByIdAsync(new[] { Id });
     }
 }
