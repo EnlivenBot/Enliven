@@ -414,11 +414,19 @@ public static class ExtensionMethods {
     public static string? RemoveNonPrintableChars(this string? input) {
         if (input is null) return null;
 
-        return new StringBuilder(input)
-            .Replace("'", "")
-            .Replace("\"", "")
-            .Replace("#", "")
-            .ToString();
+        return string.Create(input.Length, input, (span, s) => {
+            s.CopyTo(span);
+            for (var i = 0; i < span.Length; i++) {
+                switch (span[i]) {
+                    case '\'':
+                    case '"':
+                    case '#':
+                    case '`':
+                        span[i] = ' ';
+                        break;
+                }
+            }
+        });
     }
 
     public static IEnlivenQueueItem? GetSelectedTrackInPlaylist(this TrackLoadResult result,
