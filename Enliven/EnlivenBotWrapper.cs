@@ -21,14 +21,12 @@ using Microsoft.Extensions.Logging;
 
 namespace Bot;
 
-public class EnlivenBotWrapper
-{
+public class EnlivenBotWrapper {
     private readonly IConfiguration _configuration;
     private readonly InstanceConfig _instanceConfig;
     private TaskCompletionSource<bool>? _firstStartResult;
 
-    public EnlivenBotWrapper(InstanceConfig config, IConfiguration configuration)
-    {
+    public EnlivenBotWrapper(InstanceConfig config, IConfiguration configuration) {
         _instanceConfig = config;
         _configuration = configuration;
     }
@@ -38,8 +36,7 @@ public class EnlivenBotWrapper
     /// </summary>
     /// <returns>True if start successful, otherwise False</returns>
     public Task<bool> StartAsync(ILifetimeScope container, IServiceProvider serviceProvider,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         if (_firstStartResult != null) throw new Exception("Current instance already started");
 
         _firstStartResult = new TaskCompletionSource<bool>();
@@ -50,50 +47,55 @@ public class EnlivenBotWrapper
     }
 
     private async Task RunLoopAsync(ILifetimeScope container, IServiceProvider serviceProvider,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var isFirst = true;
         var topLevelHostedServices = serviceProvider.GetServices<IHostedService>()
             .ToImmutableArray();
 
-        while (!cancellationToken.IsCancellationRequested)
-        {
-            var lifetimeScope = container.BeginLifetimeScope(Constants.BotLifetimeScopeTag, ConfigureBotLifetime);
+        while (!cancellationToken.IsCancellationRequested) {
+            await using var lifetimeScope =
+                container.BeginLifetimeScope(Constants.BotLifetimeScopeTag, ConfigureBotLifetime);
             var logger = lifetimeScope.Resolve<ILogger<EnlivenBotWrapper>>();
             lifetimeScope.CurrentScopeEnding += (sender, eventArgs) => {
                 var exception = new Exception();
                 exception = ExceptionDispatchInfo.SetCurrentStackTrace(exception);
                 logger.LogCritical(exception, "SOMEONE {Sender} DISPOSED BOT ILifetimeScope", sender);
             };
-            try
-            {
+
+            try {
+                logger.LogInformation("Starting bot instance {InstanceName}", Path.GetFileName(_instanceConfig.Name));
                 var bot = lifetimeScope.Resolve<EnlivenBot>();
                 await bot.StartAsync(cancellationToken);
-                
+
                 var hostedServices = lifetimeScope
                     .Resolve<IReadOnlyCollection<IHostedService>>()
                     .Except(topLevelHostedServices)
                     .ToImmutableArray();
-                foreach (var hostedService in hostedServices) 
+                foreach (var hostedService in hostedServices)
                     await hostedService.StartAsync(cancellationToken);
 
                 _firstStartResult!.TrySetResult(true);
 
-                try
-                {
+                try {
                     await bot.WaitForDisposeAsync();
-                    foreach (var hostedService in hostedServices)
-                        await hostedService.StopAsync(CancellationToken.None);
                 }
-                catch (Exception)
-                {
+                catch (Exception) {
                     // ignored
                 }
+
+                try {
+                    await hostedServices
+                        .Select(service => service.StopAsync(CancellationToken.None))
+                        .WhenAll();
+                }
+                catch (Exception) {
+                    // ignored
+                }
+
+                logger.LogInformation("Stopping bot instance {InstanceName}", Path.GetFileName(_instanceConfig.Name));
             }
-            catch (Exception e)
-            {
-                logger.LogError(e, "Failed to start bot instance with config {FileName}",
-                    Path.GetFileName(_instanceConfig.Name));
+            catch (Exception e) {
+                logger.LogError(e, "Failed to start bot instance with config {InstanceName}", _instanceConfig.Name);
                 _firstStartResult!.TrySetResult(false);
                 if (isFirst) return;
             }
@@ -102,8 +104,7 @@ public class EnlivenBotWrapper
         }
     }
 
-    private void ConfigureBotLifetime(ContainerBuilder builder)
-    {
+    private void ConfigureBotLifetime(ContainerBuilder builder) {
         var services = new ServiceCollection();
         services.AddSingleton(_instanceConfig);
         services.AddSingleton<IServiceScopeFactory, ServiceScopeFactoryAdapter>();

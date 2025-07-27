@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Linq;
-using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Interactions.Handlers;
-using Bot.DiscordRelated.MessageComponents;
 using Common;
 using Common.Config;
 using Common.Music.Cluster;
@@ -18,8 +16,7 @@ using Newtonsoft.Json;
 
 namespace Bot.DiscordRelated.Music;
 
-public sealed class EmbedPlayerDisplayProvider : IService, IDisposable
-{
+public sealed class EmbedPlayerDisplayProvider : IService, IDisposable {
     private readonly IArtworkService _artworkService;
     private readonly ConcurrentDictionary<string, EmbedPlayerDisplay> _cache = new();
     private readonly EnlivenShardedClient _client;
@@ -35,8 +32,7 @@ public sealed class EmbedPlayerDisplayProvider : IService, IDisposable
         CommandHandlerService commandHandlerService,
         MessageComponentInteractionsHandler messageComponentInteractionsHandler,
         ILogger<EmbedPlayerDisplayProvider> logger, ILoggerFactory loggerFactory, IArtworkService artworkService,
-        IEnlivenClusterAudioService clusterAudioService)
-    {
+        IEnlivenClusterAudioService clusterAudioService) {
         _messageComponentInteractionsHandler = messageComponentInteractionsHandler;
         _commandHandlerService = commandHandlerService;
         _logger = logger;
@@ -47,31 +43,25 @@ public sealed class EmbedPlayerDisplayProvider : IService, IDisposable
         _guildConfigProvider = guildConfigProvider;
     }
 
-    public Task OnPreDiscordStart()
-    {
+    public Task OnPreDiscordStart() {
         new Task(UpdateCycle, TaskCreationOptions.LongRunning).Start();
         return Task.CompletedTask;
     }
 
-    public EmbedPlayerDisplay? Get(string id)
-    {
+    public EmbedPlayerDisplay? Get(string id) {
         return _cache.TryGetValue(id, out var display) ? display : null;
     }
 
-    public EmbedPlayerDisplay? Get(ITextChannel channel)
-    {
+    public EmbedPlayerDisplay? Get(ITextChannel channel) {
         return Get($"guild-{channel.GuildId}");
     }
 
-    public EmbedPlayerDisplay Provide(ITextChannel channel)
-    {
+    public EmbedPlayerDisplay Provide(ITextChannel channel) {
         return ProvideInternal($"guild-{channel.GuildId}", channel);
     }
 
-    private EmbedPlayerDisplay ProvideInternal(string id, ITextChannel channel, int recursiveCount = 0)
-    {
-        var embedPlayerDisplay = _cache.GetOrAdd(id, s =>
-        {
+    private EmbedPlayerDisplay ProvideInternal(string id, ITextChannel channel, int recursiveCount = 0) {
+        var embedPlayerDisplay = _cache.GetOrAdd(id, s => {
             var guildConfig = _guildConfigProvider.Get(channel.GuildId);
             // TODO: Implement proper logger creation
             return new EmbedPlayerDisplay(channel, _client, guildConfig.Loc, _commandHandlerService,
@@ -88,35 +78,32 @@ public sealed class EmbedPlayerDisplayProvider : IService, IDisposable
         return embedPlayerDisplay;
     }
 
-    private async void UpdateCycle()
-    {
-        while (!_updateCycleCancellationTokenSource.IsCancellationRequested)
-        {
-            var waitCycle = Task.Delay(Constants.PlayerEmbedUpdateDelay, _updateCycleCancellationTokenSource.Token);
-            var displays = _cache.Values.ToList();
-            foreach (var display in displays)
-            {
-                try
-                {
-                    if (display.Player?.State != PlayerState.Playing) continue;
-                    display.UpdateProgress();
-                    display.UpdateMessageComponents();
-                    await display.UpdateControlMessage(true);
+    private async void UpdateCycle() {
+        try {
+            while (!_updateCycleCancellationTokenSource.IsCancellationRequested) {
+                var waitCycle = Task.Delay(Constants.PlayerEmbedUpdateDelay, _updateCycleCancellationTokenSource.Token);
+                var displays = _cache.Values.ToList();
+                foreach (var display in displays) {
+                    try {
+                        if (display.Player?.State != PlayerState.Playing) continue;
+                        display.UpdateProgress();
+                        display.UpdateMessageComponents();
+                        await display.UpdateControlMessage(true);
+                    }
+                    catch (Exception) {
+                        // ignored
+                    }
                 }
-                catch (Exception)
-                {
-                    // ignored
-                }
-            }
 
-            await waitCycle;
+                await waitCycle;
+            }
         }
-        // ReSharper disable once FunctionNeverReturns
+        catch (Exception) {
+            // ignored
+        }
     }
-    
-    public void Dispose()
-    {
+
+    public void Dispose() {
         _updateCycleCancellationTokenSource.Cancel();
-        _updateCycleCancellationTokenSource.Dispose();
     }
 }
