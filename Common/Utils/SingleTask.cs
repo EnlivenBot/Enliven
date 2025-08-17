@@ -119,6 +119,7 @@ public class SingleTask<T, TForcedArg> : DisposableBase {
     }
 
     public async Task<T> ForcedExecute(TForcedArg forcedArg) {
+        EnsureNotDisposed();
         var taskCompletionSource = new TaskCompletionSource<T>();
         _forcedParams.Enqueue((taskCompletionSource, forcedArg));
         _handyTimer.SetDelay(TimeSpan.Zero);
@@ -177,10 +178,12 @@ public class SingleTask<T, TForcedArg> : DisposableBase {
             }
         }
         finally {
-            _currentTaskCompletionSource?.TrySetException(
-                new TaskCanceledException("Task cancelled due to SingleTask disposing"));
-            _dirtyTaskCompletionSource?.TrySetException(
-                new TaskCanceledException("Task cancelled due to SingleTask disposing"));
+            var exception = new TaskCanceledException("Task cancelled due to SingleTask disposing");
+            _currentTaskCompletionSource?.TrySetException(exception);
+            _dirtyTaskCompletionSource?.TrySetException(exception);
+            while (_forcedParams.TryDequeue(out var forcedExecution)) {
+                forcedExecution.Item1?.TrySetException(exception);
+            }
         }
     }
 
