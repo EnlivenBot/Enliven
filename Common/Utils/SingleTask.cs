@@ -145,24 +145,25 @@ public class SingleTask<T, TForcedArg> : DisposableBase {
 
                 if (IsDisposed) return;
 
+                _forcedParams.TryDequeue(out var forcedExecution);
+                var singleTaskExecutionData = new SingleTaskExecutionData<TForcedArg>(
+                    BetweenExecutionsDelay, forcedExecution.Item2);
                 lock (_lock) {
-                    _currentTaskCompletionSource = _dirtyTaskCompletionSource ?? new TaskCompletionSource<T>();
+                    _currentTaskCompletionSource = _dirtyTaskCompletionSource ?? forcedExecution.Item1
+                        ?? new TaskCompletionSource<T>();
                     _dirtyTaskCompletionSource = null;
                 }
 
-                _forcedParams.TryDequeue(out var forcedExecution);
-                var singleTaskExecutionData =
-                    new SingleTaskExecutionData<TForcedArg>(BetweenExecutionsDelay, forcedExecution.Item2);
                 try {
                     var result = await _action(singleTaskExecutionData);
                     if (result is Task task) await task;
                     _lastResult = result;
                     _currentTaskCompletionSource!.SetResult(result);
-                    forcedExecution.Item1?.SetResult(result);
+                    forcedExecution.Item1?.TrySetResult(result);
                 }
                 catch (Exception e) {
                     _currentTaskCompletionSource!.SetException(e);
-                    forcedExecution.Item1?.SetException(e);
+                    forcedExecution.Item1?.TrySetException(e);
                 }
 
                 lock (_lock) {
