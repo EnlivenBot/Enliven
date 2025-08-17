@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reactive;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Bot.DiscordRelated.Commands.Modules;
@@ -29,14 +30,17 @@ public class NonSpamMessageController {
     private TimeChecker _lastSendTimeChecker = new(TimeSpan.FromSeconds(20));
     private SendControlMessageOverride? _sendControlMessageOverride;
 
-    public NonSpamMessageController(ILocalizationProvider loc, IMessageChannel channel, string embedTitle, Color embedColor = default) {
+    public NonSpamMessageController(ILocalizationProvider loc, IMessageChannel channel, string embedTitle,
+        Color embedColor = default) {
         _loc = loc;
         TargetChannel = channel;
         EmbedTitle = embedTitle;
         EmbedColor = embedColor;
-        _updateTask = new SingleTask(InternalUpdateAsync) { CanBeDirty = true, BetweenExecutionsDelay = TimeSpan.FromSeconds(1) };
+        _updateTask = new SingleTask(InternalUpdateAsync)
+            { CanBeDirty = true, BetweenExecutionsDelay = TimeSpan.FromSeconds(1) };
         _resendTask = new SingleTask<IUserMessage?>(InternalResendAsync);
     }
+
     public string EmbedTitle { get; set; }
     public Color EmbedColor { get; set; }
 
@@ -81,7 +85,8 @@ public class NonSpamMessageController {
 
         var description = Entries
             .GroupBy(data => data.Entry.Get(_loc))
-            .Select(grouping => grouping.Key + GetEntryPostfix(grouping.Count(), grouping.OrderBy(data => data.AddDate).Last().AddDate))
+            .Select(grouping =>
+                grouping.Key + GetEntryPostfix(grouping.Count(), grouping.OrderBy(data => data.AddDate).Last().AddDate))
             .JoinToString("\n");
         return new EmbedBuilder()
             .WithTitle(EmbedTitle)
@@ -90,7 +95,9 @@ public class NonSpamMessageController {
 
         string GetEntryPostfix(int count, DateTime last) {
             var lastOffset = new DateTimeOffset(last);
-            return count == 1 ? $" (<t:{lastOffset.ToUnixTimeSeconds()}:R>)" : $" (**{count}x**, last <t:{lastOffset.ToUnixTimeSeconds()}:R>)";
+            return count == 1
+                ? $" (<t:{lastOffset.ToUnixTimeSeconds()}:R>)"
+                : $" (**{count}x**, last <t:{lastOffset.ToUnixTimeSeconds()}:R>)";
         }
     }
 
@@ -102,7 +109,7 @@ public class NonSpamMessageController {
         return _resendTask.Execute();
     }
 
-    private async Task<IUserMessage?> InternalResendAsync(SingleTaskExecutionData executionData) {
+    private async Task<IUserMessage?> InternalResendAsync(SingleTaskExecutionData<Unit> executionData) {
         Message?.SafeDelete();
         Message = null;
 
@@ -126,7 +133,7 @@ public class NonSpamMessageController {
         return null;
     }
 
-    private async Task InternalUpdateAsync(SingleTaskExecutionData executionData) {
+    private async Task InternalUpdateAsync(SingleTaskExecutionData<Unit> executionData) {
         var embed = GetEmbed();
         if (embed == null) {
             Message.SafeDelete();
@@ -136,7 +143,8 @@ public class NonSpamMessageController {
         }
 
         try {
-            if (Message == null || await _lastSendTimeChecker.ToCriteria().AddCriterion(new EnsureMessage(TargetChannel, Message).Invert()).JudgeAsync())
+            if (Message == null || await _lastSendTimeChecker.ToCriteria()
+                    .AddCriterion(new EnsureMessage(TargetChannel, Message).Invert()).JudgeAsync())
                 await Resend();
             else {
                 await Message!.ModifyAsync(properties => {
@@ -151,7 +159,8 @@ public class NonSpamMessageController {
         }
     }
 
-    public async Task ResendWithOverride(SendControlMessageOverride sendControlMessageOverride, bool executeResend = true) {
+    public async Task ResendWithOverride(SendControlMessageOverride sendControlMessageOverride,
+        bool executeResend = true) {
         _sendControlMessageOverride = (embed, component) => {
             _sendControlMessageOverride = null;
             return sendControlMessageOverride(embed, component);
@@ -170,16 +179,20 @@ public class NonSpamMessageController {
     private class NonSpamMessageControllerEntry : IRepliedEntry {
         private readonly NonSpamMessageController _controller;
         private bool _isDeleted;
+
         public NonSpamMessageControllerEntry(NonSpamMessageController controller, MessageControllerEntryData data) {
             _controller = controller;
             Data = data;
         }
+
         public MessageControllerEntryData Data { get; private set; }
+
         public Task ChangeEntryAsync(IEntry entry) {
             if (_isDeleted) throw new InvalidOperationException("This IEntry already deleted");
             Data.Entry = entry;
             return _controller.Update();
         }
+
         public Task DeleteAsync() {
             if (_isDeleted) return Task.CompletedTask;
             _isDeleted = true;

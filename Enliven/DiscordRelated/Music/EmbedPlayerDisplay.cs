@@ -60,7 +60,6 @@ public class EmbedPlayerDisplay : PlayerDisplayBase {
     private bool _resendInsteadOfUpdate;
     private SendControlMessageOverride? _sendControlMessageOverride;
     private IMessageChannel _targetChannel;
-
     public bool NextResendForced;
 
     public EmbedPlayerDisplay(IMessageChannel targetChannel, IDiscordClient discordClient, ILocalizationProvider loc,
@@ -93,7 +92,7 @@ public class EmbedPlayerDisplay : PlayerDisplayBase {
         };
     }
 
-    private async Task SendControlMessageInternal(SingleTaskExecutionData data) {
+    private async Task SendControlMessageInternal(SingleTaskExecutionData<Unit> data) {
         try {
             var shouldResend =
                 NextResendForced
@@ -135,7 +134,7 @@ public class EmbedPlayerDisplay : PlayerDisplayBase {
         }
     }
 
-    private async Task UpdateControlMessageInternal(SingleTaskExecutionData data) {
+    private async Task UpdateControlMessageInternal(SingleTaskExecutionData<Unit> data) {
         var internalCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(
             _cancellationTokenSource?.Token ?? CancellationToken.None);
         if (internalCancellationTokenSource.Token.IsCancellationRequested) data.OverrideDelay = TimeSpan.Zero;

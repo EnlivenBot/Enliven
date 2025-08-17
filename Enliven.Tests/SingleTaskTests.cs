@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Common;
 using Common.Utils;
 using FluentAssertions;
 using FluentAssertions.Extensions;
@@ -9,11 +11,14 @@ using Xunit;
 namespace Enliven.Tests;
 
 public class SingleTaskTests : IDisposable {
-    private SingleTask<int> _singleTask;
+    private readonly List<int?> _forcedParams = [];
+    private readonly SingleTask<int, int?> _singleTask;
     private int _timesExecuted;
+
     public SingleTaskTests() {
-        _singleTask = new SingleTask<int>(async () => {
+        _singleTask = new SingleTask<int, int?>(async data => {
             await Task.Delay(50);
+            _forcedParams.Add(data.Parameter);
             return _timesExecuted++;
         });
     }
@@ -145,6 +150,14 @@ public class SingleTaskTests : IDisposable {
         await Task.WhenAll(secondTasks);
 
         _timesExecuted.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task SingleTask_ManyForced_VerifyExpectations() {
+        await Enumerable.Range(0, 10)
+            .Select(i => _ = _singleTask.ForcedExecute(i))
+            .WhenAll();
+        _forcedParams.Should().BeEquivalentTo(Enumerable.Range(0, 10));
     }
 
     [Fact]
