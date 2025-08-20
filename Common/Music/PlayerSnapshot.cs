@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using Common.Music.Players;
 using Common.Music.Tracks;
 using Lavalink4NET.Players;
 
 namespace Common.Music;
 
-public class PlayerSnapshot
-{
+public class PlayerSnapshot {
     public ulong GuildId { get; set; }
     public ulong LastVoiceChannelId { get; set; }
     public IEnlivenQueueItem? LastTrack { get; set; }

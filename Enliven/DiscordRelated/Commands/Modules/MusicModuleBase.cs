@@ -5,12 +5,12 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using Bot.DiscordRelated.Commands.Modules.Contexts;
 using Bot.DiscordRelated.Music;
+using Bot.Music.Cluster;
+using Bot.Music.Players;
+using Bot.Music.Players.Options;
 using Common;
 using Common.Config;
 using Common.Localization.Entries;
-using Common.Music.Cluster;
-using Common.Music.Players;
-using Common.Music.Players.Options;
 using Discord;
 using Discord.Commands;
 using Discord.Interactions;
@@ -21,8 +21,7 @@ using Microsoft.Extensions.Options;
 
 namespace Bot.DiscordRelated.Commands.Modules;
 
-public abstract class MusicModuleBase : AdvancedModuleBase
-{
+public abstract class MusicModuleBase : AdvancedModuleBase {
     private static readonly ConcurrentDictionary<ulong, NonSpamMessageController> ErrorsMessagesControllers = new();
 
     protected static readonly IEntry ChannelNotAllowedEntry = new EntryLocalized("Music.ChannelNotAllowed");
@@ -40,20 +39,17 @@ public abstract class MusicModuleBase : AdvancedModuleBase
     public IEnlivenClusterAudioService AudioService { get; set; } = null!;
     protected EnlivenLavalinkPlayer? Player { get; private set; }
 
-    public sealed override async Task BeforeExecuteAsync(CommandInfo command)
-    {
+    public sealed override async Task BeforeExecuteAsync(CommandInfo command) {
         await base.BeforeExecuteAsync(command);
         await BeforeExecuteAsync(command.Attributes);
     }
 
-    public sealed override async Task BeforeExecuteAsync(ICommandInfo command)
-    {
+    public sealed override async Task BeforeExecuteAsync(ICommandInfo command) {
         await base.BeforeExecuteAsync(command);
         await BeforeExecuteAsync(command.Attributes);
     }
 
-    private async Task BeforeExecuteAsync(IReadOnlyCollection<Attribute> attributes)
-    {
+    private async Task BeforeExecuteAsync(IReadOnlyCollection<Attribute> attributes) {
         var userVoiceChannel = (Context.User as IVoiceState)?.VoiceChannel;
         var userVoiceChannelId = userVoiceChannel?.Id;
 
@@ -63,12 +59,11 @@ public abstract class MusicModuleBase : AdvancedModuleBase
         // Probably here we also need to check if player isn't null actually
         if (!channelInfo.IsCurrentChannelSuitable)
             await this.ReplyFormattedAsync(PlaybackEntry, PlaybackMovedEntry.WithArg(channelInfo.MusicChannel!), true);
-        
-        if (Context.NeedResponse && channelInfo.IsCurrentChannelSuitable && Context.Channel is ITextChannel textChannel && Player is not null)
-        {
+
+        if (Context.NeedResponse && channelInfo.IsCurrentChannelSuitable &&
+            Context.Channel is ITextChannel textChannel && Player is not null) {
             var embedPlayerDisplay = EmbedPlayerDisplayProvider.Get(textChannel);
-            if (embedPlayerDisplay != null)
-            {
+            if (embedPlayerDisplay != null) {
                 await embedPlayerDisplay.ResendControlMessageWithOverride(OverrideSendingControlMessage, false);
             }
         }
@@ -76,14 +71,12 @@ public abstract class MusicModuleBase : AdvancedModuleBase
 
     protected virtual async Task<EnlivenLavalinkPlayer?> ResolvePlayerBeforeExecuteAsync(
         IReadOnlyCollection<Attribute> attributes,
-        MusicCommandChannelInfo channelInfo, ulong? userVoiceChannelId)
-    {
+        MusicCommandChannelInfo channelInfo, ulong? userVoiceChannelId) {
         await ReplyAndThrowIfAsync(!channelInfo.IsCommandAllowed,
             ChannelNotAllowedEntry.WithArg(Context.User.Mention, channelInfo.MusicChannel!));
 
         var anyNodeAvailableTask = AudioService.WaitForAnyNodeAvailable();
-        if (!anyNodeAvailableTask.IsCompleted)
-        {
+        if (!anyNodeAvailableTask.IsCompleted) {
             var loadingEntry = await ReplyEntryAsync(AwaitingNodeConnectionEntry, TimeSpan.FromDays(1));
             await anyNodeAvailableTask;
             await loadingEntry.DeleteAsync();
@@ -91,8 +84,7 @@ public abstract class MusicModuleBase : AdvancedModuleBase
 
         await ReplyAndThrowIfAsync(userVoiceChannelId == null, NotInVoiceChannelEntry.WithArg(Context.User.Mention));
 
-        if (AudioService.Players.TryGetPlayer<EnlivenLavalinkPlayer>(Context.Guild.Id, out var player))
-        {
+        if (AudioService.Players.TryGetPlayer<EnlivenLavalinkPlayer>(Context.Guild.Id, out var player)) {
             await ReplyAndThrowIfAsync(userVoiceChannelId != player!.VoiceChannelId,
                 OtherVoiceChannelEntry.WithArg(Context.User.Mention));
         }
@@ -102,32 +94,30 @@ public abstract class MusicModuleBase : AdvancedModuleBase
 
     protected async Task<EnlivenLavalinkPlayer> CheckUserAndCreatePlayerAsync(
         PlayerRetrieveOptions playerRetrieveOptions, PlaylistLavalinkPlayerOptions? options = null,
-        MusicCommandChannelInfo? channelInfo = null)
-    {
+        MusicCommandChannelInfo? channelInfo = null) {
         var userVoiceChannel = (Context.User as IVoiceState)?.VoiceChannel;
         var userVoiceChannelId = userVoiceChannel?.Id;
-        
+
         var currentUser = await Context.Guild.GetCurrentUserAsync();
         var perms = currentUser.GetPermissions((Context.User as IVoiceState)?.VoiceChannel);
         await ReplyAndThrowIfAsync(!perms.Connect, CantConnectEntry.WithArg($"<#{userVoiceChannelId}>"));
 
-        return await CreatePlayerAsync(userVoiceChannelId!.Value, playerRetrieveOptions, options, channelInfo);        
-    }    
-    
+        return await CreatePlayerAsync(userVoiceChannelId!.Value, playerRetrieveOptions, options, channelInfo);
+    }
+
     protected async Task<EnlivenLavalinkPlayer> CreatePlayerAsync(ulong userVoiceChannelId,
         PlayerRetrieveOptions playerRetrieveOptions, PlaylistLavalinkPlayerOptions? options = null,
-        MusicCommandChannelInfo? channelInfo = null)
-    {
+        MusicCommandChannelInfo? channelInfo = null) {
         var playlistLavalinkPlayerOptions = options ?? new PlaylistLavalinkPlayerOptions();
         var optionsWrapper = new OptionsWrapper<PlaylistLavalinkPlayerOptions>(playlistLavalinkPlayerOptions);
         var retrieveResult = await AudioService.Players.RetrieveAsync(Context.Guild.Id, userVoiceChannelId,
             EnlivenClusterAudioService.EnlivenPlayerFactory, optionsWrapper, playerRetrieveOptions);
 
-        if (!retrieveResult.IsSuccess)
-        {
+        if (!retrieveResult.IsSuccess) {
             await ReplyEntryAsync(CantRetrievePlayerEntry);
             throw new CommandInterruptionException(CantRetrievePlayerEntry);
         }
+
         Player = retrieveResult.Player;
 
         channelInfo = GetChannelInfo();
@@ -139,21 +129,18 @@ public abstract class MusicModuleBase : AdvancedModuleBase
         return Player;
     }
 
-    protected async Task<IUserMessage> OverrideSendingControlMessage(Embed embed, MessageComponent? component)
-    {
+    protected async Task<IUserMessage> OverrideSendingControlMessage(Embed embed, MessageComponent? component) {
         var sentMessage = await Context.SendMessageAsync(null, embed, false, component);
         return await sentMessage.GetMessageAsync();
     }
 
-    protected async Task ReplyAndThrowIfAsync(bool condition, IEntry entry)
-    {
+    protected async Task ReplyAndThrowIfAsync(bool condition, IEntry entry) {
         if (!condition) return;
         _ = await ReplyEntryAsync(entry, Constants.ShortTimeSpan);
         throw new CommandInterruptionException(entry);
     }
 
-    protected MusicCommandChannelInfo GetChannelInfo()
-    {
+    protected MusicCommandChannelInfo GetChannelInfo() {
         var musicChannelId = GuildConfig.GetChannel(ChannelFunction.Music, out var m) ? m : (ulong?)null;
         var dedicatedMusicChannelId =
             GuildConfig.GetChannel(ChannelFunction.DedicatedMusic, out var d) ? d : (ulong?)null;
@@ -162,8 +149,7 @@ public abstract class MusicModuleBase : AdvancedModuleBase
             Context);
     }
 
-    protected async Task<IRepliedEntry> ReplyEntryAsync(IEntry entry, TimeSpan? timeout = null)
-    {
+    protected async Task<IRepliedEntry> ReplyEntryAsync(IEntry entry, TimeSpan? timeout = null) {
         var nonSpamMessageController = ErrorsMessagesControllers
             .GetOrAdd(Context.Channel.Id, CreateNonSpanMessageController);
         var repliedEntry = nonSpamMessageController.AddRepliedEntry(entry, timeout);
@@ -173,14 +159,12 @@ public abstract class MusicModuleBase : AdvancedModuleBase
             await nonSpamMessageController.Update();
         return repliedEntry;
 
-        NonSpamMessageController CreateNonSpanMessageController(ulong arg)
-        {
+        NonSpamMessageController CreateNonSpanMessageController(ulong arg) {
             return new NonSpamMessageController(Loc, Context.Channel, Loc.Get("Music.Fail"));
         }
     }
 
-    protected async Task<EmbedPlayerDisplay> GetMainPlayerDisplay()
-    {
+    protected async Task<EmbedPlayerDisplay> GetMainPlayerDisplay() {
         Debug.Assert(Player is not null);
         var channelInfo = GetChannelInfo();
         var embedPlayerDisplay = EmbedPlayerDisplayProvider.Provide(await channelInfo.GetTargetChannelAsync());
@@ -193,8 +177,7 @@ public abstract class MusicModuleBase : AdvancedModuleBase
         ulong? MusicChannel,
         ulong? DedicatedMusicChannel,
         bool IsMusicLimited,
-        ICommonModuleContext Context)
-    {
+        ICommonModuleContext Context) {
         public bool IsCurrentChannelSuitable => MusicChannel == null || CurrentChannel == MusicChannel ||
                                                 CurrentChannel == DedicatedMusicChannel;
 
@@ -202,8 +185,7 @@ public abstract class MusicModuleBase : AdvancedModuleBase
         public ulong TargetChannelId => MusicChannel ?? CurrentChannel;
         private ICommonModuleContext Context { get; init; } = Context;
 
-        public async Task<ITextChannel> GetTargetChannelAsync()
-        {
+        public async Task<ITextChannel> GetTargetChannelAsync() {
             if (Context.Channel.Id == TargetChannelId) return (ITextChannel)Context.Channel;
 
             return await Context.Guild.GetTextChannelAsync(TargetChannelId)

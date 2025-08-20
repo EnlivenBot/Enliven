@@ -1,7 +1,6 @@
-﻿namespace Lavalink4NET.InactivityTracking.Trackers;
+﻿using System.Collections.Immutable;
 
-using System.Collections.Immutable;
-using Lavalink4NET.Tracking;
+namespace Lavalink4NET.InactivityTracking.Trackers;
 
 public readonly record struct PlayerTrackingState(
     PlayerTrackingStatus Status,

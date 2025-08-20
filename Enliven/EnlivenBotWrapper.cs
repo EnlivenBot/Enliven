@@ -8,12 +8,17 @@ using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
+using Bot.Music.Cluster;
 using Bot.Utilities.Logging;
 using Common;
 using Common.Config;
+using Common.Infrastructure;
 using Common.Utils;
 using Discord;
 using Discord.WebSocket;
+using Enliven.MusicResolvers.Lavalink;
+using Lavalink4NET;
+using Lavalink4NET.Cluster;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -114,6 +119,10 @@ public class EnlivenBotWrapper {
         services.AddSingleton<DiscordShardedClient>(s => s.GetRequiredService<EnlivenShardedClient>());
         services.AddSingleton<IDiscordClient>(s => s.GetRequiredService<EnlivenShardedClient>());
         services.AddLavalink();
+        services.AddSingleton<IAudioService>(provider => provider.GetRequiredService<IEnlivenClusterAudioService>());
+        services.AddSingleton<IEnlivenClusterAudioService, EnlivenClusterAudioService>();
+        services.AddSingleton<IClusterAudioService>(provider =>
+            provider.GetRequiredService<IEnlivenClusterAudioService>());
         services.AddPerBotServices();
 
         builder.Populate(services);

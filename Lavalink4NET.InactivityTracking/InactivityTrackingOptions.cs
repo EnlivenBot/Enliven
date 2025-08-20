@@ -1,14 +1,12 @@
-namespace Lavalink4NET.Tracking;
-
-using System;
 using System.Collections.Immutable;
-using Lavalink4NET.InactivityTracking;
+using Lavalink4NET.InactivityTracking.Trackers;
+
+namespace Lavalink4NET.InactivityTracking;
 
 /// <summary>
 ///     The options for the <see cref="InactivityTrackingService"/>.
 /// </summary>
-public sealed class InactivityTrackingOptions
-{
+public sealed class InactivityTrackingOptions {
     /// <summary>
     ///     Gets or sets the default inactivity timeout for a player stop. Use <see cref="TimeSpan.Zero"/> for
     ///     disconnect immediately from the channel. The default timeout is used if a tracker does not specify a timeout.

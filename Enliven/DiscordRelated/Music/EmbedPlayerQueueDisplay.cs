@@ -2,19 +2,17 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Bot.DiscordRelated.Interactions.Handlers;
-using Bot.DiscordRelated.MessageComponents;
+using Bot.Music.Players;
 using Bot.Utilities.Collector;
 using Common;
 using Common.Localization.Entries;
 using Common.Localization.Providers;
-using Common.Music.Players;
 using Common.Utils;
 using Discord;
 
 namespace Bot.DiscordRelated.Music;
 
-public class EmbedPlayerQueueDisplay : PlayerDisplayBase
-{
+public class EmbedPlayerQueueDisplay : PlayerDisplayBase {
     private readonly CollectorService _collectorService;
     private readonly IDiscordClient _discordClient;
     private readonly ILocalizationProvider _loc;
@@ -26,8 +24,7 @@ public class EmbedPlayerQueueDisplay : PlayerDisplayBase
 
     public EmbedPlayerQueueDisplay(IMessageChannel targetChannel, ILocalizationProvider loc,
         MessageComponentInteractionsHandler messageComponentInteractionsHandler, CollectorService collectorService,
-        IDiscordClient discordClient)
-    {
+        IDiscordClient discordClient) {
         _loc = loc;
         _messageComponentInteractionsHandler = messageComponentInteractionsHandler;
         _collectorService = collectorService;
@@ -35,12 +32,10 @@ public class EmbedPlayerQueueDisplay : PlayerDisplayBase
         _targetChannel = targetChannel;
     }
 
-    public override async Task Initialize(EnlivenLavalinkPlayer finalLavalinkPlayer)
-    {
+    public override async Task Initialize(EnlivenLavalinkPlayer finalLavalinkPlayer) {
         var paginatedAppearanceOptions = new PaginatedAppearanceOptions { Timeout = TimeSpan.FromMinutes(1) };
         _paginatedMessage = new PaginatedMessage(paginatedAppearanceOptions, _targetChannel, _loc,
-            _messageComponentInteractionsHandler, _collectorService, _discordClient)
-        {
+            _messageComponentInteractionsHandler, _collectorService, _discordClient) {
             Title = _loc.Get("MusicQueues.QueueTitle"), Color = Color.Gold
         };
         _ = _paginatedMessage.WaitForDisposeAsync().ContinueWith(_ => ExecuteShutdown(null, null));
@@ -48,8 +43,7 @@ public class EmbedPlayerQueueDisplay : PlayerDisplayBase
         await _paginatedMessage.Resend();
     }
 
-    private void UpdatePages()
-    {
+    private void UpdatePages() {
         _paginatedMessage?.SetPages(string.Join("\n",
                 Player!.Playlist.Select((track, i) =>
                     (Player.CurrentTrackIndex == i ? "@" : " ")
@@ -58,8 +52,7 @@ public class EmbedPlayerQueueDisplay : PlayerDisplayBase
     }
 
 
-    public override Task ChangePlayer(EnlivenLavalinkPlayer newPlayer)
-    {
+    public override Task ChangePlayer(EnlivenLavalinkPlayer newPlayer) {
         base.ChangePlayer(newPlayer);
         UpdatePages();
         _subscribers?.Dispose();
@@ -70,15 +63,13 @@ public class EmbedPlayerQueueDisplay : PlayerDisplayBase
         return Task.CompletedTask;
     }
 
-    public override async Task ExecuteShutdown(IEntry? header, IEntry? body)
-    {
+    public override async Task ExecuteShutdown(IEntry? header, IEntry? body) {
         await base.ExecuteShutdown(header!, body!);
         _subscribers?.Dispose();
         _paginatedMessage.Dispose();
     }
 
-    public override Task LeaveNotification(IEntry? header, IEntry? body)
-    {
+    public override Task LeaveNotification(IEntry? header, IEntry? body) {
         return Task.CompletedTask;
     }
 }

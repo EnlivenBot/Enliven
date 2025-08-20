@@ -24,10 +24,13 @@
         <PackageReference Include="Serilog" />
         <PackageReference Include="System.Reactive" />
         <PackageReference Include="Tyrrrz.Extensions" />
-      <PackageReference Include="YandexMusicResolver"/>
     </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\Lavalink4NET.InactivityTracking\Lavalink4NET.InactivityTracking.csproj" />
     </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Infrastructure\Serializing\"/>
+  </ItemGroup>
 </Project>

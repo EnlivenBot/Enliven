@@ -3,19 +3,20 @@ using System.IO;
 using System.Net.Http;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
+using Aspire.ServiceDefaults;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using Bot;
 using Bot.DiscordRelated.Commands;
-using Bot.Music.Deezer;
-using Bot.Music.Spotify;
-using Bot.Music.Vk;
 using Bot.Utilities.Logging;
 using Common;
-using Common.Config;
 using Common.Localization;
-using Common.Music.Resolvers;
 using Common.Utils;
+using Enliven.MusicResolver.Spotify;
+using Enliven.MusicResolver.YandexMusic;
+using Enliven.MusicResolvers.Base;
+using Enliven.MusicResolvers.Lavalink;
+using Enliven.MusicResolvers.Vk;
 using Lavalink4NET.Artwork;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
@@ -47,9 +48,8 @@ builder.Host
 
         services.AddVk(builder.Configuration);
         services.AddYandex(builder.Configuration);
-        services.AddSingleton<IMusicResolver, DeezerMusicResolver>();
-        services.ConfigureNamedOptions<SpotifyCredentials>(builder.Configuration);
-        services.AddSingleton<IMusicResolver, SpotifyMusicResolver>();
+        services.AddDeezer();
+        services.AddSpotify(builder.Configuration);
     });
 
 var app = builder.Build();

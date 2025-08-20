@@ -29,11 +29,6 @@
         <PackageReference Include="Serilog.Expressions" />
         <PackageReference Include="Serilog.Sinks.Seq" />
         <PackageReference Include="SerilogTracing" />
-        <PackageReference Include="SpotifyAPI.Web" />
-        <PackageReference Include="VkNet" />
-        <PackageReference Include="VkNet.AudioBypassService" />
-        <PackageReference Include="Xabe.FFmpeg.Downloader" />
-        <PackageReference Include="YandexMusicResolver" />
     </ItemGroup>
 
     <ItemGroup>
@@ -51,6 +46,11 @@
     <ItemGroup>
         <ProjectReference Include="..\Aspire.ServiceDefaults\Aspire.ServiceDefaults.csproj" />
         <ProjectReference Include="..\Common\Common.csproj" />
+      <ProjectReference Include="..\Enliven.MusicResolvers\Enliven.MusicResolvers.Spotify\Enliven.MusicResolvers.Spotify.csproj"/>
+      <ProjectReference Include="..\Enliven.MusicResolvers\Enliven.MusicResolvers.YandexMusic\Enliven.MusicResolvers.YandexMusic.csproj"/>
+      <ProjectReference Include="..\Enliven.MusicResolvers\Enliven.MusicResolvers.Vk\Enliven.MusicResolvers.Vk.csproj"/>
+      <ProjectReference Include="..\Enliven.MusicResolvers\Enliven.MusicResolvers.Base\Enliven.MusicResolvers.Base.csproj"/>
+      <ProjectReference Include="..\Enliven.MusicResolvers\Enliven.MusicResolvers.Lavalink\Enliven.MusicResolvers.Lavalink.csproj"/>
         <ProjectReference Include="..\Lavalink4NET.InactivityTracking\Lavalink4NET.InactivityTracking.csproj" />
     </ItemGroup>
 

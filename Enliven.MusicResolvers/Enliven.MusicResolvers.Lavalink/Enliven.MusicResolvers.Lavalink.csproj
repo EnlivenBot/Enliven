@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Enliven.MusicResolvers.Lavalink</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Enliven.MusicResolvers.Base\Enliven.MusicResolvers.Base.csproj"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Lavalink4NET.Abstractions"/>
+    <PackageReference Include="Lavalink4NET.Rest"/>
+  </ItemGroup>
+
+</Project>

@@ -2,22 +2,19 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Bot.Music.Players;
 using Common;
-using Common.Music.Players;
 using Discord.Commands;
 
 namespace Bot.DiscordRelated.Commands.Modules;
 
-public abstract class HavePlayerMusicModuleBase : MusicModuleBase
-{
+public abstract class HavePlayerMusicModuleBase : MusicModuleBase {
     protected new EnlivenLavalinkPlayer Player => base.Player!;
 
     protected override async Task<EnlivenLavalinkPlayer?> ResolvePlayerBeforeExecuteAsync(
-        IReadOnlyCollection<Attribute> attributes, MusicCommandChannelInfo channelInfo, ulong? userVoiceChannelId)
-    {
+        IReadOnlyCollection<Attribute> attributes, MusicCommandChannelInfo channelInfo, ulong? userVoiceChannelId) {
         var player = await base.ResolvePlayerBeforeExecuteAsync(attributes, channelInfo, userVoiceChannelId);
-        if (player is null)
-        {
+        if (player is null) {
             _ = await ReplyEntryAsync(NothingPlayingEntry, Constants.ShortTimeSpan);
             throw new CommandInterruptionException(NothingPlayingEntry);
         }
@@ -32,8 +29,7 @@ public abstract class HavePlayerMusicModuleBase : MusicModuleBase
         return player;
     }
 
-    public override async Task AfterExecuteAsync(CommandInfo command)
-    {
+    public override async Task AfterExecuteAsync(CommandInfo command) {
         await this.RemoveMessageInvokerIfPossible();
         await base.AfterExecuteAsync(command);
     }

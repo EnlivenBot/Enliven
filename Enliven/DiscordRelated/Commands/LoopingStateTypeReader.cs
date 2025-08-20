@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Common.Music.Players;
+using Common.Music;
 using Discord.Commands;
 
 namespace Bot.DiscordRelated.Commands;

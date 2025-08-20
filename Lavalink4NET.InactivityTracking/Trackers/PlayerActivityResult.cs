@@ -1,13 +1,9 @@
-﻿namespace Lavalink4NET.InactivityTracking;
+﻿namespace Lavalink4NET.InactivityTracking.Trackers;
 
-using Lavalink4NET.InactivityTracking.Trackers;
-
-public readonly struct PlayerActivityResult
-{
+public readonly struct PlayerActivityResult {
     private readonly bool _inactive;
 
-    private PlayerActivityResult(bool inactive, TimeSpan? timeout)
-    {
+    private PlayerActivityResult(bool inactive, TimeSpan? timeout) {
         _inactive = inactive;
         Timeout = timeout;
     }

@@ -1,9 +1,6 @@
-﻿namespace Lavalink4NET.InactivityTracking;
+﻿namespace Lavalink4NET.InactivityTracking.Trackers;
 
-using Lavalink4NET.InactivityTracking.Trackers;
-
-public interface IInactivityTracker
-{
+public interface IInactivityTracker {
     InactivityTrackerOptions Options { get; }
 
     ValueTask RunAsync(

@@ -1,13 +1,11 @@
-﻿namespace Lavalink4NET.InactivityTracking;
-
-using System;
-using System.Collections.Immutable;
-using System.Threading;
+﻿using System.Collections.Immutable;
+using Lavalink4NET.InactivityTracking.Trackers;
 using Lavalink4NET.Players;
 using Microsoft.Extensions.Internal;
 
-internal sealed class InactivityTrackerContext : IInactivityTrackerContext
-{
+namespace Lavalink4NET.InactivityTracking;
+
+internal sealed class InactivityTrackerContext : IInactivityTrackerContext {
     private readonly IInactivityTrackingService _inactivityTrackingService;
     private IImmutableDictionary<ulong, InactivityTrackerEntry> _entries;
     private int _counter;
@@ -16,8 +14,7 @@ internal sealed class InactivityTrackerContext : IInactivityTrackerContext
     public InactivityTrackerContext(
         IInactivityTrackingService inactivityTrackingService,
         IInactivityTracker inactivityTracker,
-        ISystemClock systemClock)
-    {
+        ISystemClock systemClock) {
         ArgumentNullException.ThrowIfNull(inactivityTrackingService);
         ArgumentNullException.ThrowIfNull(inactivityTracker);
         ArgumentNullException.ThrowIfNull(systemClock);
@@ -28,8 +25,7 @@ internal sealed class InactivityTrackerContext : IInactivityTrackerContext
         _entries = ImmutableDictionary<ulong, InactivityTrackerEntry>.Empty;
     }
 
-    public InactivityTrackerEntry? GetEntry(ulong guildId)
-    {
+    public InactivityTrackerEntry? GetEntry(ulong guildId) {
         return _entries.TryGetValue(guildId, out var entry)
             ? entry
             : null;
@@ -45,14 +41,14 @@ internal sealed class InactivityTrackerContext : IInactivityTrackerContext
         int counter,
         IImmutableDictionary<ulong, InactivityTrackerEntry> entries,
         IImmutableSet<ulong> activePlayers,
-        IImmutableDictionary<ulong, InactivityTrackerEntry> trackedPlayers)
-    {
+        IImmutableDictionary<ulong, InactivityTrackerEntry> trackedPlayers) {
         ArgumentNullException.ThrowIfNull(entries);
         ArgumentNullException.ThrowIfNull(activePlayers);
         ArgumentNullException.ThrowIfNull(trackedPlayers);
 
-        if (_counter != counter || Interlocked.CompareExchange(ref _scopeState, ScopeState.None, ScopeState.Allocated) is not ScopeState.Allocated)
-        {
+        if (_counter != counter ||
+            Interlocked.CompareExchange(ref _scopeState, ScopeState.None, ScopeState.Allocated) is not ScopeState
+                .Allocated) {
             throw new InvalidOperationException("The scope is not active.");
         }
 
@@ -60,10 +56,9 @@ internal sealed class InactivityTrackerContext : IInactivityTrackerContext
         _entries = entries;
     }
 
-    public InactivityTrackerScope CreateScope()
-    {
-        if (Interlocked.CompareExchange(ref _scopeState, ScopeState.Allocated, ScopeState.None) is not ScopeState.None)
-        {
+    public InactivityTrackerScope CreateScope() {
+        if (Interlocked.CompareExchange(ref _scopeState, ScopeState.Allocated,
+                ScopeState.None) is not ScopeState.None) {
             throw new InvalidOperationException("A scope is already active.");
         }
 
@@ -72,8 +67,7 @@ internal sealed class InactivityTrackerContext : IInactivityTrackerContext
     }
 }
 
-file static class ScopeState
-{
+file static class ScopeState {
     public const int None = 0;
     public const int Allocated = 1;
 }

@@ -1,9 +1,9 @@
-﻿namespace Lavalink4NET.InactivityTracking;
-
+﻿using Lavalink4NET.InactivityTracking.Trackers;
 using Lavalink4NET.Players;
 
-public interface IInactivityTrackerContext
-{
+namespace Lavalink4NET.InactivityTracking;
+
+public interface IInactivityTrackerContext {
     IInactivityTracker InactivityTracker { get; }
 
     InactivityTrackerScope CreateScope();

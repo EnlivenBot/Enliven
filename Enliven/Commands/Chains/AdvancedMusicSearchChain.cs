@@ -8,11 +8,11 @@ using System.Threading.Tasks;
 using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Interactions.Handlers;
 using Bot.DiscordRelated.MessageComponents;
+using Bot.Music.Players;
 using Bot.Utilities.Collector;
 using Common;
 using Common.Config;
 using Common.Config.Emoji;
-using Common.Music.Players;
 using Common.Music.Tracks;
 using Discord;
 using Lavalink4NET;
@@ -21,10 +21,8 @@ using Lavalink4NET.Tracks;
 
 namespace Bot.Commands.Chains;
 
-public class AdvancedMusicSearchChain : ChainBase
-{
-    public static IEmote[] NumberReactions =
-    {
+public class AdvancedMusicSearchChain : ChainBase {
+    public static IEmote[] NumberReactions = {
         new Emoji("1️⃣"),
         new Emoji("2️⃣"),
         new Emoji("3️⃣"),
@@ -59,8 +57,7 @@ public class AdvancedMusicSearchChain : ChainBase
         IAudioService audioService,
         MessageComponentInteractionsHandler messageComponentInteractionsHandler,
         CollectorService collectorService)
-        : base($"{nameof(AdvancedMusicSearchChain)}_{guildConfig.GuildId}_{requester.Id}", guildConfig.Loc)
-    {
+        : base($"{nameof(AdvancedMusicSearchChain)}_{guildConfig.GuildId}_{requester.Id}", guildConfig.Loc) {
         _player = player;
         _targetChannel = targetChannel;
         _requester = requester;
@@ -74,8 +71,7 @@ public class AdvancedMusicSearchChain : ChainBase
             .WithTitle(guildConfig.Loc.Get("Music.SearchResultsTitle"));
     }
 
-    public async Task Start()
-    {
+    public async Task Start() {
         SetTimeout(Constants.VeryShortTimeSpan);
         var tracks = await _audioService.Tracks.LoadTracksAsync(_query, _searchMode);
 
@@ -83,21 +79,18 @@ public class AdvancedMusicSearchChain : ChainBase
             Loc.Get("Music.SearchResultsDescription", _searchMode, _query.SafeSubstring(100, "..."));
         if (!tracks.HasMatches)
             MainBuilder.Description += Loc.Get("Music.NothingFound");
-        else
-        {
+        else {
             var stringBuilder = new StringBuilder();
             // 1500 - the maximum number of characters to be within the embed description limit. Taken with a margin
             // 10 - max number of tracks
-            for (var i = 0; i < tracks.Count && stringBuilder.Length < 1500 && i < 10; i++)
-            {
+            for (var i = 0; i < tracks.Count && stringBuilder.Length < 1500 && i < 10; i++) {
                 var track = tracks.Tracks[i];
                 stringBuilder.AppendLine($"{i + 1}. [{track.Title}]({track.Author})\n");
             }
 
             MainBuilder.Description += stringBuilder.ToString();
 
-            for (var index = 0; index < tracks.Count && index < 10; index++)
-            {
+            for (var index = 0; index < tracks.Count && index < 10; index++) {
                 var track = tracks.Tracks[index];
                 var button = new EnlivenButtonBuilder().WithStyle(ButtonStyle.Secondary)
                     .WithTargetRow(index / 5).WithEmote(NumberReactions[index])
@@ -120,19 +113,18 @@ public class AdvancedMusicSearchChain : ChainBase
         if (!tracks.HasMatches)
             return;
 
-        _componentBuilder.SetCallback(async callback =>
-        {
-            if (callback.Context.User.Id != _requester.Id)
-            {
+        _componentBuilder.SetCallback(async callback => {
+            if (callback.Context.User.Id != _requester.Id) {
                 var embed = CommandHandlerService
-                    .GetErrorEmbed(callback.Context.User, Loc, Loc.Get("Common.OnlyRequester", callback.Context.User.Mention))
+                    .GetErrorEmbed(callback.Context.User, Loc,
+                        Loc.Get("Common.OnlyRequester", callback.Context.User.Mention))
                     .Build();
-                _ = callback.Interaction.FollowupAsync(embed: embed, ephemeral: true).DelayedDelete(TimeSpan.FromSeconds(15));
+                _ = callback.Interaction.FollowupAsync(embed: embed, ephemeral: true)
+                    .DelayedDelete(TimeSpan.FromSeconds(15));
                 return;
             }
 
-            switch (callback.CustomId)
-            {
+            switch (callback.CustomId) {
                 case var _ when int.TryParse(callback.CustomId, out var index):
                     await ProcessAdd(new[] { tracks.Tracks[index] }, msg);
                     break;
@@ -146,24 +138,21 @@ public class AdvancedMusicSearchChain : ChainBase
         });
 
         _collectorGroup = new CollectorsGroup(
-            _collectorService.CollectMessage(_requester, 
+            _collectorService.CollectMessage(_requester,
                 message => message.Channel.Id == _targetChannel.Id,
-                async args =>
-                {
+                async args => {
                     if (!int.TryParse(args.Message.Content, out var result)) return;
                     if (result > tracks.Count || result <= 0) return;
                     if (await ProcessAdd(new[] { tracks.Tracks[result - 1] }, msg)) await args.RemoveReason();
                 })
         );
 
-        OnEnd = async localized =>
-        {
+        OnEnd = async localized => {
             _collectorGroup.DisposeAll();
             _componentBuilder.Dispose();
             await _cancellationTokenSource.CancelAsync();
             msg.DelayedDelete(Constants.StandardTimeSpan);
-            await msg.ModifyAsync(properties =>
-            {
+            await msg.ModifyAsync(properties => {
                 properties.Embed = new EmbedBuilder().WithColor(Color.Orange).WithTitle(Loc.Get("ChainsCommon.Ended"))
                     .WithDescription(localized.Get(Loc))
                     .Build();
@@ -175,14 +164,12 @@ public class AdvancedMusicSearchChain : ChainBase
         SetTimeout(TimeSpan.FromMinutes(1));
     }
 
-    private async Task<bool> ProcessAdd(IEnumerable<LavalinkTrack> tracks, IUserMessage msg)
-    {
+    private async Task<bool> ProcessAdd(IEnumerable<LavalinkTrack> tracks, IUserMessage msg) {
         var trackRequester = new TrackRequester(_requester);
         var queueItems = tracks
             .Select(track => new EnlivenQueueItem(track, trackRequester))
             .ToImmutableArray();
-        switch (queueItems.Length)
-        {
+        switch (queueItems.Length) {
             case 1:
                 _player.WriteToQueueHistory(Loc.Get("MusicQueues.Enqueued", _requester.Username,
                     queueItems[0].Track.Title.RemoveNonPrintableChars()));
