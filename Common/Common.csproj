@@ -8,18 +8,12 @@
 
     <ItemGroup>
         <PackageReference Include="Autofac" />
-        <PackageReference Include="DiffMatchPatchCSharp" />
         <PackageReference Include="Discord.Net" />
         <PackageReference Include="JetBrains.Annotations" />
         <PackageReference Include="Lavalink4NET.Artwork" />
         <PackageReference Include="Lavalink4NET.Cluster" />
         <PackageReference Include="Lavalink4NET.Discord.NET" />
         <PackageReference Include="LiteDB" />
-        <PackageReference Include="MessagePack" />
-        <PackageReference Include="MessagePackAnalyzer">
-            <PrivateAssets>all</PrivateAssets>
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-        </PackageReference>
         <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
         <PackageReference Include="Serilog" />
         <PackageReference Include="System.Reactive" />
