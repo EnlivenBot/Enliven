@@ -23,8 +23,4 @@
     <ItemGroup>
       <ProjectReference Include="..\Lavalink4NET.InactivityTracking\Lavalink4NET.InactivityTracking.csproj" />
     </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Infrastructure\Serializing\"/>
-  </ItemGroup>
 </Project>
