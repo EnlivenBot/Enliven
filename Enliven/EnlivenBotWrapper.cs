@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
-using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
@@ -26,15 +25,11 @@ using Microsoft.Extensions.Logging;
 
 namespace Bot;
 
-public class EnlivenBotWrapper {
-    private readonly IConfiguration _configuration;
-    private readonly InstanceConfig _instanceConfig;
+public class EnlivenBotWrapper(
+    InstanceConfig instanceConfig,
+    IConfiguration configuration,
+    ILogger<EnlivenBotWrapper> globalLogger) {
     private TaskCompletionSource<bool>? _firstStartResult;
-
-    public EnlivenBotWrapper(InstanceConfig config, IConfiguration configuration) {
-        _instanceConfig = config;
-        _configuration = configuration;
-    }
 
     /// <summary>
     /// Attempts to start a bot instance
@@ -53,22 +48,29 @@ public class EnlivenBotWrapper {
 
     private async Task RunLoopAsync(ILifetimeScope container, IServiceProvider serviceProvider,
         CancellationToken cancellationToken) {
-        var isFirst = true;
         var topLevelHostedServices = serviceProvider.GetServices<IHostedService>()
             .ToImmutableArray();
 
+        var isFirst = true;
         while (!cancellationToken.IsCancellationRequested) {
-            await using var lifetimeScope =
-                container.BeginLifetimeScope(Constants.BotLifetimeScopeTag, ConfigureBotLifetime);
+            var success = await Run(container, topLevelHostedServices, cancellationToken);
+            if (isFirst && !success) {
+                return;
+            }
+
+            isFirst = false;
+        }
+    }
+
+    private async Task<bool> Run(ILifetimeScope container, ImmutableArray<IHostedService> topLevelHostedServices,
+        CancellationToken cancellationToken) {
+        var lifetimeScope = container.BeginLifetimeScope(Constants.BotLifetimeScopeTag, ConfigureBotLifetime);
+        try {
             var logger = lifetimeScope.Resolve<ILogger<EnlivenBotWrapper>>();
-            lifetimeScope.CurrentScopeEnding += (sender, eventArgs) => {
-                var exception = new Exception();
-                exception = ExceptionDispatchInfo.SetCurrentStackTrace(exception);
-                logger.LogCritical(exception, "SOMEONE {Sender} DISPOSED BOT ILifetimeScope", sender);
-            };
 
             try {
-                logger.LogInformation("Starting bot instance {InstanceName}", Path.GetFileName(_instanceConfig.Name));
+                logger.LogInformation("Starting bot instance {InstanceName}",
+                    Path.GetFileName(instanceConfig.Name));
                 var bot = lifetimeScope.Resolve<EnlivenBot>();
                 await bot.StartAsync(cancellationToken);
 
@@ -97,24 +99,42 @@ public class EnlivenBotWrapper {
                     // ignored
                 }
 
-                logger.LogInformation("Stopping bot instance {InstanceName}", Path.GetFileName(_instanceConfig.Name));
+                logger.LogInformation("Stopping bot instance {InstanceName}", instanceConfig.Name);
             }
             catch (Exception e) {
-                logger.LogError(e, "Failed to start bot instance with config {InstanceName}", _instanceConfig.Name);
+                logger.LogError(e, "Failed to start bot instance with config {InstanceName}", instanceConfig.Name);
                 _firstStartResult!.TrySetResult(false);
-                if (isFirst) return;
+                return false;
+            }
+        }
+        finally {
+            async ValueTask DisposeBotLifetime() {
+                try {
+                    await lifetimeScope.DisposeAsync();
+                }
+                catch (Exception e) {
+                    globalLogger.LogError(e, "Failed to dispose bot {InstanceName} lifetime", instanceConfig.Name);
+                }
             }
 
-            isFirst = false;
+            var timeout = Task.Delay(TimeSpan.FromSeconds(15), cancellationToken);
+            var completed = await Task.WhenAny(Task.Run(DisposeBotLifetime, cancellationToken), timeout);
+            if (completed == timeout) {
+                globalLogger.LogError(
+                    "Bot {InstanceName} lifetime did not disposed in time. Skipping and restarting",
+                    instanceConfig.Name);
+            }
         }
+
+        return true;
     }
 
     private void ConfigureBotLifetime(ContainerBuilder builder) {
         var services = new ServiceCollection();
-        services.AddSingleton(_instanceConfig);
+        services.AddSingleton(instanceConfig);
         services.AddSingleton<IServiceScopeFactory, ServiceScopeFactoryAdapter>();
         services.AddSingleton<EnlivenBot>();
-        services.ConfigureNamedOptions<DiscordSocketConfig>(_configuration);
+        services.ConfigureNamedOptions<DiscordSocketConfig>(configuration);
         services.AddSingleton<EnlivenShardedClient>();
         services.AddSingleton<DiscordShardedClient>(s => s.GetRequiredService<EnlivenShardedClient>());
         services.AddSingleton<IDiscordClient>(s => s.GetRequiredService<EnlivenShardedClient>());
@@ -127,6 +147,6 @@ public class EnlivenBotWrapper {
 
         builder.Populate(services);
         builder.RegisterDecorator<ILoggerFactory>((_, _, factory) =>
-            new BotInstanceLoggerFactoryDecorator(factory, _instanceConfig));
+            new BotInstanceLoggerFactoryDecorator(factory, instanceConfig));
     }
 }
