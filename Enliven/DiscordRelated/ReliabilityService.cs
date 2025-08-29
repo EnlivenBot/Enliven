@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using Common;
@@ -27,7 +27,7 @@ public class ReliabilityService : IService {
     private static readonly bool AttemptReset = true;
     // --- End Configuration Section ---
 
-    private readonly Dictionary<IDiscordClient, CancellationTokenSource> _disconnectedClients = new();
+    private readonly ConcurrentDictionary<IDiscordClient, CancellationTokenSource> _disconnectedClients = new();
     private readonly ILogger<ReliabilityService> _logger;
 
     public ReliabilityService(DiscordSocketClient mainDiscord, ILogger<ReliabilityService> logger) {
@@ -48,14 +48,20 @@ public class ReliabilityService : IService {
         return Task.CompletedTask;
     }
 
-    private Task DisconnectedAsync(Exception arg1, DiscordSocketClient arg2) {
+    private Task DisconnectedAsync(Exception exception, DiscordSocketClient client) {
+        if (_disconnectedClients.ContainsKey(client)) {
+            return Task.CompletedTask;
+        }
+
         // Check the state after <timeout> to see if we reconnected
-        _logger.LogInformation("Client disconnected, starting timeout task...");
-        _disconnectedClients[arg2] = new CancellationTokenSource();
-        _ = Task.Delay(Timeout, _disconnectedClients[arg2].Token).ContinueWith(async _ => {
-            _logger.LogDebug("Timeout expired, continuing to check client state...");
-            if (await CheckIsStateCorrectAsync(arg2))
-                _logger.LogDebug("State came back okay");
+        _logger.LogInformation("Client disconnected, starting reconnect watchdog");
+        _disconnectedClients[client] = new CancellationTokenSource();
+        _ = Task.Delay(Timeout, _disconnectedClients[client].Token).ContinueWith(async _ => {
+            _logger.LogDebug("Watchdog timeout expired, trying to check client state");
+            if (await CheckIsStateCorrectAsync(client)) {
+                _logger.LogInformation("State came back okay");
+                _disconnectedClients.TryRemove(client, out var _);
+            }
             else
                 FailFast();
         });
@@ -63,12 +69,15 @@ public class ReliabilityService : IService {
         return Task.CompletedTask;
     }
 
-    private Task ConnectedAsync(DiscordSocketClient arg) {
-        // Cancel all previous state checks and reset the CancelToken - client is back online
-        _logger.LogDebug("Client reconnected, resetting cancel tokens...");
-        if (_disconnectedClients.TryGetValue(arg, out var cts)) cts!.Cancel();
+    private Task ConnectedAsync(DiscordSocketClient client) {
+        if (!_disconnectedClients.TryGetValue(client, out var cts)) {
+            return Task.CompletedTask;
+        }
 
-        _logger.LogDebug("Client reconnected, cancel tokens reset.");
+        // Cancel all previous state checks and reset the CancelToken - client is back online
+        _logger.LogDebug("Client reconnected, stopping watchdog");
+        cts.Cancel();
+        _disconnectedClients.TryRemove(client, out _);
 
         return Task.CompletedTask;
     }
@@ -94,7 +103,7 @@ public class ReliabilityService : IService {
             }
 
             if (connect.IsCompletedSuccessfully)
-                _logger.LogInformation("Client reset successfully!");
+                _logger.LogInformation("Client reset successfully");
 
             return true;
         }
