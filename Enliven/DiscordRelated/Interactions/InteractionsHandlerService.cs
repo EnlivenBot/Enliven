@@ -39,6 +39,8 @@ public sealed class InteractionsHandlerService(
             .Select(interaction => new ShardedInteractionContext(enlivenShardedClient, interaction))
             .Subscribe(context => _ = OnInteractionCreated(context));
         logger.LogInformation("Interactions initialized");
+
+        await customInteractionService.RegisterCommandsGloballyAsync();
     }
 
     private async Task OnInteractionCreated(ShardedInteractionContext context) {
