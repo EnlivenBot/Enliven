@@ -149,8 +149,4 @@ public class EmbedPlayerEffectsDisplay : PlayerDisplayBase {
         await _controlMessage.SafeDeleteAsync();
         _disposable?.Dispose();
     }
-
-    public override Task LeaveNotification(IEntry header, IEntry body) {
-        return Task.CompletedTask;
-    }
 }

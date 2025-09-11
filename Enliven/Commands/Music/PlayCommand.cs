@@ -8,7 +8,6 @@ using Bot.DiscordRelated.Commands.Attributes;
 using Bot.DiscordRelated.Commands.Modules;
 using Bot.DiscordRelated.Commands.Modules.Contexts;
 using Bot.DiscordRelated.Interactions;
-using Bot.DiscordRelated.Music;
 using Common;
 using Common.Music.Tracks;
 using Discord;
@@ -41,28 +40,11 @@ public sealed class PlayCommand : CreatePlayerMusicModuleBase {
     private async Task PlayInternal(string? query, int? position = null) {
         var messageInvoker = (Context as TextCommandsModuleContext)?.Message;
         var queries = await GetMusicQueries(messageInvoker, query.IsBlank(""));
-        var mainPlayerDisplay = await GetMainPlayerDisplay();
         if (queries.Count != 0) {
-            await StartResolvingInternal(position, mainPlayerDisplay, queries);
-            return;
+            await Player.ResolveAndEnqueue(queries, new TrackRequester(Context.User), position);
         }
 
-        if (Context.NeedResponse)
-            await mainPlayerDisplay.ResendControlMessageWithOverride(OverrideSendingControlMessage);
-        else {
-            await this.RemoveMessageInvokerIfPossible();
-            mainPlayerDisplay.NextResendForced = true;
-            await mainPlayerDisplay.ControlMessageResend();
-        }
-    }
-
-    private async Task StartResolvingInternal(int? position, EmbedPlayerDisplay mainPlayerDisplay,
-        IEnumerable<string> queries) {
-        if (Context.NeedResponse)
-            await mainPlayerDisplay.ResendControlMessageWithOverride(OverrideSendingControlMessage, false);
-        else _ = mainPlayerDisplay.ControlMessageResend();
-
-        await Player.ResolveAndEnqueue(queries, new TrackRequester(Context.User), position);
+        await this.RemoveMessageInvokerIfPossible();
     }
 
     private async Task<List<string>> GetMusicQueries(IMessage? message, string query) {

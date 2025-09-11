@@ -10,8 +10,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Bot.DiscordRelated.Commands;
-using Bot.DiscordRelated.Criteria;
 using Bot.DiscordRelated.Interactions.Handlers;
+using Bot.DiscordRelated.Interactions.Wrappers;
 using Bot.DiscordRelated.MessageComponents;
 using Bot.Music.Cluster;
 using Bot.Music.Players;
@@ -33,40 +33,35 @@ using Tyrrrz.Extensions;
 
 namespace Bot.DiscordRelated.Music;
 
-public class EmbedPlayerDisplay : PlayerDisplayBase {
+public class EmbedPlayerDisplay : PlayerDisplayBase, IEmbedPlayerDisplayBackgroundUpdatable {
     public const int TrackAuthorMaxLength = 70;
     public const int TrackTitleMaxLength = 170;
     private const int MobileTextChopLimit = 56;
-    private readonly IArtworkService _artworkService;
 
+    private readonly IArtworkService _artworkService;
     private readonly IEnlivenClusterAudioService _audioService;
     private readonly CommandHandlerService _commandHandlerService;
-    private readonly SingleTask _controlMessageSendTask;
     private readonly IDiscordClient _discordClient;
     private readonly EnlivenEmbedBuilder _embedBuilder;
     private readonly ILocalizationProvider _loc;
     private readonly ILogger<EmbedPlayerDisplay> _logger;
     private readonly MessageComponentInteractionsHandler _messageComponentInteractionsHandler;
-    private readonly IGuild? _targetGuild;
-    private readonly SingleTask _updateControlMessageTask;
+    private readonly UpdatableMessageDisplay _updatableMessageDisplay;
+    private readonly IMessageChannel _targetChannel;
 
     private CancellationTokenSource? _cancellationTokenSource;
-    private IUserMessage? _controlMessage;
     private string? _effectsInParameters;
-    private bool _isExternalEmojiAllowed;
+    private bool _isExternalEmojiAllowed = true;
     private MessageComponent? _messageComponent;
     private EnlivenComponentBuilder? _messageComponentManager;
     private Disposables? _playerSubscriptions;
-    private bool _resendInsteadOfUpdate;
-    private SendControlMessageOverride? _sendControlMessageOverride;
-    private IMessageChannel _targetChannel;
-    public bool NextResendForced;
+
+    public bool UpdateViaInteractions => _updatableMessageDisplay.UpdateViaInteractions;
 
     public EmbedPlayerDisplay(IMessageChannel targetChannel, IDiscordClient discordClient, ILocalizationProvider loc,
         CommandHandlerService commandHandlerService,
         MessageComponentInteractionsHandler messageComponentInteractionsHandler,
         ILogger<EmbedPlayerDisplay> logger, IArtworkService artworkService, IEnlivenClusterAudioService audioService) {
-        _targetGuild = (targetChannel as ITextChannel)?.Guild;
         _messageComponentInteractionsHandler = messageComponentInteractionsHandler;
         _logger = logger;
         _artworkService = artworkService;
@@ -83,153 +78,66 @@ public class EmbedPlayerDisplay : PlayerDisplayBase {
         _embedBuilder.AddField("Queue", loc.Get("Music.Queue").Format(0, 0, 0), loc.Get("Music.Empty"));
         _embedBuilder.AddField("RequestHistory", loc.Get("Music.RequestHistory"), loc.Get("Music.Empty"));
         _embedBuilder.AddField("Warnings", loc.Get("Music.Warning"), loc.Get("Music.Empty"), false, 100, false);
+        SetupComponents();
 
-        _controlMessageSendTask = new SingleTask(SendControlMessageInternal)
-            { BetweenExecutionsDelay = TimeSpan.FromSeconds(30), CanBeDirty = false };
-        _updateControlMessageTask = new SingleTask(UpdateControlMessageInternal) {
-            BetweenExecutionsDelay = TimeSpan.FromSeconds(1.5), CanBeDirty = true,
-            ShouldExecuteNonDirtyIfNothingRunning = true
-        };
+        _updatableMessageDisplay = new UpdatableMessageDisplay(targetChannel, MessagePropertiesUpdateCallback, _logger);
+
+        // Start checking for custom emojis
+        _ = CheckCustomEmojis().ObserveException();
     }
 
-    private async Task SendControlMessageInternal(SingleTaskExecutionData<Unit> data) {
-        try {
-            var shouldResend =
-                NextResendForced
-                || _resendInsteadOfUpdate
-                || _controlMessage == null
-                || await EnsureMessage.NotExists(_targetChannel, _controlMessage.Id, 3);
-            if (shouldResend) {
-                _resendInsteadOfUpdate = false;
-                NextResendForced = false;
-                var oldCts = Interlocked.Exchange(ref _cancellationTokenSource, new CancellationTokenSource());
-                oldCts?.Cancel();
+    private void MessagePropertiesUpdateCallback(MessageProperties properties) {
+        UpdateProgress();
+        UpdateMessageComponents();
+        properties.Embed = _embedBuilder.Build();
+        properties.Content = "";
+        properties.Components = _messageComponent;
+    }
 
-                UpdateParameters();
+    private async Task CheckCustomEmojis() {
+        if (_targetChannel is IGuildChannel { Guild: { } guild }) {
+            var guildUser = await guild.GetUserAsync(_discordClient.CurrentUser.Id);
+            var channelPerms = guildUser.GetPermissions((IGuildChannel)_targetChannel);
+            if (!channelPerms.UseExternalEmojis) {
+                _isExternalEmojiAllowed = false;
+                _embedBuilder.Fields["Warnings"].IsEnabled = true;
+                _embedBuilder.Fields["Warnings"].Value = _loc.Get("Music.WarningCustomEmoji");
                 UpdateProgress();
-                UpdateQueue();
-                UpdateTrackInfo();
-
-                if (_targetGuild != null) {
-                    var guildUser = await _targetGuild.GetUserAsync(_discordClient.CurrentUser.Id);
-                    var channelPerms = guildUser.GetPermissions((IGuildChannel)_targetChannel);
-                    _isExternalEmojiAllowed = channelPerms.UseExternalEmojis;
-                    _embedBuilder.Fields["Warnings"].IsEnabled = !channelPerms.UseExternalEmojis;
-                    if (_embedBuilder.Fields["Warnings"].IsEnabled)
-                        _embedBuilder.Fields["Warnings"].Value = _loc.Get("Music.WarningCustomEmoji");
-                }
-
-                var oldControlMessage = _controlMessage;
-                await SendControlMessage_WithMessageComponents();
-                _logger.LogTrace(
-                    "Sent player embed control message. Guild: {TargetGuildId}. Channel: {TargetChannelId}. Message id: {ControlMessageId}",
-                    _targetGuild?.Id, _targetChannel.Id, _controlMessage?.Id);
-                oldControlMessage.SafeDelete();
             }
-            else
-                data.OverrideDelay = TimeSpan.FromSeconds(5);
-        }
-        catch (Exception) {
-            // ignored
-        }
-    }
-
-    private async Task UpdateControlMessageInternal(SingleTaskExecutionData<Unit> data) {
-        var internalCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(
-            _cancellationTokenSource?.Token ?? CancellationToken.None);
-        if (internalCancellationTokenSource.Token.IsCancellationRequested) data.OverrideDelay = TimeSpan.Zero;
-        if (_controlMessage != null) {
-            try {
-                if (_resendInsteadOfUpdate) {
-                    _resendInsteadOfUpdate = false;
-                    await _controlMessageSendTask.Execute(false, TimeSpan.Zero);
-                    return;
-                }
-
-                _logger.LogTrace(
-                    "Modifying embed control message. Guild: {TargetGuildId}. Channel: {TargetChannelId}. Message id: {ControlMessageId}",
-                    _targetGuild?.Id, _targetChannel.Id, _controlMessage.Id);
-                await _controlMessage.ModifyAsync(properties => {
-                    properties.Embed = _embedBuilder!.Build();
-                    properties.Content = "";
-                    properties.Components = _messageComponent;
-                }, new RequestOptions {
-                    CancelToken = internalCancellationTokenSource.Token,
-                    RatelimitCallback = RatelimitCallback,
-                    RetryMode = RetryMode.AlwaysFail
-                });
-            }
-            catch (TimeoutException) {
-                // Ignore all timeouts because weird Discord (Discord.NET?) logic.
-                // Updating only one message every 5 seconds will trigger ratelimit exceptions.
-                // Fuck it.
-            }
-            catch (Exception e) {
-                _logger.LogTrace(e,
-                    "Failed to update embed control message. Guild: {TargetGuildId}. Channel: {TargetChannelId}. Message id: {ControlMessageId}",
-                    _targetGuild?.Id, _targetChannel.Id, _controlMessage?.Id);
-                if (_controlMessage != null) {
-                    _targetChannel.GetMessageAsync(_controlMessage.Id).SafeDelete();
-                    _controlMessage = null;
-                }
-
-                ControlMessageResend(_targetChannel);
-            }
-        }
-
-        Task RatelimitCallback(IRateLimitInfo info) {
-            if (info.RetryAfter is { } retryAfter) {
-                internalCancellationTokenSource.Cancel();
-                data.OverrideDelay = retryAfter > data.BetweenExecutionsDelay.GetValueOrDefault().TotalSeconds
-                    ? TimeSpan.FromSeconds(retryAfter + 1)
-                    : null;
-            }
-
-            return Task.CompletedTask;
-        }
-    }
-
-    public override async Task LeaveNotification(IEntry header, IEntry body) {
-        try {
-            var embedBuilder = new EmbedBuilder().WithColor(Color.Gold).WithTitle(header.Get(_loc))
-                .WithDescription(body.Get(_loc));
-            await _targetChannel.SendMessageAsync(null, false, embedBuilder.Build());
-        }
-        catch (Exception) {
-            // ignored
         }
     }
 
     public override async Task ExecuteShutdown(IEntry header, IEntry body) {
         base.ExecuteShutdown(header, body);
+        _messageComponentManager?.Dispose();
         var oldCts = Interlocked.Exchange(ref _cancellationTokenSource, null);
         // ReSharper disable once MethodHasAsyncOverload
         oldCts?.Cancel();
-        var message = _controlMessage;
-        _controlMessage = null;
 
         _playerSubscriptions?.Dispose();
         oldCts?.Dispose();
-        _controlMessageSendTask.Dispose();
-        _updateControlMessageTask.Dispose();
+        var message = _updatableMessageDisplay.Dispose();
+
+        var embed = new EmbedBuilder()
+            .WithColor(Color.Gold)
+            .WithTitle(header.Get(_loc))
+            .WithDescription(body.Get(_loc))
+            .Build();
+        var components = new ComponentBuilder()
+            .WithButton(_loc.Get("Music.RestoreStoppedPlayerButton"), "restoreStoppedPlayer")
+            .Build();
 
         if (message != null) {
-            var embed = new EmbedBuilder()
-                .WithColor(Color.Gold)
-                .WithTitle(header.Get(_loc))
-                .WithDescription(body.Get(_loc))
-                .Build();
-            var components = new ComponentBuilder()
-                .WithButton(_loc.Get("Music.RestoreStoppedPlayerButton"), "restoreStoppedPlayer")
-                .Build();
             await message.ModifyAsync(properties => {
                 properties.Content = Optional<string>.Unspecified;
                 properties.Embed = embed;
                 properties.Components = components;
             });
         }
-        else
-            await LeaveNotification(header, body);
+        else {
+            // TODO: Is this correct?
+            await _targetChannel.SendMessageAsync(embed: embed, components: components);
+        }
     }
 
     public override async Task ChangePlayer(EnlivenLavalinkPlayer newPlayer) {
@@ -239,7 +147,7 @@ public class EmbedPlayerDisplay : PlayerDisplayBase {
         var updateControlMessageSubj = new Subject<Unit>();
         updateControlMessageSubj
             .Throttle(TimeSpan.FromMilliseconds(100))
-            .Subscribe(_ => UpdateControlMessage());
+            .Subscribe(_ => _updatableMessageDisplay.Update(false));
 
         _playerSubscriptions = new Disposables(
             updateControlMessageSubj,
@@ -266,7 +174,7 @@ public class EmbedPlayerDisplay : PlayerDisplayBase {
         UpdateMessageComponents();
         UpdateTrackInfo();
         UpdateProgress();
-        await ControlMessageResend();
+        await _updatableMessageDisplay.Update(false);
         return;
 
         void OnCurrentTrackIndexChanged(int _) {
@@ -293,29 +201,30 @@ public class EmbedPlayerDisplay : PlayerDisplayBase {
         }
     }
 
-    private async Task SendControlMessage_WithMessageComponents() {
-        _messageComponentManager?.Dispose();
+    public Task Update(IEnlivenInteraction interaction) {
+        return _updatableMessageDisplay.HandleInteraction(interaction);
+    }
+
+    Task IEmbedPlayerDisplayBackgroundUpdatable.Update() {
+        return _updatableMessageDisplay.Update(true);
+    }
+
+    private void SetupComponents() {
         _messageComponentManager = _messageComponentInteractionsHandler.GetBuilder();
+        // @formatter:off
         var btnTemplate = new EnlivenButtonBuilder().WithTargetRow(0).WithStyle(ButtonStyle.Secondary);
-        _messageComponentManager.WithButton(btnTemplate.Clone().WithEmote(CommonEmoji.LegacyTrackPrevious)
-            .WithCustomId("TrackPrevious"));
-        _messageComponentManager.WithButton(btnTemplate.Clone().WithEmote(CommonEmoji.LegacyFastReverse)
-            .WithCustomId("FastReverse"));
-        _messageComponentManager.WithButton(btnTemplate.Clone().WithEmote(CommonEmoji.LegacyPlayPause)
-            .WithCustomId("PlayPause").WithStyle(ButtonStyle.Primary));
-        _messageComponentManager.WithButton(btnTemplate.Clone().WithEmote(CommonEmoji.LegacyFastForward)
-            .WithCustomId("FastForward"));
-        _messageComponentManager.WithButton(btnTemplate.Clone().WithEmote(CommonEmoji.LegacyTrackNext)
-            .WithCustomId("TrackNext"));
+        _messageComponentManager.WithButton(btnTemplate.Clone().WithEmote(CommonEmoji.LegacyTrackPrevious).WithCustomId("TrackPrevious"));
+        _messageComponentManager.WithButton(btnTemplate.Clone().WithEmote(CommonEmoji.LegacyFastReverse).WithCustomId("FastReverse"));
+        _messageComponentManager.WithButton(btnTemplate.Clone().WithEmote(CommonEmoji.LegacyPlayPause).WithCustomId("PlayPause").WithStyle(ButtonStyle.Primary));
+        _messageComponentManager.WithButton(btnTemplate.Clone().WithEmote(CommonEmoji.LegacyFastForward).WithCustomId("FastForward"));
+        _messageComponentManager.WithButton(btnTemplate.Clone().WithEmote(CommonEmoji.LegacyTrackNext).WithCustomId("TrackNext"));
         btnTemplate.WithTargetRow(1);
-        _messageComponentManager.WithButton(btnTemplate.Clone().WithEmote(CommonEmoji.BookmarkTabs)
-            .WithCustomId("Queue"));
-        _messageComponentManager.WithButton(btnTemplate.Clone().WithEmote(CommonEmoji.LegacyShuffle)
-            .WithCustomId("Shuffle"));
-        _messageComponentManager.WithButton(btnTemplate.Clone().WithEmote(CommonEmoji.LegacyStop).WithCustomId("Stop")
-            .WithStyle(ButtonStyle.Danger));
-        _messageComponentManager.WithButton(btnTemplate.Clone().WithCustomId("Repeat"));
+        _messageComponentManager.WithButton(btnTemplate.Clone().WithEmote(CommonEmoji.BookmarkTabs).WithCustomId("Queue"));
+        _messageComponentManager.WithButton(btnTemplate.Clone().WithEmote(CommonEmoji.LegacyShuffle).WithCustomId("Shuffle"));
+        _messageComponentManager.WithButton(btnTemplate.Clone().WithEmote(CommonEmoji.LegacyStop).WithCustomId("Stop").WithStyle(ButtonStyle.Danger));
+        _messageComponentManager.WithButton(btnTemplate.Clone().WithEmote(CommonEmoji.RepeatOffBox).WithCustomId("Repeat"));
         _messageComponentManager.WithButton(btnTemplate.Clone().WithEmote(CommonEmoji.E).WithCustomId("Effects"));
+        // @formatter:on
         _messageComponentManager.SetCallback(async callback => {
             Debug.Assert(Player is not null);
             var command = callback.CustomId switch {
@@ -339,25 +248,10 @@ public class EmbedPlayerDisplay : PlayerDisplayBase {
             }
         });
 
-        UpdateMessageComponents();
-
         _messageComponent = _messageComponentManager.Build();
-        _controlMessage = await _sendControlMessageOverride.ExecuteAndFallbackWith(_embedBuilder.Build(),
-            _messageComponent, _targetChannel, _logger);
-        _sendControlMessageOverride = null;
     }
 
-    public async Task ResendControlMessageWithOverride(SendControlMessageOverride sendControlMessageOverride,
-        bool executeResend = true) {
-        _sendControlMessageOverride = sendControlMessageOverride;
-        NextResendForced = true;
-        _resendInsteadOfUpdate = true;
-        if (!executeResend) return;
-
-        await _controlMessageSendTask.Execute(false, TimeSpan.Zero);
-    }
-
-    public void UpdateMessageComponents() {
+    private void UpdateMessageComponents() {
         if (_messageComponentManager == null) return;
         var entries = _messageComponentManager.Entries;
         var updated = false;
@@ -381,7 +275,7 @@ public class EmbedPlayerDisplay : PlayerDisplayBase {
         if (updated) _messageComponent = _messageComponentManager.Build();
     }
 
-    public void UpdateProgress(bool background = false) {
+    private void UpdateProgress() {
         Debug.Assert(Player is not null);
         if (Player.CurrentItem != null) {
             var track = Player.CurrentItem.Track;
@@ -573,18 +467,5 @@ public class EmbedPlayerDisplay : PlayerDisplayBase {
         Debug.Assert(Player is not null);
         var node = _audioService.GetPlayerNode(Player);
         _embedBuilder.WithFooter($"Powered by {_discordClient.CurrentUser.Username} | {node?.Label}");
-    }
-
-    public Task UpdateControlMessage(bool background = false) {
-        return _updateControlMessageTask.IsDisposed
-            ? Task.CompletedTask
-            : _updateControlMessageTask.Execute(!background);
-    }
-
-    public async Task ControlMessageResend(IMessageChannel? channel = null) {
-        if (_controlMessageSendTask.IsDisposed) return;
-
-        _targetChannel = channel ?? _targetChannel;
-        await _controlMessageSendTask.Execute(false);
     }
 }

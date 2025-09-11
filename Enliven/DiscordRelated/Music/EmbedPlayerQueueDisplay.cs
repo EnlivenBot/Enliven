@@ -68,8 +68,4 @@ public class EmbedPlayerQueueDisplay : PlayerDisplayBase {
         _subscribers?.Dispose();
         _paginatedMessage.Dispose();
     }
-
-    public override Task LeaveNotification(IEntry? header, IEntry? body) {
-        return Task.CompletedTask;
-    }
 }

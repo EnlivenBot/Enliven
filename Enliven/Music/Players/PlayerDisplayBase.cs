@@ -39,8 +39,6 @@ public abstract class PlayerDisplayBase : IPlayerDisplay {
         return Task.CompletedTask;
     }
 
-    public abstract Task LeaveNotification(IEntry header, IEntry body);
-
     public bool IsShutdowned { get; private set; }
 
     public IObservable<IPlayerDisplay> Shutdown { get; }

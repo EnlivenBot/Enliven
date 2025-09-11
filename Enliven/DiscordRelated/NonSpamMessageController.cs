@@ -44,7 +44,7 @@ public class NonSpamMessageController {
     public string EmbedTitle { get; set; }
     public Color EmbedColor { get; set; }
 
-    private IUserMessage? Message { get; set; }
+    public IUserMessage? Message { get; private set; }
     private List<MessageControllerEntryData> Entries { get; } = new();
     private IMessageChannel TargetChannel { get; }
 
@@ -77,6 +77,13 @@ public class NonSpamMessageController {
             .MinBy(data => data.AddDate);
         if (data != null) Entries.Remove(data);
         return this;
+    }
+
+    public bool IsEmpty {
+        get {
+            Entries.RemoveAll(data => data.AddDate + data.Timeout < DateTime.Now);
+            return Entries.Count == 0;
+        }
     }
 
     public Embed? GetEmbed() {
@@ -193,11 +200,10 @@ public class NonSpamMessageController {
             return _controller.Update();
         }
 
-        public Task DeleteAsync() {
-            if (_isDeleted) return Task.CompletedTask;
+        public void Delete() {
+            if (_isDeleted) return;
             _isDeleted = true;
             _controller.Entries.Remove(Data);
-            return _controller.Update();
         }
     }
 }

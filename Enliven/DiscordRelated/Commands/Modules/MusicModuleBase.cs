@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading.Tasks;
 using Bot.DiscordRelated.Commands.Modules.Contexts;
 using Bot.DiscordRelated.Music;
@@ -56,15 +55,19 @@ public abstract class MusicModuleBase : AdvancedModuleBase {
         var channelInfo = GetChannelInfo();
         Player = await ResolvePlayerBeforeExecuteAsync(attributes, channelInfo, userVoiceChannelId);
 
-        // Probably here we also need to check if player isn't null actually
-        if (!channelInfo.IsCurrentChannelSuitable)
-            await this.ReplyFormattedAsync(PlaybackEntry, PlaybackMovedEntry.WithArg(channelInfo.MusicChannel!), true);
+        if (Player is null) return;
 
-        if (Context.NeedResponse && channelInfo.IsCurrentChannelSuitable &&
-            Context.Channel is ITextChannel textChannel && Player is not null) {
-            var embedPlayerDisplay = EmbedPlayerDisplayProvider.Get(textChannel);
+        if (!channelInfo.IsCurrentChannelSuitable) {
+            var reply = await this.ReplyFormattedAsync(
+                PlaybackEntry, PlaybackMovedEntry.WithArg(channelInfo.MusicChannel!), true);
+            _ = reply.CleanupAfterAsync(Constants.ShortTimeSpan);
+            return;
+        }
+
+        if (Context.InteractionBasedResponseRequired(out var interaction)) {
+            var embedPlayerDisplay = EmbedPlayerDisplayProvider.Get(await channelInfo.GetTargetChannelAsync());
             if (embedPlayerDisplay != null) {
-                await embedPlayerDisplay.ResendControlMessageWithOverride(OverrideSendingControlMessage, false);
+                await embedPlayerDisplay.Update(interaction);
             }
         }
     }
@@ -79,7 +82,7 @@ public abstract class MusicModuleBase : AdvancedModuleBase {
         if (!anyNodeAvailableTask.IsCompleted) {
             var loadingEntry = await ReplyEntryAsync(AwaitingNodeConnectionEntry, TimeSpan.FromDays(1));
             await anyNodeAvailableTask;
-            await loadingEntry.DeleteAsync();
+            loadingEntry.Delete();
         }
 
         await ReplyAndThrowIfAsync(userVoiceChannelId == null, NotInVoiceChannelEntry.WithArg(Context.User.Mention));
@@ -120,10 +123,18 @@ public abstract class MusicModuleBase : AdvancedModuleBase {
 
         Player = retrieveResult.Player;
 
-        channelInfo = GetChannelInfo();
+        channelInfo ??= GetChannelInfo();
         var embedPlayerDisplay = EmbedPlayerDisplayProvider.Provide(await channelInfo.GetTargetChannelAsync());
-        if (channelInfo.IsCurrentChannelSuitable && Context.NeedResponse)
-            await embedPlayerDisplay.ResendControlMessageWithOverride(OverrideSendingControlMessage, false);
+
+        // if (ErrorsMessagesControllers.TryGetValue(channelInfo.CurrentChannel, out var errorsMessagesController)
+        //     && errorsMessagesController is { IsEmpty: true, Message: not null })
+        // {
+        //     ErrorsMessagesControllers.Remove(channelInfo.CurrentChannel, out _);
+        //  // TODO: Reuse message from nonSpamMessageController   
+        // }
+
+        if (channelInfo.IsCurrentChannelSuitable && Context.InteractionBasedResponseRequired(out var interaction))
+            await embedPlayerDisplay.Update(interaction);
         await embedPlayerDisplay.Initialize(Player);
 
         return Player;
@@ -162,14 +173,6 @@ public abstract class MusicModuleBase : AdvancedModuleBase {
         NonSpamMessageController CreateNonSpanMessageController(ulong arg) {
             return new NonSpamMessageController(Loc, Context.Channel, Loc.Get("Music.Fail"));
         }
-    }
-
-    protected async Task<EmbedPlayerDisplay> GetMainPlayerDisplay() {
-        Debug.Assert(Player is not null);
-        var channelInfo = GetChannelInfo();
-        var embedPlayerDisplay = EmbedPlayerDisplayProvider.Provide(await channelInfo.GetTargetChannelAsync());
-        if (!embedPlayerDisplay.IsInitialized) await embedPlayerDisplay.Initialize(Player);
-        return embedPlayerDisplay;
     }
 
     protected record MusicCommandChannelInfo(

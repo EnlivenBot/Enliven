@@ -16,6 +16,4 @@ public interface IPlayerDisplay {
     public Task ChangePlayer(EnlivenLavalinkPlayer newPlayer);
 
     public Task ExecuteShutdown(IEntry header, IEntry body);
-
-    public Task LeaveNotification(IEntry header, IEntry body);
 }

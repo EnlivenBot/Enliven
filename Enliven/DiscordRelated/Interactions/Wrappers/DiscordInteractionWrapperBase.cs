@@ -19,7 +19,7 @@ public class DiscordInteractionWrapperBase(IDiscordInteraction interaction) : IE
     public bool CurrentResponseDeferred { get; protected set; }
 
     public bool CurrentResponseMeaningful { get; protected set; }
-    
+
     protected void SetRespondStarted() {
         _isRespondStarted = true;
     }
@@ -79,7 +79,7 @@ public class DiscordInteractionWrapperBase(IDiscordInteraction interaction) : IE
         await Interaction.DeleteOriginalResponseAsync(options);
     }
 
-    public async Task DeferAsync(bool ephemeral = false, RequestOptions? options = null) {
+    public virtual async Task DeferAsync(bool ephemeral = false, RequestOptions? options = null) {
         SetRespondStarted();
         CurrentResponseDeferred = true;
         await Interaction.DeferAsync(ephemeral, options);

@@ -77,6 +77,8 @@ public class SingleTask<T, TForcedArg> : DisposableBase {
     public bool CanBeDirty { get; set; } = true;
     public bool ShouldExecuteNonDirtyIfNothingRunning { get; set; }
 
+    public Task WaitForCurrent() => _currentTaskCompletionSource?.Task ?? Task.CompletedTask;
+
     public Task<T> Execute(bool makesDirty = true, TimeSpan? delayOverride = null) {
         EnsureNotDisposed();
         makesDirty = makesDirty || !CanBeDirty;
@@ -147,8 +149,9 @@ public class SingleTask<T, TForcedArg> : DisposableBase {
                 if (IsDisposed) return;
 
                 _forcedParams.TryDequeue(out var forcedExecution);
+                using var currentCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 var singleTaskExecutionData = new SingleTaskExecutionData<TForcedArg>(
-                    BetweenExecutionsDelay, forcedExecution.Item2);
+                    BetweenExecutionsDelay, forcedExecution.Item2, currentCts.Token);
                 lock (_lock) {
                     _currentTaskCompletionSource = _dirtyTaskCompletionSource ?? forcedExecution.Item1
                         ?? new TaskCompletionSource<T>();
@@ -161,6 +164,10 @@ public class SingleTask<T, TForcedArg> : DisposableBase {
                     _lastResult = result;
                     _currentTaskCompletionSource!.SetResult(result);
                     forcedExecution.Item1?.TrySetResult(result);
+                }
+                catch (OperationCanceledException) when (currentCts.Token.IsCancellationRequested) {
+                    _currentTaskCompletionSource?.TrySetCanceled(currentCts.Token);
+                    forcedExecution.Item1?.TrySetCanceled(currentCts.Token);
                 }
                 catch (Exception e) {
                     _currentTaskCompletionSource!.SetException(e);
@@ -192,8 +199,12 @@ public class SingleTask<T, TForcedArg> : DisposableBase {
     }
 }
 
-public class SingleTaskExecutionData<TForcedParam>(TimeSpan? betweenExecutionsDelay, TForcedParam? parameter) {
+public class SingleTaskExecutionData<TForcedParam>(
+    TimeSpan? betweenExecutionsDelay,
+    TForcedParam? parameter,
+    CancellationToken cancellationToken) {
     public TimeSpan? BetweenExecutionsDelay { get; } = betweenExecutionsDelay;
     public TimeSpan? OverrideDelay { get; set; }
     public TForcedParam? Parameter { get; } = parameter;
+    public CancellationToken CancellationToken { get; } = cancellationToken;
 }
