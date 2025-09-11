@@ -42,31 +42,6 @@ public sealed class InteractionsHandlerService(
     }
 
     private async Task OnInteractionCreated(ShardedInteractionContext context) {
-        // var componentInteraction = (IComponentInteraction)context.Interaction;
-        //
-        // var i = 0;
-        // try {
-        //     await componentInteraction.DeferAsync();
-        //     await componentInteraction.ModifyOriginalResponseAsync(properties => properties.Content = "Test" + Guid.NewGuid());
-        //     await componentInteraction.ModifyOriginalResponseAsync(properties => properties.Content = "Test" + Guid.NewGuid());
-        //     // await componentInteraction.UpdateAsync(properties => properties.Content = "Test");
-        //     
-        //     await componentInteraction.RespondAsync("Hello");
-        //     var originalResponse = await componentInteraction.GetOriginalResponseAsync();
-        //     await Task.Delay(1000);
-        //     for (var j = 0; j < 1000; j++) {
-        //         await originalResponse.ModifyAsync(properties => properties.Content = $"Hello {i}");
-        //         i++;
-        //         await Task.Delay(1000);
-        //     }
-        // }
-        // catch (Exception e) {
-        //     Console.WriteLine(e);
-        //     throw;
-        // }
-        //
-        // return;
-
         Activity.Current = null;
         using var activity = _activitySource.StartActivityStructured(ActivityKind.Server,
             "Received discord interaction from {User} ({UserId}) in {GuildId}-{ChannelId}",
