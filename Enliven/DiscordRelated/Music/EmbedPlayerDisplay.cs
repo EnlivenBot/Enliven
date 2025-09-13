@@ -13,6 +13,7 @@ using Bot.DiscordRelated.Commands;
 using Bot.DiscordRelated.Interactions.Handlers;
 using Bot.DiscordRelated.Interactions.Wrappers;
 using Bot.DiscordRelated.MessageComponents;
+using Bot.DiscordRelated.UpdatableMessage;
 using Bot.Music.Cluster;
 using Bot.Music.Players;
 using Common;
@@ -58,10 +59,11 @@ public class EmbedPlayerDisplay : PlayerDisplayBase, IEmbedPlayerDisplayBackgrou
 
     public bool UpdateViaInteractions => _updatableMessageDisplay.UpdateViaInteractions;
 
-    public EmbedPlayerDisplay(IMessageChannel targetChannel, IDiscordClient discordClient, ILocalizationProvider loc,
-        CommandHandlerService commandHandlerService,
+    public EmbedPlayerDisplay(IMessageChannel targetChannel, EnlivenShardedClient discordClient,
+        ILocalizationProvider loc, CommandHandlerService commandHandlerService,
         MessageComponentInteractionsHandler messageComponentInteractionsHandler,
-        ILogger<EmbedPlayerDisplay> logger, IArtworkService artworkService, IEnlivenClusterAudioService audioService) {
+        ILogger<EmbedPlayerDisplay> logger, IArtworkService artworkService,
+        IEnlivenClusterAudioService audioService) {
         _messageComponentInteractionsHandler = messageComponentInteractionsHandler;
         _logger = logger;
         _artworkService = artworkService;
@@ -81,6 +83,7 @@ public class EmbedPlayerDisplay : PlayerDisplayBase, IEmbedPlayerDisplayBackgrou
         SetupComponents();
 
         _updatableMessageDisplay = new UpdatableMessageDisplay(targetChannel, MessagePropertiesUpdateCallback, _logger);
+        _updatableMessageDisplay.AttachBehavior(new StayInTheViewUpdatableMessageDisplayBehavior(discordClient, 5));
 
         // Start checking for custom emojis
         _ = CheckCustomEmojis().ObserveException();
@@ -145,12 +148,12 @@ public class EmbedPlayerDisplay : PlayerDisplayBase, IEmbedPlayerDisplayBackgrou
         await base.ChangePlayer(newPlayer);
 
         var updateControlMessageSubj = new Subject<Unit>();
-        updateControlMessageSubj
-            .Throttle(TimeSpan.FromMilliseconds(100))
-            .Subscribe(_ => _updatableMessageDisplay.Update(false));
 
         _playerSubscriptions = new Disposables(
             updateControlMessageSubj,
+            updateControlMessageSubj
+                .Throttle(TimeSpan.FromMilliseconds(100))
+                .Subscribe(_ => _updatableMessageDisplay.Update(false)),
             newPlayer.QueueHistory.HistoryChanged
                 .Select(OnHistoryChanged)
                 .Where(isChanged => isChanged)
@@ -199,6 +202,10 @@ public class EmbedPlayerDisplay : PlayerDisplayBase, IEmbedPlayerDisplayBackgrou
                 collection.GetLastHistory(_loc, out var isChanged).IsBlank(_loc.Get("Music.Empty"));
             return isChanged;
         }
+    }
+
+    public Task Update(InteractionMessageHolder interaction) {
+        return _updatableMessageDisplay.HandleInteraction(interaction);
     }
 
     public Task Update(IEnlivenInteraction interaction) {

@@ -1,5 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Reactive;
+using System.Reactive.Linq;
+using System.Reactive.Subjects;
 using System.Threading;
 using System.Threading.Tasks;
 using Bot.DiscordRelated.Interactions.Wrappers;
@@ -8,25 +12,38 @@ using Common.Utils;
 using Discord;
 using Microsoft.Extensions.Logging;
 
-namespace Bot.DiscordRelated.Music;
+namespace Bot.DiscordRelated.UpdatableMessage;
 
 public class UpdatableMessageDisplay : DisposableBase {
-    private static readonly TimeSpan ResendDelay = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan ResendDelay = TimeSpan.FromSeconds(20);
     private static readonly TimeSpan InteractionBasedUpdateDelay = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan MessageBasedUpdateDelay = TimeSpan.FromSeconds(3);
 
-    private readonly ILogger _logger;
-    private readonly IMessageChannel _targetChannel;
+    private readonly List<IUpdatableMessageDisplayBehavior> _behaviors = [];
+    private readonly ILogger? _logger;
     private readonly Action<MessageProperties> _messagePropertiesUpdateCallback;
     private readonly SingleTask<Unit, IEnlivenInteraction?> _controlMessageSendTask;
     private readonly SingleTask<Unit, IEnlivenInteraction?> _updateControlMessageTask;
     private InteractionMessageHolder? _interaction;
+    private Subject<InteractionMessageHolder>? _messageChangedSubject;
 
     public bool UpdateViaInteractions => _interaction?.InteractionAvailable() ?? false;
+    public IMessageChannel TargetChannel { get; }
+
+    public IObservable<InteractionMessageHolder> MessageChanged =>
+        (_messageChangedSubject ??= new Subject<InteractionMessageHolder>()).AsObservable();
 
     public UpdatableMessageDisplay(IMessageChannel targetChannel,
-        Action<MessageProperties> messagePropertiesUpdateCallback, ILogger logger) {
-        _targetChannel = targetChannel;
+        Action<MessageProperties> messagePropertiesUpdateCallback,
+        ILogger? logger) : this(targetChannel,
+        messagePropertiesUpdateCallback, [], logger) {
+    }
+
+    public UpdatableMessageDisplay(IMessageChannel targetChannel,
+        Action<MessageProperties> messagePropertiesUpdateCallback,
+        IEnumerable<IUpdatableMessageDisplayBehavior> behaviors,
+        ILogger? logger) {
+        TargetChannel = targetChannel;
         _messagePropertiesUpdateCallback = messagePropertiesUpdateCallback;
         _logger = logger;
         _controlMessageSendTask = new SingleTask<Unit, IEnlivenInteraction?>(SendControlMessageInternal)
@@ -35,6 +52,10 @@ public class UpdatableMessageDisplay : DisposableBase {
             BetweenExecutionsDelay = MessageBasedUpdateDelay, CanBeDirty = true,
             ShouldExecuteNonDirtyIfNothingRunning = true
         };
+
+        foreach (var behavior in behaviors) {
+            AttachBehavior(behavior);
+        }
     }
 
     private async Task<Unit> SendControlMessageInternal(SingleTaskExecutionData<IEnlivenInteraction?> arg) {
@@ -44,23 +65,25 @@ public class UpdatableMessageDisplay : DisposableBase {
         _messagePropertiesUpdateCallback(messageProperties);
         if (arg.Parameter is { } interaction) {
             await interaction.RespondAsync(text: messageProperties.Content.GetValueOrDefault(),
-                messageProperties.Embeds.GetValueOrDefault([]),
+                embed: messageProperties.Embed.GetValueOrDefault(),
+                embeds: messageProperties.Embeds.GetValueOrDefault(),
                 components: messageProperties.Components.GetValueOrDefault());
             OnInteractionProcessed(InteractionMessageHolder.CreateFromInteraction(interaction, OnInteractionExpired));
             return Unit.Default;
         }
 
-        var message = await _targetChannel.SendMessageAsync(text: messageProperties.Content.GetValueOrDefault(),
-            embeds: [messageProperties.Embed.GetValueOrDefault()],
+        var message = await TargetChannel.SendMessageAsync(text: messageProperties.Content.GetValueOrDefault(),
+            embed: messageProperties.Embed.GetValueOrDefault(),
+            embeds: messageProperties.Embeds.GetValueOrDefault(),
             components: messageProperties.Components.GetValueOrDefault());
-        _interaction = InteractionMessageHolder.CreateFromMessage(message);
+        OnInteractionProcessed(InteractionMessageHolder.CreateFromMessage(message));
         return Unit.Default;
     }
 
     private async Task<Unit> UpdateControlMessageInternal(SingleTaskExecutionData<IEnlivenInteraction?> data) {
         await _controlMessageSendTask.WaitForCurrent().ObserveException();
         if (_interaction == null) {
-            await _controlMessageSendTask.Execute();
+            await _controlMessageSendTask.ExecuteForcedIfHasArgument(data.Parameter);
             return Unit.Default;
         }
 
@@ -71,6 +94,7 @@ public class UpdatableMessageDisplay : DisposableBase {
         };
 
         // Try to resend an interaction response
+        // TODO: Handle already responded interactions
         if (data.Parameter is { HasResponded: false } interaction) {
             // If new interaction is a component interaction, and it's the same message as the control message
             // Just update it
@@ -85,8 +109,9 @@ public class UpdatableMessageDisplay : DisposableBase {
             }
 
             // Other types of interactions, but main message sent recently
-            if (_interaction is not null &&
-                DateTimeOffset.Now - _interaction.CreatedAt < TimeSpan.FromSeconds(10)) {
+            // TODO: Handle resending
+            if (_interaction is not null
+                && DateTimeOffset.Now - _interaction.InteractionCreatedAt < TimeSpan.FromSeconds(10)) {
                 // Just defer it
                 await interaction.DeferAsync(options: requestOptions);
                 // Delete loading message
@@ -98,6 +123,11 @@ public class UpdatableMessageDisplay : DisposableBase {
             return Unit.Default;
         }
 
+        if (await ShouldResend()) {
+            await _controlMessageSendTask.Execute();
+            return Unit.Default;
+        }
+
         try {
             await _interaction.ModifyAsync(_messagePropertiesUpdateCallback, requestOptions);
         }
@@ -106,9 +136,9 @@ public class UpdatableMessageDisplay : DisposableBase {
             // Fuck it.
         }
         catch (Exception e) {
-            _logger.LogTrace(e, "Failed to update embed control message. " +
-                                "Guild: {TargetGuildId}. Channel: {TargetChannelId}. Message id: {ControlMessageId}",
-                (_targetChannel as IGuildChannel)?.GuildId, _targetChannel.Id, await _interaction.GetMessageIdAsync());
+            _logger?.LogTrace(e, "Failed to update embed control message. " +
+                                 "Guild: {TargetGuildId}. Channel: {TargetChannelId}. Message id: {ControlMessageId}",
+                (TargetChannel as IGuildChannel)?.GuildId, TargetChannel.Id, await _interaction.GetMessageIdAsync());
 
             _ = _controlMessageSendTask.Execute();
         }
@@ -126,8 +156,33 @@ public class UpdatableMessageDisplay : DisposableBase {
         }
     }
 
+    public void AttachBehavior(IUpdatableMessageDisplayBehavior behavior) {
+        behavior.OnAttached(this);
+        _behaviors.Add(behavior);
+    }
+
     public Task Update(bool background) {
         return _updateControlMessageTask.Execute(makesDirty: !background);
+    }
+
+    public Task HandleInteraction(InteractionMessageHolder holder) {
+        if (_interaction is null) {
+            OnInteractionProcessed(holder);
+            return _updateControlMessageTask.Execute();
+        }
+
+        if (holder.InteractionAvailable()) {
+            if (!_interaction.InteractionAvailable()
+                || _interaction.InteractionAvailable()
+                && holder.InteractionCreatedAt > _interaction.InteractionCreatedAt) {
+                _ = _interaction.DeleteAsync().ObserveException();
+                OnInteractionProcessed(holder);
+                return _updateControlMessageTask.Execute();
+            }
+        }
+
+        _ = holder.DeleteAsync().ObserveException();
+        return _updateControlMessageTask.Execute();
     }
 
     public Task HandleInteraction(IEnlivenInteraction interaction) {
@@ -135,12 +190,39 @@ public class UpdatableMessageDisplay : DisposableBase {
     }
 
     private void OnInteractionProcessed(InteractionMessageHolder interaction) {
-        _updateControlMessageTask.BetweenExecutionsDelay = InteractionBasedUpdateDelay;
+        _updateControlMessageTask.BetweenExecutionsDelay = interaction.InteractionAvailable()
+            ? InteractionBasedUpdateDelay
+            : MessageBasedUpdateDelay;
         _interaction = interaction;
+        _messageChangedSubject?.OnNext(interaction);
     }
 
     private void OnInteractionExpired() {
         _updateControlMessageTask.BetweenExecutionsDelay = MessageBasedUpdateDelay;
+    }
+
+    private async ValueTask<bool> ShouldResend() {
+        if (_behaviors.Count == 0) {
+            return false;
+        }
+
+        List<ValueTask<bool>>? tasks = null;
+        foreach (var behavior in _behaviors.OfType<IUpdatableMessageDisplayResendBehavior>()) {
+            tasks ??= new List<ValueTask<bool>>(_behaviors.Count);
+            tasks.Add(behavior.ShouldResend());
+        }
+
+        if (tasks is null) {
+            return false;
+        }
+
+        foreach (var valueTask in tasks) {
+            if (await valueTask) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public new InteractionMessageHolder? Dispose() {
@@ -151,72 +233,9 @@ public class UpdatableMessageDisplay : DisposableBase {
     protected override void DisposeInternal() {
         _controlMessageSendTask.Dispose();
         _updateControlMessageTask.Dispose();
-    }
-
-    public class InteractionMessageHolder {
-        private bool _interactionWasValid;
-        private readonly IEnlivenInteraction? _interaction;
-        private readonly Task<IUserMessage> _controlMessageTask;
-        private readonly Action _interactionExpiredCallback;
-
-        private InteractionMessageHolder(IEnlivenInteraction? interaction,
-            Task<IUserMessage> controlMessageTask,
-            Action interactionExpiredCallback) {
-            _interaction = interaction;
-            _controlMessageTask = controlMessageTask;
-            _interactionExpiredCallback = interactionExpiredCallback;
-            _interactionWasValid = interaction is not null;
-        }
-
-        public DateTimeOffset? CreatedAt => _interaction?.CreatedAt;
-
-        public async Task ModifyAsync(Action<MessageProperties> messagePropertiesUpdateCallback,
-            RequestOptions? requestOptions = null) {
-            if (InteractionAvailable()) {
-                await _interaction!.ModifyOriginalResponseAsync(messagePropertiesUpdateCallback, requestOptions);
-            }
-            else {
-                if (_interactionWasValid) {
-                    _interactionWasValid = false;
-                    _interactionExpiredCallback();
-                }
-
-                await (await _controlMessageTask).ModifyAsync(messagePropertiesUpdateCallback, requestOptions);
-            }
-        }
-
-        public async Task DeleteAsync() {
-            if (InteractionAvailable())
-                await _interaction!.DeleteOriginalResponseAsync();
-            else
-                await (await _controlMessageTask).DeleteAsync();
-        }
-
-        public ValueTask<ulong> GetMessageIdAsync() {
-            return _controlMessageTask.IsCompletedSuccessfully
-                ? ValueTask.FromResult(_controlMessageTask.Result.Id)
-                : new ValueTask<ulong>(_controlMessageTask.PipeAsync(message => message.Id));
-        }
-
-        public bool InteractionAvailable() {
-            return _interaction is not null && DateTimeOffset.Now - _interaction.CreatedAt < new TimeSpan(0, 14, 50);
-        }
-
-        public static InteractionMessageHolder CreateFromInteraction(IEnlivenInteraction interaction,
-            Action interactionExpiredCallback) {
-            return new InteractionMessageHolder(interaction, interaction.GetOriginalResponseAsync(),
-                interactionExpiredCallback);
-        }
-
-        public static InteractionMessageHolder CreateFromComponentInteraction(IComponentInteraction interaction,
-            Action interactionExpiredCallback) {
-            return new InteractionMessageHolder((IEnlivenInteraction?)interaction,
-                Task.FromResult(interaction.Message),
-                interactionExpiredCallback);
-        }
-
-        public static InteractionMessageHolder CreateFromMessage(IUserMessage controlMessage) {
-            return new InteractionMessageHolder(null, Task.FromResult(controlMessage), () => { });
+        _messageChangedSubject?.Dispose();
+        foreach (var behavior in _behaviors) {
+            behavior.Dispose();
         }
     }
 }

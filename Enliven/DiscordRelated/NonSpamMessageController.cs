@@ -2,57 +2,48 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reactive;
+using System.Reactive.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Bot.DiscordRelated.Commands.Modules;
-using Bot.DiscordRelated.Criteria;
-using Bot.DiscordRelated.Music;
-using Bot.Utilities;
+using Bot.DiscordRelated.Interactions.Wrappers;
+using Bot.DiscordRelated.UpdatableMessage;
 using Common;
-using Common.Criteria;
 using Common.Localization.Entries;
 using Common.Localization.Providers;
 using Common.Utils;
 using Discord;
+using Discord.WebSocket;
 using Tyrrrz.Extensions;
 
 namespace Bot.DiscordRelated;
 
-public class NonSpamMessageController {
-    private static readonly Regex UserMentionRegex = new(@"(?<!<@)!?(\d+)(?=>)");
+public partial class NonSpamMessageController : DisposableBase {
+    [GeneratedRegex(@"(?<=<@)(\d+)(?=>)")] private static partial Regex UserMentionRegex { get; }
+
     private readonly ILocalizationProvider _loc;
+    private readonly HandyTimer _clearTimer = new();
+    private readonly UpdatableMessageDisplay _updatableMessageDisplay;
+    private readonly List<MessageControllerEntryData> _entries = [];
 
-    private readonly SingleTask<IUserMessage?> _resendTask;
-    private readonly SingleTask _updateTask;
-
-    private HandyLongestTimer _clearTimer = new();
-
-    private TimeChecker _lastSendTimeChecker = new(TimeSpan.FromSeconds(20));
-    private SendControlMessageOverride? _sendControlMessageOverride;
-
-    public NonSpamMessageController(ILocalizationProvider loc, IMessageChannel channel, string embedTitle,
-        Color embedColor = default) {
+    public NonSpamMessageController(ILocalizationProvider loc, BaseSocketClient enlivenShardedClient,
+        IMessageChannel channel, string embedTitle, Color embedColor = default) {
         _loc = loc;
-        TargetChannel = channel;
         EmbedTitle = embedTitle;
         EmbedColor = embedColor;
-        _updateTask = new SingleTask(InternalUpdateAsync)
-            { CanBeDirty = true, BetweenExecutionsDelay = TimeSpan.FromSeconds(1) };
-        _resendTask = new SingleTask<IUserMessage?>(InternalResendAsync);
+        _updatableMessageDisplay = new UpdatableMessageDisplay(channel, MessagePropertiesUpdateCallback, null);
+        // @formatter:off
+        _updatableMessageDisplay.AttachBehavior(new ResendAfterTimeUpdatableMessageDisplayBehavior(TimeSpan.FromSeconds(20)));
+        _updatableMessageDisplay.AttachBehavior(new StayInTheViewUpdatableMessageDisplayBehavior(enlivenShardedClient, 1));
+        // @formatter:on
+
+        _clearTimer.OnTimerElapsed
+            .Delay(TimeSpan.FromSeconds(5))
+            .Subscribe(OnClearingRequested);
     }
 
-    public string EmbedTitle { get; set; }
-    public Color EmbedColor { get; set; }
-
-    public IUserMessage? Message { get; private set; }
-    private List<MessageControllerEntryData> Entries { get; } = new();
-    private IMessageChannel TargetChannel { get; }
-
-    [Obsolete("Use overload with IEntry instead")]
-    public NonSpamMessageController AddEntry(string entry, TimeSpan? timeout = null) {
-        AddEntryInternal(new EntryString(entry), timeout);
-        return this;
-    }
+    public string EmbedTitle { get; private set; }
+    public Color EmbedColor { get; private set; }
 
     public NonSpamMessageController AddEntry(IEntry entry, TimeSpan? timeout = null) {
         AddEntryInternal(entry, timeout);
@@ -66,38 +57,49 @@ public class NonSpamMessageController {
 
     private MessageControllerEntryData AddEntryInternal(IEntry entry, TimeSpan? timeout = null) {
         var data = new MessageControllerEntryData(entry, timeout.GetValueOrDefault(Constants.ShortTimeSpan));
-        Entries.Add(data);
+        _entries.Add(data);
         _clearTimer.SetDelay(data.Timeout);
+        OnEntriesChanged();
         return data;
     }
 
     public NonSpamMessageController RemoveEntry(IEntry entry) {
-        var data = Entries
+        var data = _entries
             .Where(data => data.Entry == entry)
             .MinBy(data => data.AddDate);
-        if (data != null) Entries.Remove(data);
+        if (data != null) _entries.Remove(data);
+        OnEntriesChanged();
         return this;
+    }
+
+    public Task Update() {
+        return _updatableMessageDisplay.Update(false);
+    }
+
+    public Task Update(IEnlivenInteraction interaction) {
+        return _updatableMessageDisplay.HandleInteraction(interaction);
     }
 
     public bool IsEmpty {
         get {
-            Entries.RemoveAll(data => data.AddDate + data.Timeout < DateTime.Now);
-            return Entries.Count == 0;
+            _entries.RemoveAll(data => data.AddDate + data.Timeout < DateTime.Now);
+            return _entries.Count == 0;
         }
     }
 
-    public Embed? GetEmbed() {
-        Entries.RemoveAll(data => data.AddDate + data.Timeout < DateTime.Now);
-        if (Entries.Count == 0) return null;
+    private Embed? GetEmbed() {
+        _entries.RemoveAll(data => data.AddDate + data.Timeout < DateTime.Now);
+        if (_entries.Count == 0) return null;
 
-        var description = Entries
+        var description = _entries
             .GroupBy(data => data.Entry.Get(_loc))
-            .Select(grouping =>
-                grouping.Key + GetEntryPostfix(grouping.Count(), grouping.OrderBy(data => data.AddDate).Last().AddDate))
+            .Select(grouping => grouping.Key + GetEntryPostfix(grouping.Count(), grouping.Max(data => data.AddDate)))
             .JoinToString("\n");
+
         return new EmbedBuilder()
             .WithTitle(EmbedTitle)
             .WithDescription(description)
+            .WithColor(EmbedColor)
             .Build();
 
         string GetEntryPostfix(int count, DateTime last) {
@@ -108,73 +110,30 @@ public class NonSpamMessageController {
         }
     }
 
-    public Task Update() {
-        return _updateTask.Execute();
+    private void MessagePropertiesUpdateCallback(MessageProperties properties) {
+        properties.Embed = GetEmbed();
+        var matchCollection = UserMentionRegex.Matches(properties.Embed.Value.Description);
+        properties.Content = matchCollection.Count > 0
+            ? matchCollection.Select(match => $"<@{match.Value}>").JoinToString(", ")
+            : Optional<string>.Unspecified;
     }
 
-    public Task<IUserMessage?> Resend() {
-        return _resendTask.Execute();
+    private void OnEntriesChanged() {
+        _clearTimer.SetDelay(_entries.Count > 0 ? _entries.Min(data => data.Timeout) : TimeSpan.Zero);
     }
 
-    private async Task<IUserMessage?> InternalResendAsync(SingleTaskExecutionData<Unit> executionData) {
-        Message?.SafeDelete();
-        Message = null;
-
-        var embed = GetEmbed();
-        if (embed == null) {
-            executionData.OverrideDelay = TimeSpan.Zero;
-            return null;
-        }
-
-
-        try {
-            _lastSendTimeChecker.Update();
-            Message = await _sendControlMessageOverride.ExecuteAndFallbackWith(embed, null, TargetChannel);
-            _sendControlMessageOverride = null;
-            return Message;
-        }
-        catch {
-            // ignored
-        }
-
-        return null;
+    private void OnClearingRequested(Unit __) {
+        if (IsDisposed || !IsEmpty) return;
+        var message = Dispose();
+        _ = message?.DeleteAsync().ObserveException();
     }
 
-    private async Task InternalUpdateAsync(SingleTaskExecutionData<Unit> executionData) {
-        var embed = GetEmbed();
-        if (embed == null) {
-            Message.SafeDelete();
-            Message = null;
-            executionData.OverrideDelay = TimeSpan.Zero;
-            return;
-        }
-
-        try {
-            if (Message == null || await _lastSendTimeChecker.ToCriteria()
-                    .AddCriterion(new EnsureMessage(TargetChannel, Message).Invert()).JudgeAsync())
-                await Resend();
-            else {
-                await Message!.ModifyAsync(properties => {
-                    properties.Embed = embed;
-                    var matchCollection = UserMentionRegex.Matches(properties.Embed.Value.Description);
-                    properties.Content = matchCollection.Select(match => $"<@{match.Value}>").JoinToString(", ");
-                });
-            }
-        }
-        catch {
-            // ignored
-        }
+    public new InteractionMessageHolder? Dispose() {
+        return _updatableMessageDisplay.Dispose();
     }
 
-    public async Task ResendWithOverride(SendControlMessageOverride sendControlMessageOverride,
-        bool executeResend = true) {
-        _sendControlMessageOverride = (embed, component) => {
-            _sendControlMessageOverride = null;
-            return sendControlMessageOverride(embed, component);
-        };
-        if (!executeResend) return;
-
-        await _resendTask.Execute(false, TimeSpan.Zero);
+    protected override void DisposeInternal() {
+        _clearTimer.Dispose();
     }
 
     private record MessageControllerEntryData(IEntry Entry, TimeSpan Timeout) {
@@ -183,27 +142,15 @@ public class NonSpamMessageController {
         public DateTime AddDate { get; } = DateTime.Now;
     }
 
-    private class NonSpamMessageControllerEntry : IRepliedEntry {
-        private readonly NonSpamMessageController _controller;
+    private record NonSpamMessageControllerEntry(NonSpamMessageController Controller, MessageControllerEntryData Data)
+        : IRepliedEntry {
         private bool _isDeleted;
-
-        public NonSpamMessageControllerEntry(NonSpamMessageController controller, MessageControllerEntryData data) {
-            _controller = controller;
-            Data = data;
-        }
-
-        public MessageControllerEntryData Data { get; private set; }
-
-        public Task ChangeEntryAsync(IEntry entry) {
-            if (_isDeleted) throw new InvalidOperationException("This IEntry already deleted");
-            Data.Entry = entry;
-            return _controller.Update();
-        }
 
         public void Delete() {
             if (_isDeleted) return;
             _isDeleted = true;
-            _controller.Entries.Remove(Data);
+            Controller._entries.Remove(Data);
+            Controller.OnEntriesChanged();
         }
     }
 }

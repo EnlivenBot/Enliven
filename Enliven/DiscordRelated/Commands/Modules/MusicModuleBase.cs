@@ -13,6 +13,7 @@ using Common.Localization.Entries;
 using Discord;
 using Discord.Commands;
 using Discord.Interactions;
+using Discord.WebSocket;
 using Lavalink4NET.Players;
 using Microsoft.Extensions.Options;
 
@@ -126,23 +127,19 @@ public abstract class MusicModuleBase : AdvancedModuleBase {
         channelInfo ??= GetChannelInfo();
         var embedPlayerDisplay = EmbedPlayerDisplayProvider.Provide(await channelInfo.GetTargetChannelAsync());
 
-        // if (ErrorsMessagesControllers.TryGetValue(channelInfo.CurrentChannel, out var errorsMessagesController)
-        //     && errorsMessagesController is { IsEmpty: true, Message: not null })
-        // {
-        //     ErrorsMessagesControllers.Remove(channelInfo.CurrentChannel, out _);
-        //  // TODO: Reuse message from nonSpamMessageController   
-        // }
-
-        if (channelInfo.IsCurrentChannelSuitable && Context.InteractionBasedResponseRequired(out var interaction))
-            await embedPlayerDisplay.Update(interaction);
         await embedPlayerDisplay.Initialize(Player);
 
-        return Player;
-    }
+        if (channelInfo.IsCurrentChannelSuitable && Context.InteractionBasedResponseRequired(out var interaction)) {
+            await embedPlayerDisplay.Update(interaction);
+        }
+        else if (ErrorsMessagesControllers.TryGetValue(channelInfo.TargetChannelId, out var errorsMessagesController)
+                 && errorsMessagesController is { IsDisposed: false, IsEmpty: true }) {
+            var oldMessageHolder = errorsMessagesController.Dispose();
+            if (oldMessageHolder != null)
+                await embedPlayerDisplay.Update(oldMessageHolder);
+        }
 
-    protected async Task<IUserMessage> OverrideSendingControlMessage(Embed embed, MessageComponent? component) {
-        var sentMessage = await Context.SendMessageAsync(null, embed, false, component);
-        return await sentMessage.GetMessageAsync();
+        return Player;
     }
 
     protected async Task ReplyAndThrowIfAsync(bool condition, IEntry entry) {
@@ -163,15 +160,21 @@ public abstract class MusicModuleBase : AdvancedModuleBase {
     protected async Task<IRepliedEntry> ReplyEntryAsync(IEntry entry, TimeSpan? timeout = null) {
         var nonSpamMessageController = ErrorsMessagesControllers
             .GetOrAdd(Context.Channel.Id, CreateNonSpanMessageController);
+        if (nonSpamMessageController.IsDisposed) {
+            nonSpamMessageController = ErrorsMessagesControllers[Context.Channel.Id] =
+                CreateNonSpanMessageController(Context.Channel.Id);
+        }
+
         var repliedEntry = nonSpamMessageController.AddRepliedEntry(entry, timeout);
-        if (Context.NeedResponse)
-            await nonSpamMessageController.ResendWithOverride(OverrideSendingControlMessage);
+        if (Context.InteractionBasedResponseRequired(out var interaction))
+            await nonSpamMessageController.Update(interaction);
         else
             await nonSpamMessageController.Update();
         return repliedEntry;
 
         NonSpamMessageController CreateNonSpanMessageController(ulong arg) {
-            return new NonSpamMessageController(Loc, Context.Channel, Loc.Get("Music.Fail"));
+            return new NonSpamMessageController(Loc, (BaseSocketClient)Context.Client, Context.Channel,
+                Loc.Get("Music.Fail"));
         }
     }
 
