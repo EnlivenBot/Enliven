@@ -136,7 +136,7 @@ public sealed class MusicCommands : HavePlayerMusicModuleBase {
         var time = timeSpan ?? TimeSpan.FromSeconds(10);
         await Player.SeekAsync(Player.Position?.Position + time ?? TimeSpan.Zero);
         Player.WriteToQueueHistory(Loc.Get("MusicQueues.FF")
-            .Format(Context.User.Username, Player.CurrentTrackIndex, time.TotalSeconds));
+            .Format(Context.User.Username, Player.CurrentTrackIndex + 1, time.TotalSeconds));
     }
 
     [RequireNonEmptyPlaylist(true)]
@@ -153,7 +153,7 @@ public sealed class MusicCommands : HavePlayerMusicModuleBase {
         var time = timeSpan ?? new TimeSpan(0, 0, 10);
         await Player.SeekAsync(Player.Position?.Position - time ?? TimeSpan.Zero);
         Player.WriteToQueueHistory(Loc.Get("MusicQueues.Rewind")
-            .Format(Context.User.Username, Player.CurrentTrackIndex, time.TotalSeconds));
+            .Format(Context.User.Username, Player.CurrentTrackIndex + 1, time.TotalSeconds));
     }
 
     [RequireNonEmptyPlaylist(true)]
