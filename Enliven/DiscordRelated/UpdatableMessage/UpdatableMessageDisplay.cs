@@ -58,16 +58,23 @@ public class UpdatableMessageDisplay : DisposableBase {
         }
     }
 
-    private async Task<Unit> SendControlMessageInternal(SingleTaskExecutionData<IEnlivenInteraction?> arg) {
+    private async Task<Unit> SendControlMessageInternal(SingleTaskExecutionData<IEnlivenInteraction?> data) {
         _ = _interaction?.DeleteAsync().ObserveException();
+
+        var requestOptions = new RequestOptions {
+            CancelToken = data.CancellationToken,
+            RetryMode = RetryMode.AlwaysFail,
+            RatelimitCallback = RateLimitCallback
+        };
 
         var messageProperties = new MessageProperties();
         _messagePropertiesUpdateCallback(messageProperties);
-        if (arg.Parameter is { } interaction) {
+        if (data.Parameter is { } interaction) {
             await interaction.RespondAsync(text: messageProperties.Content.GetValueOrDefault(),
                 embed: messageProperties.Embed.GetValueOrDefault(),
                 embeds: messageProperties.Embeds.GetValueOrDefault(),
-                components: messageProperties.Components.GetValueOrDefault());
+                components: messageProperties.Components.GetValueOrDefault(),
+                options: requestOptions);
             OnInteractionProcessed(InteractionMessageHolder.CreateFromInteraction(interaction, OnInteractionExpired));
             return Unit.Default;
         }
@@ -75,9 +82,20 @@ public class UpdatableMessageDisplay : DisposableBase {
         var message = await TargetChannel.SendMessageAsync(text: messageProperties.Content.GetValueOrDefault(),
             embed: messageProperties.Embed.GetValueOrDefault(),
             embeds: messageProperties.Embeds.GetValueOrDefault(),
-            components: messageProperties.Components.GetValueOrDefault());
+            components: messageProperties.Components.GetValueOrDefault(),
+            options: requestOptions);
         OnInteractionProcessed(InteractionMessageHolder.CreateFromMessage(message));
         return Unit.Default;
+
+        Task RateLimitCallback(IRateLimitInfo info) {
+            if (info.RetryAfter is { } retryAfter) {
+                data.OverrideDelay = retryAfter > data.BetweenExecutionsDelay.GetValueOrDefault().TotalSeconds
+                    ? TimeSpan.FromSeconds(retryAfter + 1)
+                    : null;
+            }
+
+            return Task.CompletedTask;
+        }
     }
 
     private async Task<Unit> UpdateControlMessageInternal(SingleTaskExecutionData<IEnlivenInteraction?> data) {
