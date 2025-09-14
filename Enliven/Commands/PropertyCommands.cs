@@ -21,7 +21,10 @@ public class PropertyCommands : AdvancedModuleBase {
 
         GuildConfig.IsMusicLimited = shouldLimitMusicCommands;
         GuildConfig.Save();
-        var description = new EntryLocalized(GuildConfig.IsMusicLimited ? "Music now limited in music channel" : "Music now now allowed in any channel");
+        // TODO: Replace with EntryLocalized
+        var description = new EntryString(GuildConfig.IsMusicLimited
+            ? "Music now limited in music channel"
+            : "Music now now allowed in any channel");
         await this.ReplySuccessFormattedAsync(description);
     }
 }
