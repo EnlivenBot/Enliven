@@ -59,9 +59,7 @@ public abstract class MusicModuleBase : AdvancedModuleBase {
         if (Player is null) return;
 
         if (!channelInfo.IsCurrentChannelSuitable) {
-            var reply = await this.ReplyFormattedAsync(
-                PlaybackEntry, PlaybackMovedEntry.WithArg(channelInfo.MusicChannel!), true);
-            _ = reply.CleanupAfterAsync(Constants.ShortTimeSpan);
+            await ReplyEntryAsync(PlaybackMovedEntry.WithArg(channelInfo.MusicChannel!), Constants.ShortTimeSpan);
             return;
         }
 
