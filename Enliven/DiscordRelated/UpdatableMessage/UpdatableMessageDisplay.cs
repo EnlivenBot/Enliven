@@ -243,6 +243,13 @@ public class UpdatableMessageDisplay : DisposableBase {
         return false;
     }
 
+    public async ValueTask<InteractionMessageHolder?> DisposeAsync() {
+        var holder = Dispose();
+        await _controlMessageSendTask.WaitForCurrent().ObserveException();
+        await _updateControlMessageTask.WaitForCurrent().ObserveException();
+        return holder;
+    }
+
     public new InteractionMessageHolder? Dispose() {
         base.Dispose();
         return Interlocked.Exchange(ref _interaction, null);

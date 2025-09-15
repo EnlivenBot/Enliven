@@ -119,7 +119,7 @@ public class EmbedPlayerDisplay : PlayerDisplayBase, IEmbedPlayerDisplayBackgrou
 
         _playerSubscriptions?.Dispose();
         oldCts?.Dispose();
-        var message = _updatableMessageDisplay.Dispose();
+        var message = await _updatableMessageDisplay.DisposeAsync();
 
         var embed = new EmbedBuilder()
             .WithColor(Color.Gold)

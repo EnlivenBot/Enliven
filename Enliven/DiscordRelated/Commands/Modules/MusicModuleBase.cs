@@ -132,7 +132,7 @@ public abstract class MusicModuleBase : AdvancedModuleBase {
         }
         else if (ErrorsMessagesControllers.TryGetValue(channelInfo.TargetChannelId, out var errorsMessagesController)
                  && errorsMessagesController is { IsDisposed: false, IsEmpty: true }) {
-            var oldMessageHolder = errorsMessagesController.Dispose();
+            var oldMessageHolder = await errorsMessagesController.DisposeAsync();
             if (oldMessageHolder != null)
                 await embedPlayerDisplay.Update(oldMessageHolder);
         }

@@ -122,10 +122,18 @@ public partial class NonSpamMessageController : DisposableBase {
         _clearTimer.SetDelay(_entries.Count > 0 ? _entries.Min(data => data.Timeout) : TimeSpan.Zero);
     }
 
-    private void OnClearingRequested(Unit __) {
+    private async void OnClearingRequested(Unit __) {
         if (IsDisposed || !IsEmpty) return;
-        var message = Dispose();
-        _ = message?.DeleteAsync().ObserveException();
+        _ = Task.Run(async () => {
+            var message = await DisposeAsync();
+            _ = message?.DeleteAsync().ObserveException();
+        });
+    }
+
+    public async ValueTask<InteractionMessageHolder?> DisposeAsync() {
+        var holder = Dispose();
+        await _updatableMessageDisplay.DisposeAsync();
+        return holder;
     }
 
     public new InteractionMessageHolder? Dispose() {
