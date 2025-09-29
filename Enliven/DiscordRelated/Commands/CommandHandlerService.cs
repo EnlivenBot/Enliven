@@ -19,8 +19,7 @@ using Tyrrrz.Extensions;
 
 namespace Bot.DiscordRelated.Commands;
 
-public class CommandHandlerService : IService
-{
+public class CommandHandlerService : IService {
     private readonly DiscordShardedClient _client;
     private readonly CollectorService _collectorService;
     private readonly CommandCooldownHandler _commandCooldownHandler = new();
@@ -35,8 +34,7 @@ public class CommandHandlerService : IService
         IGuildConfigProvider guildConfigProvider,
         IStatisticsPartProvider statisticsPartProvider, ILifetimeScope serviceProvider,
         CollectorService collectorService,
-        ILogger<CommandHandlerService> logger)
-    {
+        ILogger<CommandHandlerService> logger) {
         _logger = logger;
         _serviceProvider = serviceProvider;
         _collectorService = collectorService;
@@ -47,16 +45,14 @@ public class CommandHandlerService : IService
     }
 
 
-    public Task OnPostDiscordStart()
-    {
+    public Task OnPostDiscordStart() {
         _fuzzySearch.AddData(_commandService.Aliases.Select(infos => infos.Key));
 
         _client.MessageReceived += HandleCommand;
         return Task.CompletedTask;
     }
 
-    private async Task HandleCommand(SocketMessage s)
-    {
+    private async Task HandleCommand(SocketMessage s) {
         if (s is not SocketUserMessage { Source: MessageSource.User } msg) return;
         if (s.Channel is not SocketGuildChannel guildChannel) return;
 
@@ -68,27 +64,23 @@ public class CommandHandlerService : IService
         var hasMentionPrefix = HasMentionPrefix(msg, _client.CurrentUser, ref argPos);
         var isDedicatedMusicChannel = IsDedicatedMusicChannel(msg, guildConfig);
 
-        if (hasStringPrefix || hasMentionPrefix || isDedicatedMusicChannel)
-        {
+        if (hasStringPrefix || hasMentionPrefix || isDedicatedMusicChannel) {
             var query = msg.Content.Try(s1 => s1.Substring(argPos), "");
             if (string.IsNullOrEmpty(query)) query = " ";
             if (string.IsNullOrWhiteSpace(query) && hasMentionPrefix) query = "help";
             if (string.IsNullOrWhiteSpace(query) && isDedicatedMusicChannel) return;
 
             var command = await GetCommand(query, context);
-            if (command.Item2.Error == CommandError.UnknownCommand && isDedicatedMusicChannel)
-            {
+            if (command.Item2.Error == CommandError.UnknownCommand && isDedicatedMusicChannel) {
                 query = $"play {query}";
                 command = await GetCommand(query, context);
             }
 
-            if (command.Item1 == null)
-            {
+            if (command.Item1 == null) {
                 if (command.Item2.Error == CommandError.UnmetPrecondition)
                     await SendErrorMessage(msg, guildConfig.Loc,
                         guildConfig.Loc.Get("CommandHandler.UnmetPrecondition"));
-                else
-                {
+                else {
                     var bestMatches = _fuzzySearch.Search(query).GetBestMatches(3)
                         .Select(match => $"`{match.SimilarTo}`").JoinToString(", ");
                     var entryLocalized =
@@ -104,10 +96,8 @@ public class CommandHandlerService : IService
                 ? await ExecuteCommand(msg, query, context, command.Item1.Value, s.Author.Id.ToString())
                 : command.Item1.Value.Value;
 
-            if (!result.IsSuccess)
-            {
-                switch (result.Error)
-                {
+            if (!result.IsSuccess) {
+                switch (result.Error) {
                     case CommandError.ParseFailed:
                         await AddEmojiErrorHint(msg, guildConfig.Loc, CommonEmoji.Help,
                             new EntryLocalized("CommandHandler.ParseFailed"),
@@ -124,8 +114,7 @@ public class CommandHandlerService : IService
                         break;
                 }
 
-                if (result.Error == CommandError.Exception)
-                {
+                if (result.Error == CommandError.Exception) {
                     var exception = result is ExecuteResult executeResult ? executeResult.Exception : null;
                     if (exception is not CommandInterruptionException)
                         _logger.LogError(exception, "Interaction execution {Result}: {Reason}", result.Error!.Value,
@@ -135,51 +124,42 @@ public class CommandHandlerService : IService
         }
     }
 
-    private static bool IsDedicatedMusicChannel(IMessage msg, GuildConfig guildConfig)
-    {
+    private static bool IsDedicatedMusicChannel(IMessage msg, GuildConfig guildConfig) {
         return guildConfig.GetChannel(ChannelFunction.DedicatedMusic, out var channelId) && msg.Channel.Id == channelId;
     }
 
     private async Task AddEmojiErrorHint(SocketUserMessage targetMessage, ILocalizationProvider loc, IEmote emote,
         IEntry description,
-        IEnumerable<EmbedFieldBuilder>? builders = null)
-    {
+        IEnumerable<EmbedFieldBuilder>? builders = null) {
         var collector = _collectorService.CollectReaction(targetMessage,
             reaction => reaction.UserId == targetMessage.Author.Id,
-            async eventArgs =>
-            {
+            async eventArgs => {
                 eventArgs.Controller.Dispose();
                 _ = eventArgs.RemoveReason();
                 _ = targetMessage.RemoveReactionAsync(CommonEmoji.Help, _client.CurrentUser);
 
                 await SendErrorMessage(targetMessage, loc, description.Get(loc), builders);
             });
-        try
-        {
+        try {
             var addReactionAsync = targetMessage.AddReactionAsync(emote);
-            _ = addReactionAsync.ContinueWith(async _ =>
-            {
+            _ = addReactionAsync.ContinueWith(async _ => {
                 await Task.Delay(TimeSpan.FromSeconds(20));
-                try
-                {
+                try {
                     await targetMessage.RemoveReactionAsync(CommonEmoji.Help, _client.CurrentUser);
                 }
-                finally
-                {
+                finally {
                     collector.Dispose();
                 }
             });
             await addReactionAsync;
         }
-        catch (Exception)
-        {
+        catch (Exception) {
             collector.Dispose();
         }
     }
 
     private async Task<(KeyValuePair<CommandMatch, ParseResult>?, IResult)> GetCommand(string query,
-        ICommandContext context)
-    {
+        ICommandContext context) {
         var (commandMatch, result) = await _commandService.FindAsync(context, query, null);
         if (result.IsSuccess) return (commandMatch, result);
 
@@ -189,12 +169,10 @@ public class CommandHandlerService : IService
             query.IndexOf(" ", StringComparison.Ordinal) > 0
                 ? query.IndexOf(" ", StringComparison.Ordinal)
                 : query.Length);
-        try
-        {
+        try {
             args = query.Substring(command.Length + 1);
         }
-        catch
-        {
+        catch {
             args = "";
         }
 
@@ -212,10 +190,8 @@ public class CommandHandlerService : IService
 
     public async Task<IResult> ExecuteCommand(IMessage message, string query, ICommandContext context,
         KeyValuePair<CommandMatch, ParseResult> pair,
-        string authorId)
-    {
-        if (_commandCooldownHandler.IsCommandOnCooldown(pair.Key.Command, context))
-        {
+        string authorId) {
+        if (_commandCooldownHandler.IsCommandOnCooldown(pair.Key.Command, context)) {
             var localizationProvider = _guildConfigProvider.Get(context.Guild.Id).Loc;
             await SendErrorMessage(message, localizationProvider,
                 new EntryLocalized("CommandHandler.CommandOnCooldown").Get(localizationProvider));
@@ -225,8 +201,7 @@ public class CommandHandlerService : IService
 #pragma warning disable 618
         var result = await pair.Key.ExecuteAsync(context, pair.Value, new ServiceProviderAdapter(_serviceProvider));
 
-        if (result.Error != CommandError.UnknownCommand)
-        {
+        if (result.Error != CommandError.UnknownCommand) {
             var commandName = query.IndexOf(" ", StringComparison.Ordinal) > -1
                 ? query.Substring(0, query.IndexOf(" ", StringComparison.Ordinal))
                 : query;
@@ -238,11 +213,9 @@ public class CommandHandlerService : IService
 #pragma warning restore 618
     }
 
-    public async Task<IResult> ExecuteCommand(string query, ICommandContext context, string authorId)
-    {
+    public async Task<IResult> ExecuteCommand(string query, ICommandContext context, string authorId) {
         var result = await _commandService.ExecuteAsync(context, query, new ServiceProviderAdapter(_serviceProvider));
-        if (result.Error != CommandError.UnknownCommand)
-        {
+        if (result.Error != CommandError.UnknownCommand) {
             var commandName = query.IndexOf(" ", StringComparison.Ordinal) > -1
                 ? query.Substring(0, query.IndexOf(" ", StringComparison.Ordinal))
                 : query;
@@ -254,10 +227,8 @@ public class CommandHandlerService : IService
     }
 
     private static async Task SendErrorMessage(IMessage message, ILocalizationProvider loc, string description,
-        IEnumerable<EmbedFieldBuilder>? fieldBuilders)
-    {
-        if (fieldBuilders == null)
-        {
+        IEnumerable<EmbedFieldBuilder>? fieldBuilders) {
+        if (fieldBuilders == null) {
             await SendErrorMessage(message, loc, description);
             return;
         }
@@ -266,24 +237,21 @@ public class CommandHandlerService : IService
         await message.Channel.SendMessageAsync(null, false, embed).DelayedDelete(Constants.LongTimeSpan);
     }
 
-    private static async Task SendErrorMessage(IMessage message, ILocalizationProvider loc, string description)
-    {
+    private static async Task SendErrorMessage(IMessage message, ILocalizationProvider loc, string description) {
         var embed = GetErrorEmbed(message.Author, loc, description).Build();
         await message.Channel.SendMessageAsync(null, false, embed).DelayedDelete(Constants.LongTimeSpan);
     }
 
-    public static EmbedBuilder GetErrorEmbed(IUser user, ILocalizationProvider loc, string description)
-    {
+    public static EmbedBuilder GetErrorEmbed(IUser user, ILocalizationProvider loc, string description) {
         var builder = new EmbedBuilder();
-        builder.WithFooter(loc.Get("Commands.RequestedBy").Format(user.Username), user.GetAvatarUrl())
+        builder.WithFooter(loc.Get("Commands.RequestedBy").Format(user.Mention), user.GetAvatarUrl())
             .WithColor(Color.Orange);
         builder.WithTitle(loc.Get("CommandHandler.FailedTitle"))
             .WithDescription(description);
         return builder;
     }
 
-    private static bool HasMentionPrefix(IUserMessage msg, IUser user, ref int argPos)
-    {
+    private static bool HasMentionPrefix(IUserMessage msg, IUser user, ref int argPos) {
         var content = msg.Content;
         if (string.IsNullOrEmpty(content) || content.Length <= 3 || content[0] != '<' || content[1] != '@')
             return false;
@@ -295,8 +263,7 @@ public class CommandHandlerService : IService
         return true;
     }
 
-    public CommandInfo GetCommandByName(string commandName)
-    {
+    public CommandInfo GetCommandByName(string commandName) {
         return _commandService.Aliases[commandName].First();
     }
 }

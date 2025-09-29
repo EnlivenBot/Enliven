@@ -11,27 +11,29 @@ namespace Bot.DiscordRelated;
 public static class DiscordUtils {
     public static EmbedBuilder GetAuthorEmbedBuilder(IUser user, ILocalizationProvider loc) {
         var embedBuilder = new EmbedBuilder();
-        embedBuilder.WithFooter(loc.Get("Commands.RequestedBy").Format(user.Username), user.GetAvatarUrl());
+        embedBuilder.WithFooter(loc.Get("Commands.RequestedBy").Format(user.Mention), user.GetAvatarUrl());
         return embedBuilder;
     }
 
     public static EnlivenEmbedBuilder GetAuthorEmbedBuilderWrapper(IUser user, ILocalizationProvider loc) {
         var embedBuilder = new EnlivenEmbedBuilder();
-        embedBuilder.WithFooter(loc.Get("Commands.RequestedBy").Format(user.Username), user.GetAvatarUrl());
+        embedBuilder.WithFooter(loc.Get("Commands.RequestedBy").Format(user.Mention), user.GetAvatarUrl());
         return embedBuilder;
     }
 
     public static EmbedBuilder WithRequester(this EmbedBuilder builder, IUser user, ILocalizationProvider loc) {
-        builder.WithFooter(loc.Get("Commands.RequestedBy").Format(user.Username), user.GetAvatarUrl());
+        builder.WithFooter(loc.Get("Commands.RequestedBy").Format(user.Mention), user.GetAvatarUrl());
         return builder;
     }
 
-    public static EnlivenEmbedBuilder WithRequester(this EnlivenEmbedBuilder builder, IUser user, ILocalizationProvider loc) {
-        builder.WithFooter(loc.Get("Commands.RequestedBy").Format(user.Username), user.GetAvatarUrl());
+    public static EnlivenEmbedBuilder WithRequester(this EnlivenEmbedBuilder builder, IUser user,
+        ILocalizationProvider loc) {
+        builder.WithFooter(loc.Get("Commands.RequestedBy").Format(user.Mention), user.GetAvatarUrl());
         return builder;
     }
 
-    public static PriorityEmbedFieldBuilder ToWrapper(this EmbedFieldBuilder builder, int? priority = null, bool enabled = true) {
+    public static PriorityEmbedFieldBuilder ToWrapper(this EmbedFieldBuilder builder, int? priority = null,
+        bool enabled = true) {
         return new PriorityEmbedFieldBuilder()
             .WithName(builder.Name)
             .WithValue(builder.Value)
@@ -42,9 +44,9 @@ public static class DiscordUtils {
 
     public static async Task<IGuildUser> GetUser(this IGuild guild, ulong id) {
         return guild switch {
-            RestGuild restGuild     => await restGuild.GetUserAsync(id),
+            RestGuild restGuild => await restGuild.GetUserAsync(id),
             SocketGuild socketGuild => socketGuild.GetUser(id),
-            _                       => throw new ArgumentOutOfRangeException(nameof(guild))
+            _ => throw new ArgumentOutOfRangeException(nameof(guild))
         };
     }
 }

@@ -74,12 +74,8 @@ public class AdvancedLavalinkPlayer : WrappedLavalinkPlayer, IPlayerOnReady, IPl
         GuildConfig.Save();
     }
 
-    public virtual void WriteToQueueHistory(string entry) {
-        WriteToQueueHistory(new HistoryEntry(new EntryString(entry)));
-    }
-
     public virtual void WriteToQueueHistory(IEntry entry) {
-        WriteToQueueHistory(entry is HistoryEntry historyEntry ? historyEntry : new HistoryEntry(entry));
+        WriteToQueueHistory(entry as HistoryEntry ?? new HistoryEntry(entry));
     }
 
     public virtual void WriteToQueueHistory(HistoryEntry entry) {
@@ -107,7 +103,7 @@ public class AdvancedLavalinkPlayer : WrappedLavalinkPlayer, IPlayerOnReady, IPl
         var effectUse = new PlayerEffectUse(source, effect);
         _effectsList.Add(effectUse);
 
-        WriteToQueueHistory(new EntryLocalized("Music.EffectApplied", source?.Username ?? "Unknown",
+        WriteToQueueHistory(new EntryLocalized("PlayerHistory.EffectApplied", source?.Mention ?? "Unknown",
             effectUse.Effect.DisplayName));
         await ApplyFiltersAsync();
         return effectUse;
@@ -116,7 +112,7 @@ public class AdvancedLavalinkPlayer : WrappedLavalinkPlayer, IPlayerOnReady, IPl
     public virtual async Task RemoveEffect(PlayerEffectUse effectUse, IUser? source) {
         if (_effectsList.Remove(effectUse)) {
             await ApplyFiltersAsync();
-            WriteToQueueHistory(new EntryLocalized("Music.EffectRemoved", source?.Username ?? "Unknown",
+            WriteToQueueHistory(new EntryLocalized("PlayerHistory.EffectRemoved", source?.Mention ?? "Unknown",
                 effectUse.Effect.DisplayName));
         }
     }

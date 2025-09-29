@@ -42,7 +42,7 @@ public sealed class PlaylistLoadCommands : CreatePlayerMusicModuleBase {
             return;
         }
 
-        Player.WriteToQueueHistory(Loc.Get("Music.LoadPlaylist", Context.User.Username,
+        Player.WriteToQueueHistory(new EntryLocalized("Music.LoadPlaylist", Context.User.Mention,
             id.SafeSubstring(100, "...")));
         await Player.ImportPlaylist(playlist.Playlist, options, new TrackRequester(Context.User));
         await this.RemoveMessageInvokerIfPossible();

@@ -27,7 +27,7 @@ public sealed class MusicCommands : HavePlayerMusicModuleBase {
     [Alias("st")]
     [Summary("stop0s")]
     public async Task Stop() {
-        await Player.Shutdown(new EntryLocalized("Music.UserStopPlayback").WithArg(Context.User.Username),
+        await Player.Shutdown(new EntryLocalized("Music.UserStopPlayback").WithArg(Context.User.Mention),
             new PlayerShutdownParameters { SavePlaylist = false, ShutdownDisplays = true });
     }
 
@@ -37,7 +37,7 @@ public sealed class MusicCommands : HavePlayerMusicModuleBase {
     [Summary("jump0s")]
     public async Task Jump([Summary("jump0_0s")] int index = 1) {
         await Player.SkipAsync(index, true);
-        Player.WriteToQueueHistory(Loc.Get("MusicQueues.Jumped", Context.User.Username,
+        Player.WriteToQueueHistory(new EntryLocalized("PlayerHistory.Jumped", Context.User.Mention,
             Player.RequestedTrackIndex + 1,
             Player.CurrentTrack!.Title.RemoveNonPrintableChars().SafeSubstring(0, 40) + "..."));
     }
@@ -56,9 +56,9 @@ public sealed class MusicCommands : HavePlayerMusicModuleBase {
 
         if (Player.Playlist.TryGetValue(index - 1, out var track)) {
             await Player.PlayAsync(track!);
-            Player.WriteToQueueHistory(Loc.Get("MusicQueues.Jumped")
-                .Format(Context.User.Username, Player.RequestedTrackIndex + 1,
-                    Player.CurrentTrack!.Title.SafeSubstring(0, 40) + "..."));
+            Player.WriteToQueueHistory(new EntryLocalized("PlayerHistory.Jumped", Context.User.Mention,
+                Player.RequestedTrackIndex + 1,
+                Player.CurrentTrack!.Title.SafeSubstring(0, 40) + "..."));
         }
         else {
             var description = new EntryLocalized("Music.TrackIndexWrong", Context.User.Mention, index,
@@ -77,7 +77,7 @@ public sealed class MusicCommands : HavePlayerMusicModuleBase {
         }
 
         await Player.SetVolumeAsync(volume);
-        var entryLocalized = new EntryLocalized("MusicQueues.NewVolume", Context.User.Username, volume);
+        var entryLocalized = new EntryLocalized("PlayerHistory.NewVolume", Context.User.Mention, volume);
         Player.WriteToQueueHistory(new HistoryEntry(entryLocalized, $"{Context.User.Id}volume"));
     }
 
@@ -86,8 +86,8 @@ public sealed class MusicCommands : HavePlayerMusicModuleBase {
     [Summary("repeat0s")]
     public Task Repeat(LoopingState? state = null) {
         Player.LoopingState = state ?? Player.LoopingState.Next();
-        var entryLocalized = new EntryLocalized("MusicQueues.RepeatSet",
-            Context.User.Username, Player.LoopingState.ToString());
+        var entryLocalized = new EntryLocalized("PlayerHistory.RepeatSet",
+            Context.User.Mention, Player.LoopingState.ToString());
         Player.WriteToQueueHistory(new HistoryEntry(entryLocalized, $"{Context.User.Id}repeat"));
 
         return Task.CompletedTask;
@@ -100,7 +100,7 @@ public sealed class MusicCommands : HavePlayerMusicModuleBase {
         if (Player.State != PlayerState.Playing) return;
 
         await Player.PauseAsync();
-        Player.WriteToQueueHistory(Loc.Get("MusicQueues.Pause").Format(Context.User.Username));
+        Player.WriteToQueueHistory(new EntryLocalized("PlayerHistory.Pause", Context.User.Mention));
     }
 
     [RequireNonEmptyPlaylist]
@@ -109,7 +109,7 @@ public sealed class MusicCommands : HavePlayerMusicModuleBase {
     [Summary("shuffle0s")]
     public Task Shuffle() {
         Player.Playlist.Shuffle();
-        Player.WriteToQueueHistory(Loc.Get("MusicQueues.Shuffle").Format(Context.User.Username));
+        Player.WriteToQueueHistory(new EntryLocalized("PlayerHistory.Shuffle", Context.User.Mention));
         return Task.CompletedTask;
     }
 
@@ -135,8 +135,8 @@ public sealed class MusicCommands : HavePlayerMusicModuleBase {
 
         var time = timeSpan ?? TimeSpan.FromSeconds(10);
         await Player.SeekAsync(Player.Position?.Position + time ?? TimeSpan.Zero);
-        Player.WriteToQueueHistory(Loc.Get("MusicQueues.FF")
-            .Format(Context.User.Username, Player.RequestedTrackIndex + 1, time.TotalSeconds));
+        Player.WriteToQueueHistory(new EntryLocalized("PlayerHistory.FF", Context.User.Mention,
+            Player.RequestedTrackIndex + 1, time.TotalSeconds));
     }
 
     [RequireNonEmptyPlaylist(true)]
@@ -152,8 +152,8 @@ public sealed class MusicCommands : HavePlayerMusicModuleBase {
 
         var time = timeSpan ?? new TimeSpan(0, 0, 10);
         await Player.SeekAsync(Player.Position?.Position - time ?? TimeSpan.Zero);
-        Player.WriteToQueueHistory(Loc.Get("MusicQueues.Rewind")
-            .Format(Context.User.Username, Player.RequestedTrackIndex + 1, time.TotalSeconds));
+        Player.WriteToQueueHistory(new EntryLocalized("PlayerHistory.Rewind", Context.User.Mention,
+            Player.RequestedTrackIndex + 1, time.TotalSeconds));
     }
 
     [RequireNonEmptyPlaylist(true)]
@@ -168,8 +168,8 @@ public sealed class MusicCommands : HavePlayerMusicModuleBase {
         }
 
         await Player.SeekAsync(position);
-        Player.WriteToQueueHistory(Loc.Get("MusicQueues.Seek")
-            .Format(Context.User.Username, position.FormattedToString()));
+        Player.WriteToQueueHistory(new EntryLocalized("PlayerHistory.Seek", Context.User.Mention,
+            position.FormattedToString()));
     }
 
     [RequireNonEmptyPlaylist]
@@ -183,12 +183,13 @@ public sealed class MusicCommands : HavePlayerMusicModuleBase {
         if (countToRemove == 1) {
             var deletedTrack = Player.Playlist[start - 1];
             Player.Playlist.RemoveRange(start - 1, countToRemove);
-            Player.WriteToQueueHistory(Loc.Get("MusicQueues.Remove", Context.User.Username, start,
+            Player.WriteToQueueHistory(new EntryLocalized("PlayerHistory.Remove", Context.User.Mention, start,
                 deletedTrack.Track.Title.RemoveNonPrintableChars().SafeSubstring(30)));
         }
         else {
             Player.Playlist.RemoveRange(start - 1, countToRemove);
-            Player.WriteToQueueHistory(Loc.Get("MusicQueues.RemoveRange", Context.User.Username, countToRemove, start,
+            Player.WriteToQueueHistory(new EntryLocalized("PlayerHistory.RemoveRange", Context.User.Mention,
+                countToRemove, start,
                 end));
         }
 
@@ -221,8 +222,8 @@ public sealed class MusicCommands : HavePlayerMusicModuleBase {
 
         newIndex = Math.Max(1, Math.Min(Player.Playlist.Count, newIndex));
         Player.Playlist.Move(trackIndex - 1, newIndex - 1);
-        Player.WriteToQueueHistory(Loc.Get("MusicQueues.TrackMoved")
-            .Format(Context.User.Mention, trackIndex, newIndex));
+        Player.WriteToQueueHistory(new EntryLocalized("PlayerHistory.TrackMoved", Context.User.Mention, trackIndex,
+            newIndex));
     }
 
     [Command("playerrestart", RunMode = RunMode.Async)]

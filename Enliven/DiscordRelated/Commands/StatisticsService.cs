@@ -25,16 +25,24 @@ public class StatisticsService : IStatisticsService {
     private readonly Temporary<int> _usersCount;
     private readonly Temporary<int> _voiceChannelsCount;
 
-    public StatisticsService(ILogger<StatisticsService> logger, IStatisticsPartProvider statisticPartProvider, EnlivenShardedClient enlivenShardedClient, CustomCommandService customCommandService) {
+    public StatisticsService(ILogger<StatisticsService> logger, IStatisticsPartProvider statisticPartProvider,
+        EnlivenShardedClient enlivenShardedClient, CustomCommandService customCommandService) {
         _statisticPartProvider = statisticPartProvider;
         _enlivenShardedClient = enlivenShardedClient;
         _customCommandService = customCommandService;
         _logger = logger;
-        _usersCount = new Temporary<int>(() => enlivenShardedClient.Guilds.Sum(guild => guild.MemberCount), Constants.LongTimeSpan);
-        _voiceChannelsCount = new Temporary<int>(() => enlivenShardedClient.Guilds.Sum(guild => guild.VoiceChannels.Count), Constants.LongTimeSpan);
-        _textChannelsCount = new Temporary<int>(() => enlivenShardedClient.Guilds.Sum(guild => guild.TextChannels.Count), Constants.LongTimeSpan);
+        _usersCount = new Temporary<int>(() => enlivenShardedClient.Guilds.Sum(guild => guild.MemberCount),
+            Constants.LongTimeSpan);
+        _voiceChannelsCount =
+            new Temporary<int>(() => enlivenShardedClient.Guilds.Sum(guild => guild.VoiceChannels.Count),
+                Constants.LongTimeSpan);
+        _textChannelsCount =
+            new Temporary<int>(() => enlivenShardedClient.Guilds.Sum(guild => guild.TextChannels.Count),
+                Constants.LongTimeSpan);
         _commandUsersCount = new Temporary<int>(() => _statisticPartProvider.Count(), Constants.LongTimeSpan);
-        _commandUsagesCount = new Temporary<int>(() => _statisticPartProvider.Get("Global").UsagesList.Sum(pair => pair.Value), Constants.LongTimeSpan);
+        _commandUsagesCount =
+            new Temporary<int>(() => _statisticPartProvider.Get("Global").UsagesList.Sum(pair => pair.Value),
+                Constants.LongTimeSpan);
     }
 
     [SuppressMessage("ReSharper", "ConditionIsAlwaysTrueOrFalse")]
@@ -45,7 +53,7 @@ public class StatisticsService : IStatisticsService {
             .WithTitle(loc.Get("Statistics.Title"))
             .WithDescription(user == null
                 ? loc.Get("Statistics.GlobalStats")
-                : loc.Get("Statistics.UserStats").Format(user.Username));
+                : loc.Get("Statistics.UserStats").Format(user.Mention));
 
         List<(CommandInfo Key, double)>? valueTuples = null;
         while (true)
@@ -72,28 +80,33 @@ public class StatisticsService : IStatisticsService {
                 valueTuples = new List<(CommandInfo, double)>();
             }
 
-        foreach (var grouping in valueTuples.GroupBy(tuple => tuple.Key.GetGroup()).OrderByDescending(tuples => tuples.Count()))
+        foreach (var grouping in valueTuples.GroupBy(tuple => tuple.Key.GetGroup())
+                     .OrderByDescending(tuples => tuples.Count()))
             embedBuilder.AddField(grouping.Key!.GetLocalizedName(loc),
-                string.Join("\n", grouping.ToList().Select((tuple, i) => $"`{tuple.Item1.Name}` - {tuple.Item2}")), true);
+                string.Join("\n", grouping.ToList().Select((tuple, i) => $"`{tuple.Item1.Name}` - {tuple.Item2}")),
+                true);
 
         if (user != null) return embedBuilder;
         var messageStats = _statisticPartProvider.Get("Messages");
         if (messageStats != null && messageStats.UsagesList.Count != 0) {
             embedBuilder.AddField(loc.Get("Statistics.ByMessages"),
-                messageStats.UsagesList.Select(pair => $"`{loc.Get("Statistics." + pair.Key)}` - {pair.Value}").JoinToString("\n"));
+                messageStats.UsagesList.Select(pair => $"`{loc.Get("Statistics." + pair.Key)}` - {pair.Value}")
+                    .JoinToString("\n"));
         }
 
         var musicStatistics = _statisticPartProvider.Get("Music");
         if (!musicStatistics.UsagesList.TryGetValue("PlaybackTime", out var userUsageCount)) userUsageCount = 0;
 
         var musicTime = TimeSpan.FromSeconds(userUsageCount);
-        var byMusicValue = loc.Get("Statistics.ByMusicFormatted", (int)musicTime.TotalDays, musicTime.Hours, musicTime.Minutes);
+        var byMusicValue = loc.Get("Statistics.ByMusicFormatted", (int)musicTime.TotalDays, musicTime.Hours,
+            musicTime.Minutes);
         embedBuilder.AddField(loc.Get("Statistics.ByMusic"), byMusicValue);
 
         embedBuilder.Fields.Insert(0, new EmbedFieldBuilder {
             Name = loc.Get("Statistics.ByGlobal"),
-            Value = loc.Get("Statistics.ByGlobalFormatted0", _enlivenShardedClient.Guilds.Count, _textChannelsCount.Value, _voiceChannelsCount.Value, _usersCount.Value)
-                  + loc.Get("Statistics.ByGlobalFormatted1", _commandUsagesCount.Value, _commandUsersCount.Value)
+            Value = loc.Get("Statistics.ByGlobalFormatted0", _enlivenShardedClient.Guilds.Count,
+                        _textChannelsCount.Value, _voiceChannelsCount.Value, _usersCount.Value)
+                    + loc.Get("Statistics.ByGlobalFormatted1", _commandUsagesCount.Value, _commandUsersCount.Value)
         });
         return embedBuilder;
     }

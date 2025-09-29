@@ -108,13 +108,13 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer {
         CancellationToken cancellationToken = new()) {
         await base.NotifyTrackExceptionAsync(track, exception, cancellationToken);
 
-        WriteToQueueHistory(new EntryLocalized("Music.TrackException", exception.Format()));
+        WriteToQueueHistory(new EntryLocalized("PlayerHistory.TrackException", exception.Format()));
     }
 
     protected override async ValueTask NotifyTrackStuckAsync(ITrackQueueItem track, TimeSpan threshold,
         CancellationToken cancellationToken = new()) {
         await base.NotifyTrackStuckAsync(track, threshold, cancellationToken);
-        WriteToQueueHistory(new EntryLocalized("Music.TrackStuck"));
+        WriteToQueueHistory(new EntryLocalized("PlayerHistory.TrackStuck"));
         await SkipAsync(1, true);
     }
 
@@ -174,7 +174,7 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer {
     public virtual async Task ImportPlaylist(EnlivenPlaylist playlist, ImportPlaylistOptions options,
         TrackRequester requester) {
         if (Playlist.Count + playlist.Tracks.Length > 10000) {
-            var historyEntry = new HistoryEntry(new EntryLocalized("MusicQueues.PlaylistLoadingLimit",
+            var historyEntry = new HistoryEntry(new EntryLocalized("PlayerHistory.PlaylistLoadingLimit",
                 requester, playlist.Tracks.Length, Constants.MaxTracksCount));
             WriteToQueueHistory(historyEntry);
             return;
@@ -190,7 +190,7 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer {
         if (options == ImportPlaylistOptions.Replace) {
             try {
                 await StopAsync();
-                WriteToQueueHistory(new HistoryEntry(new EntryLocalized("Music.ImportPlayerStop")));
+                WriteToQueueHistory(new HistoryEntry(new EntryLocalized("PlayerHistory.ImportPlayerStop")));
             }
             catch (Exception) {
                 // ignored
@@ -198,12 +198,13 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer {
 
             if (!Playlist.IsEmpty) {
                 Playlist.Clear();
-                WriteToQueueHistory(new HistoryEntry(new EntryLocalized("Music.ClearPlaylist", requester)));
+                WriteToQueueHistory(new HistoryEntry(new EntryLocalized("PlayerHistory.ClearPlaylist", requester)));
             }
         }
 
         Playlist.AddRange(tracks);
-        WriteToQueueHistory(new HistoryEntry(new EntryLocalized("Music.AddTracks", requester, tracks.Length)));
+        WriteToQueueHistory(
+            new HistoryEntry(new EntryLocalized("PlayerHistory.EnqueuedMany", requester, tracks.Length)));
 
         if (options != ImportPlaylistOptions.JustAdd) {
             var item = playlist.TrackIndex == -1
@@ -215,7 +216,7 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer {
             }
 
             await PlayAsync(item, new TrackPlayProperties(position));
-            WriteToQueueHistory(new EntryLocalized("MusicQueues.Jumped", requester, RequestedTrackIndex + 1,
+            WriteToQueueHistory(new EntryLocalized("PlayerHistory.Jumped", requester, RequestedTrackIndex + 1,
                 CurrentTrack!.Title.RemoveNonPrintableChars().SafeSubstring(100, "...")!));
         }
         else if (State == PlayerState.NotPlaying) {
@@ -236,7 +237,7 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer {
         var queriesArray = queries.ToImmutableArray();
         var currentResolverIndex = 0;
         var addedTracks = new List<EnlivenQueueItem>();
-        var historyEntry = new HistoryEntry(new EntryLocalized("Music.ResolvingTracks",
+        var historyEntry = new HistoryEntry(new EntryLocalized("PlayerHistory.ResolvingTracks",
             // ReSharper disable once AccessToModifiedClosure
             () => requester, () => queriesArray.Length, () => currentResolverIndex, () => addedTracks.Count));
         WriteToQueueHistory(historyEntry);
@@ -279,16 +280,16 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer {
             }
 
             if (addedTracks.Count == 1) {
-                WriteToQueueHistory(new HistoryEntry(new EntryLocalized("MusicQueues.Enqueued", requester,
+                WriteToQueueHistory(new HistoryEntry(new EntryLocalized("PlayerHistory.Enqueued", requester,
                     addedTracks[0].Track.Title.RemoveNonPrintableChars())));
             }
             else if (addedTracks.Count > 1) {
-                WriteToQueueHistory(new HistoryEntry(new EntryLocalized("MusicQueues.EnqueuedMany", requester,
+                WriteToQueueHistory(new HistoryEntry(new EntryLocalized("PlayerHistory.EnqueuedMany", requester,
                     addedTracks.Count)));
             }
 
             if (isLimitHit) {
-                WriteToQueueHistory(new HistoryEntry(new EntryLocalized("MusicQueues.LimitExceed", requester,
+                WriteToQueueHistory(new HistoryEntry(new EntryLocalized("PlayerHistory.LimitExceed", requester,
                     queriesArray.Length - currentResolverIndex, Constants.MaxTracksCount)));
             }
             else if (addedTracks.Count == 0) {

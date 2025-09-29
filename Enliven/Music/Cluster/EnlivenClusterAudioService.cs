@@ -33,8 +33,13 @@ public class EnlivenClusterAudioService : ClusterAudioService, IEnlivenClusterAu
     private static readonly IEntry ConcatLines = new EntryString("{0}\n{1}");
     private static readonly IEntry ResumeViaPlaylists = new EntryLocalized("Music.ResumeViaPlaylists");
     private static readonly IEntry PlaybackStopped = new EntryLocalized("Music.PlaybackStopped");
-    private static readonly IEntry TryReconnectAfterDispose = new EntryLocalized("Music.TryReconnectAfterDispose");
-    private static readonly IEntry ReconnectedAfterDisposeEntry = new EntryLocalized("Music.ReconnectedAfterDispose");
+
+    private static readonly IEntry TryReconnectAfterDispose =
+        new EntryLocalized("PlayerHistory.TryReconnectAfterDispose");
+
+    private static readonly IEntry ReconnectedAfterDisposeEntry =
+        new EntryLocalized("PlayerHistory.ReconnectedAfterDispose");
+
     private readonly ILogger<EnlivenClusterAudioService> _logger;
     private readonly MusicResolverService _musicResolverService;
     private readonly IPlaylistProvider _playlistProvider;

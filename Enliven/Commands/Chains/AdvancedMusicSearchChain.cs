@@ -13,6 +13,7 @@ using Bot.Utilities.Collector;
 using Common;
 using Common.Config;
 using Common.Config.Emoji;
+using Common.Localization.Entries;
 using Common.Music.Tracks;
 using Discord;
 using Lavalink4NET;
@@ -171,11 +172,12 @@ public class AdvancedMusicSearchChain : ChainBase {
             .ToImmutableArray();
         switch (queueItems.Length) {
             case 1:
-                _player.WriteToQueueHistory(Loc.Get("MusicQueues.Enqueued", _requester.Username,
+                _player.WriteToQueueHistory(new EntryLocalized("PlayerHistory.Enqueued", _requester.Mention,
                     queueItems[0].Track.Title.RemoveNonPrintableChars()));
                 break;
             default:
-                _player.WriteToQueueHistory(Loc.Get("Music.AddTracks", _requester.Username, queueItems.Length));
+                _player.WriteToQueueHistory(new EntryLocalized("PlayerHistory.EnqueuedMany", _requester.Mention,
+                    queueItems.Length));
                 break;
         }
 

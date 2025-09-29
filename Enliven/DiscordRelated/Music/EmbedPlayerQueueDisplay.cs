@@ -36,7 +36,7 @@ public class EmbedPlayerQueueDisplay : PlayerDisplayBase {
         var paginatedAppearanceOptions = new PaginatedAppearanceOptions { Timeout = TimeSpan.FromMinutes(1) };
         _paginatedMessage = new PaginatedMessage(paginatedAppearanceOptions, _targetChannel, _loc,
             _messageComponentInteractionsHandler, _collectorService, _discordClient) {
-            Title = _loc.Get("MusicQueues.QueueTitle"), Color = Color.Gold
+            Title = _loc.Get("Music.QueueTitle"), Color = Color.Gold
         };
         _ = _paginatedMessage.WaitForDisposeAsync().ContinueWith(_ => ExecuteShutdown(null, null));
         await base.Initialize(finalLavalinkPlayer);
