@@ -34,7 +34,7 @@ public sealed class PlayCommand : CreatePlayerMusicModuleBase {
     [Alias("pn")]
     [Summary("playnext0s")]
     public async Task PlayNext([Remainder] [SlashCommandOptional] [Summary("play0_0s")] string? query = null) {
-        await PlayInternal(query, Player.Playlist.Count == 0 ? null : Player.CurrentTrackIndex + 1);
+        await PlayInternal(query, Player.Playlist.Count == 0 ? null : Player.RequestedTrackIndex + 1);
     }
 
     private async Task PlayInternal(string? query, int? position = null) {

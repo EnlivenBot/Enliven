@@ -109,12 +109,14 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener {
 
     public VoiceState VoiceState { get; private set; }
 
+
     public ITrackQueueItem? CurrentItem {
         get => _currentItem;
         protected internal set {
             if (value is TrackQueueItem) Debug.Assert(value is TrackQueueItem);
 
             _currentItem = value;
+            OnCurrentItemChanged();
         }
     }
 
@@ -787,6 +789,8 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener {
 
         return activity;
     }
+
+    protected virtual void OnCurrentItemChanged() { }
 }
 
 internal static partial class Logging {

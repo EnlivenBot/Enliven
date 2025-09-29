@@ -17,6 +17,7 @@ namespace Bot.Music.Players;
 
 public class WrappedLavalinkPlayer : LavalinkPlayer {
     private readonly Subject<PlayerState> _stateChanged = new();
+    private readonly Subject<IEnlivenQueueItem?> _currentItemChanged = new();
 
     private readonly Subject<int> _volumeChanged = new();
 
@@ -28,6 +29,7 @@ public class WrappedLavalinkPlayer : LavalinkPlayer {
 
     public IObservable<int> VolumeChanged => _volumeChanged.AsObservable();
     public IObservable<PlayerState> StateChanged => _stateChanged.AsObservable();
+    public IObservable<IEnlivenQueueItem?> CurrentItemChanged => _currentItemChanged.AsObservable();
 
     public new IEnlivenQueueItem? CurrentItem {
         get {
@@ -36,6 +38,11 @@ public class WrappedLavalinkPlayer : LavalinkPlayer {
 
             return (IEnlivenQueueItem?)trackQueueItem;
         }
+    }
+
+    protected override void OnCurrentItemChanged() {
+        base.OnCurrentItemChanged();
+        _currentItemChanged.OnNext(CurrentItem);
     }
 
     public virtual ValueTask SetVolumeAsync(int volume, CancellationToken token = new()) {

@@ -46,7 +46,7 @@ public class EmbedPlayerQueueDisplay : PlayerDisplayBase {
     private void UpdatePages() {
         _paginatedMessage?.SetPages(string.Join("\n",
                 Player!.Playlist.Select((track, i) =>
-                    (Player.CurrentTrackIndex == i ? "@" : " ")
+                    (Player.RequestedTrackIndex == i ? "@" : " ")
                     + $"{i + 1}: {Player.Playlist[i].Track.Title.RemoveNonPrintableChars()}")),
             "```py\n{0}```", 50);
     }
@@ -58,7 +58,7 @@ public class EmbedPlayerQueueDisplay : PlayerDisplayBase {
         _subscribers?.Dispose();
         _subscribers = new Disposables(
             newPlayer.Playlist.Changed.Subscribe(_ => UpdatePages()),
-            newPlayer.CurrentTrackIndexChanged.Subscribe(_ => UpdatePages())
+            newPlayer.RequestedTrackIndexChanged.Subscribe(_ => UpdatePages())
         );
         return Task.CompletedTask;
     }

@@ -166,7 +166,9 @@ public class EmbedPlayerDisplay : PlayerDisplayBase, IEmbedPlayerDisplayBackgrou
                 .Select(_ => Unit.Default)
                 .Subscribe(updateControlMessageSubj),
             newPlayer.FiltersChanged.Subscribe(_ => UpdateEffects()),
-            newPlayer.CurrentTrackIndexChanged.Subscribe(OnCurrentTrackIndexChanged),
+            newPlayer.CurrentItemChanged
+                .DistinctUntilChanged()
+                .Subscribe(OnCurrentItemChanged),
             newPlayer.LoopingStateChanged.Subscribe(OnLoopingStateChanged)
         );
 
@@ -180,7 +182,7 @@ public class EmbedPlayerDisplay : PlayerDisplayBase, IEmbedPlayerDisplayBackgrou
         await _updatableMessageDisplay.Update(false);
         return;
 
-        void OnCurrentTrackIndexChanged(int _) {
+        void OnCurrentItemChanged(IEnlivenQueueItem? _) {
             UpdateProgress();
             UpdateTrackInfo();
             UpdateQueue();
@@ -330,7 +332,7 @@ public class EmbedPlayerDisplay : PlayerDisplayBase, IEmbedPlayerDisplayBackgrou
     private async Task UpdateTrackInfo() {
         Debug.Assert(Player is not null);
         var track = Player.CurrentItem?.Track;
-        if (Player.CurrentTrackIndex >= Player.Playlist.Count && Player.Playlist.Count != 0) {
+        if (Player.RequestedTrackIndex >= Player.Playlist.Count && Player.Playlist.Count != 0) {
             _embedBuilder.Author = new EmbedAuthorBuilder();
             _embedBuilder.Title = _loc.Get("Music.QueueEnd");
             _embedBuilder.Url = "";
@@ -391,7 +393,7 @@ public class EmbedPlayerDisplay : PlayerDisplayBase, IEmbedPlayerDisplayBackgrou
         }
         else {
             _embedBuilder.Fields["Queue"].Name =
-                _loc.Get("Music.Queue").Format(Player.CurrentTrackIndex + 1, Player.Playlist.Count,
+                _loc.Get("Music.Queue").Format(Player.RequestedTrackIndex + 1, Player.Playlist.Count,
                     Player.Playlist.TotalPlaylistLength.FormattedToString());
             _embedBuilder.Fields["Queue"].Value = $"```glsl\n{GetPlaylistString()}```";
         }
@@ -405,14 +407,14 @@ public class EmbedPlayerDisplay : PlayerDisplayBase, IEmbedPlayerDisplayBackgrou
         Debug.Assert(Player is not null);
 
         var builder = new StringBuilder();
-        var helper = new PlaylistQueueHelper(Player.Playlist, Player.CurrentTrackIndex - 1, 6);
+        var helper = new PlaylistQueueHelper(Player.Playlist, Player.RequestedTrackIndex - 1, 6);
         foreach (var group in helper) {
             var numberMaxLength = (int)Math.Floor(Math.Log10(group.CurrentNumber + group.Count) + 1);
 
             builder.Append('─', numberMaxLength);
             builder.AppendLine($"─┬────{group.Requester.ToString(false)}");
             foreach (var queueItem in group) {
-                var isCurrent = group.CurrentIndex == Player.CurrentTrackIndex;
+                var isCurrent = group.CurrentIndex == Player.RequestedTrackIndex;
 
                 var title = queueItem.Track is ITrackHasCustomQueueTitle customQueueTitle
                     ? customQueueTitle.GetQueueTitle()

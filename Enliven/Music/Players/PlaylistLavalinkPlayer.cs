@@ -25,13 +25,13 @@ namespace Bot.Music.Players;
 
 public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer {
     private static readonly IEntry StartPlayingFailedEntry = new EntryLocalized("Music.StartPlayingFailed");
-    private readonly ISubject<int> _currentTrackIndexChanged = new Subject<int>();
+    private readonly ISubject<int> _requestedTrackIndexChanged = new Subject<int>();
 
     private readonly SemaphoreSlim _enqueueLock = new(1);
 
     private readonly ISubject<LoopingState> _loopingStateChanged = new Subject<LoopingState>();
     private readonly MusicResolverService _musicResolverService;
-    private int _currentTrackIndex;
+    private int _requestedTrackIndex;
     private LoopingState _loopingState = LoopingState.Off;
 
 
@@ -62,14 +62,14 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer {
     public IObservable<LoopingState> LoopingStateChanged => _loopingStateChanged;
 
     public LavalinkPlaylist Playlist { get; } = new();
-    public IObservable<int> CurrentTrackIndexChanged => _currentTrackIndexChanged;
+    public IObservable<int> RequestedTrackIndexChanged => _requestedTrackIndexChanged;
 
-    public int CurrentTrackIndex {
-        get => _currentTrackIndex;
+    public int RequestedTrackIndex {
+        get => _requestedTrackIndex;
         private set {
-            if (_currentTrackIndex == value) return;
-            _currentTrackIndex = value;
-            _currentTrackIndexChanged.OnNext(value);
+            if (_requestedTrackIndex == value) return;
+            _requestedTrackIndex = value;
+            _requestedTrackIndexChanged.OnNext(value);
         }
     }
 
@@ -84,7 +84,7 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer {
             if (enlivenItem != null) {
                 enlivenItem.PlaybackExceptionCount++;
                 if (enlivenItem.PlaybackExceptionCount > 2) {
-                    if (Playlist.Count - CurrentTrackIndex > 1) {
+                    if (Playlist.Count - RequestedTrackIndex > 1) {
                         await SkipAsync(1, true);
                     }
                 }
@@ -129,7 +129,7 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer {
         await base.PlayAsync(trackQueueItem, trackPlayProperties, token);
 
         UpdateCurrentTrackIndex();
-        if (Playlist.TryGetValue(CurrentTrackIndex + 1, out var nextTrack) &&
+        if (Playlist.TryGetValue(RequestedTrackIndex + 1, out var nextTrack) &&
             nextTrack.Track is ITrackNeedPrefetch needPrefetchTrack) _ = needPrefetchTrack.PrefetchTrack();
     }
 
@@ -137,7 +137,7 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer {
         EnsureNotDestroyed();
         if (!force && LoopingState == LoopingState.One) {
             // TODO Log warning if current played track index doesn't exists to repeat track with LoopingState.One
-            if (!Playlist.TryGetValue(CurrentTrackIndex, out var currentTrack)) return false;
+            if (!Playlist.TryGetValue(RequestedTrackIndex, out var currentTrack)) return false;
             await PlayAsync(currentTrack);
             return true;
         }
@@ -145,12 +145,12 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer {
         if (Playlist.IsEmpty)
             return false;
 
-        CurrentTrackIndex += count;
-        if ((force || LoopingState == LoopingState.All) && CurrentTrackIndex > Playlist.Count - 1)
-            CurrentTrackIndex = 0;
-        if (force && CurrentTrackIndex < 0) CurrentTrackIndex = Playlist.Count - 1;
+        RequestedTrackIndex += count;
+        if ((force || LoopingState == LoopingState.All) && RequestedTrackIndex > Playlist.Count - 1)
+            RequestedTrackIndex = 0;
+        if (force && RequestedTrackIndex < 0) RequestedTrackIndex = Playlist.Count - 1;
 
-        if (!Playlist.TryGetValue(CurrentTrackIndex, out var track)) return false;
+        if (!Playlist.TryGetValue(RequestedTrackIndex, out var track)) return false;
         await PlayAsync(track!);
         return true;
     }
@@ -161,7 +161,7 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer {
             .Select(track => MessagePackSerializer.Typeless.Serialize(track, EnlivenMessagePack.Options)).ToArray();
         var exportPlaylist = new EnlivenPlaylist { Tracks = byteTracks };
         if (options != ExportPlaylistOptions.IgnoreTrackIndex) {
-            exportPlaylist.TrackIndex = CurrentTrackIndex.Normalize(0, Playlist.Count - 1);
+            exportPlaylist.TrackIndex = RequestedTrackIndex.Normalize(0, Playlist.Count - 1);
         }
 
         if (options == ExportPlaylistOptions.AllData) {
@@ -215,7 +215,7 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer {
             }
 
             await PlayAsync(item, new TrackPlayProperties(position));
-            WriteToQueueHistory(new EntryLocalized("MusicQueues.Jumped", requester, CurrentTrackIndex + 1,
+            WriteToQueueHistory(new EntryLocalized("MusicQueues.Jumped", requester, RequestedTrackIndex + 1,
                 CurrentTrack!.Title.RemoveNonPrintableChars().SafeSubstring(100, "...")!));
         }
         else if (State == PlayerState.NotPlaying) {
@@ -226,10 +226,10 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer {
     protected void UpdateCurrentTrackIndex() {
         if (CurrentItem == null)
             return;
-        if (Playlist.TryGetValue(CurrentTrackIndex, out var currentPlaylistItem)
+        if (Playlist.TryGetValue(RequestedTrackIndex, out var currentPlaylistItem)
             && CurrentItem.Identifier == currentPlaylistItem.Identifier)
             return;
-        CurrentTrackIndex = Playlist.IndexOfWithFallback(CurrentItem);
+        RequestedTrackIndex = Playlist.IndexOfWithFallback(CurrentItem);
     }
 
     public virtual async Task ResolveAndEnqueue(IEnumerable<string> queries, TrackRequester requester, int? insertAt) {
@@ -333,7 +333,7 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer {
                 && recId.ToString() == curId.ToString())
                 return currentTrack;
 
-            if (Playlist.TryGetValue(CurrentTrackIndex, out var track)
+            if (Playlist.TryGetValue(RequestedTrackIndex, out var track)
                 && track.Track.AdditionalInformation.TryGetValue("EnlivenCorrelationId", out var curIndexId)
                 && recId.ToString() == curIndexId.ToString())
                 return track;

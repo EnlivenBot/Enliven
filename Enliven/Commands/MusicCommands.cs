@@ -38,7 +38,7 @@ public sealed class MusicCommands : HavePlayerMusicModuleBase {
     public async Task Jump([Summary("jump0_0s")] int index = 1) {
         await Player.SkipAsync(index, true);
         Player.WriteToQueueHistory(Loc.Get("MusicQueues.Jumped", Context.User.Username,
-            Player.CurrentTrackIndex + 1,
+            Player.RequestedTrackIndex + 1,
             Player.CurrentTrack!.Title.RemoveNonPrintableChars().SafeSubstring(0, 40) + "..."));
     }
 
@@ -57,7 +57,7 @@ public sealed class MusicCommands : HavePlayerMusicModuleBase {
         if (Player.Playlist.TryGetValue(index - 1, out var track)) {
             await Player.PlayAsync(track!);
             Player.WriteToQueueHistory(Loc.Get("MusicQueues.Jumped")
-                .Format(Context.User.Username, Player.CurrentTrackIndex + 1,
+                .Format(Context.User.Username, Player.RequestedTrackIndex + 1,
                     Player.CurrentTrack!.Title.SafeSubstring(0, 40) + "..."));
         }
         else {
@@ -136,7 +136,7 @@ public sealed class MusicCommands : HavePlayerMusicModuleBase {
         var time = timeSpan ?? TimeSpan.FromSeconds(10);
         await Player.SeekAsync(Player.Position?.Position + time ?? TimeSpan.Zero);
         Player.WriteToQueueHistory(Loc.Get("MusicQueues.FF")
-            .Format(Context.User.Username, Player.CurrentTrackIndex + 1, time.TotalSeconds));
+            .Format(Context.User.Username, Player.RequestedTrackIndex + 1, time.TotalSeconds));
     }
 
     [RequireNonEmptyPlaylist(true)]
@@ -153,7 +153,7 @@ public sealed class MusicCommands : HavePlayerMusicModuleBase {
         var time = timeSpan ?? new TimeSpan(0, 0, 10);
         await Player.SeekAsync(Player.Position?.Position - time ?? TimeSpan.Zero);
         Player.WriteToQueueHistory(Loc.Get("MusicQueues.Rewind")
-            .Format(Context.User.Username, Player.CurrentTrackIndex + 1, time.TotalSeconds));
+            .Format(Context.User.Username, Player.RequestedTrackIndex + 1, time.TotalSeconds));
     }
 
     [RequireNonEmptyPlaylist(true)]
@@ -192,7 +192,7 @@ public sealed class MusicCommands : HavePlayerMusicModuleBase {
                 end));
         }
 
-        if (Player.CurrentTrackIndex == -1 && Player.Playlist.Count != 0) {
+        if (Player.RequestedTrackIndex == -1 && Player.Playlist.Count != 0) {
             var track = Player.Playlist[Math.Min(start - 1, Player.Playlist.Count)];
             await Player.PlayAsync(track);
         }
