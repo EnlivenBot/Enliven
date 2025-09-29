@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Net.Http;
 using System.Reactive;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
@@ -25,10 +26,15 @@ using Common.Music;
 using Common.Music.Tracks;
 using Common.Utils;
 using Discord;
+using ImageSharp.Vibrant;
 using Lavalink4NET.Artwork;
 using Lavalink4NET.Players;
 using Microsoft.Extensions.Logging;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 using Tyrrrz.Extensions;
+using Color = Discord.Color;
+using Image = SixLabors.ImageSharp.Image;
 
 #pragma warning disable 4014
 
@@ -329,6 +335,8 @@ public class EmbedPlayerDisplay : PlayerDisplayBase, IEmbedPlayerDisplayBackgrou
         }
     }
 
+    private CancellationTokenSource? _imageLoadingCancellationTokenSource = new();
+
     private async Task UpdateTrackInfo() {
         Debug.Assert(Player is not null);
         var track = Player.CurrentItem?.Track;
@@ -348,10 +356,45 @@ public class EmbedPlayerDisplay : PlayerDisplayBase, IEmbedPlayerDisplayBackgrou
 
         var artwork = await track.ResolveArtwork(_artworkService);
         _embedBuilder
-            .WithAuthor(track!.Author.SafeSubstring(TrackAuthorMaxLength, "...").IsBlank("Unknown"),
+            .WithColor(Color.Gold)
+            .WithAuthor(track.Author.SafeSubstring(TrackAuthorMaxLength, "...").IsBlank("Unknown"),
                 artwork?.ToString())
             .WithTitle(track.Title.RemoveNonPrintableChars().SafeSubstring(TrackTitleMaxLength, "...")!)
             .WithUrl(track.Uri?.ToString()!);
+
+        _imageLoadingCancellationTokenSource?.Cancel();
+        _imageLoadingCancellationTokenSource?.Dispose();
+
+        if (artwork is not null) {
+            var cts = new CancellationTokenSource();
+            _imageLoadingCancellationTokenSource = cts;
+            // ReSharper disable once MethodSupportsCancellation
+            _ = Task.Run(async () => {
+                var color = await GetArtworkVibrantColor(artwork, cts.Token);
+                if (color is not null && !cts.IsCancellationRequested) {
+                    _embedBuilder.Color = color;
+                }
+            });
+        }
+    }
+
+    private static HttpClient HttpClient { get; } = new HttpClient();
+
+    private static async Task<Color?> GetArtworkVibrantColor(Uri artworkUri, CancellationToken token) {
+        try {
+            var artworkStream = await HttpClient.GetStreamAsync(artworkUri, token);
+            using var image = await Image.LoadAsync(artworkStream, token);
+            using var rgbaImage = image as Image<Rgba32> ?? image.CloneAs<Rgba32>();
+            var swatches = VibrantExtractor.GetPalette(rgbaImage);
+            if (swatches.Vibrant is not null) {
+                return new Color(swatches.Vibrant.R, swatches.Vibrant.G, swatches.Vibrant.B);
+            }
+        }
+        catch {
+            // ignored
+        }
+
+        return null;
     }
 
     private void UpdateEffects() {
