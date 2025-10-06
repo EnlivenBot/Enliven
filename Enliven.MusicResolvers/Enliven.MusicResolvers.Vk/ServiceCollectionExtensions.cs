@@ -15,8 +15,8 @@ namespace Enliven.MusicResolvers.Vk;
 public static class ServiceCollectionExtensions {
     public static IServiceCollection AddVk(this IServiceCollection services, IConfiguration configuration) {
         services.ConfigureNamedOptions<VkCredentials>(configuration);
-        services.AddSingleton<IVkApi>(_ =>
-            new VkApi(new ServiceCollection().AddAudioBypass()));
+        services.AddAudioBypass();
+        services.AddSingleton<IVkApi>(_ => new VkApi());
         services.AddSingleton<VkMusicCacheService>(_ =>
             new VkMusicCacheService(TimeSpan.FromDays(1), ".cache/vkmusic/", "mp3"));
         services.AddSingleton<VkMusicSeederService, VkMusicSeederService>();
