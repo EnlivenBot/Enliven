@@ -93,7 +93,7 @@ public class ReliabilityService : IService {
             var task = await Task.WhenAny(timeout, connect);
 
             if (task == timeout) {
-                _logger.LogCritical(null, "Client reset timed out (task deadlocked?), killing process");
+                _logger.LogCritical("Client reset timed out (task deadlocked?), killing process");
                 return false;
             }
 
@@ -108,7 +108,7 @@ public class ReliabilityService : IService {
             return true;
         }
 
-        _logger.LogCritical(null, "Client did not reconnect in time, killing process");
+        _logger.LogCritical("Client did not reconnect in time, killing process");
         return false;
     }
 

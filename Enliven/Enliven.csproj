@@ -12,6 +12,8 @@
     <ContainerRuntimeIdentifier>linux-x64</ContainerRuntimeIdentifier>
 
     <MinVerTagPrefix>v</MinVerTagPrefix>
+
+    <InterceptorsNamespaces>$(InterceptorsNamespaces);Microsoft.Extensions.Logging.AutoLoggerMessage</InterceptorsNamespaces>
   </PropertyGroup>
 
   <ItemGroup>

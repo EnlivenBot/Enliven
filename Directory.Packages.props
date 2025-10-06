@@ -17,7 +17,7 @@
     <PackageVersion Include="DiscordChatExporter.Core" Version="2021.7.29.2003"/>
     <PackageVersion Include="FluentAssertions" Version="6.12.1"/>
     <PackageVersion Include="FluentAssertions.Reactive" Version="0.2.0"/>
-    <PackageVersion Include="JetBrains.Annotations" Version="2024.3.0"/>
+    <PackageVersion Include="JetBrains.Annotations" Version="2025.2.2"/>
     <PackageVersion Include="Lavalink4NET" Version="$(Lavalink4NETVersion)"/>
     <PackageVersion Include="Lavalink4NET.Abstractions" Version="4.0.27"/>
     <PackageVersion Include="Lavalink4NET.Artwork" Version="$(Lavalink4NETVersion)"/>
@@ -46,7 +46,7 @@
     <PackageVersion Include="SpotifyAPI.Web" Version="7.2.1"/>
     <PackageVersion Include="System.Reactive" Version="6.0.1"/>
     <PackageVersion Include="Tyrrrz.Extensions" Version="1.6.5"/>
-    <PackageVersion Include="VkNet" Version="1.75.0"/>
+    <PackageVersion Include="VkNet" Version="1.79.0-alpha-137"/>
     <PackageVersion Include="VkNet.AudioBypassService" Version="1.7.6"/>
     <PackageVersion Include="Xabe.FFmpeg.Downloader" Version="5.2.6"/>
     <PackageVersion Include="xunit" Version="2.9.2"/>

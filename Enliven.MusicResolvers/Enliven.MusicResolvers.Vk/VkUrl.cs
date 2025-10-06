@@ -8,18 +8,18 @@ using VkNet.Utils;
 namespace Enliven.MusicResolvers.Vk;
 
 public partial class VkUrl {
-    [GeneratedRegex(@"https://vk\.com/music/album/(-?\d*)_(\d*)_(\S*)", RegexOptions.Compiled)]
+    [GeneratedRegex(@"https://vk\.(com|ru)/music/album/(-?\d*)_(\d*)_(\S*)", RegexOptions.Compiled)]
     private static partial Regex AlbumRegex { get; }
 
-    [GeneratedRegex(@"https://vk\.com/audios(-?\d*)", RegexOptions.Compiled)]
+    [GeneratedRegex(@"https://vk\.(com|ru)/audios(-?\d*)", RegexOptions.Compiled)]
     private static partial Regex UserRegex { get; }
 
-    [GeneratedRegex(@"https://vk\.com/audio(-?\d*_\d*)", RegexOptions.Compiled)]
+    [GeneratedRegex(@"https://vk\.(com|ru)/audio(-?\d*_\d*)", RegexOptions.Compiled)]
     private static partial Regex TrackRegex { get; }
 
     public VkUrl(string request) {
         Request = request;
-        if (!request.StartsWith("https://vk.com")) {
+        if (!request.StartsWith("https://vk.com") && !request.StartsWith("https://vk.ru")) {
             Type = AudioUrlType.Unknown;
             Id = request;
             return;
