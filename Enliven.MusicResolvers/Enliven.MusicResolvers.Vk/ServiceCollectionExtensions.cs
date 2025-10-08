@@ -16,7 +16,7 @@ public static class ServiceCollectionExtensions {
     public static IServiceCollection AddVk(this IServiceCollection services, IConfiguration configuration) {
         services.ConfigureNamedOptions<VkCredentials>(configuration);
         services.AddAudioBypass();
-        services.AddSingleton<IVkApi>(_ => new VkApi());
+        services.AddSingleton<IVkApi, VkApi>();
         services.AddSingleton<VkMusicCacheService>(_ =>
             new VkMusicCacheService(TimeSpan.FromDays(1), ".cache/vkmusic/", "mp3"));
         services.AddSingleton<VkMusicSeederService, VkMusicSeederService>();

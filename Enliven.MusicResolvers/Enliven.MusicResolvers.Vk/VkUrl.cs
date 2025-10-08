@@ -27,23 +27,23 @@ public partial class VkUrl {
 
         var trackMatch = TrackRegex.Match(request);
         if (trackMatch.Success) {
-            Id = trackMatch.Groups[1].Value;
+            Id = trackMatch.Groups[2].Value;
             Type = AudioUrlType.Track;
             return;
         }
 
         var albumMatch = AlbumRegex.Match(request);
         if (albumMatch.Success) {
-            Id = albumMatch.Groups[1].Value;
-            PlaylistId = albumMatch.Groups[2].Value;
-            AccessKey = albumMatch.Groups[3].Value;
+            Id = albumMatch.Groups[2].Value;
+            PlaylistId = albumMatch.Groups[3].Value;
+            AccessKey = albumMatch.Groups[4].Value;
             Type = AudioUrlType.Album;
             return;
         }
 
         var userMatch = UserRegex.Match(request);
         if (userMatch.Success) {
-            Id = userMatch.Groups[1].Value;
+            Id = userMatch.Groups[2].Value;
             Type = AudioUrlType.User;
             return;
         }
