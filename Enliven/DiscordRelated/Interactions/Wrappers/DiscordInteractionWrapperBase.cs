@@ -25,9 +25,9 @@ public class DiscordInteractionWrapperBase(IDiscordInteraction interaction) : IE
     }
 
     public async Task RespondAsync(string? text = null, Embed[]? embeds = null, bool isTTS = false,
-        bool ephemeral = false,
-        AllowedMentions? allowedMentions = null, MessageComponent? components = null, Embed? embed = null,
-        RequestOptions? options = null, PollProperties? poll = null) {
+        bool ephemeral = false, AllowedMentions? allowedMentions = null, MessageComponent? components = null,
+        Embed? embed = null,
+        RequestOptions? options = null, PollProperties? poll = null, MessageFlags flags = MessageFlags.None) {
         SetRespondStarted();
         CurrentResponseDeferred = false;
         CurrentResponseMeaningful = true;
@@ -36,9 +36,10 @@ public class DiscordInteractionWrapperBase(IDiscordInteraction interaction) : IE
     }
 
     public async Task RespondWithFilesAsync(IEnumerable<FileAttachment> attachments, string? text = null,
-        Embed[]? embeds = null, bool isTTS = false,
-        bool ephemeral = false, AllowedMentions? allowedMentions = null, MessageComponent? components = null,
-        Embed? embed = null, RequestOptions? options = null, PollProperties? poll = null) {
+        Embed[]? embeds = null, bool isTTS = false, bool ephemeral = false, AllowedMentions? allowedMentions = null,
+        MessageComponent? components = null,
+        Embed? embed = null, RequestOptions? options = null, PollProperties? poll = null,
+        MessageFlags flags = MessageFlags.None) {
         SetRespondStarted();
         CurrentResponseDeferred = false;
         CurrentResponseMeaningful = true;
@@ -47,9 +48,9 @@ public class DiscordInteractionWrapperBase(IDiscordInteraction interaction) : IE
     }
 
     public Task<IUserMessage> FollowupAsync(string? text = null, Embed[]? embeds = null, bool isTTS = false,
-        bool ephemeral = false,
-        AllowedMentions? allowedMentions = null, MessageComponent? components = null, Embed? embed = null,
-        RequestOptions? options = null, PollProperties? poll = null) {
+        bool ephemeral = false, AllowedMentions? allowedMentions = null, MessageComponent? components = null,
+        Embed? embed = null,
+        RequestOptions? options = null, PollProperties? poll = null, MessageFlags flags = MessageFlags.None) {
         SetRespondStarted();
         return Interaction.FollowupAsync(text, embeds, isTTS, ephemeral, allowedMentions, components, embed, options,
             poll);
@@ -58,7 +59,8 @@ public class DiscordInteractionWrapperBase(IDiscordInteraction interaction) : IE
     public Task<IUserMessage> FollowupWithFilesAsync(IEnumerable<FileAttachment> attachments, string? text = null,
         Embed[]? embeds = null, bool isTTS = false,
         bool ephemeral = false, AllowedMentions? allowedMentions = null, MessageComponent? components = null,
-        Embed? embed = null, RequestOptions? options = null, PollProperties? poll = null) {
+        Embed? embed = null, RequestOptions? options = null, PollProperties? poll = null,
+        MessageFlags flags = MessageFlags.None) {
         SetRespondStarted();
         return Interaction.FollowupWithFilesAsync(attachments, text, embeds, isTTS, ephemeral, allowedMentions,
             components, embed, options, poll);
@@ -124,6 +126,7 @@ public class DiscordInteractionWrapperBase(IDiscordInteraction interaction) : IE
     public InteractionContextType? ContextType => Interaction.ContextType;
 
     public GuildPermissions Permissions => Interaction.Permissions;
+    public ulong AttachmentSizeLimit { get; }
 
     public DateTimeOffset CreatedAt => Interaction.CreatedAt;
 }
