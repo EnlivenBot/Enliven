@@ -4,11 +4,9 @@ using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reactive.Disposables;
-using System.Reactive.Linq;
 using System.Threading.Tasks;
 using Bot.DiscordRelated.Interactions.Handlers;
 using Discord;
-using Discord.WebSocket;
 
 namespace Bot.DiscordRelated.MessageComponents;
 
@@ -99,8 +97,7 @@ public class EnlivenComponentBuilder(MessageComponentInteractionsHandler message
             foreach (var (_, (_, buttonBuilder)) in builders) {
                 var userCustomId = buttonBuilder.CustomId;
                 var systemCustomId = $"{userCustomId}{buttonBuilder.Guid}|";
-                builder.WithButton(buttonBuilder.WithCustomId(systemCustomId), pairs.Row);
-                buttonBuilder.CustomId = userCustomId;
+                builder.WithButton(buttonBuilder.Clone().WithCustomId(systemCustomId), pairs.Row);
 
                 _buttonCallbackDisposables.Add(messageComponentInteractionsHandler.RegisterMessageComponent(
                     systemCustomId, OnCurrentMessageCallbackTriggered));
