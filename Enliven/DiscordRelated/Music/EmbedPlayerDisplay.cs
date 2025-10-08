@@ -362,12 +362,13 @@ public class EmbedPlayerDisplay : PlayerDisplayBase, IEmbedPlayerDisplayBackgrou
             .WithTitle(track.Title.RemoveNonPrintableChars().SafeSubstring(TrackTitleMaxLength, "...")!)
             .WithUrl(track.Uri?.ToString()!);
 
-        _imageLoadingCancellationTokenSource?.Cancel();
-        _imageLoadingCancellationTokenSource?.Dispose();
+        var cts = new CancellationTokenSource();
+        var oldCts = Interlocked.Exchange(ref _imageLoadingCancellationTokenSource, cts);
+        // ReSharper disable once MethodHasAsyncOverload
+        oldCts?.Cancel();
+        oldCts?.Dispose();
 
         if (artwork is not null) {
-            var cts = new CancellationTokenSource();
-            _imageLoadingCancellationTokenSource = cts;
             // ReSharper disable once MethodSupportsCancellation
             _ = Task.Run(async () => {
                 var color = await GetArtworkVibrantColor(artwork, cts.Token);
