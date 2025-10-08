@@ -97,7 +97,6 @@ public class EmbedPlayerDisplay : PlayerDisplayBase, IEmbedPlayerDisplayBackgrou
 
     private void MessagePropertiesUpdateCallback(MessageProperties properties) {
         UpdateProgress();
-        UpdateMessageComponents();
         properties.Embed = _embedBuilder.Build();
         properties.Content = "";
         properties.Components = _messageComponent;
