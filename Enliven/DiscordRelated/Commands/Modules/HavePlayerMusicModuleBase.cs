@@ -19,11 +19,11 @@ public abstract class HavePlayerMusicModuleBase : MusicModuleBase {
             throw new CommandInterruptionException(NothingPlayingEntry);
         }
 
-        var requireNonEmptyPlaylist = attributes
-            .Any(attribute => attribute is RequireNonEmptyPlaylistAttribute);
         var requirePlayingTrack = attributes
             .Any(attribute => (attribute as RequireNonEmptyPlaylistAttribute)?.RequirePlayingTrack == true);
         await ReplyAndThrowIfAsync(requirePlayingTrack && player.CurrentTrack == null, NothingPlayingEntry);
+        var requireNonEmptyPlaylist = attributes
+            .Any(attribute => attribute is RequireNonEmptyPlaylistAttribute);
         await ReplyAndThrowIfAsync(requireNonEmptyPlaylist && player.Playlist.IsEmpty, NothingPlayingEntry);
 
         return player;

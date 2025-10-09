@@ -77,14 +77,17 @@ public abstract class MusicModuleBase : AdvancedModuleBase {
         await ReplyAndThrowIfAsync(!channelInfo.IsCommandAllowed,
             ChannelNotAllowedEntry.WithArg(Context.User.Mention, channelInfo.MusicChannel!));
 
+        await ReplyAndThrowIfAsync(userVoiceChannelId == null, NotInVoiceChannelEntry.WithArg(Context.User.Mention));
+
         var anyNodeAvailableTask = AudioService.WaitForAnyNodeAvailable();
         if (!anyNodeAvailableTask.IsCompleted) {
             var loadingEntry = await ReplyEntryAsync(AwaitingNodeConnectionEntry, TimeSpan.FromDays(1));
             await anyNodeAvailableTask;
             loadingEntry.Delete();
-        }
 
-        await ReplyAndThrowIfAsync(userVoiceChannelId == null, NotInVoiceChannelEntry.WithArg(Context.User.Mention));
+            await ReplyAndThrowIfAsync(userVoiceChannelId == null,
+                NotInVoiceChannelEntry.WithArg(Context.User.Mention));
+        }
 
         if (AudioService.Players.TryGetPlayer<EnlivenLavalinkPlayer>(Context.Guild.Id, out var player)) {
             await ReplyAndThrowIfAsync(userVoiceChannelId != player!.VoiceChannelId,
@@ -112,6 +115,7 @@ public abstract class MusicModuleBase : AdvancedModuleBase {
         MusicCommandChannelInfo? channelInfo = null) {
         var playlistLavalinkPlayerOptions = options ?? new PlaylistLavalinkPlayerOptions();
         var optionsWrapper = new OptionsWrapper<PlaylistLavalinkPlayerOptions>(playlistLavalinkPlayerOptions);
+        // TODO Proper exception handling
         var retrieveResult = await AudioService.Players.RetrieveAsync(Context.Guild.Id, userVoiceChannelId,
             EnlivenClusterAudioService.EnlivenPlayerFactory, optionsWrapper, playerRetrieveOptions);
 
