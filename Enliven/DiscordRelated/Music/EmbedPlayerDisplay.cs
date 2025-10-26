@@ -314,7 +314,7 @@ public class EmbedPlayerDisplay : PlayerDisplayBase, IEmbedPlayerDisplayBackgrou
             };
             var needCustomSourceEmoji = track is ITrackHasCustomSource && _isExternalEmojiAllowed;
             var sb = new StringBuilder(Player.Position?.Position.FormattedToString());
-            if (track.IsSeekable) {
+            if (track is { IsLiveStream: false, IsSeekable: true }) {
                 sb.Append(" / ");
                 sb.Append(track.Duration.FormattedToString());
             }
