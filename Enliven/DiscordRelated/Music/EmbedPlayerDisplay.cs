@@ -298,6 +298,10 @@ public class EmbedPlayerDisplay : PlayerDisplayBase, IEmbedPlayerDisplayBackgrou
 
             var progressPercentage = Convert.ToInt32(Player.Position?.Position.TotalSeconds /
                 track.Duration.TotalSeconds * 100);
+            if (track.IsLiveStream) {
+                progressPercentage = 100;
+            }
+
             var emojiPack = _isExternalEmojiAllowed ? ProgressEmoji.CustomEmojiPack : ProgressEmoji.TextEmojiPack;
             var progressBar = emojiPack.GetProgress(progressPercentage);
 
