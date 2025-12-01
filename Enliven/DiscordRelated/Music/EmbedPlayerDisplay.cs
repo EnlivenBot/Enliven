@@ -135,17 +135,11 @@ public class EmbedPlayerDisplay : PlayerDisplayBase, IEmbedPlayerDisplayBackgrou
             .WithButton(_loc.Get("Music.RestoreStoppedPlayerButton"), "restoreStoppedPlayer")
             .Build();
 
-        if (message != null) {
-            await message.ModifyAsync(properties => {
-                properties.Content = Optional<string>.Unspecified;
-                properties.Embed = embed;
-                properties.Components = components;
-            });
-        }
-        else {
-            // TODO: Is this correct?
-            await _targetChannel.SendMessageAsync(embed: embed, components: components);
-        }
+        await message.ModifyOrResendAsync(_targetChannel, properties => {
+            properties.Content = Optional<string>.Unspecified;
+            properties.Embed = embed;
+            properties.Components = components;
+        });
     }
 
     public override async Task ChangePlayer(EnlivenLavalinkPlayer newPlayer) {
