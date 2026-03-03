@@ -42,9 +42,8 @@ public sealed partial class DeezerMusicResolver(ILogger<DeezerMusicResolver> log
                     Artist = token!.Value<string>("ART_NAME")
                 })
                 .ToAsyncEnumerable()
-                .SelectAwait(async arg => await cluster.LoadTrackAsync($"{arg.Title} {arg.Artist}",
-                    TrackSearchMode.YouTube,
-                    resolutionScope, cancellationToken))
+                .Select(async (arg, ct) => await cluster.LoadTrackAsync($"{arg.Title} {arg.Artist}",
+                    TrackSearchMode.YouTube, resolutionScope, ct))
                 .Where(track => track is not null)
                 .OfType<LavalinkTrack>();
 

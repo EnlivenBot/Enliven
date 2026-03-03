@@ -35,12 +35,19 @@ public class SpotifyMusicResolver : IMusicResolver {
         Debug.Assert(_spotifyClient is not null);
         var spotifyUrl = new SpotifyUrl(query);
         var spotifyTrackWrappers = await spotifyUrl.Resolve(_spotifyClient);
-        var tracks = spotifyTrackWrappers.ToAsyncEnumerable()
-            .SelectAwait(async wrapper => (await cluster.LoadTrackAsync(await wrapper.GetTrackInfo(_spotifyClient),
-                TrackSearchMode.SoundCloud, resolutionScope, cancellationToken), wrapper))
+        var tracks = spotifyTrackWrappers
+            .ToAsyncEnumerable()
+            .Select<SpotifyTrackWrapper, (LavalinkTrack, SpotifyTrackWrapper wrapper)>(async (wrapper, ct) =>
+                await ResolveTrack(wrapper, ct))
             .Where(tuple => tuple.Item1 is not null)
             .Select(x => new SpotifyLavalinkTrack(x.wrapper, x.Item1!, _spotifyClient));
         return new MusicResolveResult(tracks);
+
+        async Task<(LavalinkTrack?, SpotifyTrackWrapper wrapper)> ResolveTrack(SpotifyTrackWrapper wrapper,
+            CancellationToken ct) {
+            return (await cluster.LoadTrackAsync(await wrapper.GetTrackInfo(_spotifyClient),
+                TrackSearchMode.SoundCloud, resolutionScope, ct), wrapper);
+        }
     }
 
     public bool CanEncodeTrack(LavalinkTrack track) => false;
