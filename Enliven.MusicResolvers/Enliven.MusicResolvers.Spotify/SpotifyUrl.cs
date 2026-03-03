@@ -82,14 +82,16 @@ public class SpotifyUrl {
 
     private static async Task<IEnumerable<SpotifyTrackWrapper>> ResolvePlaylist(SpotifyClient client, string id) {
         var fullPlaylist = await client.Playlists.Get(id);
-        var tracks = await client.PaginateAll(fullPlaylist.Tracks!);
+        var tracks = await client.PaginateAll(fullPlaylist.Items!);
         return tracks.Select(track => track.Track as FullTrack)
             .Where(track => track != null)
             .Select(track => new SpotifyTrackWrapper(track!.Id, track));
     }
 
     private static async Task<IEnumerable<SpotifyTrackWrapper>> ResolveArtist(SpotifyClient client, string id) {
-        var topTracks = await client.Artists.GetTopTracks(id, new ArtistsTopTracksRequest("ES"));
-        return topTracks.Tracks.Select(track => new SpotifyTrackWrapper(track.Id, track));
+        var artist = await client.Artists.Get(id, new ArtistRequest());
+        var searchResult =
+            await client.Search.Item(new SearchRequest(SearchRequest.Types.Track, $"artist:\"{artist.Name}\""));
+        return searchResult.Tracks.Items?.Select(track => new SpotifyTrackWrapper(track.Id, track)) ?? [];
     }
 }
