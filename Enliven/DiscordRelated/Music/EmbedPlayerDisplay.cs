@@ -206,14 +206,17 @@ public class EmbedPlayerDisplay : PlayerDisplayBase, IEmbedPlayerDisplayBackgrou
     }
 
     public Task Update(InteractionMessageHolder interaction) {
+        if (IsShutdowned) return Task.CompletedTask;
         return _updatableMessageDisplay.HandleInteraction(interaction);
     }
 
     public Task Update(IEnlivenInteraction interaction) {
+        if (IsShutdowned) return Task.CompletedTask;
         return _updatableMessageDisplay.HandleInteraction(interaction);
     }
 
     Task IEmbedPlayerDisplayBackgroundUpdatable.Update() {
+        if (IsShutdowned) return Task.CompletedTask;
         return _updatableMessageDisplay.Update(true);
     }
 

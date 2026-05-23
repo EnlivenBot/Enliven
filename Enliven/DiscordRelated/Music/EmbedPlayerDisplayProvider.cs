@@ -42,7 +42,11 @@ public sealed class EmbedPlayerDisplayProvider(
     }
 
     public EmbedPlayerDisplay? Get(string id) {
-        return _cache.TryGetValue(id, out var display) ? display : null;
+        if (!_cache.TryGetValue(id, out var display)) return null;
+        if (!display.IsShutdowned && display.Player?.State != PlayerState.Destroyed)
+            return display;
+        _cache.TryRemove(id, out _);
+        return null;
     }
 
     public EmbedPlayerDisplay? Get(ITextChannel channel) {

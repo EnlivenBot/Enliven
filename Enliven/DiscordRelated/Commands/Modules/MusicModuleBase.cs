@@ -66,7 +66,10 @@ public abstract class MusicModuleBase : AdvancedModuleBase {
         if (Context.InteractionBasedResponseRequired(out var interaction)) {
             var embedPlayerDisplay = EmbedPlayerDisplayProvider.Get(await channelInfo.GetTargetChannelAsync());
             if (embedPlayerDisplay != null) {
-                await embedPlayerDisplay.Update(interaction);
+                try {
+                    await embedPlayerDisplay.Update(interaction);
+                }
+                catch (ObjectDisposedException) { }
             }
         }
     }
@@ -90,7 +93,11 @@ public abstract class MusicModuleBase : AdvancedModuleBase {
         }
 
         if (AudioService.Players.TryGetPlayer<EnlivenLavalinkPlayer>(Context.Guild.Id, out var player)) {
-            await ReplyAndThrowIfAsync(userVoiceChannelId != player!.VoiceChannelId,
+            if (player!.State == PlayerState.Destroyed) {
+                return null;
+            }
+
+            await ReplyAndThrowIfAsync(userVoiceChannelId != player.VoiceChannelId,
                 OtherVoiceChannelEntry.WithArg(Context.User.Mention));
         }
 
