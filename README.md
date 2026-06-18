@@ -55,12 +55,12 @@ Also, you can help us with translition on Crowdin:
 
 ## Links
 
-- [Project homepage](https://gitlab.com/enlivenbot/enliven)
-- [Repository](https://gitlab.com/enlivenbot/enliven)
-- [Issue tracker](https://gitlab.com/enlivenbot/enliven/-/issues)
+- [Project homepage](https://github.com/EnlivenBot/Enliven)
+- [Repository](https://github.com/EnlivenBot/Enliven)
+- [Issue tracker](https://github.com/EnlivenBot/Enliven/issues)
 - [Discord support server][support]
-- [Compiling sources](https://gitlab.com/enlivenbot/enliven/-/wikis/Compiling-sources)
-- [Self-hosting](https://gitlab.com/enlivenbot/enliven/-/wikis/Self-hosting)
+- [Compiling sources](https://github.com/EnlivenBot/Enliven/blob/master/.github/wiki/Compiling-sources.md)
+- [Self-hosting](https://github.com/EnlivenBot/Enliven/blob/master/.github/wiki/Self-hosting.md)
 - Enliven on discord bots lists:
   - [top.gg](https://top.gg/bot/801159808929497208)
   - [discordbotlist.com](https://discordbotlist.com/bots/enliven)
@@ -70,9 +70,6 @@ Also, you can help us with translition on Crowdin:
   - [discord.boats](https://discord.boats/bot/801159808929497208)
   
 ## Help us
-You can help by making a contributing or by telling your friends about the bot. The more people use the bot, the better!
+Like the bot? Leave a star.
 
-Also, you can upvote bot on botlists:
-- [top.gg](https://top.gg/bot/801159808929497208)
-- [discordbotlist.com](https://discordbotlist.com/bots/enliven)
-- [bots.discordlabs.org](https://bots.discordlabs.org/bot/801159808929497208)
+You can help by making a contributing or by telling your friends about the bot. The more people use the bot, the better!

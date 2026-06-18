@@ -7,7 +7,7 @@ If you still want to continue - please **_use the self-hosted version for person
 
 Also, we are not responsible for the code and its operability, updatability, backward compatibility, etc. For all questions - write to our support server.
 
-1. Compile the sources using [this page](compiling-sources).
+1. Compile the sources using [this page](Compiling-sources.md).
 2. Install, launch and configure [lavalink](https://github.com/lavalink-devs/Lavalink)
 3. Navigate to binaries folder (typically `Enliven/bin/Release/net10.0/`) and launch the bot (`./Enliven` for linux or `Enliven.exe` for Windows)
 4. Copy `appsettings.json` to `appsettings.Production.json` and edit it. Here is examples for sections:
@@ -71,7 +71,7 @@ Edit `LavalinkNodes` variable in your config file:
 git pull
 ```
 
-2. Build project via [compile sources page](compiling-sources)
+2. Build project via [compile sources page](Compiling-sources.md)
 
 #### Emoji missing
 
@@ -79,7 +79,7 @@ Discord bots work as users with nitro. They can use all emojis from the servers 
 
 1. Add your bot to our server with emoji
 
-* Join our support server (link in [README.md](https://gitlab.com/enlivenbot/enliven/-/blob/master/README.md))
+* Join our support server (link in [README.md](https://github.com/EnlivenBot/Enliven))
 * Send a direct message with your bot invite link to any user with ADMIN role (prefer `skproch`)
 * After that, we will add your bot to the server with emoji and the emoji that are specified in the default config will work for you.
 
