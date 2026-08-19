@@ -10,8 +10,7 @@ using Common.Localization.Providers;
 
 namespace Common.History;
 
-public class HistoryCollection : IList<HistoryEntry>, IEntry
-{
+public class HistoryCollection : IList<HistoryEntry>, IEntry {
     private readonly List<HistoryEntry> _entries = new();
 
     private readonly ISubject<HistoryCollection> _historyChangedSubject = new Subject<HistoryCollection>();
@@ -24,29 +23,24 @@ public class HistoryCollection : IList<HistoryEntry>, IEntry
     private int _maxLastHistoryLength;
 
     public HistoryCollection(int maxLastHistoryLength = int.MaxValue, int maxEntriesCount = int.MaxValue,
-        bool ignoreDuplicateIds = true)
-    {
+        bool ignoreDuplicateIds = true) {
         _ignoreDuplicateIds = ignoreDuplicateIds;
         _maxEntriesCount = maxEntriesCount;
         _maxLastHistoryLength = maxLastHistoryLength;
     }
 
-    public int MaxEntriesCount
-    {
+    public int MaxEntriesCount {
         get => _maxEntriesCount;
-        set
-        {
+        set {
             _maxEntriesCount = value;
             _entries.RemoveRange(0, (Count - value).Normalize(0, int.MaxValue));
             OnHistoryChanged();
         }
     }
 
-    public int MaxLastHistoryLength
-    {
+    public int MaxLastHistoryLength {
         get => _maxLastHistoryLength;
-        set
-        {
+        set {
             _maxLastHistoryLength = value;
             OnHistoryChanged();
         }
@@ -55,25 +49,21 @@ public class HistoryCollection : IList<HistoryEntry>, IEntry
     public IObservable<HistoryCollection> HistoryChanged => _historyChangedSubject.AsObservable();
 
     [Obsolete("Use GetLastHistory instead")]
-    public string Get(ILocalizationProvider provider, params object[] additionalArgs)
-    {
+    public string Get(ILocalizationProvider provider, params object[] additionalArgs) {
         return GetLastHistory(provider);
     }
 
-    public IEnumerator<HistoryEntry> GetEnumerator()
-    {
+    public IEnumerator<HistoryEntry> GetEnumerator() {
         return _entries.GetEnumerator();
     }
 
-    IEnumerator IEnumerable.GetEnumerator()
-    {
+    IEnumerator IEnumerable.GetEnumerator() {
         return GetEnumerator();
     }
 
-    public void Add(HistoryEntry item)
-    {
-        if (item.Identifier != null && !_ignoreDuplicateIds && _entries.LastOrDefault()?.Identifier == item.Identifier)
-        {
+    public void Add(HistoryEntry item) {
+        if (item.Identifier != null && !_ignoreDuplicateIds &&
+            _entries.LastOrDefault()?.Identifier == item.Identifier) {
             RemoveAt(Count - 1);
         }
 
@@ -82,10 +72,8 @@ public class HistoryCollection : IList<HistoryEntry>, IEntry
         OnHistoryChanged(_entries.Count - 1);
     }
 
-    public void Clear()
-    {
-        foreach (var historyEntry in _entries.ToList())
-        {
+    public void Clear() {
+        foreach (var historyEntry in _entries.ToList()) {
             UnsubscribeItem(historyEntry);
         }
 
@@ -93,28 +81,23 @@ public class HistoryCollection : IList<HistoryEntry>, IEntry
         OnHistoryChanged();
     }
 
-    public bool Contains(HistoryEntry item)
-    {
+    public bool Contains(HistoryEntry item) {
         return _entries.Contains(item);
     }
 
-    public void CopyTo(HistoryEntry[] array, int arrayIndex)
-    {
+    public void CopyTo(HistoryEntry[] array, int arrayIndex) {
         _entries.CopyTo(array, arrayIndex);
     }
 
-    public bool Remove(HistoryEntry item)
-    {
-        try
-        {
+    public bool Remove(HistoryEntry item) {
+        try {
             var index = IndexOf(item);
             var result = _entries.Remove(item);
             UnsubscribeItem(item);
             OnHistoryChanged(index);
             return result;
         }
-        catch (Exception)
-        {
+        catch (Exception) {
             return false;
         }
     }
@@ -122,30 +105,25 @@ public class HistoryCollection : IList<HistoryEntry>, IEntry
     public int Count => _entries.Count;
     public bool IsReadOnly => false;
 
-    public int IndexOf(HistoryEntry item)
-    {
+    public int IndexOf(HistoryEntry item) {
         return _entries.IndexOf(item);
     }
 
-    public void Insert(int index, HistoryEntry item)
-    {
+    public void Insert(int index, HistoryEntry item) {
         _entries.Insert(index, item);
         SubscribeItem(item);
         OnHistoryChanged(index);
     }
 
-    public void RemoveAt(int index)
-    {
+    public void RemoveAt(int index) {
         UnsubscribeItem(_entries[index]);
         _entries.RemoveAt(index);
         OnHistoryChanged(index);
     }
 
-    public HistoryEntry this[int index]
-    {
+    public HistoryEntry this[int index] {
         get => _entries[index];
-        set
-        {
+        set {
             UnsubscribeItem(_entries[index]);
             _entries[index] = value;
             SubscribeItem(value);
@@ -153,15 +131,12 @@ public class HistoryCollection : IList<HistoryEntry>, IEntry
         }
     }
 
-    public string GetLastHistory(ILocalizationProvider provider)
-    {
+    public string GetLastHistory(ILocalizationProvider provider) {
         return GetLastHistory(provider, out _);
     }
 
-    public string GetLastHistory(ILocalizationProvider provider, out bool isChanged)
-    {
-        if (_lastHistory != null && _lastProvider == provider && !_isChanged)
-        {
+    public string GetLastHistory(ILocalizationProvider provider, out bool isChanged) {
+        if (_lastHistory != null && _lastProvider == provider && !_isChanged) {
             isChanged = false;
             return _lastHistory;
         }
@@ -174,22 +149,18 @@ public class HistoryCollection : IList<HistoryEntry>, IEntry
         isChanged = _lastHistory != result;
         return _lastHistory = result;
 
-        string BuildHistory()
-        {
+        string BuildHistory() {
             string? lastEntry = null;
             var count = 1;
             var stringBuilder = new StringBuilder();
 
             var index = _entries.Count - 1;
-            for (; index >= 0; index--)
-            {
+            for (; index >= 0; index--) {
                 var s = _entries[index].Get(provider);
-                if (lastEntry == s && !_ignoreDuplicateIds)
-                {
+                if (lastEntry == s && !_ignoreDuplicateIds) {
                     count++;
                 }
-                else
-                {
+                else {
                     if (!AppendEntry()) return stringBuilder.ToString();
                     lastEntry = s;
                     count = 1;
@@ -200,56 +171,55 @@ public class HistoryCollection : IList<HistoryEntry>, IEntry
             AppendEntry();
             return stringBuilder.ToString();
 
-            bool AppendEntry()
-            {
+            bool AppendEntry() {
                 if (lastEntry == null) return true;
                 var final = count > 1
                     ? $"{lastEntry} (**x{count}**){Environment.NewLine}"
                     : $"{lastEntry}{Environment.NewLine}";
-                if (stringBuilder.Length + final.Length > MaxLastHistoryLength) return false;
+
+                var availableLength = MaxLastHistoryLength - stringBuilder.Length;
+                if (availableLength <= 0) return false;
+                if (final.Length > availableLength) {
+                    final = final.SafeSubstring(availableLength, "...");
+                    stringBuilder.Insert(0, final);
+                    return false;
+                }
+
                 stringBuilder.Insert(0, final);
                 return true;
             }
         }
     }
 
-    protected virtual void OnHistoryChanged(int? affectedIndex = null)
-    {
+    protected virtual void OnHistoryChanged(int? affectedIndex = null) {
         _isChanged = affectedIndex == null || affectedIndex.Value >= _firstAffectedIndex;
         _historyChangedSubject.OnNext(this);
     }
 
-    private void SubscribeItem(HistoryEntry entry)
-    {
+    private void SubscribeItem(HistoryEntry entry) {
         entry.Updated += EntryOnUpdated;
         entry.Removing += EntryOnRemoving;
         entry.Inserting += EntryOnInserting;
     }
 
-    private void EntryOnInserting(object? sender, HistoryEntry.InsertingEventArgs e)
-    {
-        if (e.InsertToStart)
-        {
+    private void EntryOnInserting(object? sender, HistoryEntry.InsertingEventArgs e) {
+        if (e.InsertToStart) {
             Add(e.EntryToInsert);
         }
-        else
-        {
+        else {
             Insert(IndexOf((HistoryEntry)sender!) + 1, e.EntryToInsert);
         }
     }
 
-    private void EntryOnRemoving(object? sender, EventArgs e)
-    {
+    private void EntryOnRemoving(object? sender, EventArgs e) {
         Remove((HistoryEntry)sender!);
     }
 
-    private void EntryOnUpdated(object? sender, EventArgs e)
-    {
+    private void EntryOnUpdated(object? sender, EventArgs e) {
         OnHistoryChanged(IndexOf((HistoryEntry)sender!));
     }
 
-    private void UnsubscribeItem(HistoryEntry entry)
-    {
+    private void UnsubscribeItem(HistoryEntry entry) {
         entry.Updated -= EntryOnUpdated;
         entry.Removing -= EntryOnRemoving;
         entry.Inserting -= EntryOnInserting;
