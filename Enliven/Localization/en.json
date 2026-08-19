@@ -51,7 +51,8 @@
       "EffectApplied": "{0} applies `{1}` effect",
       "EffectRemoved": "{0} removes `{1}` effect",
       "TrackStuck": "The current track is stuck. Let's skip.",
-      "TrackException": "Track playback error: `{0}`. Let's skip."
+      "TrackException": "Track playback error: `{0}`. Let's skip.",
+      "TrackExceptionAllClientsFailed": "Track playback failed because all available clients failed. Let's skip. If this keeps happening, please report it to the bot developers."
     },
     "Music": {
       "QueueTitle": "Queue",

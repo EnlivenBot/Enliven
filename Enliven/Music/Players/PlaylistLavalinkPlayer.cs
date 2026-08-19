@@ -108,7 +108,11 @@ public class PlaylistLavalinkPlayer : AdvancedLavalinkPlayer {
         CancellationToken cancellationToken = new()) {
         await base.NotifyTrackExceptionAsync(track, exception, cancellationToken);
 
-        WriteToQueueHistory(new EntryLocalized("PlayerHistory.TrackException", exception.Format()));
+        var exceptionText = exception.Message ?? exception.Cause ?? string.Empty;
+        var entry = exceptionText.Contains("All clients failed to load the item.", StringComparison.Ordinal)
+            ? new EntryLocalized("PlayerHistory.TrackExceptionAllClientsFailed")
+            : new EntryLocalized("PlayerHistory.TrackException", exception.Format());
+        WriteToQueueHistory(entry);
     }
 
     protected override async ValueTask NotifyTrackStuckAsync(ITrackQueueItem track, TimeSpan threshold,

@@ -51,7 +51,8 @@
       "EffectApplied": "{0} aplica el efecto `{1}`",
       "EffectRemoved": "{0} elimina el efecto `{1}`",
       "TrackStuck": "La pista actual está bloqueada. La voy a saltar.",
-      "TrackException": "Error de reproducción de pista: `{0}`. La voy a saltar."
+      "TrackException": "Error de reproducción de pista: `{0}`. La voy a saltar.",
+      "TrackExceptionAllClientsFailed": "No se pudo reproducir la pista porque todos los clientes disponibles fallaron. La omitimos. Si esto sigue ocurriendo, repórtalo a los desarrolladores del bot."
     },
     "Music": {
       "QueueTitle": "Cola",
