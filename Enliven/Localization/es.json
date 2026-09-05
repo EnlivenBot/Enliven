@@ -94,6 +94,7 @@
       "Waiting": "Esperando...",
       "QueueEnd": "Se ha alcanzado el fin de la cola",
       "OnlyOneNode": "Por desgracia, solamente está disponible el nodo en el que estoy ahora mismo",
+      "NodeNotFound": "El nodo `{0}` no está disponible. Elige un nodo de la lista de autocompletado.",
       "ResumeViaPlaylists": "Puedes intentar volver a reproducir usando: `/loadplaylist {0}`",
       "Empty": "Vacío",
       "Warning": "**Alerta**",

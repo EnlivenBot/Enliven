@@ -43,6 +43,7 @@ public class EnlivenClusterAudioService : ClusterAudioService, IEnlivenClusterAu
     private readonly ILogger<EnlivenClusterAudioService> _logger;
     private readonly MusicResolverService _musicResolverService;
     private readonly IPlaylistProvider _playlistProvider;
+    private readonly SemaphoreSlim _playerMigrationLock = new(1, 1);
 
     private readonly Dictionary<ulong, PlayerSnapshot> _lastPlayerSnapshots = new();
 
@@ -65,6 +66,45 @@ public class EnlivenClusterAudioService : ClusterAudioService, IEnlivenClusterAu
     public ILavalinkNode GetPlayerNode(ILavalinkPlayer player) {
         return Nodes.FirstOrDefault(node => node.SessionId == player.SessionId)
                ?? throw new InvalidOperationException("No node serving this player");
+    }
+
+    public async Task<EnlivenLavalinkPlayer> MovePlayerAsync(EnlivenLavalinkPlayer player,
+        ILavalinkNode targetNode, IEntry reason) {
+        ArgumentNullException.ThrowIfNull(player);
+        ArgumentNullException.ThrowIfNull(targetNode);
+
+        await _playerMigrationLock.WaitAsync();
+        try {
+            var currentNode = GetPlayerNode(player);
+            if (currentNode == targetNode)
+                throw new InvalidOperationException("The target node is already serving this player");
+            if (targetNode.Status != LavalinkNodeStatus.Available)
+                throw new InvalidOperationException("The target node is not available");
+
+            var snapshot = await (player as IPlayerShutdownInternally).ShutdownInternal();
+            var displays = player.Displays.ToImmutableArray();
+            player.Displays.Clear();
+
+            var options = new OptionsWrapper<PlaylistLavalinkPlayerOptions>(ConvertSnapshotToOptions(snapshot));
+            var retrieveOptions = new PlayerRetrieveOptions {
+                ChannelBehavior = PlayerChannelBehavior.Join,
+                OverridenSessionProvider = new FixedNodeSessionProvider(targetNode)
+            };
+            var result = await Players.RetrieveAsync(snapshot.GuildId, snapshot.LastVoiceChannelId,
+                EnlivenPlayerFactory, options, retrieveOptions);
+            if (!result.IsSuccess || result.Player is null)
+                throw new InvalidOperationException($"Failed to move player: {result.Status}");
+
+            foreach (var display in displays)
+                await display.ChangePlayer(result.Player);
+
+            result.Player.WriteToQueueHistory(player.QueueHistory.AsEnumerable());
+            result.Player.WriteToQueueHistory(reason.WithArg(targetNode.Label));
+            return result.Player;
+        }
+        finally {
+            _playerMigrationLock.Release();
+        }
     }
 
     public async Task ShutdownPlayer(AdvancedLavalinkPlayer player, PlayerShutdownParameters shutdownParameters,
@@ -206,5 +246,13 @@ public class EnlivenClusterAudioService : ClusterAudioService, IEnlivenClusterAu
             InitialVolume = snapshot.Volume,
         };
         return playlistLavalinkPlayerOptions;
+    }
+
+    private sealed class FixedNodeSessionProvider(ILavalinkNode node) : ILavalinkSessionProvider {
+        public ValueTask<LavalinkPlayerSession> GetSessionAsync(ulong guildId,
+            CancellationToken cancellationToken = default) {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult(new LavalinkPlayerSession(node.ApiClient, node.SessionId!, node.Label));
+        }
     }
 }

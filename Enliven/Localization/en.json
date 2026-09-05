@@ -95,6 +95,7 @@
       "Waiting": "Waiting...",
       "QueueEnd": "End of queue reached",
       "OnlyOneNode": "Unfortunately, only the node you are using is available to the bot right now",
+      "NodeNotFound": "Node `{0}` is not available. Choose a node from the autocomplete list.",
       "ResumeViaPlaylists": "You can try to replay through `/loadplaylist {0}`",
       "Empty": "Empty",
       "Warning": "**Warning**",

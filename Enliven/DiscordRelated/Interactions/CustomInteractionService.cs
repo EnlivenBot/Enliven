@@ -28,8 +28,7 @@ using SummaryAttribute = Discord.Commands.SummaryAttribute;
 
 namespace Bot.DiscordRelated.Interactions;
 
-public class CustomInteractionService : InteractionService, IService
-{
+public class CustomInteractionService : InteractionService, IService {
     private static PropertyInfo _typeInfoProperty = typeof(ModuleBuilder).GetDeclaredProperty("TypeInfo");
 
     private static PropertyInfo _callbackProperty = typeof(SlashCommandBuilder).GetProperty("Callback")!;
@@ -37,14 +36,16 @@ public class CustomInteractionService : InteractionService, IService
 
     public CustomInteractionService(DiscordShardedClient discordClient, ILifetimeScope serviceContainer,
         ILogger<CustomInteractionService> logger)
-        : base(discordClient, new InteractionServiceConfig { UseCompiledLambda = true, LogLevel = LogSeverity.Debug })
-    {
+        : base(discordClient, new InteractionServiceConfig {
+            UseCompiledLambda = true,
+            EnableAutocompleteHandlers = true,
+            LogLevel = LogSeverity.Debug
+        }) {
         _serviceProvider = new ServiceProviderAdapter(serviceContainer);
         Log += message => LoggingUtilities.OnDiscordLog(logger, message);
     }
 
-    public async Task OnPreDiscordStart()
-    {
+    public async Task OnPreDiscordStart() {
         var textCommandGroups = Assembly.GetExecutingAssembly()
             .GetTypes()
             .Where(type => typeof(IModuleBase).IsAssignableFrom(type) &&
@@ -66,20 +67,17 @@ public class CustomInteractionService : InteractionService, IService
                 moduleBuilder => BuildTopLevelModules(moduleBuilder, subcommandSet));
     }
 
-    public async Task OnDiscordReady()
-    {
+    public async Task OnDiscordReady() {
         await RegisterCommandsGloballyAsync();
     }
 
     private void BuildTopLevelModules(ModuleBuilder moduleBuilder,
-        IGrouping<string?, (MethodInfo info, CommandAttribute?)> subcommandSet)
-    {
+        IGrouping<string?, (MethodInfo info, CommandAttribute?)> subcommandSet) {
         moduleBuilder.SlashGroupName = subcommandSet.Key;
         moduleBuilder.Description = subcommandSet.Key;
 
         foreach (var commandInClass in subcommandSet.GroupBy(tuple => tuple.info.DeclaringType))
-            moduleBuilder.AddModule(builder =>
-            {
+            moduleBuilder.AddModule(builder => {
                 BuildClassModule(commandInClass.Key!, builder,
                     CreateLambdaBuilder(commandInClass.Key!.GetTypeInfo(), this), commandInClass.AsEnumerable());
             });
@@ -87,8 +85,7 @@ public class CustomInteractionService : InteractionService, IService
 
     private void BuildClassModule(Type module, ModuleBuilder moduleBuilder,
         Func<IServiceProvider, IInteractionModuleBase> createLambdaBuilder,
-        IEnumerable<(MethodInfo info, CommandAttribute?)> commandMethods)
-    {
+        IEnumerable<(MethodInfo info, CommandAttribute?)> commandMethods) {
         _typeInfoProperty.SetValue(moduleBuilder, module);
         moduleBuilder.AddAttributes(module.GetCustomAttributes<Attribute>().ToArray());
 
@@ -98,8 +95,7 @@ public class CustomInteractionService : InteractionService, IService
     }
 
     private void BuildSlashCommand(SlashCommandBuilder builder, CommandAttribute? command, MethodInfo methodInfo,
-        Func<IServiceProvider, IInteractionModuleBase> createLambdaBuilder)
-    {
+        Func<IServiceProvider, IInteractionModuleBase> createLambdaBuilder) {
         var commandText = command!.Text.Contains(' ') ? command.Text.SubstringAfterLast(" ") : command.Text;
         var description = methodInfo.GetCustomAttribute<SummaryAttribute>()
             .Pipe(attribute => attribute?.Text)
@@ -127,8 +123,7 @@ public class CustomInteractionService : InteractionService, IService
             .WithAttributes(methodInfo.GetCustomAttributes().ToArray());
         _callbackProperty.SetValue(builder, CreateCallback(createLambdaBuilder, methodInfo));
 
-        foreach (var parameterInfo in methodInfo.GetParameters())
-        {
+        foreach (var parameterInfo in methodInfo.GetParameters()) {
             var pDescription = parameterInfo.GetCustomAttribute<SummaryAttribute>()
                 .Pipe(attribute => attribute?.Text)
                 .Pipe(s => s == null ? null : EntryLocalized.Create("Help", s))
@@ -139,14 +134,17 @@ public class CustomInteractionService : InteractionService, IService
                 .Pipe(s => s.SafeSubstring(100, "..."));
             var isOptional = parameterInfo.GetCustomAttribute<SlashCommandOptionalAttribute>()?.IsOptional ??
                              parameterInfo.IsOptional;
-            builder.AddParameter(parameterBuilder =>
-            {
+            builder.AddParameter(parameterBuilder => {
                 parameterBuilder
                     .WithName(parameterInfo.Name!.ToLower())
                     .WithDescription(pDescription)
                     .SetParameterType(parameterInfo.ParameterType)
                     .SetRequired(!isOptional)
                     .SetDefaultValue(parameterInfo.DefaultValue);
+                var autocompleteAttribute = parameterInfo.GetCustomAttribute<AutocompleteAttribute>();
+                if (autocompleteAttribute?.AutocompleteHandlerType is not null)
+                    parameterBuilder.WithAutocompleteHandler(autocompleteAttribute.AutocompleteHandlerType,
+                        _serviceProvider);
             });
         }
     }
@@ -156,10 +154,8 @@ public class CustomInteractionService : InteractionService, IService
     private static MethodInfo? _reflectionUtilsCreateLambdaBuilderMethod;
 
     private static Func<IServiceProvider, IInteractionModuleBase> CreateLambdaBuilder(TypeInfo typeInfo,
-        InteractionService commandService)
-    {
-        if (_reflectionUtilsCreateLambdaBuilderMethod == null)
-        {
+        InteractionService commandService) {
+        if (_reflectionUtilsCreateLambdaBuilderMethod == null) {
             var reflectionUtilsType =
                 typeof(InteractionService).Assembly.GetType("Discord.Interactions.ReflectionUtils`1")!.MakeGenericType(
                     typeof(IInteractionModuleBase));
@@ -171,41 +167,34 @@ public class CustomInteractionService : InteractionService, IService
     }
 
     private static ExecuteCallback CreateCallback(Func<IServiceProvider, IInteractionModuleBase> createInstance,
-        MethodInfo methodInfo)
-    {
+        MethodInfo methodInfo) {
         Func<IInteractionModuleBase, object[], Task> commandInvoker =
             CreateMethodInvoker<IInteractionModuleBase>(methodInfo);
 
         async Task<IResult> ExecuteCallback(IInteractionContext context, object[] args,
-            IServiceProvider serviceProvider, ICommandInfo commandInfo)
-        {
+            IServiceProvider serviceProvider, ICommandInfo commandInfo) {
             var instance = createInstance(serviceProvider);
             instance.SetContext(context);
 
-            try
-            {
+            try {
                 await instance.BeforeExecuteAsync(commandInfo).ConfigureAwait(false);
                 instance.BeforeExecute(commandInfo);
                 var task = commandInvoker(instance, args) ?? Task.Delay(0);
 
                 if (task is Task<RuntimeResult> runtimeTask)
                     return await runtimeTask.ConfigureAwait(false);
-                else
-                {
+                else {
                     await task.ConfigureAwait(false);
                     return ExecuteResult.FromSuccess();
                 }
             }
-            catch (CommandInterruptionException)
-            {
+            catch (CommandInterruptionException) {
                 return ExecuteResult.FromSuccess();
             }
-            catch (Exception ex)
-            {
+            catch (Exception ex) {
                 return ExecuteResult.FromError(ex);
             }
-            finally
-            {
+            finally {
                 await instance.AfterExecuteAsync(commandInfo).ConfigureAwait(false);
                 instance.AfterExecute(commandInfo);
                 (instance as IDisposable)?.Dispose();
@@ -215,16 +204,14 @@ public class CustomInteractionService : InteractionService, IService
         return ExecuteCallback;
     }
 
-    internal static Func<T, object[], Task> CreateMethodInvoker<T>(MethodInfo methodInfo)
-    {
+    internal static Func<T, object[], Task> CreateMethodInvoker<T>(MethodInfo methodInfo) {
         var parameters = methodInfo.GetParameters();
         var paramsExp = new Expression[parameters.Length];
 
         var instanceExp = Expression.Parameter(typeof(T), "instance");
         var argsExp = Expression.Parameter(typeof(object[]), "args");
 
-        for (var i = 0; i < parameters.Length; i++)
-        {
+        for (var i = 0; i < parameters.Length; i++) {
             var parameter = parameters[i];
 
             var indexExp = Expression.Constant(i);
@@ -232,7 +219,8 @@ public class CustomInteractionService : InteractionService, IService
             paramsExp[i] = Expression.Convert(accessExp, parameter.ParameterType);
         }
 
-        var callExp = Expression.Call(Expression.Convert(instanceExp, methodInfo.ReflectedType!), methodInfo, paramsExp);
+        var callExp = Expression.Call(Expression.Convert(instanceExp, methodInfo.ReflectedType!), methodInfo,
+            paramsExp);
         var finalExp = Expression.Convert(callExp, typeof(Task));
         var lambda = Expression.Lambda<Func<T, object[], Task>>(finalExp, instanceExp, argsExp).Compile();
 

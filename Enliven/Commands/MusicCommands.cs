@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Bot.DiscordRelated;
 using Bot.DiscordRelated.Commands;
@@ -10,7 +11,11 @@ using Common.History;
 using Common.Localization.Entries;
 using Common.Music;
 using Discord.Commands;
+using Discord.Interactions;
+using Lavalink4NET.Cluster.Nodes;
 using Lavalink4NET.Players;
+using ContextType = Discord.Commands.ContextType;
+using RunMode = Discord.Commands.RunMode;
 
 // ReSharper disable ConditionIsAlwaysTrueOrFalse
 // ReSharper disable ConstantConditionalAccessQualifier
@@ -21,11 +26,11 @@ namespace Bot.Commands;
 
 [SlashCommandAdapter]
 [Grouping("music")]
-[RequireContext(ContextType.Guild)]
+[Discord.Commands.RequireContext(ContextType.Guild)]
 public sealed class MusicCommands : HavePlayerMusicModuleBase {
     [Command("stop", RunMode = RunMode.Async)]
     [Alias("st")]
-    [Summary("stop0s")]
+    [Discord.Commands.Summary("stop0s")]
     public async Task Stop() {
         await Player.Shutdown(new EntryLocalized("Music.UserStopPlayback").WithArg(Context.User.Mention),
             new PlayerShutdownParameters { SavePlaylist = false, ShutdownDisplays = true });
@@ -34,8 +39,8 @@ public sealed class MusicCommands : HavePlayerMusicModuleBase {
     [RequireNonEmptyPlaylist]
     [Command("jump", RunMode = RunMode.Async)]
     [Alias("j", "skip", "next", "n", "s", "jmp")]
-    [Summary("jump0s")]
-    public async Task Jump([Summary("jump0_0s")] int index = 1) {
+    [Discord.Commands.Summary("jump0s")]
+    public async Task Jump([Discord.Commands.Summary("jump0_0s")] int index = 1) {
         await Player.SkipAsync(index, true);
         Player.WriteToQueueHistory(new EntryLocalized("PlayerHistory.Jumped", Context.User.Mention,
             Player.RequestedTrackIndex + 1,
@@ -45,8 +50,8 @@ public sealed class MusicCommands : HavePlayerMusicModuleBase {
     [RequireNonEmptyPlaylist]
     [Command("goto", RunMode = RunMode.Async)]
     [Alias("g", "go", "gt")]
-    [Summary("goto0s")]
-    public async Task Goto([Summary("goto0_0s")] int index) {
+    [Discord.Commands.Summary("goto0s")]
+    public async Task Goto([Discord.Commands.Summary("goto0_0s")] int index) {
         //For programmers who count from 0
         if (index == 0) index = 1;
         if (index < 0) {
@@ -69,8 +74,8 @@ public sealed class MusicCommands : HavePlayerMusicModuleBase {
 
     [Command("volume", RunMode = RunMode.Async)]
     [Alias("v")]
-    [Summary("volume0s")]
-    public async Task Volume([Summary("volume0_0s")] int volume = 100) {
+    [Discord.Commands.Summary("volume0s")]
+    public async Task Volume([Discord.Commands.Summary("volume0_0s")] int volume = 100) {
         if (volume is > 200 or < 10) {
             await this.ReplyFailFormattedAsync(new EntryLocalized("Music.VolumeOutOfRange"), true);
             return;
@@ -83,7 +88,7 @@ public sealed class MusicCommands : HavePlayerMusicModuleBase {
 
     [Command("repeat", RunMode = RunMode.Async)]
     [Alias("r", "loop", "l")]
-    [Summary("repeat0s")]
+    [Discord.Commands.Summary("repeat0s")]
     public Task Repeat(LoopingState? state = null) {
         Player.LoopingState = state ?? Player.LoopingState.Next();
         var entryLocalized = new EntryLocalized("PlayerHistory.RepeatSet",
@@ -95,7 +100,7 @@ public sealed class MusicCommands : HavePlayerMusicModuleBase {
 
     [RequireNonEmptyPlaylist]
     [Command("pause", RunMode = RunMode.Async)]
-    [Summary("pause0s")]
+    [Discord.Commands.Summary("pause0s")]
     public async Task Pause() {
         if (Player.State != PlayerState.Playing) return;
 
@@ -106,7 +111,7 @@ public sealed class MusicCommands : HavePlayerMusicModuleBase {
     [RequireNonEmptyPlaylist]
     [Command("shuffle", RunMode = RunMode.Async)]
     [Alias("random", "shuf", "shuff", "randomize", "randomise")]
-    [Summary("shuffle0s")]
+    [Discord.Commands.Summary("shuffle0s")]
     public Task Shuffle() {
         Player.Playlist.Shuffle();
         Player.WriteToQueueHistory(new EntryLocalized("PlayerHistory.Shuffle", Context.User.Mention));
@@ -116,7 +121,7 @@ public sealed class MusicCommands : HavePlayerMusicModuleBase {
     [RequireNonEmptyPlaylist]
     [Command("list", RunMode = RunMode.Async)]
     [Alias("l", "q", "queue")]
-    [Summary("list0s")]
+    [Discord.Commands.Summary("list0s")]
     public Task List() {
         EmbedPlayerQueueDisplayProvider.CreateOrUpdateQueueDisplay(Context.Channel, Player);
         return Task.CompletedTask;
@@ -125,8 +130,8 @@ public sealed class MusicCommands : HavePlayerMusicModuleBase {
     [RequireNonEmptyPlaylist(true)]
     [Command("fastforward", RunMode = RunMode.Async)]
     [Alias("ff", "fwd")]
-    [Summary("fastforward0s")]
-    public async Task FastForward([Summary("fastforward0_0s")] TimeSpan? timeSpan = null) {
+    [Discord.Commands.Summary("fastforward0s")]
+    public async Task FastForward([Discord.Commands.Summary("fastforward0_0s")] TimeSpan? timeSpan = null) {
         if (!Player.CurrentTrack!.IsSeekable) {
             await this.ReplyFailFormattedAsync(new EntryLocalized("Music.TrackNotSeekable", Context.User.Mention), true)
                 .CleanupAfter(Constants.ShortTimeSpan);
@@ -142,8 +147,8 @@ public sealed class MusicCommands : HavePlayerMusicModuleBase {
     [RequireNonEmptyPlaylist(true)]
     [Command("rewind", RunMode = RunMode.Async)]
     [Alias("rw")]
-    [Summary("rewind0s")]
-    public async Task Rewind([Summary("fastforward0_0s")] TimeSpan? timeSpan = null) {
+    [Discord.Commands.Summary("rewind0s")]
+    public async Task Rewind([Discord.Commands.Summary("fastforward0_0s")] TimeSpan? timeSpan = null) {
         if (!Player.CurrentTrack!.IsSeekable) {
             await this.ReplyFailFormattedAsync(new EntryLocalized("Music.TrackNotSeekable", Context.User.Mention), true)
                 .CleanupAfter(Constants.ShortTimeSpan);
@@ -159,8 +164,8 @@ public sealed class MusicCommands : HavePlayerMusicModuleBase {
     [RequireNonEmptyPlaylist(true)]
     [Command("seek", RunMode = RunMode.Async)]
     [Alias("sk", "se")]
-    [Summary("seek0s")]
-    public async Task Seek([Summary("seek0_0s")] TimeSpan position) {
+    [Discord.Commands.Summary("seek0s")]
+    public async Task Seek([Discord.Commands.Summary("seek0_0s")] TimeSpan position) {
         if (!Player.CurrentTrack!.IsSeekable) {
             await this.ReplyFailFormattedAsync(new EntryLocalized("Music.TrackNotSeekable", Context.User.Mention), true)
                 .CleanupAfter(Constants.ShortTimeSpan);
@@ -175,8 +180,9 @@ public sealed class MusicCommands : HavePlayerMusicModuleBase {
     [RequireNonEmptyPlaylist]
     [Command("removerange", RunMode = RunMode.Async)]
     [Alias("rr", "delr", "dr")]
-    [Summary("remove0s")]
-    public async Task RemoveRange([Summary("remove0_0s")] int start, [Summary("remove0_1s")] int end = -1) {
+    [Discord.Commands.Summary("remove0s")]
+    public async Task RemoveRange([Discord.Commands.Summary("remove0_0s")] int start,
+        [Discord.Commands.Summary("remove0_1s")] int end = -1) {
         start = start.Normalize(1, Player.Playlist.Count);
         end = end.Normalize(start, Player.Playlist.Count);
         var countToRemove = end - start + 1;
@@ -202,16 +208,18 @@ public sealed class MusicCommands : HavePlayerMusicModuleBase {
     [RequireNonEmptyPlaylist]
     [Command("remove", RunMode = RunMode.Async)]
     [Alias("rm", "del", "delete")]
-    [Summary("remove0s")]
-    public async Task Remove([Summary("remove0_0s")] int start, [Summary("remove1_1s")] int count = 1) {
+    [Discord.Commands.Summary("remove0s")]
+    public async Task Remove([Discord.Commands.Summary("remove0_0s")] int start,
+        [Discord.Commands.Summary("remove1_1s")] int count = 1) {
         await RemoveRange(start, start + count - 1);
     }
 
     [RequireNonEmptyPlaylist]
     [Command("move", RunMode = RunMode.Async)]
     [Alias("m", "mv")]
-    [Summary("move0s")]
-    public async Task Move([Summary("move0_0s")] int trackIndex, [Summary("move0_1s")] int newIndex = 1) {
+    [Discord.Commands.Summary("move0s")]
+    public async Task Move([Discord.Commands.Summary("move0_0s")] int trackIndex,
+        [Discord.Commands.Summary("move0_1s")] int newIndex = 1) {
         // For programmers
         if (trackIndex == 0) trackIndex = 1;
         if (trackIndex < 1 || trackIndex > Player.Playlist.Count) {
@@ -227,11 +235,40 @@ public sealed class MusicCommands : HavePlayerMusicModuleBase {
     }
 
     [Command("playerrestart", RunMode = RunMode.Async)]
-    [Summary("playerrestart0s")]
+    [Discord.Commands.Summary("playerrestart0s")]
     [CommandCooldown(GuildDelayMilliseconds = 60000)]
     public async Task RestartPlayer() {
         var playerShutdownParameters = new PlayerShutdownParameters()
             { ShutdownDisplays = false, SavePlaylist = false, RestartPlayer = true };
         await Player.Shutdown(playerShutdownParameters);
+    }
+
+    [Command("changenode", RunMode = RunMode.Async)]
+    [Discord.Commands.Summary("changenode0s")]
+    [CommandCooldown(GuildDelayMilliseconds = 30000)]
+    public async Task ChangeNode(
+        [Autocomplete(typeof(LavalinkNodeAutocompleteHandler))]
+        [SlashCommandOptional]
+        [Discord.Commands.Summary("changenode0_0s")]
+        string? node = null) {
+        var currentNode = AudioService.GetPlayerNode(Player);
+        var availableNodes = AudioService.Nodes
+            .Where(candidate => candidate.Status == LavalinkNodeStatus.Available && candidate != currentNode)
+            .ToArray();
+
+        var targetNode = node is null
+            ? availableNodes.FirstOrDefault()
+            : availableNodes.FirstOrDefault(candidate =>
+                string.Equals(candidate.Label, node, StringComparison.OrdinalIgnoreCase));
+        if (targetNode is null) {
+            var error = availableNodes.Length == 0
+                ? new EntryLocalized("Music.OnlyOneNode")
+                : new EntryLocalized("Music.NodeNotFound", node ?? "");
+            await this.ReplyFailFormattedAsync(error);
+            return;
+        }
+
+        await AudioService.MovePlayerAsync(Player, targetNode,
+            new EntryLocalized("PlayerHistory.NodeChanged", Context.User.Mention));
     }
 }
