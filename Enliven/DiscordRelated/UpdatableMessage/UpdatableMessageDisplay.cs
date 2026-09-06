@@ -23,7 +23,7 @@ public class UpdatableMessageDisplay : DisposableBase {
     private readonly ILogger? _logger;
     private readonly Action<MessageProperties> _messagePropertiesUpdateCallback;
     private readonly SingleTask<Unit, IEnlivenInteraction?> _controlMessageSendTask;
-    private readonly SingleTask<Unit, IEnlivenInteraction?> _updateControlMessageTask;
+    private readonly SingleTask<Unit, UpdateRequest?> _updateControlMessageTask;
     private InteractionMessageHolder? _interaction;
     private Subject<InteractionMessageHolder>? _messageChangedSubject;
 
@@ -48,7 +48,7 @@ public class UpdatableMessageDisplay : DisposableBase {
         _logger = logger;
         _controlMessageSendTask = new SingleTask<Unit, IEnlivenInteraction?>(SendControlMessageInternal)
             { BetweenExecutionsDelay = ResendDelay, CanBeDirty = false };
-        _updateControlMessageTask = new SingleTask<Unit, IEnlivenInteraction?>(UpdateControlMessageInternal) {
+        _updateControlMessageTask = new SingleTask<Unit, UpdateRequest?>(UpdateControlMessageInternal) {
             BetweenExecutionsDelay = MessageBasedUpdateDelay, CanBeDirty = true,
             ShouldExecuteNonDirtyIfNothingRunning = true
         };
@@ -70,11 +70,22 @@ public class UpdatableMessageDisplay : DisposableBase {
         var messageProperties = new MessageProperties();
         _messagePropertiesUpdateCallback(messageProperties);
         if (data.Parameter is { } interaction) {
-            await interaction.RespondAsync(text: messageProperties.Content.GetValueOrDefault(),
-                embed: messageProperties.Embed.GetValueOrDefault(),
-                embeds: messageProperties.Embeds.GetValueOrDefault(),
-                components: messageProperties.Components.GetValueOrDefault(),
-                options: requestOptions);
+            if (interaction.CurrentResponseDeferred || interaction.HasResponded) {
+                await interaction.ModifyOriginalResponseAsync(properties => {
+                    properties.Content = messageProperties.Content;
+                    properties.Embed = messageProperties.Embed;
+                    properties.Embeds = messageProperties.Embeds;
+                    properties.Components = messageProperties.Components;
+                }, requestOptions);
+            }
+            else {
+                await interaction.RespondAsync(text: messageProperties.Content.GetValueOrDefault(),
+                    embed: messageProperties.Embed.GetValueOrDefault(),
+                    embeds: messageProperties.Embeds.GetValueOrDefault(),
+                    components: messageProperties.Components.GetValueOrDefault(),
+                    options: requestOptions);
+            }
+
             OnInteractionProcessed(InteractionMessageHolder.CreateFromInteraction(interaction, OnInteractionExpired));
             return Unit.Default;
         }
@@ -98,10 +109,17 @@ public class UpdatableMessageDisplay : DisposableBase {
         }
     }
 
-    private async Task<Unit> UpdateControlMessageInternal(SingleTaskExecutionData<IEnlivenInteraction?> data) {
+    private async Task<Unit> UpdateControlMessageInternal(SingleTaskExecutionData<UpdateRequest?> data) {
         await _controlMessageSendTask.WaitForCurrent().ObserveException();
+
+        if (data.Parameter?.MessageHolder is { } messageHolder) {
+            await HandleMessageHolder(messageHolder);
+            return Unit.Default;
+        }
+
+        var interactionParameter = data.Parameter?.Interaction;
         if (_interaction == null) {
-            await _controlMessageSendTask.ExecuteForcedIfHasArgument(data.Parameter);
+            await _controlMessageSendTask.ExecuteForcedIfHasArgument(interactionParameter);
             return Unit.Default;
         }
 
@@ -113,7 +131,7 @@ public class UpdatableMessageDisplay : DisposableBase {
 
         // Try to resend an interaction response
         // TODO: Handle already responded interactions
-        if (data.Parameter is { HasResponded: false } interaction) {
+        if (interactionParameter is { HasResponded: false } interaction) {
             // If new interaction is a component interaction, and it's the same message as the control message
             // Just update it
             if (interaction is IComponentInteraction componentInteraction) {
@@ -184,27 +202,28 @@ public class UpdatableMessageDisplay : DisposableBase {
     }
 
     public Task HandleInteraction(InteractionMessageHolder holder) {
-        if (_interaction is null) {
-            OnInteractionProcessed(holder);
-            return _updateControlMessageTask.Execute();
-        }
-
-        if (holder.InteractionAvailable()) {
-            if (!_interaction.InteractionAvailable()
-                || _interaction.InteractionAvailable()
-                && holder.InteractionCreatedAt > _interaction.InteractionCreatedAt) {
-                _ = _interaction.DeleteAsync().ObserveException();
-                OnInteractionProcessed(holder);
-                return _updateControlMessageTask.Execute();
-            }
-        }
-
-        _ = holder.DeleteAsync().ObserveException();
-        return _updateControlMessageTask.Execute();
+        return _updateControlMessageTask.ForcedExecute(UpdateRequest.FromMessageHolder(holder));
     }
 
     public Task HandleInteraction(IEnlivenInteraction interaction) {
-        return _updateControlMessageTask.ForcedExecute(interaction);
+        return _updateControlMessageTask.ForcedExecute(UpdateRequest.FromInteraction(interaction));
+    }
+
+    private async Task HandleMessageHolder(InteractionMessageHolder holder) {
+        if (_interaction is null) {
+            OnInteractionProcessed(holder);
+            return;
+        }
+
+        if (holder.InteractionAvailable()
+            && (!_interaction.InteractionAvailable()
+                || holder.InteractionCreatedAt > _interaction.InteractionCreatedAt)) {
+            await _interaction.DeleteAsync().ObserveException();
+            OnInteractionProcessed(holder);
+            return;
+        }
+
+        await holder.DeleteAsync().ObserveException();
     }
 
     private void OnInteractionProcessed(InteractionMessageHolder interaction) {
@@ -263,4 +282,10 @@ public class UpdatableMessageDisplay : DisposableBase {
             behavior.Dispose();
         }
     }
+}
+
+internal sealed record UpdateRequest(IEnlivenInteraction? Interaction, InteractionMessageHolder? MessageHolder) {
+    public static UpdateRequest FromInteraction(IEnlivenInteraction interaction) => new(interaction, null);
+
+    public static UpdateRequest FromMessageHolder(InteractionMessageHolder holder) => new(null, holder);
 }

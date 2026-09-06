@@ -123,9 +123,12 @@ public class SingleTask<T, TForcedArg> : DisposableBase {
     public async Task<T> ForcedExecute(TForcedArg? forcedArg) {
         EnsureNotDisposed();
         var taskCompletionSource = new TaskCompletionSource<T>();
-        _forcedParams.Enqueue((taskCompletionSource, forcedArg));
-        _handyTimer.SetDelay(TimeSpan.Zero);
-        _signal.Writer.TryWrite(Unit.Default);
+        lock (_lock) {
+            _forcedParams.Enqueue((taskCompletionSource, forcedArg));
+            _handyTimer.SetDelay(TimeSpan.Zero);
+            _signal.Writer.TryWrite(Unit.Default);
+        }
+
         return await taskCompletionSource.Task;
     }
 
